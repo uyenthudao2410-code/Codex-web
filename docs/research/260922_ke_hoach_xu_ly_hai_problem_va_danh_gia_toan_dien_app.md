@@ -2161,3 +2161,103 @@ delivery/history/secret guards trước commit. Exact next action là snapshot
 `.coding-tools`, commit/push source + research lên `origin/main`, sau đó recapture
 Windows/Ubuntu readback; nếu runtime vẫn `UPDATE_INCOMPLETE`, tiếp tục giữ
 `admission=recovery` và không tuyên bố Problem nào đã đóng.
+
+### 16.43. Checkpoint sau commit/push và recapture runtime — 22/09/2026 lúc 22:49 +07
+
+Patch two-phase đã được giao trực tiếp trên `main`, không tạo worktree:
+
+```text
+506c415a fix: preserve two-phase activation readiness boundary
+9ed732a9 chore: refresh coding-tools delivery receipt
+HEAD = origin/main = 9ed732a9ed7b0a471d6e4f2b1a9f7cc42278de5a
+git rev-list --left-right --count HEAD...origin/main = 0 0
+```
+
+Delivery/history/secret guards đã chạy lại trước push; snapshot receipt lúc đó
+bind ledger blob `e574c83cfa1f24eb377e576199e38aac05f77127`, schema 12,
+`integrity_check=ok`, FK violations `0`. Sau push, ledger live tiếp tục có
+runtime evidence mới nên phải tạo snapshot mới cho delivery attempt kế tiếp;
+không reset hoặc bỏ dirty `ledger.sqlite3`.
+
+**Windows authenticated Recovery IPC, read-only observation:**
+
+```text
+collected_at_ms = 1790092088273 (2026-09-22T15:48:08Z)
+Recovery Host PID = 42556
+host instance = 3d2a072b655e55995ff15ad2db94dda3
+runtime_mode = packaged
+Recovery Host running_revision = disk_revision = baf32237ab3bbf38ca80f3b696575c5922f6a73ac60c0353e90630ea651749ce
+Coding MCP running_revision = null
+Coding MCP disk_revision = 57531dd62073778b223bed695728221b0f1fa522bb6d7c40d56f3a955802c747
+mcpRunning/nativeAlive/tunnelRunning/componentsReady/fullyReady = false/false/false/false/false
+updateIncomplete = true
+centralConnected/authorityReady = true/true
+connectorContractState = UNAVAILABLE
+connectorRediscovered = false
+identity_current = false
+workspace_context client read = absent
+activation envelope = READY, admission_open=true
+```
+
+Observation status là `STALE_OR_INCOMPLETE`, `authority_granted=false`,
+`live_accepted=false`; nó xác nhận đúng mâu thuẫn cần fail-closed (outer
+envelope xanh nhưng primary runtime chết), không phải reboot receipt, strict
+connector discovery hay natural outcome. Source fix mới chỉ tác động các epoch
+được commit/revalidate sau này; không tự động rewrite epoch/runtime đang chạy.
+
+**Ubuntu `/healthz`, GET read-only sau push:**
+
+```text
+HTTP = 200
+schema_version = 25
+admission_mode = recovery
+declared_source_revision = be16a0b1bb6536643c4894e37c9adaffd76bc905
+package_source_sha256 = sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c
+expected_package_source_sha256 = same as package_source_sha256
+unresolved_action_count = 11
+quarantined_unknown_action_count = 10
+quarantined_unresolved_action_count = 10
+unquarantined_unresolved_action_count = 1
+action_dispatch_dispositions = 0
+```
+
+Remote package/revision chưa theo `main@9ed732a9`; fingerprint equality giữa
+package và expected chỉ là process self-consistency, không phải current-HEAD
+deployment proof. Không SSH, không deploy/restart/reboot, không invoke
+quarantine route và không mở admission.
+
+**Canonical lifecycle census mới, Backup API/query-only:**
+
+```text
+snapshot_at = 2026-09-22T15:48:54.554Z
+backup_api_snapshot_sha256 = b65bf7e066b2929987f43fa2feefae14090dfbdb63c06741c2f8d372792e5b1e
+logical_sha256 = 988e557c1ad10954f32e71927684e36cb527ab297942cee57fcdc771cd38964d
+size_bytes = 97742848
+schema_version = 12
+integrity_check = ok
+foreign_key_check_rows = 0
+ordinary_active_runs = 17 (all THRESHOLD_SENSITIVE_STALE_CANDIDATE)
+stale_background_operation_residues = 0
+unbound_live_resource_residues = 0
+```
+
+Đếm exact revision từ connection `mode=ro` vẫn là:
+
+| Problem/revision | accepted | aborted | active | tổng RUN hợp lệ |
+|---|---:|---:|---:|---:|
+| `prl-22e670302757c9b7663170e226ed7c26` / 1 | 47 | 16 | 3 | 66 |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / 2 | 16 | 10 | 13 | 39 |
+
+Coverage manifest, outcome claim và resolution của hai revision vẫn `0`; không
+được lấy accepted RUN, outer READY, package health hay `/healthz=200` làm
+criterion/natural outcome. `report_lifecycle_census.py` xác nhận
+`mutated_canonical_ledger=false`, projection `CONTEXTUAL_PROJECTIONS`, không có
+live-owned RUN/resource residue.
+
+**Operator checkpoint:** source/focused repair đã lên `origin/main`; ledger và
+runtime evidence vẫn được giữ nguyên để điều tra. Các Problem vẫn `OPEN`,
+Windows primary MCP/Tunnel/strict discovery/workspace read chưa đạt, Ubuntu còn
+recovery + một unresolved action và remote chưa theo HEAD. Exact next action là
+stage một snapshot mới của ledger hiện tại cùng receipt, kiểm tra lại guards và
+chỉ commit/push nếu muốn bảo toàn snapshot evidence; sau đó cần activation epoch
+mới có source/package/epoch đồng nhất trước mọi reboot/admission test.
