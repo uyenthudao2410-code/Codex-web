@@ -1313,3 +1313,142 @@ overwrite/reconcile; build output không được commit như release artifact. 
 vẫn chỉ là `RUNTIME_RECOVERY_VERIFIED / PRODUCT_ACCEPTANCE_OPEN`, connector
 strict discovery, `workspace_context`, reboot matrix, natural-use, outcome và
 closure của cả hai Problem đều còn mở.
+
+## 15.9. Recheck sau `2c7fce90` và refresh bị từ chối fail-closed — 23/09/2026
+
+Wave này tiếp tục trực tiếp trên `main`, không tạo worktree và không chạy thêm
+refresh khi request trước vẫn còn được đối soát. Trong lúc đọc trạng thái, một
+commit source đã được đồng bộ lên cả local và remote:
+
+```text
+HEAD == origin/main = 2c7fce90ada3cc5ab7312b8fdb5261f072792f04
+message = fix: preserve exact UI suppression across handoff
+source worktree = clean (ngoài .coding-tools runtime evidence)
+```
+
+Commit trên đã chứa patch suppression/re-arm theo đúng `instance_id` và hai
+regression cases: heartbeat của cùng UI instance không tự xoá suppression;
+UI instance mới mới được coi là explicit re-arm signal kể cả khi epoch đang
+`VERIFYING`. Đây là source/focused-proof change đã publish; không gộp nó với
+runtime acceptance.
+
+### Runtime refresh boundary
+
+Refresh đã chạy trước wave này kết thúc bằng lỗi chính thức:
+
+```text
+DEV_UI_REFRESH_POSTFLIGHT_FAILED
+Full-system refresh did not prove fresh Recovery Host, MCP, Tunnel, UI and activation-epoch identities.
+```
+
+Readback sau khi process terminal:
+
+```text
+full-clean epoch = activation-mud5ulma-b78e78a8c66f46f34d60ec60d348b4d6
+expected disk revision = 94ea711860aba7b21527b9b081744a8e5b6d8dc519b6de6ebf8f53425f00eb00
+Recovery Host PID = 34168
+host running revision = c53f5f524bc8b97fcc6fa1d3264ea84ada498244a3d385d8a075c42fb33f3ab6
+state = UPDATE_INCOMPLETE
+admission_open = false
+current_for_full_clean = false
+full_clean_capability_available = false
+```
+
+`dev-ui-lifecycle status` đồng thời chiếu UI hiện hữu nhưng không usable:
+
+```text
+components_ready = false
+fully_ready = false
+runtime_update_incomplete = true
+connector_state = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered = false
+connector_refresh_required = true
+```
+
+Đây là source/package/runtime drift thật, không phải lý do để hạ guard hoặc
+kill/spawn lặp. Strongest current state là
+`RUNTIME_UPDATE_INCOMPLETE + ADMISSION_CLOSED`; không dùng outer/old READY,
+`/healthz`, test xanh hoặc host liveness để nâng thành `LIVE_ACCEPTED`.
+
+### Controlled ledger recovery boundary
+
+Controlled evidence-only recovery trước đó (section 16.34 của kế hoạch tổng
+thể) đã apply một lần với rollback backup, exact pointer CAS và postflight
+integrity/event-chain. Wave này **không apply lần hai** vì:
+
+1. canonical ledger hiện đã chứa ba RUN historical và tail evidence đã được
+   nối; không còn một `missing RUN allowlist` mới để replay;
+2. các candidate/receipt cũ không bind với snapshot hiện tại; dùng lại sẽ vi
+   phạm exact physical/logical hash guard;
+3. runtime vẫn chưa có quiesce receipt mới chứng minh writer ownership bằng
+   `0` và refresh vừa đóng admission ở lớp activation, nên không được tạo
+   quiesce giả hoặc gọi `apply` với `runtime_stopped=true`.
+
+Immutable Backup-API census mới (không tạo writer, không sửa canonical bytes)
+trả:
+
+```text
+snapshot_at = 2026-09-22T21:11:11.848Z
+physical_sha256 = cf85a6e1bc084ebe7837b9cb87a31ed21a4448e31d831ddd36beb9e54b4afdf3
+logical_sha256 = 4b5f05e5059081bf67c33deb16ae943a7b20630b9f29b3c952d17bf9cce57769
+schema_version = 12
+integrity_check = ok
+foreign_key_check_rows = 0
+mutated_canonical_ledger = false
+ordinary_active_runs = 17
+p5_epochs = 6
+stale_background_operation_residues = 0
+unbound_live_resource_residues = 0
+```
+
+Hash mới chỉ là snapshot quan sát; nó không phải receipt cho một canonical
+switch mới và không được trộn với candidate cũ.
+
+### Metrics read-only cho hai Problem và toàn app
+
+Các reporter chính thức cùng snapshot immutable ghi nhận:
+
+| Chỉ số | Giá trị | Cách diễn giải đúng |
+| --- | ---: | --- |
+| SQLite / FK | `ok` / `0` | Causal ledger đọc được; không phải runtime/client proof |
+| Exact revision binding | `193/211 = 91.4692%` | Còn 18 event không bind exact; descriptive mechanics |
+| Criterion-to-proof structural coverage | `34/34 = 100%` | Manifest/proof bridge có cấu trúc; không phải natural outcome |
+| Receipt-bound authoritative confirmation | `3/3` | Mẫu rất nhỏ; không suy ra efficacy |
+| Independent outcome coverage | `3/49 = 6.1224%` | 46 revision còn thiếu outcome độc lập |
+| Natural evidence | `false` | Reporter không tự suy cohort từ timestamp/text |
+| Problem revisions | `49` | 7 `OPEN`, 30 `PROVISIONALLY_RESOLVED`, 3 `RESOLVED_CONFIRMED`, 2 `BLOCKED` |
+| Right-censored unconfirmed revisions | `37` | Không được gọi là failed hay resolved |
+| Restricted TTPR | p50 `589000.3782 ms`, p90 `2129062.2617 ms` | Descriptive stage-union proxy; không phải TTOC |
+| P4 shadow population | `100` (98 terminal) | `20` raw patch-repaired nhưng `0` causal-solution repaired; `29` unknown |
+| P4/P5 gate | `COLLECTING` / `experiment_start_ready=false` | Chưa được auto-promote policy hay mở treatment |
+
+Đối với đúng hai Problem mục tiêu, joined-ledger audit vẫn giữ số liệu và
+trạng thái tách biệt:
+
+| Problem/revision | RUN | Accepted | Aborted | Active | State | Closure evidence |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| `prl-22e670302757c9b7663170e226ed7c26` / rev 1 | 66 | 47 | 16 | 3 | `OPEN` | `typed_natural=false`, `technically_accepted=false` |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / rev 2 | 39 | 16 | 10 | 13 | `OPEN` | `typed_natural=false`, `technically_accepted=false` |
+
+Không được gộp `66/39 RUN`, không dùng 3 confirmation của revision khác để
+đóng hai Problem này, và không coi pointer/evidence continuity là resolution.
+
+### Operator checkpoint và next action
+
+- **Đã hoàn thành:** source patch `2c7fce90` đã ở `main`/`origin/main`; refresh
+  thất bại đã được terminalize đúng mã; ledger được census bằng Backup API;
+  metrics PRL/P4 được recapture; không có canonical ledger mutation mới.
+- **Trạng thái hiện tại:** `SOURCE_PRESENT + FOCUSED_PROOF +
+  EVIDENCE_RECOVERY_APPLIED_HISTORICALLY`; runtime mới nhất
+  `UPDATE_INCOMPLETE/ADMISSION_CLOSED`; strict connector, `workspace_context`,
+  reboot/Machine B, fault injection, natural-use, independent outcome và
+  closure authority vẫn mở.
+- **Phân loại blocker:** source/package/epoch continuity và activation
+  authority; không phải lỗi integrity SQLite, không phải lý do replay ledger.
+- **Exact next action:** review focused proof của commit `2c7fce90`, stage
+  delivery snapshot mới cho `.coding-tools`, chạy toàn bộ delivery/history/
+  secret/index guards và push trực tiếp `main`. Sau đó chỉ một owner-authorized
+  packaged activation mới được phép tạo epoch/candidate exact; không apply
+  candidate ledger cũ, không gọi connector ACK, không reboot và không đóng
+  Problem trước strict discovery + real `workspace_context` + independent
+  outcome.

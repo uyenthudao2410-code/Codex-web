@@ -2992,3 +2992,15 @@ Các gate sản phẩm không đổi: current ChatWeb strict discovery,
 `workspace_context`, reboot/logon/Machine B, fault injection, natural-use,
 independent outcome, criterion coverage/disposition và closure authority vẫn
 chưa có; hai Problem tiếp tục `OPEN` và tách revision.
+
+### 16.58. Recheck sau `2c7fce90` và controlled-ledger boundary — 23/09/2026
+
+Follow-up hiện tại được ghi tách trong [wave report 260923](260923_controlled_recovery_ui_handoff_wave.md#159-recheck-sau-2c7fce90-và-refresh-bị-từ-chối-fail-closed--23092026). Checkout vẫn chạy trực tiếp trên `main`, `HEAD == origin/main == 2c7fce90`; không tạo worktree.
+
+Refresh gần nhất đã terminalize với `DEV_UI_REFRESH_POSTFLIGHT_FAILED`. Recovery Host `34168` chạy revision `c53f…` trong khi expected disk revision của epoch `activation-mud5ulma…` là `94ea…`; epoch giữ `UPDATE_INCOMPLETE`, `admission_open=false`, và UI projection giữ `components_ready=false`, `fully_ready=false`, `CHANGED_NEEDS_DISCOVERY`. Đây là fail-closed source/package/epoch continuity, không phải lý do bypass guard.
+
+Controlled evidence-only ledger recovery đã **apply một lần trước đó** (rollback + exact pointer CAS + postflight) và không có candidate/allowlist mới hợp lệ để apply lại. Snapshot Backup API mới chỉ là read-only observation: physical `cf85a6e1…`, logical `4b5f05e5…`, schema `12`, integrity `ok`, FK `0`, `mutated_canonical_ledger=false`. Không gọi `apply` với candidate cũ, không tạo quiesce receipt giả và không sửa byte canonical.
+
+Metrics hiện hành: exact revision binding `193/211`; structural criterion-to-proof `34/34`; authoritative confirmation `3/3` (small-n); independent outcome `3/49`; P4 `COLLECTING` với 100 shadow tasks, 20 raw-patch nhưng 0 causal repair và 29 unknown. Hai Problem tiếp tục tách rev 1/rev 2 và `OPEN` (`66 = 47/16/3`, `39 = 16/10/13`), chưa có `typed_natural`, technical acceptance, strict connector discovery hoặc real `workspace_context`.
+
+**Checkpoint:** source patch đã publish và ledger integrity/continuity vẫn đọc được; runtime activation chưa usable. Exact next action là stage/verify delivery snapshot rồi push trực tiếp `main`; sau đó mới mở một activation packaged exact-identity có owner authority. Không replay ledger candidate, không gọi connector ACK, reboot hoặc Problem closure từ snapshot này.
