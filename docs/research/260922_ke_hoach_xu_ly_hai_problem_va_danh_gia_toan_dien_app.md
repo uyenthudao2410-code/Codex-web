@@ -1776,3 +1776,56 @@ controller_knowledge_acks  +1
 **Phân loại kết quả:** recovery **đã hoàn tất ở tầng evidence continuity + safe pointer CAS**. Đây không phải activation/admission, không phải reboot acceptance, không chứng minh MCP/Tunnel/client discovery, không tạo authority continuation grant và không đóng Problem. Hai Problem vẫn `OPEN`; C09/C12, 18-criterion durable continuation, natural-use/independent outcome, strict workspace-context read và release gates vẫn mở.
 
 **Exact next action:** review diff/runtime evidence, chạy `npm run stage:coding-tools-delivery` và `npm run check:coding-tools-delivery`, rồi commit/push evidence trực tiếp trên `main`. Không redeploy/restart control plane trong wave này; GH001 generated-executable history warning và các gate runtime/natural outcome phải được báo riêng, không trộn vào acceptance của recovery ledger.
+
+### 16.35. Recheck sau controlled recovery và checkpoint trước delivery trực tiếp trên `main` — 22/09/2026 khoảng 21:37–21:45 +07
+
+Wave này không tạo worktree và không thực hiện restart/reboot/deploy. Mục tiêu là đối chiếu lại đúng canonical state sau apply, phân biệt runtime recovery với runtime usability, rồi chuẩn bị delivery snapshot theo chính sách giữ toàn bộ `.coding-tools` evidence.
+
+**Git và phạm vi thay đổi**
+
+- Checkout hiện tại là `main`; `HEAD = origin/main = 02e2a6b5dfa8d138be403b64617c2a3e6f3489aa`.
+- Trước khi stage, chỉ canonical `.coding-tools/orchestration/ledger.sqlite3` dirty do byte-level live evidence sau controlled recovery; không có source/test file ngoài các commit đã ghi ở 16.30–16.34.
+- Không dùng `reset`, `restore`, `clean`, worktree hoặc copy đè SQLite. Việc user yêu cầu “up thẳng lên main” được thực hiện theo nghĩa commit/push trực tiếp trên checkout `main`, nhưng chỉ sau khi delivery guard xác nhận snapshot ledger và receipt cùng một index.
+
+**Canonical ledger read-only recheck**
+
+`report_lifecycle_census.py --summary` dùng SQLite Online Backup API, `mode=ro` và `query_only`; capture `2026-09-22T14:37:07.425Z` (`21:37:07.425 +07`). Kết quả:
+
+| Chỉ số | Giá trị hiện thấy | Ý nghĩa không được suy rộng |
+| --- | ---: | --- |
+| SQLite schema / integrity / FK | `12` / `ok` / `0` | Ledger đọc được và không có FK violation; không phải proof runtime/client |
+| Backup snapshot physical SHA | `b65bf7e066b2929987f43fa2feefae14090dfbdb63c06741c2f8d372792e5b1` | Hash của bản Backup API; phải bind lại khi stage, không trộn với candidate cũ |
+| Logical SHA | `988e557c1ad10954f32e71927684e36cb527ab297942cee57fcdc771cd38964d` | Khớp logical state sau apply |
+| `events` / max seq | `25,822` / `59,822` | Causal tail hiện thấy trong canonical |
+| `runs` | `557` | Bao gồm ba RUN historical vừa được nối lại; không phải 557 natural tasks |
+| `problem_events` / max seq | `307` / `320` | Pointer `prl-22e…` đã CAS tới 320 |
+| ordinary active RUN / P5 anchor | `17` / `6` | Đều là projection/candidate classification; không chứng minh process sống |
+| stale background residue / unbound live resource | `0` / `0` | Không có residue được census nhận diện; unknown effects vẫn không được replay |
+| projection mode | `CONTEXTUAL_PROJECTIONS`, `1079` contexts | Projection không có binding current RUN cho hai Problem; không thay canonical causal history |
+
+Truy vấn exact revision sau apply cho kết quả không đổi về authority:
+
+- `prl-22e670302757c9b7663170e226ed7c26` revision 1: `OPEN`, pointer `320`, `66 RUN = 47 accepted + 16 aborted + 3 active`, `closed_at=null`.
+- `prl-e918c7d33e70c2d304d0797e11b05fcb` revision 2: `OPEN`, pointer `316`, `39 RUN = 16 accepted + 10 aborted + 13 active`, `closed_at=null`.
+- Cả hai revision vẫn có `coverage_manifest/criterion_dispositions = 0`, `problem_outcome_claim = 0`, và `continuation_success = 0` trong tập exact binding. Accepted RUN và `REPORT_ACKNOWLEDGED` không được nâng thành resolution/natural outcome.
+- Đính chính cách đếm: event-distinct `run_id` từng cho 64/40 vì có event `OPEN`/`REVISION`/`USER_FEEDBACK` với `run_id=''`; khi lọc `ENGINEERING_ATTEMPT_BOUND` và join `runs`, không có non-empty dangling RUN ID. Khoảng thiếu còn lại là ba report/checkpoint lịch sử đã được nối lại bằng importer; đó là lineage gap đã xử lý ở tầng evidence, không phải bằng chứng Problem đã đóng.
+
+**Runtime/process recheck — strongest state remains fail-closed**
+
+- Recovery Supervisor script PID `47772` đang `healthy`; packaged Recovery Host PID `42556` có executable `C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP\Coding Tools MCP.exe` và `--recovery-host`; Recovery MCP PID `38200` đang resident; connected control-plane agent PID `37104` ở `started_heartbeat_only`.
+- Exact persisted final census trong `activation-epoch.json` ghi `workspace_matches=true`, `process_identity_verified=true`, `authority_ready=true`, Coding MCP running revision = disk revision `57531dd62073778b223bed695728221b0f1fa522bb6d7c40d56f3a955802c747`, `mcpRunning=true`, `nativeAlive=true`, nhưng `tunnelRunning=false`, `componentsReady=false`, `fullyReady=false`, `updateIncomplete=true`.
+- Cùng receipt ghi `connectorContractState=CHANGED_NEEDS_DISCOVERY`, `connectorRediscovered=false`, `connectorRefreshRequired=true`, không có connector ACK/freshness. `runtime-state.json` cũng không có native/tunnel PID hiện hành. `node scripts/dev-ui-lifecycle.js status` trả `state=MISSING`, `installation=mismatch`, `connector_state=UNAVAILABLE` cho development UI.
+- Outer epoch envelope có `state=READY/admission_state=OPEN`, nhưng final census của cùng epoch lại là `UPDATE_INCOMPLETE/admission_open=false`. Vì vậy phải chọn nhánh fail-closed chặt hơn: biết host/process và authority, nhưng chưa có primary MCP/Tunnel/connector usable. Không dùng trường outer stale để gọi hệ thống `fullyReady` hoặc mở canary.
+
+**Proof source và boundary**
+
+- P1/P2 handoff safety, A2 role-aware oracle và evidence-only importer đã có focused source proof; continuation suite gần nhất là `140 passed, 10 subtests passed` trên cùng source HEAD.
+- Đây vẫn chưa phải process-level fault injection qua restart/lost ACK/effect boundary, strict `tools/list`/`server/discover`, real `workspace_context`, provider/App Server dispatch, reboot/logon, Machine B, 48-hour natural-use hoặc independent user outcome.
+- Không restart/kill/reboot để “lấy thêm xanh”, không tự tạo natural task, không auto-ACK knowledge thiếu và không mark unknown effect completed. B0–B4, C09/C12 và bốn continuity/BG natural gates vẫn mở.
+
+**Operator checkpoint**
+
+- **Đã hoàn thành:** canonical evidence continuity và pointer CAS đã apply có rollback/postflight; current ledger/runtime/process được recapture; các denominator và lineage correction được ghi rõ.
+- **Trạng thái hiện tại:** hai Problem vẫn `OPEN`; recovery plane resident; primary MCP process-level census có nhưng tunnel/connector chưa usable; Git chưa có commit mới sau 02e2a6b5.
+- **Phân loại blocker:** không còn là thiếu chứng minh Supervisor spawn; blocker hiện tại là `UPDATE_INCOMPLETE`/connector discovery, authority cho live activation, process-level fault proof và natural outcome. Đây là blocker evidence/authority, không phải test failure.
+- **Exact next action:** chạy `npm run stage:coding-tools-delivery` rồi `npm run check:coding-tools-delivery`, review index/delivery receipt, commit trực tiếp trên `main` và push `main` nếu guard PASS. Sau delivery chỉ tiếp tục bằng một activation epoch mới có receipt exact; không dùng epoch outer `READY/OPEN`, không reboot và không đóng Problem trước khi có strict discovery + workspace outcome.
