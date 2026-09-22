@@ -1418,4 +1418,16 @@ git bundle verify: OK
 
 Bundle này chứa phần lịch sử local `origin/main..HEAD`, đủ để khôi phục ref hiện tại sau một migration có kiểm soát; nó không phải worktree và không làm thay đổi `main`, `origin/main`, canonical ledger hoặc artifact vật lý. Trước migration hiện có **1031 tracked path dưới `output/`**, nhưng chỉ **3 blob >100 MB**; dry-run được phép giới hạn vào generated output nếu owner chọn phương án loại khỏi lịch sử.
 
+Sau khi ghi checkpoint 16.23, đã tạo thêm bundle bao phủ đúng current HEAD để không dùng nhầm snapshot cũ:
+
+```text
+Path: E:\Caches\Temp\codex-web-main-before-history-migration-20260922-current.bundle
+Size: 159,829,859 bytes
+SHA-256: 132f2ec48d023c858065e49baef6ddd2f798a20e5b01edeaf5ffc409d08884e5
+Ref: abab565e471530541f67095c23d7ff7b8d722eb3 refs/heads/main
+git bundle verify: OK
+```
+
+Bundle đầu tiên vẫn được giữ làm checkpoint lịch sử tại `a23c45d`; bundle `current` mới là backup cần dùng nếu owner cho phép migration từ HEAD hiện tại.
+
 **Trạng thái:** backup đã có, nhưng chưa có lệnh `git filter-repo`, `git lfs migrate`, `git update-ref`, `git reset`, `git rebase`, `git push --force-with-lease` hoặc canonical recovery switch. Tiếp theo vẫn cần owner xác nhận phương án và target history; sau đó mới chạy dry-run trên bản sao kiểm soát, đối chiếu `.coding-tools` retention, và publish.
