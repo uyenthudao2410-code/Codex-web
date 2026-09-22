@@ -112,8 +112,13 @@ development với tài nguyên packaged. Ở `packaged`, Supervisor dùng
 `app_root\resources\resources\control-plane\node_agent.py`; ở
 `development`, nó dùng `app_root\resources\native-python\python.exe` và
 `app_root\control-plane\control_plane\node_agent.py`. Manifest lưu path cùng
-SHA-256 của cả hai file, còn child agent nhận `--runtime-mode` đúng bằng mode
-đó. Sai mode, path hoặc hash làm preflight dừng fail-closed; việc chạy
+SHA-256 của cả hai file **và của executable Node được dùng để chạy adapter**:
+packaged pin Node vào chính Recovery Host executable (với
+`ELECTRON_RUN_AS_NODE=1` ở boundary Python), còn development pin một
+`node.exe` tuyệt đối đã resolve lúc cài Supervisor. Child agent nhận
+`--node` từ identity đã pin và `--runtime-mode` đúng bằng mode đó; nó không
+được tự fallback sang Electron executable hoặc PATH ở mỗi heartbeat. Sai mode,
+path hoặc bất kỳ hash nào làm preflight dừng fail-closed; việc chạy
 development sau handoff vì vậy phải cài lại Supervisor từ chính checkout đó.
 
 Supervisor không sở hữu Coding MCP/Tunnel. Nó chỉ chịu trách nhiệm bounded

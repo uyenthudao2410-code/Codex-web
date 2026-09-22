@@ -1630,3 +1630,44 @@ PRODUCT_ACCEPTANCE_OPEN`. Route heartbeat lifecycle vẫn là gap P1, nhưng kh�
 được giải quyết bằng loop heartbeat vô hạn trong wave discovery. Exact next
 action không đổi: lấy current-process strict discovery từ connector được hỗ trợ;
 nếu connector không expose, terminalize `WAITING_FOR_SUPPORTED_CONNECTOR`.
+
+## 15.13. Đã sửa root cause connected-agent development và gate activation — 23/09/2026
+
+Read-only process inspection trước patch cho thấy Supervisor vẫn healthy nhưng
+connected-agent development dùng command line:
+
+```text
+...\resources\native-python\python.exe -I ...\control_plane\node_agent.py
+run-connected-agent ... --node E:\DEV\Codex-web\node_modules\electron\dist\electron.exe
+--runtime-mode development
+```
+
+Với `runtime-mode=development`, `node_agent.py` gọi trực tiếp
+`[args.node, scripts/dev-ui-lifecycle.js, status]` và chỉ đặt
+`ELECTRON_RUN_AS_NODE=1` ở packaged adapter. Reproduction với đúng command/path
+trên trả `runtime_status_unavailable`; cùng command với `node.exe` thật trả
+được status. Đây là typed cause của heartbeat route bị stale, không phải
+`ledger.sqlite3` corruption và không phải lý do để bật Tunnel.
+
+Source patch trong `resources/recovery-supervisor/recovery-supervisor.ps1`:
+
+* `packaged` pin `--node` vào chính Recovery Host executable;
+* `development` resolve absolute `node.exe` một lần tại Supervisor install,
+  ghi `control_plane_node_path` cùng `control_plane_node_sha256` vào manifest;
+* preflight kiểm path/hash của Python, agent và Node; mismatch hoặc manifest
+  thiếu identity làm agent `manifest_legacy`/`integrity_unproven` và không spawn;
+* replacement nhận biết Node identity thay đổi để không giữ lại agent cũ;
+* không fallback sang Electron executable hoặc PATH trong heartbeat.
+
+Focused proof: `node --test tests/recovery-supervisor.test.js` **17/17 PASS**;
+test mới chứng minh development executable giả lập Electron khác `node.exe`
+nhưng `--node` nhận đúng `process.execPath`, còn packaged giữ executable host.
+`git diff --check` PASS. Chưa coi đây là live recovery proof: installed
+Supervisor chưa được reinstall/activation sau source patch trong section này.
+
+**Checkpoint:** source/focused-proof đạt; runtime hiện tại vẫn có thể đang chạy
+manifest cũ và route evidence có thể stale. Exact next action là commit/push
+source+test+docs trực tiếp trên `main`, sau đó reinstall Supervisor bằng lệnh
+được hỗ trợ, capture command line/hash mới và quan sát tối thiểu hai chu kỳ
+heartbeat. Chỉ nếu route evidence tự refresh mới quay lại strict discovery;
+không ACK thủ công, không sửa byte ledger, không reboot trong wave này.

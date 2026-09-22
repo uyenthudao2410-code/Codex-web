@@ -3124,3 +3124,40 @@ retry refresh, không ACK thủ công và không chạy reboot. Ưu tiên tiếp
 strict connector discovery, rồi một `workspace_context` thật. Nếu connector
 không expose trong phiên được hỗ trợ, ghi `WAITING_FOR_SUPPORTED_CONNECTOR` và
 để `prl-22e…`/`prl-e918…` ở `OPEN`.
+
+### 16.62. Root cause và source repair cho connected-agent development — 23/09/2026
+
+Đã triển khai packet sửa nhỏ, có nguyên nhân định danh được, cho gap P1 route
+heartbeat. Supervisor development trước đây lấy `$M.executable` (Electron)
+truyền vào `node_agent.py --node`, trong khi `_runtime_status()` development
+chạy trực tiếp `dev-ui-lifecycle.js` mà không đặt `ELECTRON_RUN_AS_NODE=1`.
+Reproduction đúng command của Supervisor trả `runtime_status_unavailable`; cùng
+agent với `C:\Program Files\nodejs\node.exe` trả status hợp lệ. Vì vậy agent
+vẫn sống (`running_heartbeat_only`) nhưng không làm mới route evidence, dẫn tới
+`CENTRAL_ROUTE_EVIDENCE_STALE`/`CHANGED_NEEDS_DISCOVERY` sau TTL.
+
+Thay đổi đã áp dụng:
+
+1. Supervisor resolve absolute `node.exe` cho `development`, lưu path/hash vào
+   manifest; `packaged` pin Node vào executable host như contract hiện hành.
+2. `Get-ControlPlaneAgentSpec` và `Assert-Manifest` kiểm exact path/hash của
+   Python, `node_agent.py` và Node runtime; thiếu/mismatch thì fail-closed.
+3. `Get-ControlPlaneAgentArguments` lấy `--node` từ identity đã kiểm chứng;
+   replacement dừng agent cũ nếu mode/path/hash đổi.
+4. Regression test bổ sung fixture Electron khác Node và assertion exact argv,
+   không chỉ assertion `runtime-mode`.
+
+Proof đã chạy: `node --test tests/recovery-supervisor.test.js` **17/17 PASS**;
+`git diff --check` PASS. Đây mới là `SOURCE_PRESENT + FOCUSED_TEST_PROOF`, chưa
+phải `LIVE_CONTROLLED_ACTIVATION`: Supervisor đang chạy có thể vẫn là manifest
+cũ. Không gọi `dev:refresh`, không tạo run/ACK/outcome mới, không chỉnh trực
+tiếp `.coding-tools/orchestration/ledger.sqlite3`.
+
+**Lựa chọn triển khai:** chọn manifest pin/hash thay vì bật
+`ELECTRON_RUN_AS_NODE` cho development. Cách này sửa đúng runtime contract,
+giữ packaged boundary, phát hiện PATH drift và không làm Electron trở thành
+Node adapter ngoài mode đã cho phép. Exact next action: commit/push trực tiếp
+`main`, reinstall Supervisor qua `npm run recovery:supervisor:install`, rồi
+capture process identity và ít nhất hai heartbeat liên tiếp. Nếu route vẫn
+stale, giữ `WAITING_FOR_SUPPORTED_CONNECTOR`/`OPEN` và phân tích tiếp theo
+evidence mới; không bypass strict discovery.
