@@ -1,6 +1,6 @@
 {
   "version": 6,
-  "tool_calls": 2760,
+  "tool_calls": 2761,
   "errors": 373,
   "cache_hits": 5,
   "deduplicated_calls": 2,
@@ -64,7 +64,7 @@
     "input_fingerprint_changed": 13
   },
   "proof_cache_saved_ms": 0,
-  "local_execution_ms": 9143044,
+  "local_execution_ms": 9143762,
   "estimated_wait_ms": 30188648,
   "request_bytes": 1849429,
   "response_bytes": 146043328,
@@ -93,16 +93,16 @@
   "result_continuation_rereads": 0,
   "result_continuation_stale": 0,
   "execution_mode_counts": {
-    "deep_single_lane": 9,
+    "deep_single_lane": 10,
     "mcp_only": 1378,
     "auto": 22
   },
   "route_resolved_counts": {
-    "sol_xhigh": 9,
+    "sol_xhigh": 10,
     "deterministic": 887
   },
   "orchestration_state_counts": {
-    "CHECKPOINTED": 199,
+    "CHECKPOINTED": 200,
     "ACCEPTING": 324,
     "ABORTED": 67,
     "REPLAN": 302,
@@ -112,9 +112,9 @@
   },
   "run_metrics": {
     "234713daf77f427ca486a7044fefd204": {
-      "tool_calls": 9,
+      "tool_calls": 10,
       "errors": 0,
-      "local_execution_ms": 5388,
+      "local_execution_ms": 6106,
       "estimated_wait_ms": 0,
       "request_bytes": 0,
       "response_bytes": 0,
@@ -151,13 +151,13 @@
       "result_continuation_rereads": 0,
       "result_continuation_stale": 0,
       "execution_mode_counts": {
-        "deep_single_lane": 9
+        "deep_single_lane": 10
       },
       "route_resolved_counts": {
-        "sol_xhigh": 9
+        "sol_xhigh": 10
       },
       "first_started_at": "2026-09-14T19:48:58.745Z",
-      "last_finished_at": "2026-09-22T12:50:09.342Z"
+      "last_finished_at": "2026-09-22T18:25:54.999Z"
     },
     "11f5493c418345fab86d49676733c0ec": {
       "tool_calls": 3,
@@ -4875,68 +4875,8 @@
       "last_finished_at": "2026-09-15T11:37:00.812Z"
     }
   },
-  "last_finished_at": "2026-09-22T13:59:35.849Z",
+  "last_finished_at": "2026-09-22T18:25:54.999Z",
   "recent": [
-    {
-      "tool": "task_control",
-      "started_at": "2026-09-15T11:30:32.680Z",
-      "finished_at": "2026-09-15T11:30:35.723Z",
-      "wall_time_source": "operation_boundary",
-      "duration_ms": 3046,
-      "wait_before_ms": 14328,
-      "request_bytes": 335,
-      "response_bytes": 14398,
-      "model_visible_bytes": 24,
-      "model_visible_chars": 24,
-      "invocation": {
-        "schema_version": 1,
-        "invocation_id": "c1384173d085662537cf8b456c2032e45bfdf80d114d79e8202d1555c96b21e1",
-        "identity_source": "transport_request_id",
-        "request_id": "0",
-        "task_context_id": "ctx_82f57ddea2f3f56c6a84a10e8ac6e42b",
-        "task_id": "86178b551c8c4b8997a24bdd6010683e",
-        "session_instance": "bac5fc092dee1481",
-        "execution_context_id": "mcp2026:12e5a7da442fa80c55a8e93388639ffef21f9e2ce46f827894b6fe54",
-        "client_id": "chatweb",
-        "client_type": "chatweb",
-        "trace_context": {
-          "trace_id": "6aa928da00000000b8fb2c8231afecea",
-          "parent_span_id": "74078afc06823f40",
-          "trace_flags": "00",
-          "trace_context_schema_version": 1,
-          "tracestate_present": true
-        }
-      },
-      "outcome": {
-        "status": "ok"
-      },
-      "truncated": false,
-      "cache_hit": false,
-      "deduplicated": false,
-      "idempotency_eligible": false,
-      "idempotency_key_present": false,
-      "idempotency_policy": "none",
-      "idempotency_key_source": "none",
-      "idempotency_operation": "task_control:ack",
-      "idempotency_missing_reason": "",
-      "error_class": "",
-      "proof_cache_eligible": 0,
-      "proof_cache_hits": 0,
-      "proof_cache_misses": 0,
-      "proof_cache_miss_reasons": {},
-      "proof_cache_saved_ms": 0,
-      "ok": true,
-      "run_id": "dcb539e0e1694bc1bb29eed2b2e07f8b",
-      "wave_id": "b35ed64b24dc4fa093cbe241df38719a",
-      "delegation_id": "",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "orchestration_state": "CHECKPOINTED",
-      "phase_timing": {},
-      "localization": {},
-      "result_tail": {}
-    },
     {
       "tool": "exec_command",
       "started_at": "2026-09-15T11:30:50.883Z",
@@ -10240,6 +10180,48 @@
       "phase_timing": {},
       "localization": {},
       "result_tail": {}
+    },
+    {
+      "tool": "workspace_preheat",
+      "started_at": "2026-09-22T18:25:54.295Z",
+      "finished_at": "2026-09-22T18:25:54.999Z",
+      "wall_time_source": "operation_boundary",
+      "duration_ms": 718,
+      "wait_before_ms": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "invocation": {},
+      "outcome": {
+        "status": "ok"
+      },
+      "truncated": false,
+      "cache_hit": false,
+      "deduplicated": false,
+      "idempotency_eligible": false,
+      "idempotency_key_present": false,
+      "idempotency_policy": "none",
+      "idempotency_key_source": "none",
+      "idempotency_operation": "workspace_preheat",
+      "idempotency_missing_reason": "",
+      "error_class": "",
+      "proof_cache_eligible": 0,
+      "proof_cache_hits": 0,
+      "proof_cache_misses": 0,
+      "proof_cache_miss_reasons": {},
+      "proof_cache_saved_ms": 0,
+      "ok": true,
+      "run_id": "234713daf77f427ca486a7044fefd204",
+      "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d",
+      "delegation_id": "1835a28961e94b9b975e26ba3133ebb2",
+      "execution_mode": "deep_single_lane",
+      "route_requested": "sol_xhigh",
+      "route_resolved": "sol_xhigh",
+      "orchestration_state": "CHECKPOINTED",
+      "phase_timing": {},
+      "localization": {},
+      "result_tail": {}
     }
   ],
   "hourly_metrics": {
@@ -10307,6 +10289,19 @@
       "local_execution_ms": 41428,
       "estimated_wait_ms": 3558352,
       "last_finished_at": "2026-09-22T13:59:35.849Z"
+    },
+    "497250": {
+      "hour": 497250,
+      "tool_calls": 1,
+      "errors": 0,
+      "cache_hits": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "local_execution_ms": 718,
+      "estimated_wait_ms": 0,
+      "last_finished_at": "2026-09-22T18:25:54.999Z"
     }
   }
 }

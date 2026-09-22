@@ -431,6 +431,50 @@ test('explicit refresh may hand off an exact idle packaged host to development',
   assert.equal(result.idle_packaged_handoff.workspace, paths.appRoot());
 });
 
+test('idle handoff accepts an explicitly suppressed dead UI after operator quit', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths, {
+    installation_id: 'f'.repeat(64),
+    runtime_mode: 'packaged'
+  });
+  const proof = await proveIdlePackagedHandoff({
+    paths,
+    descriptor: staleDescriptor,
+    client: {
+      status: async () => ({
+        pid: staleDescriptor.owner_pid,
+        instance_id: staleDescriptor.instance_id,
+        process_start_token: OLD_PROCESS_START_TOKEN,
+        electron_ui_recovery: {
+          registered: true,
+          alive: false,
+          state: 'suppressed',
+          suppressed: true,
+          suppression_reason: 'operator_quit'
+        }
+      }),
+      call: async (action) => {
+        assert.equal(action, 'runtime.lightweight_snapshot');
+        return {
+          telemetryAvailable: true,
+          signalStale: false,
+          snapshotBusy: false,
+          busy: false,
+          recovering: false,
+          mcpRunning: false,
+          nativeAlive: false,
+          tunnelRunning: false,
+          activationEpoch: { state: 'FAILED', admission_open: false },
+          device: { workspace: paths.appRoot() }
+        };
+      }
+    }
+  });
+  assert.equal(proof.exact_host, true);
+  assert.equal(proof.workspace, paths.appRoot());
+  assert.equal(proof.activation_epoch_state, 'FAILED');
+});
+
 test('explicit refresh refuses a cached UI absence while replacement registration is pending', async (t) => {
   const paths = fixture(t);
   const staleDescriptor = descriptor(paths, {

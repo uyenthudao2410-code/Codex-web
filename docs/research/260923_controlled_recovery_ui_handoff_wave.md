@@ -347,3 +347,96 @@ Sau rollout, authenticated local MCP `initialize` và `tools/list` vẫn PASS v�
 strict discovery** của HEAD hiện tại; admission vẫn cố ý đóng ở `recovery`,
 không tự retry 11 action unresolved đã quarantine, không phải Windows
 installed-runtime acceptance hoặc natural-work outcome.
+
+## 10. Controlled recovery recheck và sửa lỗi READY proof — 2026-09-23 01:36 +07
+
+### 10.1 Live recheck trước khi thử lại
+
+Đã đọc lại bằng `RecoveryIpcClient` chính thức của packaged installation, với
+đúng data root `C:\Users\Admin\AppData\Roaming\web-mcp-assistant`; không dùng
+raw IPC, không sửa JSON runtime/control-plane, không đụng trực tiếp SQLite và
+không gửi restart lần ba trước khi xác định nguyên nhân.
+
+Receipt quan trọng tại `2026-09-22T18:32:01Z–18:32:23Z`:
+
+| Lớp | Quan sát | Diễn giải |
+|---|---|---|
+| Supervisor | PID `6172`, `healthy`, task `Running`, `consecutive_failures=0`; host PID `52348`, instance `7e969d265f1c9c28f99bb3678d5bd96f` | Recovery supervisor và replacement Recovery Host vẫn sống; không cần kill/spawn lại để chứng minh host |
+| Recovery Host | packaged, code revision running=disk `9dbfd39a…`, descriptor epoch `activation-mud08kdv-4d0c8e0ed107f0a6c2b1c9f18825c95e` | Host identity/revision hiện tại có thể xác minh; đây chưa phải READY epoch |
+| Primary MCP | `mcpRunning=true`, `nativeAlive=true`, running=disk revision `a49891f8…`, process/server identity đã đọc được | Primary process thực sự đã start; không còn là lỗi “không spawn được MCP” |
+| Central route | `centralConnected=true`, `authorityReady=true`, route evidence hợp lệ nhưng `runtime_readiness=degraded`; aggregate reason `LOCAL_EXECUTOR_NOT_READY` | Route/authenticated heartbeat tồn tại, nhưng local executor chưa được phép quảng bá READY |
+| Activation | `epoch_state=FAILED`, projected `state=UPDATE_INCOMPLETE`, `admission_open=false`, `ready_commit_digest=null` | Admission vẫn đóng đúng fail-closed; không có proof READY để mở lại |
+| Connector | `connectorRediscovered=false`, `connectorRefreshRequired=true`, contract `smart-v3` | Với `central_executor`, đây không phải điều kiện thay thế cho central route; vẫn chưa có strict ChatWeb discovery |
+| UI/recovery plane | UI registered/alive PID `51620` nhưng đang `suppressed/operator_quit`; recovery MCP state có PID `51296`; final census trước đó không được ghi đầy đủ | Không suy diễn `ui_verified`/`recovery_plane_verified` từ liveness đơn lẻ |
+
+Không có ledger recovery mutation mới. Census query-only độc lập trước retry vẫn
+giữ `integrity_check=ok`, `foreign_key_check_rows=0`,
+`mutated_canonical_ledger=false`, `projection_drift=false`,
+`unexplained_active_runs=0`; do đó blocker hiện tại không phải corruption hay
+quyền ghi ledger.
+
+### 10.2 Nguyên nhân đã tái hiện bằng code và regression proof
+
+Failure `ACTIVATION_EPOCH_READY_PROOF_REQUIRED` với message
+`Final runtime census reports UPDATE_INCOMPLETE` được truy ngược tới hai pha
+được thiết kế trong `FullCleanActivation`:
+
+1. `finalCensus()` chạy khi record còn `state=VERIFYING` và
+   `admission_state=CLOSED`, trước `commitReady()/complete_epoch`.
+2. `lightweightSnapshot()` phản ánh trung thực epoch chưa mở admission bằng
+   `runtime.updateIncomplete=true`, đồng thời `fullyReady=false` và
+   `centralStatusReason=LOCAL_EXECUTOR_NOT_READY`.
+3. Khi tất cả predicate độc lập của final census đã đạt (MCP/native, revision,
+   workspace/device, process identity, UI, recovery plane, projection và
+   central route), proof vẫn mang cờ `runtime.updateIncomplete=true` vào
+   `ActivationEpochStore.commitReady()`, nên store từ chối proof hoàn chỉnh.
+
+Đây là lỗi ở biên proof hai pha, không phải lý do để hạ revision guard hoặc
+cho phép route degraded thành READY. Đã sửa tại
+`electron/services/fullCleanActivation.js`: chỉ sau khi `pass=true` và đúng
+record `VERIFYING/CLOSED`, proof được đánh dấu `admissionPending=true` và tách
+`runtime.updateIncomplete` của trạng thái chờ mở admission khỏi các guard
+component/revision/identity. Mọi failure trước `pass` vẫn giữ nguyên
+`updateIncomplete=true` và fail-closed.
+
+Regression test central activation được mở rộng để inject đúng trạng thái
+`updateIncomplete=true` trong cửa sổ pre-admission và yêu cầu:
+
+```text
+runtime.updateIncomplete=false
+runtime.admissionPending=true
+finalize() -> READY
+admission_state -> OPEN
+```
+
+Proof đã chạy:
+
+```text
+node --test tests/full-clean-activation.test.js
+63/63 PASS
+```
+
+Đây mới là source/focused proof; packaged installation đang chạy chưa chứa
+patch mới ở thời điểm receipt trên.
+
+### 10.3 Checkpoint và bước tiếp theo
+
+Checkpoint wave này:
+
+- controlled restart lần đầu: `CANONICAL_LEDGER_CENSUS_TIMEOUT`, không tạo epoch;
+- census độc lập sau đó: PASS, không mutation/projection drift;
+- controlled retry: tạo epoch mới, đi qua `HANDOFF → STARTING → VERIFYING`,
+  nhưng fail ở READY proof vì cờ pre-admission nêu trên;
+- sau failure: Supervisor/Recovery Host vẫn healthy, admission vẫn CLOSED,
+  không được gọi là ledger corruption và không retry nguyên trạng;
+- source fix + regression proof đã có, chưa build/cài packaged candidate mới.
+
+Exact next action là: chạy release-boundary JavaScript/package proof cho patch
+này, cài packaged candidate qua đường installer được hỗ trợ vào đúng production
+profile (không copy thô/app.asar edit), đọc lại process/package hashes, rồi
+chỉ thực hiện **một** controlled full-clean recovery mới nếu preflight/census
+độc lập còn PASS. Postflight phải chứng minh activation `READY`/admission OPEN,
+`fullyReady=true`, central route READY, exact epoch/revision/process identity,
+strict connector discovery và một `workspace_context` thật trên
+`E:\DEV\Codex-web`. Nếu một điều kiện fail, giữ `BLOCKED` và ghi receipt; không
+kill process theo tên, không sửa descriptor/route evidence, không chỉnh ledger.

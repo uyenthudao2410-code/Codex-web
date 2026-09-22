@@ -338,7 +338,11 @@ function idleHandoffUiIsQuiescent(status, now = Date.now()) {
   // have just launched a replacement UI whose registration has not reached
   // the cached IPC projection yet. Require its terminal, no-launch-pending
   // state rather than interpreting every `alive: false` as absence.
-  if (ui.alive !== false || text(ui.state).toLowerCase() !== 'missing') return false;
+  const state = text(ui.state).toLowerCase();
+  const explicitlySuppressed = state === 'suppressed'
+    && ui.suppressed === true
+    && ['operator_quit', 'runtime_stop'].includes(text(ui.suppression_reason));
+  if (ui.alive !== false || (state !== 'missing' && !explicitlySuppressed)) return false;
   for (const field of [
     'initial_registration_grace_until_unix_ms',
     'pending_registration_until_unix_ms',

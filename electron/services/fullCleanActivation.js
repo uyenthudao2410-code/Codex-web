@@ -2656,6 +2656,30 @@ class FullCleanActivation {
       nowUnixMs: censusNowUnixMs
     });
     const pass = Boolean(componentsReadyForAdmission && (centralExecutor || connectorReady?.valid === true));
+    // The final census is deliberately taken before commitReady()/complete_epoch
+    // opens MCP admission.  lightweightSnapshot() therefore reports
+    // updateIncomplete=true because the durable epoch is still VERIFYING/CLOSED,
+    // even when every component, identity, revision, projection, and central
+    // route predicate below has passed.  Preserve the raw pre-admission state
+    // separately instead of letting that expected two-phase state invalidate an
+    // otherwise complete READY proof.  This branch is reachable only after the
+    // independent component/route predicates above pass and only for the exact
+    // admission-closed VERIFYING record; source/revision/identity failures stay
+    // fail-closed with runtime.updateIncomplete=true.
+    const runtimeForReadyProof = pass
+      && record.state === 'VERIFYING'
+      && record.admission_state === 'CLOSED'
+      && runtime
+      && typeof runtime === 'object'
+      && !Array.isArray(runtime)
+      && (runtime.updateIncomplete === true || runtime.update_incomplete === true)
+      ? {
+        ...runtime,
+        updateIncomplete: false,
+        update_incomplete: false,
+        admissionPending: true
+      }
+      : runtime;
     return {
       verified: pass,
       pass,
@@ -2723,7 +2747,7 @@ class FullCleanActivation {
       projection_rebuild_receipt: projectionRebuild.receipt,
       lifecycle_decision: activationObservation?.lifecycle_decision || null,
       reason: pass ? null : 'UPDATE_INCOMPLETE',
-      runtime
+      runtime: runtimeForReadyProof
     };
   }
 

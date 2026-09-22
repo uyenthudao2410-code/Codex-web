@@ -1656,6 +1656,7 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
       centralConnected: false,
       authorityReady: false,
       centralStatusReason: 'LOCAL_EXECUTOR_NOT_READY',
+      updateIncomplete: true,
       activationEpoch: { activation_epoch_id: activationEpochId, admission_open: false },
       codeRevision: { codingMcp: { disk_revision: revision, running_revision: revision } }
     });
@@ -1733,6 +1734,9 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
     assert.equal(centralReady.central_status_reason, null);
     assert.equal(centralReady.runtime.fullyReady, false,
       'admission is closed while the independent central route is proven');
+    assert.equal(centralReady.runtime.updateIncomplete, false,
+      'expected pre-admission epoch state must not invalidate a complete READY proof');
+    assert.equal(centralReady.runtime.admissionPending, true);
     assert.equal(Object.hasOwn(centralReady, 'connector_validation'), false);
     coordinator.recordPendingCensus(activationEpochId, centralReady);
     const completed = await coordinator.finalize(activationEpochId);
