@@ -8,7 +8,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 test('Settings has one obvious entry and a resumable four-step setup surface', () => {
   const html = read('renderer/index.html');
-  assert.match(html, /data-page="system"[^>]*>.*?<span>Cài đặt<\/span>/s);
+  assert.match(html, /data-page="system"[^>]*>.*?<span>Thiết lập hệ thống<\/span>/s);
   assert.match(html, /id="setupSummary"/);
   for (const id of ['setupStepConnection', 'setupStepFolder', 'setupStepAccount', 'setupStepVerify']) {
     assert.match(html, new RegExp(`id="${id}"`));
@@ -37,8 +37,18 @@ test('Central setup never labels a read-only inspection as executor start', () =
   assert.match(app, /central \? 'Liên kết & quyền' : 'Kiểm tra kết nối'/);
   assert.match(app, /Đã có target được cấp/);
   assert.match(app, /reconcileControlPlaneAuthorityStatus/);
-  assert.match(app, /isCentralExecutor\(state\.snapshot\?\.settings\)\s*\? navigate\('deploy'\)/);
+  assert.match(app, /isCentralExecutor\(state\.snapshot\?\.settings\)\s*\? navigate\('system'\)/);
   assert.doesNotMatch(app, /central \? 'Kiểm tra Executor'/);
+});
+
+test('System setup is the only primary settings entry and old setup pages remain subordinate links', () => {
+  const html = read('renderer/index.html');
+  const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.match(nav, /data-page="system"[^>]*>[\s\S]*?Thiết lập hệ thống/);
+  assert.doesNotMatch(nav, /data-page="(?:deploy|workspace|settings)"/);
+  for (const page of ['deploy', 'workspace', 'settings']) {
+    assert.match(html, new RegExp(`class="setup-section-link" data-nav="${page}"`));
+  }
 });
 
 test('Central workspace setup uses understandable presets and keeps opaque IDs out of normal UI', () => {
@@ -59,7 +69,8 @@ test('Central wizard resumes from the registered Ubuntu inventory, not legacy di
   const app = read('renderer/app.js');
   assert.match(app, /function centralWorkspaceEntries\(\)/);
   assert.match(app, /function centralDispatchableTargetForLocalWorkspace\(\)/);
-  assert.match(app, /const workspaceReady = central\s*\?\s*centralWorkspaceEntries\(\)\.length > 0/);
+  assert.match(app, /const workspaceReady = central\s*\?\s*inventoryKnown && centralWorkspaceEntries\(\)\.length > 0/);
+  assert.match(app, /centralWorkspaceInventoryStatus/);
   assert.match(app, /Boolean\(centralDispatchableTargetForLocalWorkspace\(\)\)/);
   assert.match(app, /centralWorkspaceSummary\(\)/);
   assert.match(app, /if \(isCentralExecutor\(state\.snapshot\?\.settings\)\) await chooseControlPlaneWorkspace\(\);/);
@@ -72,6 +83,17 @@ test('Central setup rehydrates local workspace inventory after reopening the win
   assert.match(app, /await reconcileControlPlaneAuthorityStatus\(\{ quiet: true \}\);[\s\S]*?await refreshControlPlaneWorkspaces\(\{ quiet: true \}\)/);
   assert.match(app, /Chưa liên kết tài khoản/);
   assert.match(app, /Đã liên kết/);
+});
+
+test('Central setup keeps enrollment resume metadata and inventory failures truthful', () => {
+  const app = read('renderer/app.js');
+  const nodeAgent = read('control-plane/control_plane/node_agent.py');
+  assert.match(app, /status\.server_origin/);
+  assert.match(app, /Máy đã có yêu cầu pairing đang lưu/);
+  assert.match(app, /workspace-refresh/);
+  assert.match(app, /Không đọc được inventory workspace/);
+  assert.match(app, /RUNTIME_MISSING/);
+  assert.match(nodeAgent, /"server_origin": server_origin/);
 });
 
 test('Central connection page hides direct-mode network and deployment controls', () => {

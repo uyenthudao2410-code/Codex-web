@@ -61,17 +61,17 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
     ['short-secret', { node_secret: 'x'.repeat(15) }, {}, {}, 'file_read', 'policy_config_mismatch', 'current'],
     ['two-character-secret', { node_secret: 'xx' }, {}, {}, 'file_read', 'policy_config_mismatch', 'current'],
     ['null-secret', { node_secret: null }, {}, {}, 'file_read', 'policy_config_mismatch', 'current'],
-    ['device-mismatch', {}, {}, { device_id: 'other-device' }, 'file_read', 'policy_config_mismatch', 'current'],
-    ['endpoint-mismatch', {}, {}, { endpoint_id: 'other-endpoint' }, 'file_read', 'policy_config_mismatch', 'current'],
-    ['origin-mismatch', {}, {}, { server_origin: 'https://other.example.test' }, 'file_read', 'policy_config_mismatch', 'current'],
+    ['device-mismatch', {}, {}, { device_id: 'other-device' }, 'file_read', 'heartbeat_only', 'current', true],
+    ['endpoint-mismatch', {}, {}, { endpoint_id: 'other-endpoint' }, 'file_read', 'heartbeat_only', 'current', true],
+    ['origin-mismatch', {}, {}, { server_origin: 'https://other.example.test' }, 'file_read', 'heartbeat_only', 'current', true],
     ['expired-read-only-policy', {}, { expires_at_ms: Date.now() - 1000 }, {}, 'file_read', 'eligible', 'current'],
     ['disabled-read-only-policy', {}, { enabled: false }, {}, 'file_read', 'eligible', 'current'],
-    ['standing-policy-missing', {}, {}, null, 'file_read', 'standing_policy_unavailable', 'current'],
-    ['standing-policy-expired', {}, {}, { expires_at_ms: Date.now() - 1000 }, 'file_read', 'standing_policy_unavailable', 'current'],
+    ['standing-policy-missing', {}, {}, null, 'file_read', 'heartbeat_only', 'current', true],
+    ['standing-policy-expired', {}, {}, { expires_at_ms: Date.now() - 1000 }, 'file_read', 'heartbeat_only', 'current', true],
     ['standing-approved-patch-only', {}, {}, {}, 'approved_patch', 'eligible', 'current'],
     ['standing-exec-only', {}, {}, {}, 'exec', 'eligible', 'current'],
-    ['workspace-registry-missing', {}, {}, {}, 'file_read', 'workspace_registry_unavailable', 'missing'],
-    ['workspace-registration-stale', {}, {}, {}, 'file_read', 'workspace_registration_not_current', 'empty']
+    ['workspace-registry-missing', {}, {}, {}, 'file_read', 'heartbeat_only', 'missing', true],
+    ['workspace-registration-stale', {}, {}, {}, 'file_read', 'heartbeat_only', 'empty', true]
   ];
   const fixtures = cases.map(([name, configPatch, readOnlyPatch, standingPatch, standingLane, , registryState]) => {
     const dataRoot = path.join(temp, name);
@@ -183,7 +183,7 @@ $agentCycle=[pscustomobject]@{first_state=$firstAgentState;second_state=$fixture
   }
   assert.equal(result.status, 0, result.error?.message || result.stderr || result.stdout);
   const observed = JSON.parse(result.stdout.trim());
-  assert.deepEqual(observed.cases, cases.map(([name, , , , , state]) => ({ name, eligible: state === 'eligible', state })));
+  assert.deepEqual(observed.cases, cases.map(([name, , , , , state]) => ({ name, eligible: ['eligible', 'heartbeat_only'].includes(state), state })));
   assert.deepEqual(observed.origins, origins.map(([value, origin]) => ({ value, origin })));
   assert.deepEqual(observed.agent_cycle, { first_state: 'started', second_state: 'running', starts: 1, pid: 123 });
 });

@@ -9,10 +9,10 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 test('manager primary navigation is operator-first while advanced tools remain reachable from System', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
-  for (const page of ['overview', 'task', 'device', 'deploy', 'workspace', 'system']) {
+  for (const page of ['overview', 'task', 'device', 'system']) {
     assert.match(nav, new RegExp(`data-page="${page}"`), `missing primary page ${page}`);
   }
-  for (const legacy of ['build', 'health', 'guide', 'logs', 'settings']) {
+  for (const legacy of ['build', 'health', 'guide', 'logs', 'settings', 'deploy', 'workspace']) {
     assert.doesNotMatch(nav, new RegExp(`data-page="${legacy}"`), `${legacy} should not compete in primary navigation`);
     assert.match(html, new RegExp(`data-nav="${legacy}"`), `${legacy} must remain reachable from System`);
     assert.match(html, new RegExp(`data-page-view="${legacy}"`), `${legacy} page must be preserved`);
@@ -66,7 +66,7 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(html, /id="refreshControlPlaneWorkspaces"/);
   assert.match(html, /id="controlPlaneWorkspaceRegistrations"/);
   assert.doesNotMatch(html, /id="controlPlaneContextId"/);
-  assert.match(html, /Quyền task sẽ đến từ liên kết tài khoản/);
+  assert.match(html, /Máy này chỉ thực thi trong quyền local được cấp/);
   assert.match(html, /Không dán <code>ctx_…<\/code>/);
   assert.match(html, /data-direct-only/);
   assert.match(app, /function isCentralExecutor\(/);

@@ -382,6 +382,52 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertTrue(health["connector_client_contact"]["current_contract_contact"])
         self.assertEqual(health["connector_controller_usage_envelope"]["classification"], "absent_so_far")
 
+    def test_completed_workspace_read_has_attested_content_free_contact_and_not_discovery(self) -> None:
+        self.runtime.activation_epoch_id = "activation-workspace-read-0001"
+        status, _, body = self.tool_call("workspace_context", {"detail": "compact", "max_entries": 1}, request_id=987)
+        self.assertEqual(status, 200)
+        self.assertFalse(body["result"]["isError"])
+        contact = self.runtime.connector_client_contact()
+        read = contact["workspace_read"]
+        self.assertTrue(read["completed"])
+        self.assertTrue(read["workspace_accessed"])
+        self.assertEqual(read["workspace_id"], body["result"]["structuredContent"]["workspace_id"])
+        self.assertEqual(read["process_instance_id"], self.runtime.process_instance_id)
+        self.assertRegex(read["request_id"], r"^rpc-[a-f0-9]{64}$")
+        self.assertNotIn(self.temp.name, json.dumps(read))
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        self.runtime.activation_epoch_id = "activation-replaced-0001"
+        self.assertIsNone(self.runtime.connector_client_contact()["workspace_read"])
+        self.runtime.activation_epoch_id = "activation-workspace-read-0001"
+        identity = {"client_id": "chatweb", "client_type": "chatweb", "identity_source": "attested_transport", "attestation_verified": True}
+        request = {"method": "tools/call", "id": 988, "params": {"name": "workspace_context"}}
+        for field, bad in [("completed", False), ("workspace_accessed", False)]:
+            self.runtime.tool_contact_receipts.clear()
+            invalid = json.loads(json.dumps(body))
+            invalid["result"]["structuredContent"][field] = bad
+            self.runtime._record_successful_rpc_contact(request, invalid, identity)
+            self.assertIsNone(self.runtime.connector_client_contact()["workspace_read"])
+        for field in ["activation_epoch_id", "process_instance_id", "server_instance_id", "workspace_id"]:
+            self.runtime.tool_contact_receipts.clear()
+            invalid = json.loads(json.dumps(body))
+            invalid["result"]["structuredContent"]["endpoint"][field] = "wrong-identity"
+            self.runtime._record_successful_rpc_contact(request, invalid, identity)
+            self.assertIsNone(self.runtime.connector_client_contact()["workspace_read"])
+        self.runtime._record_successful_rpc_contact(
+            {"method": "tools/call", "id": 988, "params": {"name": "workspace_context"}},
+            {"result": {"isError": False, "structuredContent": {"completed": False, "workspace_accessed": False}}},
+            {"client_id": "chatweb", "client_type": "chatweb", "identity_source": "attested_transport", "attestation_verified": True},
+        )
+        self.assertIsNone(self.runtime.connector_client_contact()["workspace_read"])
+
+    def test_unattested_workspace_response_cannot_record_completed_read(self) -> None:
+        self.runtime.activation_epoch_id = "activation-workspace-read-0002"
+        status, _, body = self.tool_call("workspace_context", {"detail": "compact"}, request_id=989,
+            extra_headers={CONNECTOR_ATTESTATION_HEADER: ""})
+        self.assertEqual(status, 200)
+        self.assertTrue(body["result"]["structuredContent"]["completed"])
+        self.assertIsNone(self.runtime.connector_client_contact()["workspace_read"])
+
     def test_activation_pending_tool_error_does_not_record_connector_contact(self) -> None:
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
         self.assertFalse(self.runtime.connector_client_contact()["observed"])

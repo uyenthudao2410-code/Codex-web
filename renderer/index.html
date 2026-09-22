@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:*;">
   <title>Coding Tools MCP</title>
+  <link rel="icon" type="image/png" href="app-icon.png">
+  <link rel="stylesheet" href="fonts.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="settings-compact.css">
   <link rel="stylesheet" href="control-center.css">
@@ -12,40 +14,22 @@
 </head>
 <body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>Execution Hub · Control Center</span><button id="closeManager" title="Đóng Control Center">×</button></div>
   <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
+
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">
-          <svg viewBox="0 0 120 120" width="32" height="32" fill="none">
-            <ellipse cx="60" cy="60" rx="52" ry="24" transform="rotate(-28 60 60)" stroke="#38bdf8" stroke-width="1.4" stroke-dasharray="8 6 2 6" opacity="0.6"/>
-            <polygon points="60,8 102,32 102,88 60,112 18,88 18,32" stroke="#3b82f6" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
-            <path d="M60,8 L60,60" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M102,32 L60,60" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M102,88 L60,60" stroke="#ec4899" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M60,112 L60,60" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M18,88 L60,60" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M18,32 L60,60" stroke="#00f2fe" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M60,26 L86,41 L86,71 L60,86 L34,71 L34,41 Z" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round" fill="#0f172a" fill-opacity="0.2"/>
-            <polygon points="60,4 68,14 60,22 52,14" fill="#38bdf8"/>
-            <polygon points="106,30 106,42 96,36 96,24" fill="#a855f7"/>
-            <polygon points="106,90 96,96 96,84 106,78" fill="#ec4899"/>
-            <polygon points="60,116 52,106 60,98 68,106" fill="#8b5cf6"/>
-            <polygon points="14,90 24,96 24,84 14,78" fill="#38bdf8"/>
-            <polygon points="14,30 14,42 24,36 24,24" fill="#00f2fe"/>
-            <circle cx="60" cy="60" r="14" fill="#38bdf8" fill-opacity="0.3"/>
-            <circle cx="60" cy="60" r="4.5" fill="#ffffff"/>
-          </svg>
+          <img src="app-icon.png" alt="Codex Hub Icon" class="brand-logo-img" width="34" height="34" />
         </div>
         <div><strong>Codex Hub</strong><small>Control Center</small></div>
       </div>
 
       <nav class="nav-list" aria-label="Điều hướng chính">
+
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
-        <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Thiết bị</span></button>
-        <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Kết nối</span></button>
-        <button class="nav-item" data-page="workspace"><span class="nav-icon">WS</span><span>Thư mục</span></button>
-        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
+        <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
+        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Thiết lập hệ thống</span></button>
       </nav>
 
       <div class="sidebar-runtime">
@@ -82,21 +66,401 @@
               </div>
               <div class="control-actions">
                 <span id="ccLastSync" class="cc-sync">Not synced</span>
-                <button class="secondary-button" id="daTokenBoardButton" title="Mở bảng theo dõi token & chi phí trong cửa sổ riêng">
-                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l4-4 3 3 5-6"/><path d="M3 17h14"/></svg>
-                  <span>Bảng token</span>
-                </button>
                 <button class="secondary-button" id="ccRefreshButton">Refresh</button>
                 <button class="primary-button" id="ccRestartButton">Restart runtime</button>
               </div>
             </div>
           </div>
 
-
           <div class="da-section">
-            <!-- Token dashboard embedded directly in Tổng quan Vận hành.
-                 Standalone window stays available via #daTokenBoardButton. -->
-            <iframe id="overviewTokenFrame" src="token-dashboard.html?embedded=1" title="Bảng token & hiệu quả" loading="lazy"></iframe>
+            <!-- Section Head: Định lượng Token & Hiệu quả -->
+            <div class="da-basic-token-head">
+              <div>
+                <h2>Định lượng Token &amp; Hiệu quả</h2>
+                <p>Ưu tiên số token đã đo, xu hướng sử dụng, cache, chi phí quy đổi và token trên mỗi kết quả hoàn tất. Số ước lượng luôn được đánh dấu riêng.</p>
+                <p class="da-technical-note">Phân tích Context & Chi phí: model-visible bytes giữ nguyên ở đơn vị byte. Token/chi phí model chỉ hiển thị từ UsageEvent canonical có provenance. Token trên từng card Tool call của ChatGPT/Coding-VP là metric riêng của host; MCP hiện chưa nhận receipt hậu-call chứa con số đó nên hiển thị "—"/unknown thay vì ước lượng. Không quy đổi byte→token và request/response transport bytes không được coi là token.</p>
+              </div>
+            </div>
+
+            <!-- 1. Top Filter & Action Header Toolbar -->
+            <div class="da-dashboard-filter-bar">
+              <div class="da-filter-group left">
+                <div class="da-filter-pill">
+                  <div class="filter-copy">
+                    <small>WORKSPACE</small>
+                    <b id="daProjectText">Chưa xác nhận</b>
+                  </div>
+                </div>
+
+                <div class="da-filter-pill">
+                  <div class="filter-copy">
+                    <small>MÔI TRƯỜNG</small>
+                    <b><span id="daEnvText">Chưa xác nhận</span></b>
+                  </div>
+                </div>
+
+                <div class="da-filter-pill date-pill" id="daDatePill">
+                  <div class="filter-copy">
+                    <small id="daDateHeader">CỬA SỔ DỮ LIỆU</small>
+                    <b id="daDateValue">Chưa có snapshot analytics</b>
+                  </div>
+                </div>
+              </div>
+
+              <div class="da-filter-group right">
+                <div class="da-toggle-badge" title="Chờ snapshot overview; không có dữ liệu được tự tạo">
+                  <span class="refresh-icon">🔄</span>
+                  <span>Chờ snapshot</span>
+                </div>
+
+                <button class="da-action-btn primary-purple" id="daRefreshButton" title="Làm mới dữ liệu từ MCP runtime">
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 0111.6-4M16.5 10a6.5 6.5 0 01-11.6 4M16 3.5v3h-3M4 16.5v-3h3"/></svg>
+                  <span>Làm mới dữ liệu</span>
+                </button>
+
+                <span id="daLastSync" class="cc-sync" hidden>Chưa đồng bộ</span>
+              </div>
+            </div>
+
+            <!-- Real-time Activity Ticker -->
+            <div class="da-ticker" id="daTicker" aria-label="Hoạt động gần đây" style="display: none;">
+              <div class="da-ticker-track" id="daTickerTrack"></div>
+            </div>
+
+            <!-- 2. Top 7 Metric KPI Cards (Balanced 3-Top + 4-Bottom Symmetry) -->
+            <div class="da-grid-tiles da-grid-6">
+
+              <!-- Card 1 (Hero): TOKEN CHATWEB -->
+              <article class="da-tile card-purple da-tile-hero" aria-label="Token ChatWeb">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-purple">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN CHATWEB</span>
+                </div>
+                <div class="da-tile-value" id="daChatTurnValue">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daChatTurnDelta">Chưa có snapshot</span>
+                </div>
+                <div class="da-tile-sub" id="daChatTurnMeta">Thiếu phép đo giữ unknown, không suy diễn từ 0</div>
+              </article>
+
+              <!-- Card 2: TOKEN PROVIDER -->
+              <article class="da-tile card-blue" aria-label="Token provider">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-blue">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN PROVIDER</span>
+                </div>
+                <div class="da-tile-value" id="daTokensTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daTokensDelta">Chưa có UsageEvent canonical</span>
+                  <div class="da-mini-spark-wave blue" id="daSpark" aria-hidden="true"></div>
+                </div>
+                <div class="da-tile-sub" id="daTokensSplit" hidden>—</div>
+                <div class="da-tile-sub" id="daTokensMeta" hidden>—<span id="daTokensRate"></span></div>
+              </article>
+
+              <!-- Card 3: INPUT TOKEN -->
+              <article class="da-tile card-cyan" aria-label="Input token">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-cyan">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 3v12m0 0l-4-4m4 4l4-4"/></svg>
+                  </div>
+                  <span class="da-tile-label">INPUT TOKEN</span>
+                </div>
+                <div class="da-tile-value" id="daTokensInTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daTokensInDelta">Input token unknown</span>
+                </div>
+              </article>
+
+              <!-- Card 4: OUTPUT TOKEN -->
+              <article class="da-tile card-purple" aria-label="Output token">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-purple">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8V7a2 2 0 012-2h12a2 2 0 012 2v1M12 21V9m0 0l-4 4m4-4l4 4"/></svg>
+                  </div>
+                  <span class="da-tile-label">OUTPUT TOKEN</span>
+                </div>
+                <div class="da-tile-value" id="daTokensOutTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daTokensOutDelta">Output token unknown</span>
+                </div>
+              </article>
+
+              <!-- Card 5: CHI PHÍ QUY ĐỔI -->
+              <article class="da-tile card-green is-cost" aria-label="Chi phí quy đổi">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-green">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                  </div>
+                  <span class="da-tile-label">CHI PHÍ QUY ĐỔI</span>
+                </div>
+                <div class="da-tile-value" id="daCostTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta is-cost" id="daCostVnd">Quy đổi bảng giá • không phải ChatGPT billing</span>
+                </div>
+                <div class="da-tile-sub" id="daCostSplit" hidden>—</div>
+                <div class="da-tile-sub" id="daCostMeta" hidden>—</div>
+              </article>
+
+              <!-- Card 6: CACHED TOKEN -->
+              <article class="da-tile card-amber is-health" aria-label="Cached token">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-amber">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <span class="da-tile-label">CACHED TOKEN</span>
+                </div>
+                <div class="da-tile-value" id="daEfficiencyTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daEfficiencyDelta">Cached token unknown</span>
+                </div>
+                <div class="da-tile-sub" id="daEfficiencyMeta" hidden>—</div>
+                <div class="da-tile-sub" id="daEfficiencySub" hidden>—</div>
+                <svg id="daCallsRing" width="36" height="36" style="position:absolute;right:14px;bottom:12px" aria-hidden="true" hidden></svg>
+              </article>
+
+              <!-- Card 7: TOKEN / KẾT QUẢ -->
+              <article class="da-tile card-teal is-health" aria-label="Token trên mỗi kết quả">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-emerald">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN / KẾT QUẢ</span>
+                </div>
+                <div class="da-tile-value" id="daCallsTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daCallsDelta">Chưa có accepted-result evidence</span>
+                </div>
+                <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
+              </article>
+            </div>
+
+            <!-- Trust Strip / Horizontal Summary Strip -->
+            <div class="da-token-trust-strip" aria-label="Chất lượng số liệu token">
+              <span><small>AI thực thi</small><b id="daProviderTokenStatus">Chưa có snapshot</b></span>
+              <span><small>Context</small><b id="daEstimateConfidence">Chưa có ước lượng controller</b></span>
+              <span><small>Token lượt chat</small><b id="daTurnTokenStatus">Chưa đo lượt nào</b></span>
+              <span><small>Token lượt gọi tool</small><b id="daToolCallTokenStatus">Chưa đo lượt nào</b></span>
+              <span hidden><small>ChatWeb điều phối</small><b id="daControllerTokenStatus">Chưa đủ dữ liệu</b></span>
+            </div>
+
+            <!-- Chat Turn Log -->
+            <!-- Main 1-View Split Stage: Charts & Real-time Turn Stream Side-by-Side -->
+            <div class="da-split-view-row">
+              <div class="da-split-left">
+                <!-- Chart 1: Xu hướng sử dụng Token -->
+                <article class="cc-card da-chart-main-card">
+                  <div class="cc-card-head">
+                    <div class="title-with-info">
+                      <h3>Biểu Đồ Lượng Từ Sử Dụng Theo Thời Gian <i class="da-info-icon" title="Xem lượng từ ngữ tăng giảm trong ngày">ⓘ</i></h3>
+                      <div class="da-chart-legend">
+                        <span class="leg-item total"><i class="dot-blue"></i>Tổng lượng từ</span>
+                        <span class="leg-item in"><i class="dot-cyan"></i>Câu hỏi gửi vào</span>
+                        <span class="leg-item out"><i class="dot-purple"></i>Câu trả lời nhận về</span>
+                      </div>
+                    </div>
+                    <div class="da-chart-head-controls">
+                      <select class="da-time-select" id="daChartTimeMode">
+                        <option value="hour" selected>Xem theo giờ</option>
+                        <option value="day">Xem theo ngày</option>
+                      </select>
+                      <span class="more-options-dot">⋮</span>
+                    </div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-chart-wrap" id="daChartCard">
+                      <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Biểu đồ xu hướng token chưa có dữ liệu" role="img" hidden></svg>
+                      <div id="daChartEmpty" class="da-chart-empty">Chưa có dữ liệu — đang chờ snapshot.</div>
+                      <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
+                    </div>
+                  </div>
+                </article>
+
+                <!-- Sub 2-Columns: Donut & Tools Side-by-side -->
+                <div class="da-sub-charts-row">
+                  <!-- Chart 2: Phân bố theo Mô hình Donut -->
+                  <article class="cc-card da-donut-card">
+                    <div class="cc-card-head">
+                      <div>
+                        <h3>Tỷ Lệ Giữa Các Mô Hình AI <i class="da-info-icon" title="Xem mô hình nào đang gánh nhiều việc nhất">ⓘ</i></h3>
+                      </div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-donut-horizontal-wrap">
+                        <svg id="daDonut" class="da-donut" width="100" height="100" viewBox="0 0 130 130" role="img" aria-label="Phân bố token chưa có dữ liệu"><text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text><text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Chưa có dữ liệu</text></svg>
+                          <div class="da-legend-list" id="daLegend"></div>
+                          <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo UsageEvent canonical" hidden></div>
+                      </div>
+                    </div>
+                    <div class="da-donut-foot">
+                      <span id="daDonutFoot">—</span>
+                      <span id="daModelSummary" class="cc-pill">Chưa có dữ liệu</span>
+                    </div>
+                  </article>
+
+                  <!-- Chart 3: Chi phí theo Công cụ -->
+                  <article class="cc-card da-tools-card">
+                    <div class="cc-card-head">
+                      <div>
+                        <h3>Chi Phí Theo Nhóm Công Việc <i class="da-info-icon" title="Loại công việc nào tiêu tốn nhiều chi phí nhất">ⓘ</i></h3>
+                      </div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-bars" id="daToolBars"></div>
+                    </div>
+                    <div class="da-tools-foot">
+                      <span>Tổng chi phí công việc</span>
+                      <strong id="daToolCostTotal">—</strong>
+                    </div>
+                  </article>
+                </div>
+              </div>
+
+              <div class="da-split-right">
+                <!-- Chat Turn Log -->
+                <article class="cc-card" aria-labelledby="daTurnLogTitle">
+                  <div class="cc-card-head">
+                    <div>
+                      <h3 id="daTurnLogTitle">Nhật ký lượt chat <i class="da-info-icon" title="Từng lượt ChatWeb mới nhất: số exact hoặc ước lượng có khoảng. Mỗi lượt một dòng, không cộng dồn.">ⓘ</i></h3>
+                      <p>Mỗi lượt một dòng · mới nhất trước · cập nhật theo nhịp đồng bộ analytics.</p>
+                    </div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-turn-total" id="daTurnTotal">Tổng chưa xác nhận</div>
+                    <div class="da-turn-log" id="daTurnLog" role="table" aria-label="Nhật ký token từng lượt chat"><div class="da-turn-empty">Chưa có lượt chat nào được đo</div></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <!-- Collapsible Details Drawer for Deep Audit & Fleet Performance -->
+            <details class="cc-card da-drawer-card" id="daDrawerAnalytics">
+              <summary>
+                <span>📊 Bảng phân tích chi tiết &amp; Bằng chứng đo lường (Tốc độ, Heatmap, Accepted Result, Độ phủ)</span>
+                <span class="da-drawer-summary-badge">Mở rộng ▾</span>
+              </summary>
+              <div class="da-drawer-content">
+                <!-- 4. Sub-Grid: Speed & Heatmap -->
+                <div class="da-sub-grid-2">
+                  <!-- Sub Card 1: Tốc độ & Thời gian phản hồi -->
+                  <article class="cc-card da-sub-card">
+                    <div class="cc-card-head">
+                      <div><h3>Tốc Độ &amp; Thời Gian Chờ <i class="da-info-icon" title="Tốc độ tạo câu trả lời và thời gian chờ AI phản hồi">ⓘ</i></h3></div>
+                    </div>
+                    <div class="cc-card-body da-perf-split">
+                      <div class="sub-stat-block">
+                        <small>Tốc độ tạo câu trả lời</small>
+                        <strong id="daRealtimeTpm">—</strong>
+                        <span class="stat-change positive" id="daRealtimeTpmMeta">—</span>
+                      </div>
+                      <div class="sub-stat-block">
+                        <small>Thời gian bắt đầu trả lời</small>
+                        <strong id="daRealtimeLatency">—</strong>
+                        <span class="stat-change" id="daRealtimeLatencyMeta">—</span>
+                      </div>
+                    </div>
+                  </article>
+
+                  <!-- Sub Card 2: Heatmap -->
+                  <article class="cc-card da-sub-card">
+                    <div class="cc-card-head">
+                      <div><h3>Khung Giờ Hoạt Động (24 Giờ x 7 Ngày) <i class="da-info-icon" title="Khung giờ nào bạn trao đổi với AI nhiều nhất">ⓘ</i></h3></div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-heatmap-container" id="daHeatmapContainer">
+                        <div class="heatmap-day-labels">
+                          <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+                        </div>
+                        <div class="da-heatmap-grid" id="daHeatmapGrid"></div>
+                        <div class="heatmap-hour-labels">
+                          <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>23:00</span>
+                        </div>
+                        <div class="heatmap-scale">
+                          <span>Ít dùng</span>
+                          <div class="scale-bar-gradient"></div>
+                          <span>Dùng nhiều</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+
+                <!-- 5. Accepted Result Table -->
+                <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daOperationsTitle">Accepted result gần đây <i class="da-info-icon" title="Kết quả terminal trong cửa sổ 7 ngày; metric thiếu dữ liệu giữ unknown, không quy về 0">ⓘ</i></h3></div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-model-table-wrap">
+                      <table class="da-fleet-table">
+                        <thead><tr><th>KẾT QUẢ</th><th>TTAR</th><th>FIRST PASS</th><th>REPLAN</th><th>WAVES</th><th>TOOL CALLS</th><th>PROVIDER COST</th><th>SYSTEM COST</th></tr></thead>
+                        <tbody id="daOperationsTableBody"><tr class="da-fleet-row"><td colspan="8" class="cell-num">Chưa có accepted-result evidence.</td></tr></tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
+                </article>
+
+                <!-- 6. Measurement Coverage Audit Panel -->
+                <article class="cc-card" aria-labelledby="daCoverageTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daCoverageTitle">Measurement coverage</h3><p>Độ phủ bằng chứng exact/current. Thiếu phép đo giữ unknown, không quy về 0 và không suy diễn token từ byte telemetry.</p></div>
+                    <span id="daCoveragePolicy" class="cc-pill is-waiting">—</span>
+                  </div>
+                  <div class="cc-card-body cc-evidence-summary" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>ChatWeb controller usage</span><b id="daCoverageController">—</b><small id="daCoverageControllerMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Provider usage</span><b id="daCoverageProvider">—</b><small id="daCoverageProviderMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Tool invocation</span><b id="daCoverageInvocation">—</b><small id="daCoverageInvocationMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Tool-card tokens</span><b id="daCoverageToolCard">—</b><small id="daCoverageToolCardMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Cost</span><b id="daCoverageCost">—</b><small id="daCoverageCostMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Exact RUN attribution</span><b id="daCoverageRunAttribution">—</b><small id="daCoverageRunAttributionMeta" class="cc-detail">UNOBSERVED</small></div>
+                  </div>
+                </article>
+              </div>
+            </details>
+
+            <!-- 7. Collapsible Pricing & Cost Model Settings -->
+            <details class="cc-card da-cost-details-disclosure" id="daCostDetailsDisclosure">
+              <summary class="cc-card-head">
+                <div>
+                  <h3>Cài Đặt Bảng Giá &amp; Tùy Chỉnh Quy Đổi</h3>
+                  <p>Điều chỉnh đơn giá token theo USD / VNĐ để tính toán chi phí chính xác theo gói tài khoản của bạn</p>
+                </div>
+                <span class="cc-pill" style="font-size: 11px; font-weight: 750; color: var(--da-blue);">Mở cài đặt giá ›</span>
+              </summary>
+              <div class="cc-card-body">
+                <div class="da-cost-model">
+                  <div class="da-cost-form">
+                    <div class="da-field"><label>Mẫu giá định sẵn (USD / 1 triệu token)</label><select id="daPreset">
+                      <option value="gpt-4o-mini">GPT-4o mini (Giá rẻ, tiết kiệm nhất)</option>
+                      <option value="gpt-4o">GPT-4o (Thông dụng, chuẩn mực)</option>
+                      <option value="gpt-4.1">GPT-4.1 (Mới nhất, thông minh)</option>
+                      <option value="o3-mini">o3-mini (Tư duy suy luận nhanh)</option>
+                      <option value="o3">o3 (Tư duy suy luận chuyên sâu)</option>
+                      <option value="custom">Tự nhập đơn giá</option>
+                    </select></div>
+                    <div class="da-field"><label>Đơn giá gửi câu hỏi vào ($/1M token)</label><input id="daRateIn" type="number" min="0" step="0.01" inputmode="decimal" value="0.15"></div>
+                    <div class="da-field"><label>Đơn giá nhận câu trả lời ($/1M token)</label><input id="daRateOut" type="number" min="0" step="0.01" inputmode="decimal" value="0.60"></div>
+                    <div class="da-field"><label>Đơn vị tiền tệ hiển thị</label><select id="daCurrency"><option value="USD" selected>USD ($)</option><option value="VND">VNĐ (₫)</option></select></div>
+                    <div class="da-field" id="daFxField" hidden><label>Tỷ giá VNĐ / 1 USD</label><input id="daFx" type="number" min="1" step="100" inputmode="decimal" placeholder="25000"></div>
+                    <button class="da-apply" id="daApply">Lưu cài đặt</button>
+                  </div>
+                  <div class="da-lane-grid">
+                    <div class="da-lane-head"><span>Mô hình AI</span><span>Giá gửi $/1M</span><span>Giá nhận $/1M</span></div>
+                    <label class="da-lane-row"><span><i class="is-chatweb"></i>Khung Chat Web (ChatWeb)</span><input id="daLaneChatIn" type="number" min="0" step="0.01" value="0.15"><input id="daLaneChatOut" type="number" min="0" step="0.01" value="0.60"></label>
+                    <label class="da-lane-row"><span><i class="is-fast"></i>Phản Hồi Nhanh (Codex Fast)</span><input id="daLaneFastIn" type="number" min="0" step="0.01" value="0.15"><input id="daLaneFastOut" type="number" min="0" step="0.01" value="0.60"></label>
+                    <label class="da-lane-row"><span><i class="is-deepseek"></i>Lập Trình Sâu (OpenCode)</span><input id="daLaneDeepIn" type="number" min="0" step="0.01" value="0.28"><input id="daLaneDeepOut" type="number" min="0" step="0.01" value="0.42"></label>
+                    <label class="da-lane-row"><span><i class="is-terra"></i>Tác Vụ Phức Tạp (Codex Deep)</span><input id="daLaneTerraIn" type="number" min="0" step="0.01" value="2.50"><input id="daLaneTerraOut" type="number" min="0" step="0.01" value="10.00"></label>
+                    <label class="da-lane-row"><span><i class="is-sol"></i>Tối Quan Trọng (Codex Critical)</span><input id="daLaneSolIn" type="number" min="0" step="0.01" value="10.00"><input id="daLaneSolOut" type="number" min="0" step="0.01" value="40.00"></label>
+                  </div>
+                  <p class="da-cost-note"><b>Lưu ý:</b> Bảng chi phí là ước tính tham khảo quy đổi theo số từ ngữ trao đổi, không đại diện cho hóa đơn trừ tiền trực tiếp từ tài khoản dịch vụ AI của bạn.</p>
+                </div>
+              </div>
+            </details>
             <article class="cc-card legacy-overview" id="runtimeSourceStatusCard">
               <div class="cc-card-head"><div><h3>Loaded runtime source</h3><p>Ba component chỉ CURRENT khi running revision khớp disk; Tunnel dùng READY theo health receipt, không giả làm source revision.</p></div><span id="runtimeSourceSummary" class="cc-pill is-waiting">Đang kiểm tra</span></div>
               <div class="cc-card-body cc-evidence-summary">
@@ -145,8 +509,6 @@
                 </div>
               </article>
             </section>
-
-            <!-- Token KPI tiles live in renderer/token-dashboard.html. -->
 
             <!-- Hidden compatibility containers required by test contracts -->
             <div class="cc-kpi-grid" aria-label="Operational KPIs" hidden style="display: none !important;">
@@ -249,7 +611,7 @@
         </section>
 
         <section class="page" data-page-view="system">
-          <div class="section-header"><div><span class="section-kicker">CÀI ĐẶT</span><h2>Cài đặt máy này</h2><p>Một nơi để kết nối máy, chọn thư mục, liên kết tài khoản và xử lý vấn đề. Chi tiết kỹ thuật chỉ mở khi cần.</p></div></div>
+          <div class="section-header"><div><span class="section-kicker">THIẾT LẬP HỆ THỐNG</span><h2>Kết nối một lần, tiếp tục từ đây</h2><p>Ubuntu điều phối chung. Máy Windows giữ thư mục và thực thi trong quyền bạn cho phép.</p></div><button class="secondary-button" id="refreshSystemSetup" type="button">Kiểm tra thiết lập</button></div>
 
           <article class="setup-card panel" id="setupSummary" aria-labelledby="setupSummaryTitle">
             <div class="setup-card-head"><div><span class="section-kicker">THIẾT LẬP TIẾP TỤC ĐƯỢC</span><h3 id="setupSummaryTitle">Đang đọc trạng thái thiết lập…</h3><p id="setupSummaryText">Cấu hình đã lưu sẽ được giữ lại khi đóng và mở lại ứng dụng.</p></div><span id="setupSummaryBadge" class="soft-badge neutral">Đang kiểm tra</span></div>
@@ -262,19 +624,21 @@
             <div class="setup-card-actions"><p id="setupNextDetail">Chưa có trạng thái mới.</p><button class="primary-button" id="setupPrimaryAction" type="button">Kiểm tra lại</button></div>
           </article>
 
-          <div class="settings-groups" aria-label="Nhóm cài đặt">
-            <button class="settings-group-card" data-nav="deploy"><span class="settings-group-icon">↔</span><span><b>Kết nối</b><small>Ubuntu, máy này, pairing và liên kết tài khoản.</small><em id="settingsConnectionSummary">Đang kiểm tra</em></span><i>›</i></button>
-            <button class="settings-group-card" data-nav="workspace"><span class="settings-group-icon">▱</span><span><b>Thư mục & quyền</b><small>Đường dẫn local, quyền đọc/ghi/chạy và workspace đã chọn.</small><em id="settingsWorkspaceSummary">Đang kiểm tra</em></span><i>›</i></button>
-            <button class="settings-group-card" data-nav="settings"><span class="settings-group-icon">◐</span><span><b>Ứng dụng</b><small>Giao diện, mở cùng Windows và chạy nền.</small><em id="settingsAppSummary">Mở tùy chọn ứng dụng</em></span><i>›</i></button>
-            <button class="settings-group-card" data-nav="health"><span class="settings-group-icon">?</span><span><b>Hỗ trợ & nâng cao</b><small>Kiểm tra, nhật ký, build và tùy chọn kỹ thuật.</small><em>Chỉ mở khi cần xử lý</em></span><i>›</i></button>
-          </div>
+          <nav class="setup-navigation" aria-label="Các phần thiết lập hệ thống">
+            <button class="setup-section-link" data-nav="deploy"><b>1. Máy chủ & tài khoản</b><small id="settingsConnectionSummary">Đang kiểm tra</small></button>
+            <button class="setup-section-link" data-nav="workspace"><b>2. Thư mục & quyền</b><small id="settingsWorkspaceSummary">Đang kiểm tra</small></button>
+            <button class="setup-section-link" data-nav="settings"><b>Tùy chọn ứng dụng</b><small id="settingsAppSummary">Giao diện & chạy nền</small></button>
+          </nav>
 
+          <details class="setup-support">
+            <summary>Hỗ trợ & nâng cao</summary>
           <div class="system-launch-grid settings-advanced-links">
             <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Kiểm tra & sửa chữa</b><small>Quan sát trạng thái và chỉ sửa khi bạn bấm rõ ràng.</small></span><i>›</i></button>
             <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Nhật ký hỗ trợ</b><small>Xem chẩn đoán cục bộ đã che dữ liệu nhạy cảm.</small></span><i>›</i></button>
             <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build & xác minh</b><small>Dành cho người quản trị hoặc người phát triển.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="guide"><span class="system-launch-icon">GD</span><span><b>Hướng dẫn kết nối cũ</b><small>Chỉ dùng cho direct legacy; Ubuntu không cần Tunnel tại Windows.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="guide" data-direct-only><span class="system-launch-icon">GD</span><span><b>Hướng dẫn kết nối cũ</b><small>Chỉ dùng cho direct legacy; Ubuntu không cần Tunnel tại Windows.</small></span><i>›</i></button>
           </div>
+          </details>
         </section>
 
         <section class="page" data-page-view="deploy">
@@ -282,20 +646,32 @@
 
           <div class="two-column deploy-grid">
             <article class="panel">
-              <div id="centralExecutorNotice" class="notice blue-notice" hidden>
-                <b>Máy thực thi được Ubuntu quản lý</b>
-                <p id="centralExecutorNoticeText">Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. Máy này chỉ giữ MCP nội bộ, workspace và policy/action được cấp.</p>
-                <p id="centralExecutorActivationStatus"></p>
-                <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
-                <label class="field"><span>Địa chỉ máy chủ Ubuntu</span><div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://ubuntu-host.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Kết nối máy chủ</button></div><small id="controlPlaneEnrollmentStatus">Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI.</small></label>
-                <div id="controlPlaneCredentialRotation" class="setting-row" hidden><span><b>Credential máy</b><small id="controlPlaneCredentialRotationStatus">Chỉ đổi sau khi Ubuntu đã duyệt máy; raw credential không hiển thị trong UI.</small></span><button id="rotateControlPlaneCredential" class="secondary-button" type="button">Đổi credential</button></div>
+              <div id="centralExecutorNotice" class="central-setup" hidden>
+                <div class="setup-mode-notice" id="setupDevelopmentNotice" role="status" hidden><b>Bạn đang dùng bản phát triển · npm start</b><p>Bản này dùng để phát triển giao diện. Các bước xác minh máy, thư mục và quyền Ubuntu cần bản cài đặt đã được xác minh. Máy chủ đang bật không đồng nghĩa máy Windows đã được cấp quyền.</p></div>
+                <label class="field" for="controlPlaneServerUrl"><span>Địa chỉ máy chủ Ubuntu</span></label>
+                <div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" aria-describedby="controlPlaneEnrollmentStatus" placeholder="https://ten-may-chu.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu kết nối</button></div>
+                <p id="controlPlaneEnrollmentStatus" class="setup-field-help" role="status" aria-live="polite">Nhập địa chỉ HTTPS của Ubuntu. Không cần API key hay Tunnel trên Windows.</p>
+                <div class="setup-server-admin">
+                  <h3>Quản trị chung trên Ubuntu</h3>
+                  <p>Mở cùng địa chỉ máy chủ từ bất kỳ máy nào truy cập được mạng riêng / Tailnet. Đăng nhập operator trong trình duyệt để xem các máy, duyệt kết nối và quản lý quyền. Trang “Máy này” chỉ điều khiển Windows hiện tại.</p>
+                  <button class="secondary-button" id="openControlPlaneConsole" type="button" disabled>Mở trang quản trị Ubuntu</button>
+                  <p id="controlPlaneConsoleHint">Nhập địa chỉ Ubuntu ở trên để mở trang quản trị. Mở trang không đăng ký máy hoặc cấp quyền.</p>
+                </div>
+                <div class="setup-next-step" aria-live="polite"><span class="section-kicker" id="connectionNextOwner">BƯỚC TIẾP THEO</span><h3 id="connectionNextTitle">Đang kiểm tra kết nối…</h3><p id="connectionNextText">Giữ nguyên cấu hình đã lưu.</p><button class="secondary-button" id="refreshControlPlaneEnrollment" type="button">Kiểm tra trạng thái máy</button></div>
                 <div id="controlPlaneAuthorityStatusCard" class="authority-status-card" hidden>
-                  <div class="panel-title"><div><h3>Liên kết tài khoản & target</h3><p>Enrollment chỉ xác minh máy. Card này đọc binding/target mà Ubuntu đã cấp cho máy, không tạo quyền mới.</p></div><span id="controlPlaneAuthorityStatusBadge" class="soft-badge neutral">Chưa kiểm tra</span></div>
+                  <div class="panel-title"><div><h3>Tài khoản & máy được phép làm việc</h3><p>Duyệt máy xong, quản trị viên cần cấp thư mục cho tài khoản của bạn.</p></div><span id="controlPlaneAuthorityStatusBadge" class="soft-badge neutral">Chưa kiểm tra</span></div>
                   <p id="controlPlaneAuthorityStatusText">Kiểm tra này chỉ đọc trạng thái Ubuntu; không tạo binding hoặc cấp quyền.</p>
                   <div id="controlPlaneAuthorityTargets" class="authority-target-list" aria-live="polite"><span class="task-muted">Chưa kiểm tra target.</span></div>
                   <button id="refreshControlPlaneAuthorityStatus" class="secondary-button" type="button">Kiểm tra liên kết</button>
                 </div>
-                <div class="notice"><b>Quyền task sẽ đến từ liên kết tài khoản</b><p>Không dán <code>ctx_…</code>, Operator Token hoặc bearer vào Windows. Sau khi OAuth được liên kết, account sẽ chọn target được cấp và Ubuntu tạo binding nội bộ. Quyền file/Git/build/test/process vẫn chạy trên máy này theo capability local mà chủ máy cấu hình khi bind.</p></div>
+                <details class="setup-technical"><summary>Chi tiết kỹ thuật & khôi phục</summary>
+                  <p id="centralExecutorNoticeText">Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu.</p>
+                  <p id="centralExecutorActivationStatus"></p>
+                  <pre id="controlPlaneTechnicalStatus"></pre>
+                  <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
+                  <div id="controlPlaneCredentialRotation" class="setting-row" hidden><span><b>Credential máy</b><small id="controlPlaneCredentialRotationStatus">Chỉ đổi sau khi Ubuntu đã duyệt máy; raw credential không hiển thị trong UI.</small></span><button id="rotateControlPlaneCredential" class="secondary-button" type="button">Đổi credential</button></div>
+                  <p>Không dán <code>ctx_…</code>, Operator Token hoặc bearer vào Windows. Máy này chỉ thực thi trong quyền local được cấp; kết nối không tự tạo quyền.</p>
+                </details>
               </div>
               <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
                 <b>Chuyển vai trò máy này sang executor Ubuntu</b>

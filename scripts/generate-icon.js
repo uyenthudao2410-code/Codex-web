@@ -5,6 +5,24 @@ const zlib = require('node:zlib');
 const ROOT = path.resolve(__dirname, '..');
 const PNG_PATH = path.join(ROOT, 'electron', 'app-icon.png');
 const ICO_PATH = path.join(ROOT, 'electron', 'app-icon.ico');
+const SOURCE_IMAGE = path.join(ROOT, 'docs', 'ICON.png');
+
+function tryBuildFromSource() {
+  if (!fs.existsSync(SOURCE_IMAGE)) return false;
+  const scriptPath = path.join(ROOT, 'scripts', 'build-icon-from-source.py');
+  const runner = path.join(ROOT, 'scripts', 'run-python.js');
+  const { spawnSync } = require('node:child_process');
+  const res = spawnSync(process.execPath, [runner, scriptPath], {
+    stdio: 'inherit',
+    cwd: ROOT
+  });
+  return res.status === 0;
+}
+
+if (tryBuildFromSource()) {
+  process.exit(0);
+}
+
 
 function crc32(buffer) {
   let crc = 0xffffffff;

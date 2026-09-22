@@ -22,3 +22,25 @@ test('legacy icon files are not used as build inputs', () => {
   assert.equal(fs.existsSync(path.join(root, 'electron', 'tray.png')), false);
   assert.equal(fs.existsSync(path.join(root, 'build', 'icon.png')), false);
 });
+
+test('canonical icon source docs/ICON.png is present and produces valid outputs', () => {
+  const iconSource = path.join(root, 'docs', 'ICON.png');
+  const appIconPng = path.join(root, 'electron', 'app-icon.png');
+  const appIconIco = path.join(root, 'electron', 'app-icon.ico');
+
+  assert.equal(fs.existsSync(iconSource), true);
+  assert.ok(fs.statSync(iconSource).size > 1000);
+
+  assert.equal(fs.existsSync(appIconPng), true);
+  const pngHeader = fs.readFileSync(appIconPng);
+  assert.equal(pngHeader.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), true);
+  assert.equal(pngHeader.readUInt32BE(16), 512);
+  assert.equal(pngHeader.readUInt32BE(20), 512);
+
+  assert.equal(fs.existsSync(appIconIco), true);
+  const icoHeader = fs.readFileSync(appIconIco);
+  assert.equal(icoHeader.readUInt16LE(0), 0);
+  assert.equal(icoHeader.readUInt16LE(2), 1);
+  assert.ok(icoHeader.readUInt16LE(4) >= 7);
+});
+

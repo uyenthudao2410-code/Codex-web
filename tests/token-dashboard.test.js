@@ -8,50 +8,10 @@ const { componentOwnsPath } = require('../electron/services/componentRevision');
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
+// The token dashboard is hosted directly in renderer/index.html, so the KPI
+// typography/narrow-breakpoint contracts live in the shared dashboard stylesheet.
 function dashboardStyleSources() {
-  const inlineStyles = [...read('renderer/token-dashboard.html').matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]);
-  assert.ok(inlineStyles.length, 'standalone dashboard styles missing');
-  return [['shared', read('renderer/dashboard.css')], ['standalone', inlineStyles.join('\n')]];
-}
-
-function loadTokenDashboardBootstrap(closeTokenDashboard) {
-  const html = read('renderer/token-dashboard.html');
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-  const source = scripts.at(-1)?.[1];
-  assert.ok(source, 'token dashboard inline bootstrap missing');
-
-  const controls = new Map();
-  const createControl = () => {
-    const listeners = new Map();
-    return {
-      addEventListener(type, listener) { listeners.set(type, listener); },
-      listener(type) { return listeners.get(type); }
-    };
-  };
-  controls.set('themeToggleBtn', createControl());
-  controls.set('closeManager', createControl());
-  let fallbackCloseCalls = 0;
-  const context = {
-    window: {
-      location: { search: '?theme=dark' },
-      mcpAssistant: closeTokenDashboard ? { closeTokenDashboard } : undefined,
-      close: () => { fallbackCloseCalls += 1; }
-    },
-    document: {
-      documentElement: { setAttribute() {}, getAttribute() { return 'dark'; } },
-      body: { dataset: {}, setAttribute() {} },
-      getElementById(id) { return controls.get(id) || null; }
-    },
-    URLSearchParams,
-    Promise
-  };
-  vm.runInNewContext(source, context, { filename: 'renderer/token-dashboard.html' });
-  const close = controls.get('closeManager').listener('click');
-  assert.equal(typeof close, 'function', 'token dashboard close handler missing');
-  return {
-    close,
-    fallbackCloseCalls: () => fallbackCloseCalls
-  };
+  return [['shared', read('renderer/dashboard.css')]];
 }
 
 function heartbeatPublisherSource() {
@@ -71,10 +31,9 @@ function makeWindow(messages, destroyed = false) {
   };
 }
 
-async function publishHeartbeat({ tokenDestroyed = false } = {}) {
+async function publishHeartbeat() {
   const managerMessages = [];
   const chatMessages = [];
-  const tokenMessages = [];
   const status = { fullyReady: true, telemetryAvailable: true };
   const context = {
     runtimeHeartbeatInFlight: null,
@@ -82,7 +41,6 @@ async function publishHeartbeat({ tokenDestroyed = false } = {}) {
     lastRecoveryProgressTime: null,
     sendManager: (channel, payload) => managerMessages.push({ channel, payload }),
     chatWindow: makeWindow(chatMessages),
-    tokenWindow: makeWindow(tokenMessages, tokenDestroyed),
     registerUiRevision: () => Promise.resolve(),
     Promise
   };
@@ -90,7 +48,7 @@ async function publishHeartbeat({ tokenDestroyed = false } = {}) {
     filename: 'electron/main.js#publishRuntimeHeartbeat'
   });
   await context.publishRuntimeHeartbeat();
-  return { status, managerMessages, chatMessages, tokenMessages };
+  return { status, managerMessages, chatMessages };
 }
 
 test('KPI metadata keeps typography without outer tile geometry', () => {
@@ -123,34 +81,31 @@ test('final narrow rules retain readable KPI tracks and populated analytics', ()
   }
 });
 
-test('standalone donut has no measured segments before the first snapshot', () => {
-  for (const relative of ['renderer/token-dashboard.html']) {
-    const html = read(relative);
-    const donut = html.match(/<svg id="daDonut"[\s\S]*?<\/svg>/)?.[0];
-    assert.ok(donut, relative + ' donut missing');
-    assert.doesNotMatch(donut, /<circle\b/, relative + ' has unobserved initial segments');
-    assert.match(donut, /id="daDonutTotal"[^>]*>—<\/text>/);
-  }
+test('overview donut has no measured segments before the first snapshot', () => {
+  const html = read('renderer/index.html');
+  const donut = html.match(/<svg id="daDonut"[\s\S]*?<\/svg>/)?.[0];
+  assert.ok(donut, 'donut missing');
+  assert.doesNotMatch(donut, /<circle\b/, 'overview has unobserved initial segments');
+  assert.match(donut, /id="daDonutTotal"[^>]*>—<\/text>/);
 });
 
-test('token dashboard shows no fabricated numbers before the live snapshot', () => {
-  const html = read('renderer/token-dashboard.html');
+test('token overview shows no fabricated numbers before the live snapshot', () => {
+  const html = read('renderer/index.html');
   assert.match(html, /<meta http-equiv="Content-Security-Policy" content="default-src 'self';/);
   assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
   assert.doesNotMatch(html, /Math\.random\(\)/);
   for (const id of ['daChatTurnValue', 'daTokensTotal', 'daCostTotal', 'daDonutTotal', 'daToolCostTotal', 'daRealtimeTpm', 'daCoveragePolicy']) {
     const tag = html.match(new RegExp(`<[^>]+id="${id}"[^>]*>[\\s\\S]*?(</[a-z]+>|/>)`));
-    assert.ok(tag, `token dashboard thiếu id ${id}`);
+    assert.ok(tag, `token overview thiếu id ${id}`);
     assert.doesNotMatch(tag[0], /216\.8M|18\.4K|\$48\.25|43\.2K|đạt chuẩn 100%|142 lần|Đã đo 142/);
   }
   assert.match(html, /id="daTurnLog"/);
   assert.match(html, /Nhật ký lượt chat/);
   assert.match(html, /<script src="control-center\.js"><\/script>/);
   assert.match(html, /<script src="dashboard\.js"><\/script>/);
-  assert.match(html, /themeToggleBtn/);
+  assert.match(html, /id="themeToggle"/);
   assert.match(html, /Chưa có dữ liệu — đang chờ snapshot\./);
   assert.match(html, /Chưa có accepted-result evidence\./);
-  assert.match(html, /Chưa có snapshot runtime/);
   assert.match(html, /Chờ snapshot overview; không có dữ liệu được tự tạo/);
   assert.match(html, /Chưa có lượt chat nào được đo/);
   assert.match(html, /Chưa có ước lượng controller/);
@@ -178,88 +133,46 @@ test('token dashboard shows no fabricated numbers before the live snapshot', () 
   }
   assert.doesNotMatch(html, /Standalone Preview Fallback/);
   assert.doesNotMatch(html, /Bộ lọc nâng cao|Xuất báo cáo dữ liệu/);
-  assert.match(html, /const initialTheme = params\.get\('theme'\) \|\| 'light';/);
 });
 
-test('token dashboard opens in its own window with the shared manager preload', () => {
-  const main = read('electron/main.js');
-  assert.match(main, /let tokenWindow;/);
-  assert.match(main, /function openTokenWindow\(\)/);
-  assert.match(main, /token-dashboard\.html/);
-  assert.match(main, /preload: path\.join\(__dirname, 'preload\.js'\)/);
-  assert.match(main, /secureHandle\('token-dashboard:open'/);
-  assert.match(main, /secureHandle\('token-dashboard:close'/);
-  assert.match(main, /openTokenWindow\(\); return true/);
-  assert.match(main, /tokenWindow\.on\('closed', \(\) => \{ tokenWindow = null; \}\)/);
-  assert.doesNotMatch(main, /tokenWindow\.hide\(\)/);
-  const preload = read('electron/preload.js');
-  assert.match(preload, /openTokenDashboard: \(\) => ipcRenderer\.invoke\('token-dashboard:open'\)/);
-  assert.match(preload, /closeTokenDashboard: \(\) => ipcRenderer\.invoke\('token-dashboard:close'\)/);
+test('token overview is hosted directly in the Control Center without a standalone window', () => {
+  assert.equal(fs.existsSync(path.join(root, 'renderer', 'token-dashboard.html')), false);
   const html = read('renderer/index.html');
-  assert.match(html, /id="daTokenBoardButton"/);
-  assert.match(html, /Bảng token/);
+  assert.doesNotMatch(html, /daTokenBoardButton/);
+  assert.doesNotMatch(html, /overviewTokenFrame/);
+  const main = read('electron/main.js');
+  assert.doesNotMatch(main, /tokenWindow/);
+  assert.doesNotMatch(main, /token-dashboard/);
+  const preload = read('electron/preload.js');
+  assert.doesNotMatch(preload, /openTokenDashboard|closeTokenDashboard|token-dashboard/);
   const js = read('renderer/dashboard.js');
-  assert.match(js, /byId\('daTokenBoardButton'\)\?\.addEventListener\('click'/);
-  assert.match(js, /api\.openTokenDashboard\(\)/);
+  assert.doesNotMatch(js, /daTokenBoardButton|openTokenDashboard|overviewTokenFrame/);
 });
 
-test('token dashboard close control invokes the exposed preload bridge', async () => {
-  let bridgeCalls = 0;
-  const harness = loadTokenDashboardBootstrap(async () => {
-    bridgeCalls += 1;
-    return { ok: true, data: true };
-  });
-
-  await harness.close();
-
-  assert.equal(bridgeCalls, 1);
-  assert.equal(harness.fallbackCloseCalls(), 0);
-});
-
-test('token dashboard falls back to window close if its close bridge fails', async () => {
-  const rejected = loadTokenDashboardBootstrap(async () => { throw new Error('IPC unavailable'); });
-  await rejected.close();
-  assert.equal(rejected.fallbackCloseCalls(), 1);
-
-  const failed = loadTokenDashboardBootstrap(async () => ({ ok: false, error: 'IPC unavailable' }));
-  await failed.close();
-
-  assert.equal(failed.fallbackCloseCalls(), 1);
-});
-
-test('runtime heartbeat reaches a live token window and skips a destroyed one', async () => {
+test('runtime heartbeat reaches manager and chat windows only', async () => {
   const live = await publishHeartbeat();
   assert.deepEqual(live.managerMessages, [{ channel: 'runtime:heartbeat', payload: live.status }]);
   assert.deepEqual(live.chatMessages, [{ channel: 'runtime:heartbeat', payload: live.status }]);
-  assert.deepEqual(live.tokenMessages, [{ channel: 'runtime:heartbeat', payload: live.status }]);
-
-  const destroyed = await publishHeartbeat({ tokenDestroyed: true });
-  assert.equal(destroyed.tokenMessages.length, 0);
 });
 
-test('standalone token header waits for real workspace data', () => {
-  for (const relative of ['renderer/token-dashboard.html']) {
-    const html = read(relative);
-    assert.match(html, /id="daProjectText">Chưa xác nhận</);
-    assert.match(html, /id="daEnvText">Chưa xác nhận</);
-    assert.doesNotMatch(html, /id="daProjectSelect"|Nền tảng AI Doanh nghiệp|Multi-Agent Workspace/);
-    assert.doesNotMatch(html, /Bộ lọc nâng cao|Xuất báo cáo dữ liệu|Tự động ▾/);
-  }
-  const standalone = read('renderer/token-dashboard.html');
-  assert.doesNotMatch(standalone, /<button[^>]*(?:data-page=|data-nav=|data-open=)/);
-  assert.doesNotMatch(standalone, /id="(?:topStartButton|refreshButton|daTokenBoardButton)"/);
-  for (const id of ['ccRefreshButton', 'daRefreshButton', 'themeToggleBtn', 'closeManager']) {
-    assert.match(standalone, new RegExp(`id="${id}"`));
+test('token overview waits for real workspace data', () => {
+  const html = read('renderer/index.html');
+  assert.match(html, /id="daProjectText">Chưa xác nhận</);
+  assert.match(html, /id="daEnvText">Chưa xác nhận</);
+  assert.doesNotMatch(html, /id="daProjectSelect"|Nền tảng AI Doanh nghiệp|Multi-Agent Workspace/);
+  assert.doesNotMatch(html, /Bộ lọc nâng cao|Xuất báo cáo dữ liệu|Tự động ▾/);
+  for (const id of ['ccRefreshButton', 'daRefreshButton', 'themeToggle', 'closeManager']) {
+    assert.match(html, new RegExp(`id="${id}"`));
   }
 });
 
-test('token dashboard self-hosts its display fonts (offline-safe)', () => {
+test('token overview self-hosts its display fonts (offline-safe)', () => {
   const css = read('renderer/fonts.css');
   assert.match(css, /font-family: 'Plus Jakarta Sans'/);
   assert.match(css, /font-family: 'JetBrains Mono'/);
   assert.match(css, /font-display: swap/);
   assert.doesNotMatch(css, /https?:\/\//);
-  const html = read('renderer/token-dashboard.html');
+  const html = read('renderer/index.html');
   assert.match(html, /<link rel="stylesheet" href="fonts\.css">/);
   for (const file of [
     'PlusJakartaSans-vietnamese.woff2',

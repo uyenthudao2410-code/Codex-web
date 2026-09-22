@@ -68,6 +68,10 @@ __pycache__/
 # Watched frontend development output.
 /frontend/.dev-dist/
 
+# Local packaging/release outputs are rebuilt from source and are not source
+# or canonical delivery evidence. Keep them out of the repository history.
+/output/
+
 # Coding Tools history/telemetry/orchestration is repository evidence.
 # Keep every current and future file below .coding-tools visible to Git except
 # the two transient SQLite sidecars explicitly authorized by the operator.

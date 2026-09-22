@@ -99,13 +99,15 @@ test('central enrollment reconciles durable status after reload without passing 
         credential_generation: 2,
         fresh: true,
         observed_at_ms: Date.now(),
-        error_code: null
+        error_code: null,
+        server_origin: 'https://SVHOME.tail0e4032.ts.net/'
       }) + '\n', stderr: '' };
     }
   });
   const status = await service.reconcileEnrollment({ deviceIdentity: identity });
   assert.equal(status.state, 'approved');
   assert.equal(status.credential_generation, 2);
+  assert.equal(status.server_origin, 'https://svhome.tail0e4032.ts.net');
   assert.equal(calls.length, 1);
   const [command, args, options] = calls[0];
   assert.equal(command, path.join(root, 'python.exe'));
@@ -116,6 +118,14 @@ test('central enrollment reconciles durable status after reload without passing 
     () => parseEnrollmentStatusResult(JSON.stringify({
       device_id: identity.device_id, enrollment_id: 'enroll_12345678', state: 'approved',
       credential_generation: 2, fresh: true, observed_at_ms: Date.now(), error_code: 'bad code'
+    }), identity.device_id),
+    { code: 'CONTROL_PLANE_ENROLLMENT_STATUS_OUTPUT_INVALID' }
+  );
+  assert.throws(
+    () => parseEnrollmentStatusResult(JSON.stringify({
+      device_id: identity.device_id, enrollment_id: 'enroll_12345678', state: 'approved',
+      credential_generation: 2, fresh: true, observed_at_ms: Date.now(), error_code: null,
+      server_origin: 'https://operator:secret@svhome.tail0e4032.ts.net/'
     }), identity.device_id),
     { code: 'CONTROL_PLANE_ENROLLMENT_STATUS_OUTPUT_INVALID' }
   );

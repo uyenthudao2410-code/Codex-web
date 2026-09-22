@@ -7,11 +7,19 @@ import sqlite3
 import subprocess
 import tempfile
 import time
+import importlib.util
 from datetime import datetime, timezone
 from pathlib import Path
 
 CANONICAL_LEDGER = ".coding-tools/orchestration/ledger.sqlite3"
 DELIVERY_RECEIPT = ".coding-tools/delivery-snapshot.json"
+
+
+def verify_history(root: Path, extra_refs: tuple[str, ...] = ()) -> dict:
+    spec = importlib.util.spec_from_file_location('ledger_delivery_history', Path(__file__).with_name('ledger-delivery-history.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.verify_history(root, extra_refs)
 
 
 def run_git(root: Path, args: list[str], *, text: bool = True) -> subprocess.CompletedProcess:
@@ -98,6 +106,7 @@ def verify_index(root: Path) -> tuple[str, int, int]:
         raise RuntimeError("staged delivery snapshot receipt size does not match the staged ledger")
     if int(receipt.get("user_version", -1)) != user_version:
         raise RuntimeError("staged delivery snapshot receipt user_version does not match the staged ledger")
+    verify_history(root)
     return blob, size_bytes, user_version
 
 
@@ -177,8 +186,15 @@ def main() -> int:
         action="store_true",
         help="Verify that the canonical ledger currently staged in the Git index is a valid SQLite database.",
     )
+    parser.add_argument('--verify-history', action='store_true', help='Read-only semantic history check of the staged ledger and archives.')
+    parser.add_argument('--baseline', action='append', default=[], help='Additional historical commit to audit with --verify-history only.')
     args = parser.parse_args()
     root = git_root()
+    if args.baseline and not args.verify_history:
+        parser.error('--baseline requires --verify-history')
+    if args.verify_history:
+        print(json.dumps(verify_history(root, tuple(args.baseline)), sort_keys=True))
+        return 0
     if args.verify_index:
         blob, size_bytes, user_version = verify_index(root)
         print(

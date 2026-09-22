@@ -1,0 +1,187 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: Execution Hub · Control Center
+    - button "×" [ref=e4] [cursor=pointer]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - generic [ref=e25]:
+        - strong [ref=e26]: Codex Hub
+        - generic [ref=e27]: Control Center
+      - navigation "Điều hướng chính" [ref=e28]:
+        - button "CC Command Center" [active] [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: CC
+          - generic [ref=e31]: Command Center
+        - button "TP Tasks & Proof" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33]: TP
+          - generic [ref=e34]: Tasks & Proof
+        - button "DV Máy này" [ref=e35] [cursor=pointer]:
+          - generic [ref=e36]: DV
+          - generic [ref=e37]: Máy này
+        - button "ST Thiết lập hệ thống" [ref=e38] [cursor=pointer]:
+          - generic [ref=e39]: ST
+          - generic [ref=e40]: Thiết lập hệ thống
+      - generic [ref=e41]:
+        - generic [ref=e42]: Dịch vụ chưa chạy
+        - paragraph [ref=e45]: Chưa chọn thư mục làm việc
+        - generic [ref=e46]:
+          - generic [ref=e47]: MCP OFF
+          - generic [ref=e48]: Tunnel OFF
+      - generic [ref=e49]:
+        - button "Coding Tools MCP · 1.0.7" [ref=e50] [cursor=pointer]
+        - generic [ref=e51]: Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - heading "Command Center" [level=1] [ref=e137]
+        - generic [ref=e56]:
+          - button "Thiết bị hiện tại local · unknown · Git n/a" [ref=e57] [cursor=pointer]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: Thiết bị hiện tại
+              - generic [ref=e61]: local · unknown · Git n/a
+          - button "◐" [ref=e62] [cursor=pointer]
+          - button "Kiểm tra lại" [ref=e63] [cursor=pointer]
+          - button "Khởi động nhanh" [ref=e64] [cursor=pointer]
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - generic [ref=e70]: UNKNOWN
+              - heading "Runtime telemetry is unavailable" [level=2] [ref=e71]
+            - generic [ref=e72]:
+              - generic [ref=e73]: Snapshot UNKNOWN · telemetry_unavailable
+              - button "Bảng token" [ref=e74] [cursor=pointer]
+              - button "Refresh" [ref=e78] [cursor=pointer]
+          - iframe [ref=e80]:
+            - main [ref=f1e3]:
+              - generic [ref=f1e5]:
+                - generic [ref=f1e7]:
+                  - generic [ref=f1e8]:
+                    - generic [ref=f1e9]: UNKNOWN
+                    - heading "Chưa có snapshot runtime" [level=2] [ref=f1e10]
+                  - generic [ref=f1e11]:
+                    - generic [ref=f1e12]: Chưa đồng bộ
+                    - button "Refresh" [ref=f1e13] [cursor=pointer]
+                - heading "Định lượng Token & Hiệu quả" [level=2] [ref=f1e16]
+                - generic [ref=f1e17]:
+                  - generic [ref=f1e18]:
+                    - generic [ref=f1e20]:
+                      - generic [ref=f1e21]: WORKSPACE
+                      - generic [ref=f1e22] [cursor=pointer]: Chưa xác nhận
+                    - generic [ref=f1e24]:
+                      - generic [ref=f1e25]: MÔI TRƯỜNG
+                      - generic [ref=f1e26] [cursor=pointer]: Chưa xác nhận
+                    - generic [ref=f1e29]:
+                      - generic [ref=f1e30]: CỬA SỔ DỮ LIỆU
+                      - generic [ref=f1e31] [cursor=pointer]: Chưa có snapshot analytics
+                  - generic [ref=f1e32]:
+                    - generic "Chờ snapshot overview; không có dữ liệu được tự tạo" [ref=f1e33] [cursor=pointer]:
+                      - generic [ref=f1e34]: 🔄
+                      - generic [ref=f1e35]: Chờ snapshot
+                    - button "Làm mới dữ liệu" [ref=f1e36] [cursor=pointer]
+                - generic [ref=f1e40]:
+                  - article "Token ChatWeb" [ref=f1e41]:
+                    - generic [ref=f1e42]: TOKEN CHATWEB
+                    - generic [ref=f1e47]: —
+                    - generic [ref=f1e48]: Chưa có snapshot
+                    - generic [ref=f1e50]: Thiếu phép đo giữ unknown, không suy diễn từ 0
+                  - article "Token provider" [ref=f1e51]:
+                    - generic [ref=f1e52]: TOKEN PROVIDER
+                    - generic [ref=f1e57]: —
+                    - generic [ref=f1e58]: Chưa có UsageEvent canonical
+                  - article "Input token" [ref=f1e60]:
+                    - generic [ref=f1e61]: INPUT TOKEN
+                    - generic [ref=f1e66]: —
+                    - generic [ref=f1e67]: Input token unknown
+                  - article "Output token" [ref=f1e69]:
+                    - generic [ref=f1e70]: OUTPUT TOKEN
+                    - generic [ref=f1e75]: —
+                    - generic [ref=f1e76]: Output token unknown
+                  - article "Chi phí quy đổi" [ref=f1e78]:
+                    - generic [ref=f1e79]: CHI PHÍ QUY ĐỔI
+                    - generic [ref=f1e84]: —
+                    - generic [ref=f1e85]: Quy đổi bảng giá • không phải ChatGPT billing
+                  - article "Cached token" [ref=f1e87]:
+                    - generic [ref=f1e88]: CACHED TOKEN
+                    - generic [ref=f1e94]: —
+                    - generic [ref=f1e95]: Cached token unknown
+                  - article "Token trên mỗi kết quả" [ref=f1e97]:
+                    - generic [ref=f1e98]: TOKEN / KẾT QUẢ
+                    - generic [ref=f1e104]: —
+                    - generic [ref=f1e105]: Chưa có accepted-result evidence
+                - generic "Chất lượng số liệu token" [ref=f1e107]:
+                  - generic [ref=f1e108]:
+                    - generic [ref=f1e109]: AI thực thi
+                    - generic [ref=f1e110]: Chưa có snapshot
+                  - generic [ref=f1e111]:
+                    - generic [ref=f1e112]: Context
+                    - generic [ref=f1e113]: Chưa có ước lượng controller
+                  - generic [ref=f1e114]:
+                    - generic [ref=f1e115]: Token lượt chat
+                    - generic [ref=f1e116]: Chưa đo lượt nào
+                  - generic [ref=f1e117]:
+                    - generic [ref=f1e118]: Token lượt gọi tool
+                    - generic [ref=f1e119]: Chưa đo lượt nào
+                - generic [ref=f1e120]:
+                  - generic [ref=f1e121]:
+                    - article [ref=f1e122]:
+                      - generic [ref=f1e123]:
+                        - generic [ref=f1e124]:
+                          - heading "Biểu Đồ Lượng Từ Sử Dụng Theo Thời Gian ⓘ" [level=3] [ref=f1e125]:
+                            - text: Biểu Đồ Lượng Từ Sử Dụng Theo Thời Gian
+                            - generic "Xem lượng từ ngữ tăng giảm trong ngày" [ref=f1e126]: ⓘ
+                          - generic [ref=f1e127]:
+                            - generic [ref=f1e128]: Tổng lượng từ
+                            - generic [ref=f1e130]: Câu hỏi gửi vào
+                            - generic [ref=f1e132]: Câu trả lời nhận về
+                        - generic [ref=f1e134]:
+                          - combobox [ref=f1e135] [cursor=pointer]:
+                            - option "Xem theo giờ" [selected]
+                            - option "Xem theo ngày"
+                          - generic [ref=f1e136] [cursor=pointer]: ⋮
+                      - generic [ref=f1e137]: Chưa có dữ liệu — đang chờ snapshot.
+                    - generic [ref=f1e140]:
+                      - article [ref=f1e141]:
+                        - heading "Tỷ Lệ Giữa Các Mô Hình AI ⓘ" [level=3] [ref=f1e144]:
+                          - text: Tỷ Lệ Giữa Các Mô Hình AI
+                          - generic "Xem mô hình nào đang gánh nhiều việc nhất" [ref=f1e145]: ⓘ
+                        - img "Phân bố token chưa có dữ liệu" [ref=f1e148]:
+                          - generic [ref=f1e149]: —
+                          - generic [ref=f1e150]: Chưa có dữ liệu
+                        - generic [ref=f1e151]:
+                          - generic [ref=f1e152]: —
+                          - generic [ref=f1e153]: Chưa có dữ liệu
+                      - article [ref=f1e154]:
+                        - heading "Chi Phí Theo Nhóm Công Việc ⓘ" [level=3] [ref=f1e157]:
+                          - text: Chi Phí Theo Nhóm Công Việc
+                          - generic "Loại công việc nào tiêu tốn nhiều chi phí nhất" [ref=f1e158]: ⓘ
+                        - generic [ref=f1e161]:
+                          - generic [ref=f1e162]: Tổng chi phí công việc
+                          - strong [ref=f1e163]: —
+                  - article [ref=f1e165]:
+                    - generic [ref=f1e167]:
+                      - heading "Nhật ký lượt chat ⓘ" [level=3] [ref=f1e168]:
+                        - text: Nhật ký lượt chat
+                        - 'generic "Từng lượt ChatWeb mới nhất: số exact hoặc ước lượng có khoảng. Mỗi lượt một dòng, không cộng dồn." [ref=f1e169]': ⓘ
+                      - paragraph [ref=f1e170]: Mỗi lượt một dòng · mới nhất trước · cập nhật theo nhịp đồng bộ analytics.
+                    - generic [ref=f1e171]:
+                      - generic [ref=f1e172]: Tổng chưa xác nhận
+                      - table "Nhật ký token từng lượt chat" [ref=f1e173]:
+                        - generic [ref=f1e174]: Chưa có lượt chat nào được đo
+                - group [ref=f1e175]:
+                  - generic "📊 Bảng phân tích chi tiết & Bằng chứng đo lường (Tốc độ, Heatmap, Accepted Result, Độ phủ) Mở rộng ▾" [ref=f1e176] [cursor=pointer]:
+                    - generic [ref=f1e177]: 📊 Bảng phân tích chi tiết & Bằng chứng đo lường (Tốc độ, Heatmap, Accepted Result, Độ phủ)
+                    - generic [ref=f1e178]: Mở rộng ▾
+                - group [ref=f1e179]:
+                  - generic "Cài Đặt Bảng Giá & Tùy Chỉnh Quy Đổi Điều chỉnh đơn giá token theo USD / VNĐ để tính toán chi phí chính xác theo gói tài khoản của bạn Mở cài đặt giá ›" [ref=f1e180] [cursor=pointer]:
+                    - generic [ref=f1e181]:
+                      - heading "Cài Đặt Bảng Giá & Tùy Chỉnh Quy Đổi" [level=3] [ref=f1e182]
+                      - paragraph [ref=f1e183]: Điều chỉnh đơn giá token theo USD / VNĐ để tính toán chi phí chính xác theo gói tài khoản của bạn
+                    - generic [ref=f1e184]: Mở cài đặt giá ›
+                  - option "GPT-4o mini (Giá rẻ, tiết kiệm nhất)" [selected]
+                  - option "GPT-4o (Thông dụng, chuẩn mực)"
+                  - option "GPT-4.1 (Mới nhất, thông minh)"
+                  - option "o3-mini (Tư duy suy luận nhanh)"
+                  - option "o3 (Tư duy suy luận chuyên sâu)"
+                  - option "Tự nhập đơn giá"
+                  - option "USD ($)" [selected]
+                  - option "VNĐ (₫)"
+        - text: ○ ○ ○ ○ ○

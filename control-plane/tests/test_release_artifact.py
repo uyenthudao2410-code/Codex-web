@@ -119,7 +119,9 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 "deploy/control-plane-backup.sh",
                 "deploy/control-plane-healthcheck.sh",
             ):
-                self.assertNotEqual((release / launcher).stat().st_mode & 0o111, 0)
+                if os.name != "nt":
+                    self.assertNotEqual((release / launcher).stat().st_mode & 0o111, 0)
+                self.assertNotIn(b"\r\n", (release / launcher).read_bytes())
 
             service_templates = {
                 "codex-control-plane.service.example": "control-plane-launcher.sh",
@@ -156,11 +158,20 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             )
             self.assertEqual(tampered_result.returncode, 2)
 
-            with tarfile.open(archive, "r:gz") as bundle:
-                names = set(bundle.getnames())
             prefix = f"{receipt['release_name']}/"
+            with tarfile.open(archive, "r:gz") as bundle:
+                members = {member.name: member for member in bundle.getmembers()}
+            names = set(members)
             self.assertIn(f"{prefix}release-manifest.json", names)
             self.assertIn(f"{prefix}control-plane/control_plane/http_api.py", names)
+            for launcher in (
+                "deploy/control-plane-launcher.sh",
+                "deploy/control-plane-mcp-tunnel-launcher.sh",
+                "deploy/control-plane-backup.sh",
+                "deploy/control-plane-healthcheck.sh",
+            ):
+                member = members[f"{prefix}{launcher}"]
+                self.assertEqual(member.mode & 0o111, 0o111)
             self.assertFalse(any(
                 ".coding-tools" in name
                 or "/__pycache__/" in name
@@ -176,6 +187,7 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             with self.assertRaises(BUILDER.ReleaseBuildError):
                 BUILDER.build_release(ROOT, output, revision, require_clean_source=False)
 
+    @unittest.skipIf(os.name == "nt", "direct POSIX launcher execution requires a Unix shell")
     def test_archive_launcher_runs_from_extracted_release_with_external_state(self) -> None:
         revision = "c" * 40
         with tempfile.TemporaryDirectory() as temporary:

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import errno
 import hashlib
 import json
 import os
@@ -762,6 +761,14 @@ def _enrollment_local_status(config: dict[str, Any], *, fresh: bool, error_code:
     state = str(config.get("enrollment_state") or "unconfigured").strip().lower()
     if state not in ENROLLMENT_STATES:
         state = "unknown"
+    # The HTTPS origin is safe, non-secret resume metadata.  Returning it from
+    # the node-agent status projection lets the desktop restore an existing
+    # enrollment after the ordinary settings field was lost, without exposing
+    # the node credential or any operator/account material.
+    try:
+        server_origin = _enrollment_server_origin(config.get("server_url"))
+    except RuntimeError:
+        server_origin = None
     return {
         "device_id": str(config.get("device_id") or ""),
         "enrollment_id": _enrollment_id(config.get("enrollment_id"), allow_none=True) if config.get("enrollment_id") else None,
@@ -770,6 +777,7 @@ def _enrollment_local_status(config: dict[str, Any], *, fresh: bool, error_code:
         "fresh": bool(fresh),
         "observed_at_ms": config.get("enrollment_observed_at_ms"),
         "error_code": error_code or config.get("enrollment_last_error"),
+        "server_origin": server_origin,
     }
 
 
@@ -811,17 +819,23 @@ def _authority_status_projection(response: Any, *, config: dict[str, Any]) -> di
         raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
     normalized_targets: list[dict[str, Any]] = []
     for target in targets:
-        target_expected = {
+        target_legacy_expected = {
             "node_display_name", "workspace_display_name", "capabilities", "binding_state",
             "workspace_state", "presence_state", "readiness", "policy_state",
             "dispatch_state", "dispatch_blockers",
         }
-        if not isinstance(target, dict) or set(target) != target_expected:
+        target_enriched_expected = target_legacy_expected | {"workspace_id", "workspace_generation"}
+        if not isinstance(target, dict) or set(target) not in {target_legacy_expected, target_enriched_expected}:
             raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
         target_node = target.get("node_display_name")
+        enriched_identity = set(target) == target_enriched_expected
+        target_workspace_id = str(target.get("workspace_id") or "").strip().lower() if enriched_identity else None
+        target_workspace_generation = str(target.get("workspace_generation") or "").strip().lower() if enriched_identity else None
         target_workspace = target.get("workspace_display_name")
         if (
             not isinstance(target_node, str) or not 1 <= len(target_node) <= 120
+            or (enriched_identity and (POLICY_IDENTIFIER_PATTERN.fullmatch(target_workspace_id or "") is None
+                                       or POLICY_IDENTIFIER_PATTERN.fullmatch(target_workspace_generation or "") is None))
             or not isinstance(target_workspace, str) or not 1 <= len(target_workspace) <= 120
             or any(ord(character) < 32 for character in target_node + target_workspace)
         ):
@@ -851,7 +865,7 @@ def _authority_status_projection(response: Any, *, config: dict[str, Any]) -> di
             or len(blockers) != len(set(blockers))
         ):
             raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
-        normalized_targets.append({
+        normalized_target = {
             "node_display_name": target_node,
             "workspace_display_name": target_workspace,
             "capabilities": {name: capabilities[name] for name in ("read", "write", "exec")},
@@ -862,7 +876,11 @@ def _authority_status_projection(response: Any, *, config: dict[str, Any]) -> di
             "policy_state": str(target["policy_state"]).lower(),
             "dispatch_state": str(target["dispatch_state"]).lower(),
             "dispatch_blockers": list(blockers),
-        })
+        }
+        if enriched_identity:
+            normalized_target["workspace_id"] = target_workspace_id
+            normalized_target["workspace_generation"] = target_workspace_generation
+        normalized_targets.append(normalized_target)
     if response["dispatchable_target_count"] != sum(
         1 for target in normalized_targets if target["dispatch_state"] == "dispatchable"
     ):
@@ -4770,7 +4788,7 @@ def reconcile_enrollment(args: argparse.Namespace) -> int:
         print(json.dumps({
             "device_id": str(args.device_id or ""), "enrollment_id": None, "state": "unconfigured",
             "credential_generation": None, "fresh": False, "observed_at_ms": None,
-            "error_code": None,
+            "error_code": None, "server_origin": None,
         }, separators=(",", ":")))
         return 0
     config = _config(config_path)
@@ -6995,30 +7013,61 @@ def _pid_is_live(pid: int) -> bool:
 
     if not isinstance(pid, int) or isinstance(pid, bool) or pid < 1:
         return False
+    if os.name == "nt":
+        return _windows_pid_is_live(pid)
     try:
         # ``signal 0`` does not terminate the target.  It is available on the
-        # supported Windows/POSIX Python runtimes and avoids introducing a
-        # second platform-specific process-control adapter for this one lock.
+        # supported POSIX Python runtimes and avoids treating a missing process
+        # as live.
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
     except PermissionError:
         return True
     except OSError as error:
-        # On Windows, os.kill(pid, 0) reports a missing PID as WinError 87
-        # (and commonly errno=EINVAL), not ProcessLookupError.  Treat that
-        # one documented missing-process result as dead so a crashed same-user
-        # agent cannot pin its read-only lock forever.  Every other unfamiliar
-        # failure remains live/fail-closed.
-        if os.name == "nt" and (
-            getattr(error, "winerror", None) == 87
-            or getattr(error, "errno", None) == errno.EINVAL
-        ):
-            return False
         # An unfamiliar error must not let this process remove a possibly-live
         # lock. The operator can inspect/stop the existing local owner.
         return True
     return True
+
+
+def _windows_pid_is_live(pid: int) -> bool:
+    """Read the Windows process exit code instead of relying on ``os.kill``.
+
+    On Windows ``os.kill(pid, 0)`` can succeed for a PID whose process has
+    already exited.  That leaves a crash-owned poll lock unreclaimable.  A
+    limited query plus ``GetExitCodeProcess`` distinguishes ``STILL_ACTIVE``
+    from a terminated process while preserving fail-closed behavior when the
+    process exists but cannot be inspected.
+    """
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+
+        process = kernel32.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not process:
+            # ERROR_INVALID_PARAMETER means the PID no longer exists. Access
+            # denied and every unfamiliar failure remain live/fail-closed.
+            return ctypes.get_last_error() != 87
+        exit_code = wintypes.DWORD()
+        try:
+            if not kernel32.GetExitCodeProcess(process, ctypes.byref(exit_code)):
+                return True
+            return exit_code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(process)
+    except Exception:
+        # Never reclaim a lock when process identity cannot be inspected.
+        return True
 
 
 def _stale_read_only_agent_lock(lock_path: Path) -> bool:

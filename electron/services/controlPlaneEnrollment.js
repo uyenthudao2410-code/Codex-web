@@ -170,18 +170,28 @@ function parseEnrollmentStatusResult(stdout, expectedDeviceId) {
   let payload;
   try { payload = JSON.parse(lines[0]); }
   catch { throw enrollmentError('CONTROL_PLANE_ENROLLMENT_STATUS_OUTPUT_INVALID', 'Node enrollment status trả về receipt không hợp lệ.'); }
+  const legacyKeys = ['credential_generation', 'device_id', 'enrollment_id', 'error_code', 'fresh', 'observed_at_ms', 'state'].sort().join(',');
+  const enrichedKeys = [...legacyKeys.split(','), 'server_origin'].sort().join(',');
+  const payloadKeys = Object.keys(payload || {}).sort().join(',');
+  const hasServerOrigin = payloadKeys === enrichedKeys;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)
-    || Object.keys(payload).sort().join(',') !== 'credential_generation,device_id,enrollment_id,error_code,fresh,observed_at_ms,state'
+    || ![legacyKeys, enrichedKeys].includes(payloadKeys)
     || String(payload.device_id || '').toLowerCase() !== String(expectedDeviceId || '').toLowerCase()
     || (payload.enrollment_id !== null && !ENROLLMENT_ID_PATTERN.test(String(payload.enrollment_id || '')))
     || !['unconfigured', 'request_sent', 'pending_operator_approval', 'approved', 'revoked', 'unknown'].includes(payload.state)
     || typeof payload.fresh !== 'boolean'
     || (payload.credential_generation !== null && (!Number.isSafeInteger(payload.credential_generation) || payload.credential_generation < 1))
     || (payload.observed_at_ms !== null && (!Number.isSafeInteger(payload.observed_at_ms) || payload.observed_at_ms <= 0))
-    || (payload.error_code !== null && !/^[A-Z0-9_]{3,96}$/.test(String(payload.error_code)))) {
+    || (payload.error_code !== null && !/^[A-Z0-9_]{3,96}$/.test(String(payload.error_code)))
+    || (hasServerOrigin && payload.server_origin !== null && typeof payload.server_origin !== 'string')) {
     throw enrollmentError('CONTROL_PLANE_ENROLLMENT_STATUS_OUTPUT_INVALID', 'Node enrollment status không đúng target hoặc trạng thái.');
   }
-  return Object.freeze({
+  let serverOrigin = null;
+  if (hasServerOrigin && payload.server_origin !== null) {
+    try { serverOrigin = centralServerOrigin(payload.server_origin); }
+    catch { throw enrollmentError('CONTROL_PLANE_ENROLLMENT_STATUS_OUTPUT_INVALID', 'Node enrollment status có origin không hợp lệ.'); }
+  }
+  const result = {
     device_id: String(payload.device_id).toLowerCase(),
     enrollment_id: payload.enrollment_id === null ? null : String(payload.enrollment_id),
     state: payload.state,
@@ -189,7 +199,9 @@ function parseEnrollmentStatusResult(stdout, expectedDeviceId) {
     fresh: payload.fresh,
     observed_at_ms: payload.observed_at_ms,
     error_code: payload.error_code
-  });
+  };
+  if (hasServerOrigin) result.server_origin = serverOrigin;
+  return Object.freeze(result);
 }
 
 function parseAuthorityStatusResult(stdout, expectedDeviceId) {
@@ -220,11 +232,16 @@ function parseAuthorityStatusResult(stdout, expectedDeviceId) {
     throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status không đúng target hoặc trạng thái.');
   }
   const targets = payload.targets.map((target) => {
-    const targetKeys = 'binding_state,capabilities,dispatch_blockers,dispatch_state,node_display_name,policy_state,presence_state,readiness,workspace_display_name,workspace_state';
+    const legacyTargetKeys = ['binding_state', 'capabilities', 'dispatch_blockers', 'dispatch_state', 'node_display_name', 'policy_state', 'presence_state', 'readiness', 'workspace_display_name', 'workspace_state'].sort().join(',');
+    const enrichedTargetKeys = [...legacyTargetKeys.split(','), 'workspace_generation', 'workspace_id'].sort().join(',');
+    const targetKeys = Object.keys(target || {}).sort().join(',');
+    const enriched = targetKeys === enrichedTargetKeys;
     if (!target || typeof target !== 'object' || Array.isArray(target)
-      || Object.keys(target).sort().join(',') !== targetKeys
+      || ![legacyTargetKeys, enrichedTargetKeys].includes(targetKeys)
       || typeof target.node_display_name !== 'string' || !target.node_display_name || target.node_display_name.length > 120
       || typeof target.workspace_display_name !== 'string' || !target.workspace_display_name || target.workspace_display_name.length > 120
+      || (enriched && (typeof target.workspace_id !== 'string' || !NODE_ID_PATTERN.test(target.workspace_id)
+        || typeof target.workspace_generation !== 'string' || !NODE_ID_PATTERN.test(target.workspace_generation)))
       || !AUTHORITY_BINDING_STATES.has(String(target.binding_state || '').toLowerCase())
       || !AUTHORITY_WORKSPACE_STATES.has(String(target.workspace_state || '').toLowerCase())
       || !AUTHORITY_PRESENCE_STATES.has(String(target.presence_state || '').toLowerCase())
@@ -238,7 +255,7 @@ function parseAuthorityStatusResult(stdout, expectedDeviceId) {
     let capabilities;
     try { capabilities = normalizeWorkspaceCapabilities(target.capabilities); }
     catch { throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status có capability không hợp lệ.'); }
-    return Object.freeze({
+    const normalized = {
       node_display_name: target.node_display_name,
       workspace_display_name: target.workspace_display_name,
       capabilities,
@@ -249,7 +266,12 @@ function parseAuthorityStatusResult(stdout, expectedDeviceId) {
       policy_state: String(target.policy_state).toLowerCase(),
       dispatch_state: String(target.dispatch_state).toLowerCase(),
       dispatch_blockers: Object.freeze(target.dispatch_blockers.map((item) => String(item).toLowerCase()))
-    });
+    };
+    if (enriched) {
+      normalized.workspace_id = String(target.workspace_id);
+      normalized.workspace_generation = String(target.workspace_generation);
+    }
+    return Object.freeze(normalized);
   });
   const dispatchable = targets.filter((target) => target.dispatch_state === 'dispatchable').length;
   if (dispatchable !== payload.dispatchable_target_count) {

@@ -95,14 +95,11 @@ body[data-theme="dark"] {
 .content-viewport { padding: 22px 24px 30px !important; }
 .page { max-width: 1360px !important; }
 
-/* Standalone token window: full-bleed overview, no centered column. */
-body.token-board-window .page { max-width: none !important; }
-body.token-board-window .content-viewport { padding: 22px 28px 34px !important; }
-body.token-board-window .da-technical-note { margin: 6px 0 0; color: var(--cc-muted); font-size: 11px; line-height: 1.5; }
+/* Token dashboard technical note spacing. */
+.da-technical-note { margin: 6px 0 0; color: var(--cc-muted); font-size: 11px; line-height: 1.5; }
 
-/* Manager overview tab: the embedded token dashboard fills the content width. */
+/* Manager overview tab: the token dashboard renders directly in the content flow. */
 section.page[data-page-view="overview"] { max-width: none !important; }
-#overviewTokenFrame { display: block; width: 100%; min-height: 1500px; height: 1500px; border: 0; border-radius: 12px; background: transparent; }
 
 /* Preserve old overview elements for existing JS bindings but remove them from the new UX. */
 .legacy-overview { display: none !important; }

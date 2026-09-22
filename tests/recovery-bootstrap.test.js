@@ -224,6 +224,75 @@ test('a crashed result lock fail-closes only its exact operation and is never re
   assert.equal(fs.existsSync(`${paths.recoveryHostBootstrapResultFile(OPERATION_TWO)}.lock`), false);
 });
 
+function rollbackSnapshot(paths, running, overrides = {}) {
+  return {
+    settings: { workspace: paths.appRoot(), executionRole: 'direct_legacy' },
+    device: { coding: { native_alive: running } },
+    status: {
+      runtimeRunning: running, tunnelRunning: running, busy: false, recovering: false,
+      manuallyStopped: false, activationEpoch: { activation_epoch_id: 'epoch-before-stop' },
+      ...overrides
+    }
+  };
+}
+
+test('bootstrap semantic stop refusal never terminates, spawns or restores', async (t) => {
+  for (const code of ['RECOVERY_REQUEST_FAILED', 'RUNTIME_BUSY', 'AUTHORITY_DENIED', 'ECONNRESET']) {
+    await t.test(code, async (t) => {
+      const paths = fixture(t);
+      const target = descriptor(paths);
+      fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(target));
+      let effects = 0;
+      const refusal = Object.assign(new Error('refused'), { code, recoveryResponseReceived: true });
+      await assert.rejects(bootstrapCurrentRecoveryHost({
+        app: { isPackaged: true, getAppPath: () => paths.appRoot() }, paths,
+        descriptor: target, status: { full_clean_activation: { available: false } },
+        client: {
+          call: async () => rollbackSnapshot(paths, true),
+          stop: async () => { throw refusal; }, start: async () => { effects++; }
+        },
+        operationId: OPERATION_ONE, sourceCheckpoint: SOURCE_CHECKPOINT, expectedDiskRevision: REVISION,
+        processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }),
+        terminateProcess: async () => { effects++; throw new Error('unsafe termination'); },
+        spawnProcess: () => { effects++; throw new Error('unsafe spawn'); }
+      }), (error) => error === refusal);
+      assert.equal(effects, 0);
+      assert.equal(readBootstrapResult(paths, OPERATION_ONE).error.code, code);
+    });
+  }
+});
+
+test('bootstrap failed handoff preserves off, unknown, partial and manual-stop state', async (t) => {
+  for (const mode of ['off', 'unknown', 'partial', 'manual-stop', 'epoch-changed', 'recovering', 'recovery-unknown']) {
+    await t.test(mode, async (t) => {
+      const paths = fixture(t);
+      const target = descriptor(paths);
+      fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(target));
+      let starts = 0;
+      let stopped = false;
+      await assert.rejects(bootstrapCurrentRecoveryHost({
+        app: { isPackaged: true, getAppPath: () => paths.appRoot() }, paths,
+        descriptor: target, status: { full_clean_activation: { available: false } },
+        client: {
+          call: async () => mode === 'unknown' ? {} : rollbackSnapshot(paths,
+            !stopped && mode !== 'off', {
+              ...(mode === 'partial' ? { tunnelRunning: false } : {}),
+              ...(stopped && mode === 'manual-stop' ? { manuallyStopped: true } : {}),
+              ...(stopped && mode === 'recovering' ? { recovering: true } : {}),
+              ...(stopped && mode === 'recovery-unknown' ? { recovering: undefined } : {}),
+              ...(stopped && mode === 'epoch-changed' ? { activationEpoch: { activation_epoch_id: 'other-epoch' } } : {})
+            }),
+          stop: async () => { stopped = true; }, start: async () => { starts++; }
+        },
+        operationId: OPERATION_ONE, sourceCheckpoint: SOURCE_CHECKPOINT, expectedDiskRevision: REVISION,
+        processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }),
+        terminateProcess: async () => { throw Object.assign(new Error('probe unavailable'), { code: 'PROCESS_IDENTITY_UNVERIFIED' }); }
+      }), { code: 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED' });
+      assert.equal(starts, 0);
+    });
+  }
+});
+
 test('stale-host bootstrap reconciles a lost stop response through exact descriptor and PID proof', async (t) => {
   const paths = fixture(t);
   const staleDescriptor = descriptor(paths);
@@ -244,7 +313,10 @@ test('stale-host bootstrap reconciles a lost stop response through exact descrip
   const result = await bootstrapCurrentRecoveryHost({
     app: { isPackaged: true, getAppPath: () => paths.appRoot() },
     paths,
-    client: { stop: async () => { throw Object.assign(new Error('response lost'), { code: 'ECONNRESET' }); } },
+    client: {
+      call: async () => rollbackSnapshot(paths, false),
+      stop: async () => { throw Object.assign(new Error('response lost'), { code: 'ECONNRESET' }); }
+    },
     descriptor: staleDescriptor,
     status: { full_clean_activation: { available: false } },
     operationId: OPERATION_ONE,
@@ -271,6 +343,36 @@ test('stale-host bootstrap reconciles a lost stop response through exact descrip
   assert.deepEqual(launches[0].args, ['--recovery-host', `--recovery-bootstrap=${OPERATION_ONE}`]);
   assert.equal(readBootstrapResult(paths, OPERATION_ONE).state, 'started');
   assert.equal(readBootstrapEnvelope(paths, { bootstrapId: OPERATION_ONE }).old_host_instance_id, staleDescriptor.instance_id);
+});
+
+test('bootstrap transport loss cannot terminate an unconfirmed runtime', async (t) => {
+  for (const state of ['running', 'unknown', 'native-alive']) {
+    await t.test(state, async (t) => {
+      const paths = fixture(t);
+      const target = descriptor(paths);
+      fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(target));
+      let effects = 0;
+      await assert.rejects(bootstrapCurrentRecoveryHost({
+        app: { isPackaged: true, getAppPath: () => paths.appRoot() }, paths,
+        descriptor: target, status: { full_clean_activation: { available: false } },
+        client: {
+          call: async () => {
+            if (state === 'unknown') return {};
+            const snapshot = rollbackSnapshot(paths, state === 'running');
+            if (state === 'native-alive') snapshot.device.coding.native_alive = true;
+            return snapshot;
+          },
+          stop: async () => { throw Object.assign(new Error('lost response'), { code: 'ECONNRESET' }); },
+          start: async () => { effects++; }
+        },
+        operationId: OPERATION_ONE, sourceCheckpoint: SOURCE_CHECKPOINT, expectedDiskRevision: REVISION,
+        processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }),
+        terminateProcess: async () => { effects++; throw new Error('unsafe terminate'); },
+        spawnProcess: () => { effects++; throw new Error('unsafe spawn'); }
+      }), { code: 'RECOVERY_BOOTSTRAP_STOP_UNCONFIRMED' });
+      assert.equal(effects, 0);
+    });
+  }
 });
 
 test('explicit refresh may hand off an exact idle packaged host to development', async (t) => {
@@ -605,6 +707,7 @@ test('refused handoff restores children only through the still-exact old Recover
     app: { isPackaged: true, getAppPath: () => paths.appRoot() },
     paths,
     client: {
+      call: async () => rollbackSnapshot(paths, stopCalls === 0),
       stop: async () => { stopCalls += 1; },
       start: async (options, callOptions) => {
         startCalls += 1;
@@ -648,6 +751,7 @@ test('failed handoff never restores through a changed Recovery Host descriptor',
     app: { isPackaged: true, getAppPath: () => paths.appRoot() },
     paths,
     client: {
+      call: async () => rollbackSnapshot(paths, true),
       stop: async () => {},
       start: async () => { startCalls += 1; }
     },
@@ -670,6 +774,34 @@ test('failed handoff never restores through a changed Recovery Host descriptor',
 
   assert.equal(descriptorReads, 2);
   assert.equal(startCalls, 0);
+});
+
+test('central rollback restores a previously running executor without enabling a direct Tunnel', async (t) => {
+  const paths = fixture(t);
+  const target = descriptor(paths);
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(target));
+  let stopped = false;
+  let starts = 0;
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: true, getAppPath: () => paths.appRoot() }, paths,
+    descriptor: target, status: { full_clean_activation: { available: false } },
+    client: {
+      call: async (action, args, options) => {
+        assert.equal(action, 'runtime.snapshot');
+        assert.equal(args[0].force, true);
+        assert.equal(options.expectedInstanceId, target.instance_id);
+        const snapshot = rollbackSnapshot(paths, !stopped, { tunnelRunning: false });
+        snapshot.settings.executionRole = 'central_executor';
+        return snapshot;
+      },
+      stop: async () => { stopped = true; }, start: async () => { starts++; }
+    },
+    operationId: OPERATION_ONE, sourceCheckpoint: SOURCE_CHECKPOINT, expectedDiskRevision: REVISION,
+    processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }),
+    terminateProcess: async () => { throw Object.assign(new Error('probe unavailable'), { code: 'PROCESS_IDENTITY_UNVERIFIED' }); }
+  }), { code: 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED' });
+  assert.equal(starts, 1);
+  assert.equal(readBootstrapResult(paths, OPERATION_ONE).state, 'failed');
 });
 
 test('failed exact termination carries cause and exit code into the durable bootstrap receipt', async (t) => {
