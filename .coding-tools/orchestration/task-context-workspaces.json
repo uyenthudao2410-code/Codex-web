@@ -117635,6 +117635,13 @@
       "updated_at": "2026-09-04T18:28:16.859Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_ff661de161c4872f4132671d3883e101": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-09-22T23:06:22.921Z",
+      "schema_version": 1,
+      "updated_at": "2026-09-22T23:06:22.921Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_ff6a81828f8ace713e29993d6236cdb8": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-09-01T20:41:30.981Z",
