@@ -1659,7 +1659,8 @@ Source patch trong `resources/recovery-supervisor/recovery-supervisor.ps1`:
   `--data-root` vì packaged policy root phải do adapter tự derive;
 * preflight kiểm path/hash của Python, agent và Node; mismatch hoặc manifest
   thiếu identity làm agent `manifest_legacy`/`integrity_unproven` và không spawn;
-* replacement nhận biết Node identity thay đổi để không giữ lại agent cũ;
+* replacement nhận biết Node identity **và argv contract** thay đổi để không giữ
+  lại agent cũ; development yêu cầu đúng `--data-root`, packaged cấm cờ này;
 * không fallback sang Electron executable hoặc PATH trong heartbeat.
 
 Focused proof: `node --test tests/recovery-supervisor.test.js` **17/17 PASS**;
