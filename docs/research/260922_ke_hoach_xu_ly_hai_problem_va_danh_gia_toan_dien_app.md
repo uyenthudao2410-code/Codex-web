@@ -4,7 +4,7 @@ Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-
 
 Trạng thái tài liệu: **RECOVERY REHEARSAL ACTIVE — người dùng đã cấp controlled recovery; backup/candidate cô lập đã tạo, canonical chưa thay, candidate chưa activation-eligible**.
 
-> **Cập nhật mới nhất 22/09 khoảng 19:20 +07:** verifier/recovery audit đã commit trực tiếp trên `main`; push bị GitHub từ chối bởi binary `output/**/Coding Tools MCP.exe` vượt giới hạn 100 MB, xem **16.20**. Canonical hash vẫn nguyên; candidate chưa activation-eligible; goal ACTIVE, chưa complete.
+> **Cập nhật mới nhất 22/09 khoảng 19:32 +07:** verifier/recovery audit và authority-status fix đã commit trực tiếp trên `main` (`b0b6505`); focused authority test PASS nhưng push vẫn bị GitHub chặn bởi ba binary `output/**/Coding Tools MCP.exe` vượt 100 MB, xem **16.20–16.22**. Canonical hash vẫn nguyên; candidate chưa activation-eligible; goal ACTIVE, chưa complete.
 
 ## 0. Kết luận điều hành
 
