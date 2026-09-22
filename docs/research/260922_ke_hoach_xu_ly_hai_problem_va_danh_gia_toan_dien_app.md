@@ -2792,3 +2792,92 @@ primary MCP/Tunnel, exact source/package continuity, connector discovery,
 `OPEN`. Bước tiếp theo cần owner-authorized installation handoff hoặc packaged
 delivery; không có phép hợp lệ để bypass identity guard hay tự ý restart theo
 một đường khác.
+
+### 16.52. Correction: packaged artifact đã chứa source repair, nhưng activation vẫn chưa đạt — 22/09/2026 lúc 23:52 +07
+
+Để tránh suy luận quá mạnh từ component revision, đã giải nén read-only
+`app.asar` của installed package vào thư mục tạm ngoài repository và đối chiếu
+với source checkout:
+
+```text
+dist/win-unpacked/resources/app.asar SHA-256
+  = 7944724624334C96AB02D7DB16213CD53E9D02BD3ED253FAD16904240F56CCE3
+
+installed resources/app.asar SHA-256
+  = 7944724624334C96AB02D7DB16213CD53E9D02BD3ED253FAD16904240F56CCE3
+
+packaged electron/services/activationEpoch.js SHA-256
+  = 77EB770D90EA8FDDD105639255CEBDA34B0FDA16B5A92D7D75FA2C28AD373C17
+
+source electron/services/activationEpoch.js SHA-256
+  = 77EB770D90EA8FDDD105639255CEBDA34B0FDA16B5A92D7D75FA2C28AD373C17
+```
+
+`app.asar` dist/installed giống nhau và file `activationEpoch.js` trong package
+trùng byte với source repair. Do đó câu kết luận ở section 16.51 rằng
+packaged host chắc chắn “chưa load source repair” phải được **thu hẹp lại**:
+component revision `a577…` khác development revision `82b…` là installation/
+packaging identity khác nhau (manifest/resource layout packaged cũng khác),
+không phải bằng chứng trực tiếp rằng file repair vắng trong package.
+
+Điều đã được chứng minh chắc chắn hơn là:
+
+- packaged Recovery Host đang chạy đúng installed artifact (`app.asar` hash
+  khớp dist), PID `40120`, revision packaged `a577…`;
+- source reader hiện tại khi đọc persisted proof chiếu `FAILED/CLOSED`;
+- authenticated runtime projection vẫn `UPDATE_INCOMPLETE`,
+  `mcpRunning=false`, `nativeAlive=false`, `tunnelRunning=false`,
+  `fullyReady=false`, `admission_open=false`;
+- chưa có một full-clean activation epoch mới chứng minh rằng packaged repair
+  đã được thực thi end-to-end;
+- development CLI vẫn bị chặn bởi `RECOVERY_HOST_INSTALLATION_MISMATCH`, đúng
+  với boundary giữa packaged installation và development checkout.
+
+Vì vậy hướng xử lý không phải bypass component hash hay sửa descriptor, mà là
+dùng đúng packaged-to-development handoff/activation contract hoặc tạo một
+packaged artifact/release mới có receipt source/package identity, rồi đọc lại
+MCP/Tunnel/epoch/connector trên đúng process. Chưa được gọi đây là
+`PACKAGED_RELEASED`, `LIVE_ACCEPTED`, strict discovery hay natural outcome.
+
+**Checkpoint correction:** packaged artifact continuity ở file repair đã có
+bằng chứng mạnh hơn; runtime readiness và Problem closure vẫn chưa có. Hai
+Problem giữ `OPEN`, ledger giữ `APPLIED_EVIDENCE_ONLY +
+IDEMPOTENCE_GUARDED`, không có mutation mới.
+
+### 16.53. Canonical checkpoint gate: chưa có accepted closure cho source repair hiện tại — 22/09/2026 lúc 23:56 +07
+
+Đã truy vấn canonical ledger bằng SQLite read-only (`mode=ro`,
+`query_only=ON`) theo đúng cột `checkpoints.git_head`, không dùng projection
+UI hay metadata suy đoán. Kết quả:
+
+```text
+HEAD tại thời điểm snapshot = 41e920ca9faee8d1c8bf9d876e5ef6b7f5ae1f3e
+checkpoint rows bind HEAD = 0
+accepted checkpoint bind HEAD = 0
+
+package-relevant repair HEAD = 6f507fda0ebcf4d846c979246188b5a3c56b6067
+checkpoint rows bind repair HEAD = 0
+accepted checkpoint bind repair HEAD = 0
+coverage manifest bind current/repair HEAD = 0
+```
+
+Accepted checkpoint gần nhất vẫn là các receipt ngày 15/09, bind HEAD cũ
+`cffd2acee24a4f38f4a83ddfea4c40f766de7a63` (ví dụ
+`8d10f276…`, `6fb3de41…`, `c8f32a66…`) hoặc cũ hơn. Chúng không được dùng để
+activate source repair hiện tại vì full-clean command yêu cầu exact
+`checkpoint_id/run_id/wave_id/proof_fingerprint/git_head`; ghép checkpoint cũ
+với source mới sẽ phá provenance và có thể mở nhầm authority.
+
+Đây là lý do `full-clean-activation --preflight` không thể tiến hành từ
+development checkout hiện tại ngay cả khi packaged host đang sống: còn thiếu
+accepted closure exact cho source/package identity này, đồng thời descriptor
+đang thuộc packaged installation khác. Không tạo RUN/checkpoint giả, không sửa
+`git_head` trong ledger, không mở admission và không lấy `REPORT_ACKNOWLEDGED`
+hay accepted historical report thay cho closure.
+
+**Checkpoint:** source repair, packaged byte identity, Supervisor liveness và
+ledger integrity đã có bằng chứng; activation authority exact, MCP/Tunnel
+readiness, strict discovery, real workspace read, reboot và natural outcome
+vẫn thiếu. Bước tiếp theo phải là một acceptance wave chính thức ghi exact
+closure/checkpoint cho source repair hoặc packaged delivery được owner duyệt;
+chỉ sau đó mới chạy full-clean handoff. Hai Problem vẫn `OPEN`.
