@@ -2970,3 +2970,25 @@ Vì vậy thứ tự tiếp tục là: review/accept helper và thêm live reins
 stage một snapshot mới nếu quyết định commit; sau đó mới xin current ChatWeb
 strict discovery, `workspace_context`, reboot/logon/Machine B, fault injection,
 natural-use và independent outcome. Hai Problem vẫn tách revision và `OPEN`.
+
+### 16.57. Checkpoint sau follow-up commit helper — 23/09/2026
+
+Helper handoff đã được commit/push riêng:
+
+```text
+dd3d49d008d5a7cc0fd7578e4f351537b0a0a36a
+fix: guard control-plane agent handoff
+HEAD == origin/main
+```
+
+Focused Supervisor `17/17` và các delivery/history/secret/index guards đều
+PASS. Source hiện đã chặn việc Supervisor dùng nhầm connected-agent packaged
+cho host development bằng exact manifest/path/hash, lock owner, executable path
+và command-line identity; chưa có live reinstall proof. Chỉ còn ledger runtime
+drift ngoài snapshot và `dist-recovery-6d2b0dec/` untracked, không được tự
+overwrite hay đưa vào release.
+
+Các gate sản phẩm không đổi: current ChatWeb strict discovery,
+`workspace_context`, reboot/logon/Machine B, fault injection, natural-use,
+independent outcome, criterion coverage/disposition và closure authority vẫn
+chưa có; hai Problem tiếp tục `OPEN` và tách revision.

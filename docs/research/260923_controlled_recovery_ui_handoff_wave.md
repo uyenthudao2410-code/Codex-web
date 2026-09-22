@@ -1281,3 +1281,35 @@ BOTH_PROBLEMS_OPEN
 
 Không dùng commit/push này để tuyên bố `LIVE_ACCEPTED`, natural outcome,
 reboot matrix, Machine B, fault injection hay đóng `prl-22e...`/`prl-e918...`.
+
+## 15.8. Checkpoint sau khi commit helper handoff — 23/09/2026
+
+Phần helper đã được review ở mức source/parser và focused test, sau đó commit
+và push riêng trên `main`:
+
+```text
+commit=dd3d49d008d5a7cc0fd7578e4f351537b0a0a36a
+message=fix: guard control-plane agent handoff
+origin/main=dd3d49d008d5a7cc0fd7578e4f351537b0a0a36a
+```
+
+Commit này gồm `Stop-ControlPlaneAgentForReplacement`, call-site trong
+`Install-Supervisor`, assertions nhận diện executable/command line và phần
+checkpoint Markdown. Focused Supervisor suite vẫn `17/17 PASS`; delivery,
+history, secret, staged-ledger index và cached-diff guards đều PASS trước push.
+Mục đích là chặn việc trộn connected-agent packaged với host development trong
+quá trình reinstall/handoff; đây chưa phải live reinstall proof.
+
+Postflight Git hiện tại:
+
+```text
+HEAD == origin/main == dd3d49d008d5a7cc0fd7578e4f351537b0a0a36a
+M  .coding-tools/orchestration/ledger.sqlite3   # runtime drift ngoài snapshot
+?? dist-recovery-6d2b0dec/                      # build output, chưa track
+```
+
+Không còn source/docs helper unstaged. Ledger drift tiếp tục không được
+overwrite/reconcile; build output không được commit như release artifact. Runtime
+vẫn chỉ là `RUNTIME_RECOVERY_VERIFIED / PRODUCT_ACCEPTANCE_OPEN`, connector
+strict discovery, `workspace_context`, reboot matrix, natural-use, outcome và
+closure của cả hai Problem đều còn mở.
