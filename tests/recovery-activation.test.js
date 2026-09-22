@@ -721,6 +721,80 @@ test('Electron UI registration completes only after the expected revision is run
   assert.equal(manager.status(activation.operation_id).postflight.source_checkpoint_id, SOURCE_CHECKPOINT.checkpoint_id);
 });
 
+test('UI recovery suppression survives heartbeat re-registration of the exact UI instance', async (t) => {
+  const paths = fixture(t);
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(NEXT),
+    orchestrator: orchestrator(),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: NEXT
+  });
+  const registration = {
+    instance_id: 'electron-ui-stable-0001',
+    pid: process.pid,
+    revision: NEXT,
+    started_at_unix_ms: Date.now()
+  };
+
+  await manager.registerUi(registration);
+  const suppression = manager.suppressUiRecovery({
+    instance_id: registration.instance_id,
+    reason: 'operator_quit'
+  });
+  assert.equal(suppression.suppressed, true);
+  assert.equal(suppression.suppressed_instance_id, registration.instance_id);
+
+  await manager.registerUi({ ...registration, started_at_unix_ms: Date.now() });
+  assert.equal(manager.uiRecoveryPreferenceStatus().suppressed, true);
+  assert.equal(manager.uiRecoveryPreferenceStatus().suppressed_instance_id, registration.instance_id);
+
+  await manager.registerUi({
+    ...registration,
+    instance_id: 'electron-ui-replaced-0001',
+    started_at_unix_ms: Date.now()
+  });
+  assert.equal(manager.uiRecoveryPreferenceStatus().suppressed, false);
+  assert.equal(manager.uiRecoveryPreferenceStatus().suppressed_instance_id, '');
+});
+
+test('a new UI registration re-arms recovery even while the activation epoch is verifying', async (t) => {
+  const paths = fixture(t);
+  const activationEpoch = {
+    activation_epoch_id: 'activation-ui-verify-0001',
+    state: 'VERIFYING'
+  };
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(NEXT),
+    orchestrator: orchestrator(),
+    fullCleanActivation: { current: () => activationEpoch },
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: NEXT
+  });
+  const registration = {
+    instance_id: 'electron-ui-verifying-0001',
+    activation_epoch_id: activationEpoch.activation_epoch_id,
+    pid: process.pid,
+    revision: NEXT,
+    started_at_unix_ms: Date.now()
+  };
+
+  await manager.registerUi(registration);
+  manager.suppressUiRecovery({ instance_id: registration.instance_id, reason: 'operator_quit' });
+  await manager.registerUi({ ...registration, started_at_unix_ms: Date.now() });
+  assert.equal(manager.uiRecoveryPreferenceStatus().suppressed, true);
+
+  await manager.registerUi({
+    ...registration,
+    instance_id: 'electron-ui-verifying-0002',
+    started_at_unix_ms: Date.now()
+  });
+  assert.equal(manager.uiRecoveryPreferenceStatus().suppressed, false);
+});
+
 test('cached Electron UI presence reuses only the exact last observed registration', (t) => {
   const paths = fixture(t);
   let identityCalls = 0;

@@ -272,7 +272,13 @@ class RecoveryActivation {
 
   loadUiRecoveryPreference() {
     if (!fs.existsSync(this.uiRecoveryStateFile)) {
-      return { version: UI_RECOVERY_STATE_VERSION, suppressed: false, reason: '', updated_at_unix_ms: 0 };
+      return {
+        version: UI_RECOVERY_STATE_VERSION,
+        suppressed: false,
+        reason: '',
+        suppressed_instance_id: '',
+        updated_at_unix_ms: 0
+      };
     }
     const value = readJson(this.uiRecoveryStateFile, null);
     const updatedAt = Number(value?.updated_at_unix_ms || 0);
@@ -282,6 +288,7 @@ class RecoveryActivation {
         version: UI_RECOVERY_STATE_VERSION,
         suppressed: true,
         reason: 'state_invalid',
+        suppressed_instance_id: '',
         updated_at_unix_ms: this.now(),
         error_code: 'UI_RECOVERY_STATE_INVALID'
       };
@@ -290,15 +297,24 @@ class RecoveryActivation {
       version: UI_RECOVERY_STATE_VERSION,
       suppressed: value.suppressed,
       reason: String(value.reason || '').slice(0, 80),
+      // Older preference files did not bind suppression to an instance. Keep
+      // those files readable, but only an exact target can survive a
+      // re-registration from the same UI process.
+      suppressed_instance_id: value.suppressed
+        ? String(value.suppressed_instance_id || '').slice(0, 128)
+        : '',
       updated_at_unix_ms: updatedAt
     };
   }
 
-  writeUiRecoveryPreference(suppressed, reason = '') {
+  writeUiRecoveryPreference(suppressed, reason = '', suppressedInstanceId = '') {
     const next = {
       version: UI_RECOVERY_STATE_VERSION,
       suppressed: suppressed === true,
       reason: suppressed === true ? String(reason || '').slice(0, 80) : '',
+      suppressed_instance_id: suppressed === true
+        ? String(suppressedInstanceId || '').slice(0, 128)
+        : '',
       updated_at_unix_ms: this.now()
     };
     writeJsonAtomic(this.uiRecoveryStateFile, next);
@@ -440,7 +456,7 @@ class RecoveryActivation {
     if (!presence.tracked || !presence.alive || presence.instance_id !== intent.instance_id) {
       throw activationError('UI_RECOVERY_INSTANCE_MISMATCH', 'Electron UI recovery suppression must match the live registered UI instance.');
     }
-    return this.writeUiRecoveryPreference(true, intent.reason);
+    return this.writeUiRecoveryPreference(true, intent.reason, intent.instance_id);
   }
 
   recoveryRevisionStatus(options = {}) {
@@ -1033,6 +1049,15 @@ class RecoveryActivation {
       presence: verifiedPresence,
       preferCachedPresence: true
     });
+    const suppressionTargetsCurrentUi = this.uiRecoveryPreference?.suppressed === true
+      && String(this.uiRecoveryPreference?.suppressed_instance_id || '') === registration.instance_id;
+    if ((this.uiRecoveryPreference?.suppressed || this.uiRecoveryPreference?.error_code)
+      && !suppressionTargetsCurrentUi) {
+      // A newly registered UI is an explicit re-arm signal. Do this before
+      // the durable epoch gate so a UI launched during VERIFYING cannot keep
+      // an operator-quit suppression forever.
+      this.writeUiRecoveryPreference(false, '');
+    }
     const epoch = this.fullCleanActivation?.current?.();
     if (epoch) {
       const epochMatches = registration.activation_epoch_id && registration.activation_epoch_id === epoch.activation_epoch_id;
@@ -1055,9 +1080,6 @@ class RecoveryActivation {
           code_revision: verifiedRevision()
         };
       }
-    }
-    if (this.uiRecoveryPreference?.suppressed || this.uiRecoveryPreference?.error_code) {
-      this.writeUiRecoveryPreference(false, '');
     }
     const pending = this.actions.load().actions.find((item) => (
       item.component === 'electron_ui'

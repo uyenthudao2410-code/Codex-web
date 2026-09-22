@@ -219,7 +219,10 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   và argv nội bộ cố định.
 - Thao tác operator quit gửi authenticated `client.suppress_ui_recovery` cho đúng
   UI instance trước khi thoát. Suppression được lưu trong user-data và sống qua
-  Recovery Host replacement; registration UI hợp lệ kế tiếp sẽ xóa suppression.
+  Recovery Host replacement; heartbeat/re-registration của đúng instance đó
+  không xóa suppression, còn một instance UI mới sẽ xóa suppression để watchdog
+  được bật lại. Điều này giữ handoff packaged → development không bị race với
+  heartbeat cuối của UI cũ.
 - Development operators use `npm start` or `npm run dev` for the same stable
   start/focus lifecycle, `npm run dev:refresh` for a full-system refresh,
   `npm run dev:stop`, and `npm run dev:replace`. These commands bind every
