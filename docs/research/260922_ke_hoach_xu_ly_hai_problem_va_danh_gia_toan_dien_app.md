@@ -1860,3 +1860,30 @@ package_source_sha256 = expected sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352
 Action còn mở vẫn là `act_0f0a49c6424d42d3bc7bc49ad46e4ffa`: node `3c7378b3-ecc4-4466-9a87-25d4d53ffdcf`/`DaoChienThang` stale, `policy_state=unavailable`, `delivery_state=dispatch_unconfirmed`, có một attempt nhưng không có receipt hoặc reconciliation. Không tự ghi receipt, không đổi thành completed/cancelled, không retry và không mở admission. Current server revision đã cập nhật; blocker còn lại là node-side evidence/operator decision cho action cũ, strict Windows runtime/discovery và natural-work outcome.
 
 **Operator checkpoint:** yêu cầu “push lên để server cập nhật” hiện đã có bằng chứng mạnh hơn Git push: Ubuntu đang chạy đúng revision `02e2a6b5` từ release sạch và package fingerprint được đối chiếu độc lập. Không thực hiện deploy/restart thêm trong wave này; bước tiếp theo phải là thu thập evidence đúng node cũ hoặc giữ `recovery` theo runbook, không làm xanh healthcheck bằng cách sửa ledger trực tiếp.
+
+### 16.37. Remote readback sau push `a2eb0eb4`: package Ubuntu còn lag Git hiện hành — 22/09/2026 khoảng 21:46 +07
+
+Đã kiểm tra lại bằng một GET read-only tới `https://svhome.tail0e4032.ts.net/healthz`; không gửi credential, không gọi mutation, không thay đổi node hoặc admission.
+
+```text
+HTTP = 200
+service = coding-tools-control-plane
+service_instance_id = cp_3efb2ef516884f0aa1e857318bcb9735
+schema_version = 24
+package_source_sha256 = sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2
+expected_package_source_sha256 = sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2
+declared_source_revision = 02e2a6b5dfa8d138be403b64617c2a3e6f3489aa
+admission_mode = recovery
+unresolved_action_count = 11
+unquarantined_unresolved_action_count = 1
+```
+
+Readback này xác nhận section 16.36 có remote service/package identity thực, nhưng **không xác nhận Ubuntu đã chạy commit mới `a2eb0eb44376294e5c327f43c07e40d923ddedd6`**. Hiện trạng phải ghi là:
+
+- Git `main`, `origin/main` và GitHub `refs/heads/main` đã ở `a2eb0eb4`.
+- Ubuntu control plane vẫn nạp release từ `02e2a6b5`, tức chậm hơn một commit docs/delivery.
+- `admission_mode=recovery`; không mở execution chỉ vì `/healthz=200`.
+- Một action `dispatch_unconfirmed` vẫn chưa có receipt/reconciliation; không mark completed, cancelled hoặc replay.
+- Windows vẫn còn `tunnelRunning=false`, `fullyReady=false`, `UPDATE_INCOMPLETE`, `CHANGED_NEEDS_DISCOVERY`; vì vậy remote package readback không thay thế strict Windows client discovery.
+
+**Operator checkpoint:** đã thêm bằng chứng endpoint hiện tại và sửa cách diễn đạt package/server thành “đã xác minh release 02e2” thay vì “đã nạp HEAD hiện hành”. Không triển khai/restart Ubuntu từ wave này, không tạo worktree, không sửa ledger và không đóng Problem. Exact next action là chỉ deploy package `a2eb0eb4` nếu có deployment authority riêng; sau đó phải đọc lại exact service/package identity và giữ admission `recovery` cho tới khi unresolved action, Windows strict discovery và natural outcome được xử lý.
