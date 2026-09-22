@@ -3208,3 +3208,106 @@ không ACK/`workspace_context` giả và không dùng runtime proof này để �
 natural outcome. Next action có giá trị phân biệt cao nhất vẫn là strict
 discovery bằng connector được hỗ trợ, rồi real `workspace_context`; sau đó mới
 reboot/Machine B/fault injection/natural-use và closure authority.
+
+### 16.64. Recheck oracle và ledger sau wave recovery — 23/09/2026
+
+Đã thực hiện một wave **read-only** trực tiếp trên `main` sau controlled
+Supervisor replacement. Không tạo worktree/branch phụ, không reset/clean và
+không chạy refresh/reboot/Tunnel/ACK.
+
+**Git/runtime boundary tại thời điểm quan sát:**
+
+```text
+HEAD = origin/main = cab69630882c4f5d9dbfc41de83ae8301d6721ae
+Supervisor              = PID 50720, state=healthy
+Connected-agent         = PID 33404, parent=50720, runtime-mode=development
+Recovery Host            = PID 41648, instance=296aa20eea59f9b3c13e54940070a6b1
+Recovery Host revision   = running 94ea7118… / disk 4158c76… / update_pending=true
+Coding MCP revision      = running a49891f8… / disk a49891f8… / update_pending=false
+activation               = READY, admission_open=false
+role                     = central_executor
+mcp/native                = true / true
+tunnel                    = false (đúng role, không phải lỗi cần ép bật)
+fully_ready               = false
+connector                 = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered   = false
+connector_refresh_required = true
+client                    = null
+```
+
+`collect-boot-runtime-observation.js --workspace E:\\DEV\\Codex-web` trả
+`status=OBSERVED`, `workspace_matched=true`, nhưng vẫn
+`authority_granted=false`, `live_accepted=false` và thiếu
+`REAL_CLIENT_WORKSPACE_READ`, `CLIENT_DISCOVERY_PROVENANCE` cùng các trường
+reboot/package/attempt. Đây là readback được xác thực từ Recovery IPC, không
+phải schema-v2 reboot receipt và không nâng product acceptance.
+
+**Ledger census mới nhất (Backup API + query-only):**
+
+```text
+snapshot_at       = 2026-09-22T22:43:27.431Z
+physical_sha256   = e73b7010c428a7108719205cfccb93e0c3f2e95cc468b29428abb5cd8b211b19
+logical_sha256    = cb46731ba30e2ef05aa0946a79ba7b67262d32559dda610b92bc5dcdc5f75243
+schema            = 12
+size              = 97,742,848 bytes
+integrity/FK      = ok / 0
+tables            = runs 557, events 25,822, problem_events 307,
+                    checkpoints 273, proofs 947
+ordinary_active   = 17 (17 THRESHOLD_SENSITIVE_STALE_CANDIDATE)
+p5_epochs         = 6
+projection_drift  = false
+stale residues    = 0
+unbound residues  = 0
+```
+
+Đếm exact theo `ENGINEERING_ATTEMPT_BOUND` và join `runs` tại snapshot này:
+
+| Problem / revision | Criteria | Accepted | Aborted | Active | Tổng RUN | State |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `prl-22e670302757c9b7663170e226ed7c26` / rev1 | 12 | 47 | 16 | 3 | 66 | OPEN |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / rev2 | 18 | 16 | 10 | 13 | 39 | OPEN |
+
+Các số `63/39` trong một snapshot trước đó là cửa sổ ledger cũ hơn; không trộn
+chúng với census mới. Cả hai revision vẫn có `state_after=OPEN` ở các bind mới
+nhất. Không có basis để chuyển status, gộp RUN/criterion hoặc coi active durable
+là worker/process đang sống.
+
+**Focused oracle proof:**
+
+```text
+node --test tests/boot-acceptance.test.js \
+  tests/boot-runtime-observation.test.js \
+  tests/recovery-bootstrap.test.js
+93 passed, 0 failed
+```
+
+Proof này xác nhận các negative quan trọng: PID/hash/health đơn lẻ không đủ;
+reboot sequence, packaged host/start-token, revision/epoch, MCP/native, role
+aware route, strict connector và `workspace_context` đều phải khớp; semantic
+stop refusal không terminate/spawn/restore; transport loss không được suy thành
+đã stop; baseline off/unknown/partial/manual-stop không tự bật lại. Đây vẫn là
+`SOURCE_PRESENT + FOCUSED_PROOF`, không phải live connector/client acceptance.
+
+Phiên Codex hiện tại không expose Coding Tools MCP connector; cả
+`list_mcp_resources` và `list_mcp_resource_templates` đều rỗng. Vì vậy không
+thể tạo hợp lệ receipt `tools/list`/`server/discover` bind process/server/epoch/
+contract SHA trong wave này. Trạng thái điều hành là
+`WAITING_FOR_SUPPORTED_CONNECTOR`; không thay thế bằng local HTTP, healthz,
+heartbeat, persisted compatibility flag, ACK thủ công hoặc
+`workspace_context` giả.
+
+**Checkpoint / next action:**
+
+- Đã hoàn thành: current census, exact Problem count, Supervisor identity,
+  runtime readback và role-aware oracle được recapture; mọi đọc ledger là
+  immutable/query-only, `mutated_canonical_ledger=false`.
+- Chưa đạt: strict connector discovery, real workspace read, source/package/
+  epoch alignment cho full-clean, reboot matrix, Machine B/fault injection,
+  natural-use và independent outcome.
+- Giữ cả hai Problem `OPEN`; giữ dirty runtime evidence theo retention policy;
+  không stage `dist-recovery-*`.
+- Exact next action: khi một connector được hỗ trợ xuất hiện, lấy
+  `tools/list`/`server/discover` receipt bind exact identity; sau đó gọi
+  `workspace_context` thật trên workspace này. Nếu connector vẫn không xuất
+  hiện, terminalize wave ở `WAITING_FOR_SUPPORTED_CONNECTOR`, không retry
+  refresh.

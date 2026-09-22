@@ -1726,3 +1726,62 @@ Problem `prl-22e…`/`prl-e918…` vẫn `OPEN`. Exact next action là giữ bun
 fail-closed, lấy strict connector discovery bằng client được hỗ trợ; sau đó mới
 real `workspace_context`, reboot matrix và natural-use/outcome. Không bật Tunnel
 chỉ để làm xanh `fully_ready`, không ACK thủ công và không gộp hai Problem.
+
+## 15.15. Recheck sau wave oracle/ledger — 23/09/2026
+
+Wave này chỉ đọc và chạy focused oracle trên checkout `main`; không tạo
+worktree/branch, không reset/clean, không refresh/reboot/Tunnel/ACK.
+
+```text
+HEAD/origin/main          = cab69630882c4f5d9dbfc41de83ae8301d6721ae
+Supervisor                = PID 50720, healthy
+Connected-agent           = PID 33404, parent=50720, development + data-root
+Recovery Host             = PID 41648 / instance 296aa20eea59f9b3c13e54940070a6b1
+Recovery Host              = running 94ea7118… / disk 4158c76… / update_pending=true
+Coding MCP                = running a49891f8… / disk a49891f8…
+activation                = READY / admission closed
+runtime                   = mcp=true, native=true, tunnel=false, fully_ready=false
+connector                 = CHANGED_NEEDS_DISCOVERY / rediscovered=false
+workspace observation    = OBSERVED, workspace_matched=true, client=null
+authority/live accepted  = false / false
+```
+
+Ledger được đọc bằng SQLite Online Backup API rồi mở `immutable + query_only`:
+
+```text
+snapshot_at      = 2026-09-22T22:43:27.431Z
+physical_sha256  = e73b7010c428a7108719205cfccb93e0c3f2e95cc468b29428abb5cd8b211b19
+logical_sha256   = cb46731ba30e2ef05aa0946a79ba7b67262d32559dda610b92bc5dcdc5f75243
+schema/integrity/FK = 12 / ok / 0
+ordinary_active_runs = 17; p5_epochs = 6
+projection_drift = false; stale/unbound residues = 0 / 0
+```
+
+Exact revision counts ở snapshot mới nhất là `prl-22e…` rev1: `47 accepted /
+16 aborted / 3 active = 66 RUN`, và `prl-e918…` rev2: `16 / 10 / 13 = 39 RUN`;
+cả hai vẫn `OPEN`. Không gộp với snapshot cũ `63/39`, không chuyển active
+durable thành process đang sống và không dùng generated projection thay
+canonical ledger.
+
+Focused suite:
+
+```text
+node --test tests/boot-acceptance.test.js \
+  tests/boot-runtime-observation.test.js \
+  tests/recovery-bootstrap.test.js
+93 passed, 0 failed
+```
+
+Kết quả chỉ đóng local source/oracle proof. Runtime vẫn chưa có current-process
+connector receipt; `list_mcp_resources` và `list_mcp_resource_templates` trong
+phiên Codex đều rỗng. Vì vậy gate strict giữ
+`WAITING_FOR_SUPPORTED_CONNECTOR`, không dùng health/heartbeat/ACK/local probe
+để thay `tools/list` hoặc `server/discover`, và không gọi app là usable.
+
+**Operator checkpoint:** recheck đã hoàn thành, canonical ledger bytes không bị
+mutate, dirty `.coding-tools/**` được giữ nguyên theo retention invariant; thư
+mục `dist-recovery-*` không đưa vào commit. Exact next action không đổi: khi
+connector được hỗ trợ xuất hiện, bind discovery vào PID/process instance/MCP
+server instance/activation epoch/contract SHA, rồi gọi real `workspace_context`
+trên `E:\\DEV\\Codex-web`. Nếu không có connector, dừng ở
+`WAITING_FOR_SUPPORTED_CONNECTOR`; hai Problem tiếp tục `OPEN`.
