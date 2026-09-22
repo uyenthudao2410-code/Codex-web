@@ -2295,3 +2295,105 @@ action chuyển sang activation packet mới: freeze package/source/epoch đồn
 revalidate primary MCP/Tunnel/connector/workspace trước admission, rồi mới chạy
 reboot matrix. Giữ các gate Machine B, 48-hour natural-use, independent outcome
 và Problem closure ở `NOT_RUN/OPEN` cho tới khi có receipt thật.
+
+### 16.45. Oracle reboot hiện hành đã đủ chặt; receipt cũ vẫn không đạt — 22/09/2026
+
+Để phân biệt “oracle source đã sửa” với “artifact acceptance đã có”, đã chạy lại
+`scripts/verify-boot-acceptance.js` qua bộ fixture hiện hành:
+
+```text
+node --test tests/boot-acceptance.test.js
+43 passed, 0 failed
+```
+
+Oracle hiện tại không còn chỉ kiểm PID/hash/Supervisor. Nó bắt buộc schema-v2,
+Problem/revision/criteria fingerprint, boot sequence trước/sau, packaged host mới
+với process-start token, Supervisor healthy + startup intent enabled, exact
+Recovery Host/Coding MCP revisions, activation `READY/admission_open`,
+`updateIncomplete=false`, `mcpRunning/nativeAlive/componentsReady/fullyReady=true`,
+client binding cùng epoch/process/contract, một `workspace_context` thật với
+`completed=true/workspace_accessed=true`, và role-specific central route hoặc
+direct Tunnel + connector freshness. Các negative fixture (`mcpDead`, `tunnelDead`,
+source drift, old epoch, closed admission, no reboot, no client read, manual
+repair...) đều fail-closed.
+
+Vì vậy nhận định đúng ở thời điểm này là: **source oracle đã đạt
+`FOCUSED_PROOF`**, còn file pre-reboot lịch sử chỉ chứa Supervisor/packaged-host
+evidence và không thể vượt oracle hiện hành; chưa có post-reboot receipt đủ trường,
+strict discovery, workspace read hoặc natural outcome. Không nới oracle để làm
+receipt cũ xanh.
+
+**Operator checkpoint:** giữ nguyên oracle và acceptance policy. Exact next action
+là tạo receipt v2 mới từ một activation/reboot được phép, bind đúng package/epoch/
+client và chạy oracle này; nếu thiếu một trường thì kết quả phải là `NOT_PROVEN`,
+không thay bằng `/healthz`, PID hoặc accepted RUN.
+
+### 16.45. Deployment Ubuntu schema-25 và quarantine action lịch sử — 22/09/2026 sau 22:45 +07
+
+Wave này đã thực hiện bằng SSH target-bound tới `svhome@100.116.112.22`, giữ
+admission đóng ở `recovery`. Control-plane package đã được build/verify từ
+commit `be16a0b1bb6536643c4894e37c9adaffd76bc905`; các commit sau đó trên
+`main` chỉ thay đổi Electron/docs/delivery evidence, không thay đổi bytes dưới
+`control-plane/` hoặc `deploy/`. Artifact receipt:
+
+```text
+control_plane_schema_version = 25
+package_source_sha256 = sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c
+archive_sha256 = 2d7af7229d14dcba39e712cda039946a2d5a6dd348d325048bda42526e46ee74
+release_file_count = 34
+```
+
+Trước migration đã tạo verified SQLite snapshot bằng Backup API, không copy
+file đang chạy:
+
+```text
+pre_migration_snapshot_sha256 = fc8bd08aed13532660787555299ef07df926a8de7bb491f191a94cc558aa7f59
+pre_migration_schema = 24
+pre_migration_integrity = ok
+pre_migration_admission = recovery
+```
+
+Sau khi bind revision/fingerprint vào protected env + systemd drop-in, đổi
+`current` bằng symlink atomic, `daemon-reload` và restart đúng user unit một
+lần. Readback exact sau restart:
+
+```text
+service = active + enabled
+current = codex-control-plane-be16a0b1bb6536643c4894e37c9adaffd76bc905
+service_instance_id = cp_d8f080f6d0eb44409ce1e5015c9c58a7
+main_pid_at_readback = 1002684
+schema_version = 25
+sqlite_integrity = ok
+declared_source_revision = be16a0b1bb6536643c4894e37c9adaffd76bc905
+package_source_sha256 = sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c
+expected_package_source_sha256 = same
+admission_mode = recovery
+```
+
+Deployment verifier và healthcheck remote đều PASS. Sau khi đối chiếu exact
+action `act_0f0a49c6424d42d3bc7bc49ad46e4ffa` / device
+`3c7378b3-ecc4-4466-9a87-25d4d53ffdcf`, operator đã ghi disposition
+`HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH` với bounded rationale. Action vẫn
+giữ nguyên `dispatch_unconfirmed`, đúng một attempt, **0 receipts**, không có
+reconciliation/completed/cancelled giả và không retry. Health sau đó:
+
+```text
+unresolved_action_count = 11
+quarantined_unknown_action_count = 10
+historical_unobserved_dispatch_count = 1
+quarantined_unresolved_action_count = 11
+unquarantined_unresolved_action_count = 0
+```
+
+Một automatic backup + healthcheck mới cũng PASS, snapshot hash
+`8b30b03cbf5aef3744d616d99ad716616e012d583a9fbb2d84a78a628ae1e6ef`, nhưng
+đây chỉ là bằng chứng integrity/package/recovery-state. Không mở admission,
+không approve enrollment, không cấp workspace/policy/binding, không chạy
+Windows canary, strict client discovery hay natural-work outcome. Các gate
+Windows primary MCP/Tunnel/connector và Problem closure vẫn `OPEN/NOT_RUN`.
+
+**Operator checkpoint:** Ubuntu đã chạy đúng backend schema 25 của source
+đã push, database migration có backup và identity readback đầy đủ; action cũ
+được quarantine minh bạch chứ chưa được coi là đã thực thi. Exact next action
+là hoàn thiện packaged Windows activation/strict discovery theo owner-authorized
+packet; chỉ sau node-side proof và independent outcome mới cân nhắc mở admission.
