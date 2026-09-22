@@ -1654,6 +1654,9 @@ Source patch trong `resources/recovery-supervisor/recovery-supervisor.ps1`:
 * `packaged` pin `--node` vào chính Recovery Host executable;
 * `development` resolve absolute `node.exe` một lần tại Supervisor install,
   ghi `control_plane_node_path` cùng `control_plane_node_sha256` vào manifest;
+* `development` truyền thêm `--data-root` đúng profile vào connected-agent để
+  `runtime_heartbeat()` có thể đọc policy projection; packaged không nhận
+  `--data-root` vì packaged policy root phải do adapter tự derive;
 * preflight kiểm path/hash của Python, agent và Node; mismatch hoặc manifest
   thiếu identity làm agent `manifest_legacy`/`integrity_unproven` và không spawn;
 * replacement nhận biết Node identity thay đổi để không giữ lại agent cũ;
@@ -1661,7 +1664,8 @@ Source patch trong `resources/recovery-supervisor/recovery-supervisor.ps1`:
 
 Focused proof: `node --test tests/recovery-supervisor.test.js` **17/17 PASS**;
 test mới chứng minh development executable giả lập Electron khác `node.exe`
-nhưng `--node` nhận đúng `process.execPath`, còn packaged giữ executable host.
+nhưng `--node` nhận đúng `process.execPath`, development có `--data-root`, còn
+packaged giữ executable host và không nhận cờ data-root.
 `git diff --check` PASS. Chưa coi đây là live recovery proof: installed
 Supervisor chưa được reinstall/activation sau source patch trong section này.
 

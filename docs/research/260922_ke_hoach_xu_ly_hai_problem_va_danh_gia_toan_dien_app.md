@@ -3140,11 +3140,13 @@ Thay đổi đã áp dụng:
 
 1. Supervisor resolve absolute `node.exe` cho `development`, lưu path/hash vào
    manifest; `packaged` pin Node vào executable host như contract hiện hành.
-2. `Get-ControlPlaneAgentSpec` và `Assert-Manifest` kiểm exact path/hash của
+2. Supervisor truyền `--data-root` đúng profile cho development agent; packaged
+   không nhận cờ này vì policy root packaged phải tự derive.
+3. `Get-ControlPlaneAgentSpec` và `Assert-Manifest` kiểm exact path/hash của
    Python, `node_agent.py` và Node runtime; thiếu/mismatch thì fail-closed.
-3. `Get-ControlPlaneAgentArguments` lấy `--node` từ identity đã kiểm chứng;
+4. `Get-ControlPlaneAgentArguments` lấy `--node` từ identity đã kiểm chứng;
    replacement dừng agent cũ nếu mode/path/hash đổi.
-4. Regression test bổ sung fixture Electron khác Node và assertion exact argv,
+5. Regression test bổ sung fixture Electron khác Node và assertion exact argv,
    không chỉ assertion `runtime-mode`.
 
 Proof đã chạy: `node --test tests/recovery-supervisor.test.js` **17/17 PASS**;

@@ -257,7 +257,13 @@ function Get-ControlPlaneAgentArguments($M,$Spec) {
   if($mode-notin @('development','packaged')){throw 'Control-plane agent runtime mode is invalid.'}
   $node=[string](Get-OptionalProperty $Spec 'node_path' (Get-OptionalProperty $M 'control_plane_node_path' ''))
   if([string]::IsNullOrWhiteSpace($node)-or-not(Test-AbsoluteSafePath $node)-or-not(Test-Path -LiteralPath $node -PathType Leaf)){throw 'Control-plane node executable identity is unavailable.'}
-  @('-I',[string]$Spec.agent_path,'run-connected-agent','--config',[string]$Spec.config_path,'--workspace-registry',[string]$Spec.workspace_registry_path,'--project-root',[string]$M.app_root,'--node',$node,'--runtime-mode',$mode)
+  $arguments=@('-I',[string]$Spec.agent_path,'run-connected-agent','--config',[string]$Spec.config_path,'--workspace-registry',[string]$Spec.workspace_registry_path,'--project-root',[string]$M.app_root,'--node',$node,'--runtime-mode',$mode)
+  if($mode-eq'development'){
+    $dataRoot=[string](Get-OptionalProperty $M 'data_root' '')
+    if(-not(Test-AbsoluteSafePath $dataRoot)){throw 'Development control-plane data root is unavailable.'}
+    $arguments+=@('--data-root',$dataRoot)
+  }
+  $arguments
 }
 function Start-ControlPlaneReadOnlyAgent($M,$Spec) {
   $args=Get-ControlPlaneAgentArguments $M $Spec|ForEach-Object{Quote-Fixed ([string]$_)}
