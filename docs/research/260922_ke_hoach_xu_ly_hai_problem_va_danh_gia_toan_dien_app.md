@@ -2462,3 +2462,91 @@ wave này. Exact next action là tạo snapshot delivery mới cho ledger hiện
 chạy đủ delivery/history/secrets guards, rồi commit trực tiếp trên `main`; sau
 đó chỉ khi có authority riêng mới thực hiện controlled activation epoch để
 đồng nhất source/package/runtime trước strict discovery và reboot acceptance.
+
+### 16.48. Recheck sau commit: ledger recovery đã idempotent, không lặp apply — 22/09/2026 lúc 23:18–23:22 +07
+
+User đã cho phép tiếp tục recovery có kiểm soát cho
+`E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3`. Quyền này đã
+được thực thi ở section 16.34 bằng đúng importer evidence-only, rollback backup,
+quiesce receipt và pointer CAS. Wave hiện tại chỉ recheck an toàn sau commit
+`ba9875b7`; không coi candidate cũ là một lý do để nhập lại.
+
+**Census canonical mới, read-only Backup API:**
+
+```text
+snapshot_at = 2026-09-22T16:17:57.973Z
+backup_api_physical_sha256 = b65bf7e066b2929987f43fa2feefae14090dfbdb63c06741c2f8d372792e5b1e
+logical_sha256 = 988e557c1ad10954f32e71927684e36cb527ab297942cee57fcdc771cd38964d
+schema_version = 12
+integrity_check = ok
+foreign_key_check_rows = 0
+ordinary_active_runs = 17 (all THRESHOLD_SENSITIVE_STALE_CANDIDATE)
+unexplained_active_runs = 0
+stale_background_operation_residues = 0
+unbound_live_resource_residues = 0
+mutated_canonical_ledger = false
+```
+
+Logical SHA khớp postflight của controlled recovery trước đó; physical SHA
+khác do file SQLite tiếp tục là live evidence và có thể thay đổi byte-level
+giữa các snapshot. Không dùng physical churn để suy ra recovery thất bại.
+
+**Readback lineage/effect hiện tại:**
+
+- Ba RUN historical được nối ở section 16.34 vẫn tồn tại và đều `accepted`:
+  `dcb539e0e1694bc1bb29eed2b2e07f8b`, `d01a5dce50c846fc8e13673cdfc8b3b3`,
+  `b194ab1e311e42efa1dd0614ca245037`.
+- `prl-22e670302757c9b7663170e226ed7c26` vẫn `OPEN`, revision `1`, pointer
+  seq `320`; `prl-e918c7d33e70c2d304d0797e11b05fcb` vẫn `OPEN`, revision `2`,
+  pointer seq `316`. Không có resolution/outcome/criterion closure mới.
+- Read-only effect census hiện tại là `background_operations` completed `1304`,
+  orphaned `37`, timed_out `2`; `idempotency_records` completed `8332`, failed
+  `831`, unknown `661`; `managed_process_jobs` closed `8`, exited `8426`,
+  quiesced `155`, spawn_failed `2`, timeout `40`. `unknown=661` vẫn là evidence
+  cần phân loại, không được gọi là replay-safe hay đã reconcile chỉ vì không
+  còn row `running` tại lát cắt này.
+
+**Negative idempotence proof:**
+
+Đã gọi `recover_ledger_evidence.py preflight` read-only với candidate cũ của
+section 16.34, exact candidate physical/logical SHA và cùng allowlist. Guard từ
+chối trước mutation với:
+
+```text
+RECOVERY_CURRENT_ROWS_CHANGED:problem_threads:1
+```
+
+Điều này là kết quả đúng: candidate cũ đã được apply, còn canonical hiện tại đã
+có row/pointer state khác nên không được ghép lại. Không tạo receipt apply mới,
+không mở `ledger_access_gate` ghi, không copy/replace SQLite, không pointer CAS,
+không replay effect và không thay đổi canonical ledger trong probe này.
+
+**Runtime boundary sau commit (read-only):**
+
+```text
+npm run dev:status
+DEV_UI state=MISSING, host=unavailable, connector_state=UNAVAILABLE,
+error_code=RECOVERY_DESCRIPTOR_STALE
+
+node scripts/collect-boot-runtime-observation.js --workspace E:/DEV/Codex-web
+status=NOT_PROVEN, failure_code=RECOVERY_DESCRIPTOR_STALE
+
+recovery:supervisor:status
+task_state=Running, state=spawn_failed, consecutive_failures=82,
+last_error_code=SPAWN_FAILED, last_error_message="Recovery Supervisor executable missing",
+last_host_pid=42556, last_healthy_at=2026-09-22T16:11:21.6495570Z
+```
+
+Recovery plane/ledger continuity vì thế đang có bằng chứng, nhưng primary
+MCP/Tunnel, development UI, strict connector discovery và reboot oracle vẫn
+chưa usable. Patch `ba9875b7` chỉ làm read-model admission fail-closed khi gặp
+runtime incomplete; nó không tự spawn executable thiếu, không restart host và
+không tự mở admission.
+
+**Checkpoint và quyết định:** controlled ledger recovery được giữ ở trạng thái
+`APPLIED_EVIDENCE_ONLY + IDEMPOTENCE_GUARDED`; không cần và không được apply lại
+candidate cũ. Hai Problem vẫn `OPEN`, natural-use/independent outcome và các
+criterion coverage vẫn thiếu. Exact next action không còn là thêm một ledger
+import, mà là owner-authorized runtime activation mới với source/package/epoch
+đồng nhất, sau đó strict connector discovery và real `workspace_context`; mọi
+reboot/admission chỉ sau khi các receipt đó có thật.
