@@ -44,6 +44,9 @@ AUTHORITY_TABLES = frozenset(
 UNKNOWN_EFFECT_TABLES = frozenset(
     {"background_operations", "idempotency_records", "managed_process_jobs"}
 )
+POINTER_ONLY_SAFE_RELATIONS = frozenset(
+    {"ENGINEERING_ATTEMPT_BOUND", "LINK", "USER_FEEDBACK"}
+)
 
 
 def sha(path: Path) -> str:
@@ -172,6 +175,122 @@ def _problem_projection(connection: sqlite3.Connection) -> dict[str, object]:
     return {"applicable": True, "drift": drift, "valid": not drift}
 
 
+def _problem_projection_reconciliation_plan(connection: sqlite3.Connection) -> dict[str, object]:
+    """Describe a safe pointer-only projection repair without applying it.
+
+    A recovery candidate may contain immutable problem events that arrived after
+    the copied ``problem_threads`` projection.  Advancing only the projection
+    pointer is safe to *propose* when every tail event keeps the current
+    revision/state and is a non-transition relation.  This verifier never
+    writes the pointer; a supported runtime reconciliation API and owner
+    authority are still required before any application.
+    """
+    thread_columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(problem_threads)")}
+    event_columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(problem_events)")}
+    required_thread = {
+        "problem_id",
+        "current_revision",
+        "resolution_state",
+        "latest_problem_event_seq",
+        "latest_problem_event_hash",
+    }
+    required_event = {
+        "problem_id",
+        "seq",
+        "problem_revision",
+        "relation_type",
+        "link_status",
+        "link_role",
+        "state_before",
+        "state_after",
+        "event_id",
+        "event_hash",
+        "prev_hash",
+    }
+    if not required_thread.issubset(thread_columns) or not required_event.issubset(event_columns):
+        return {"applicable": False, "plans": [], "valid": False, "can_apply": False}
+
+    plans: list[dict[str, object]] = []
+    for thread in connection.execute(
+        "SELECT problem_id,current_revision,resolution_state,latest_problem_event_seq,latest_problem_event_hash FROM problem_threads ORDER BY problem_id"
+    ):
+        problem_id = str(thread["problem_id"])
+        pointer_seq = int(thread["latest_problem_event_seq"] or 0)
+        pointer_hash = str(thread["latest_problem_event_hash"] or "")
+        tail = connection.execute(
+            """SELECT seq,problem_revision,relation_type,link_status,link_role,
+                      state_before,state_after,event_id,event_hash,prev_hash
+                 FROM problem_events
+                WHERE problem_id=? AND seq>?
+                ORDER BY seq""",
+            (problem_id, pointer_seq),
+        ).fetchall()
+        if not tail:
+            continue
+        reasons: list[str] = []
+        tail_rows: list[dict[str, object]] = []
+        expected_prev = pointer_hash
+        for row in tail:
+            relation = str(row["relation_type"] or "")
+            event_revision = int(row["problem_revision"] or 0)
+            state_before = str(row["state_before"] or "")
+            state_after = str(row["state_after"] or "")
+            link_status = str(row["link_status"] or "")
+            link_role = str(row["link_role"] or "")
+            event_reasons: list[str] = []
+            if event_revision != int(thread["current_revision"]):
+                event_reasons.append("REVISION_MISMATCH")
+            if state_before != str(thread["resolution_state"] or "") or state_after != state_before:
+                event_reasons.append("STATE_TRANSITION_OR_MISMATCH")
+            if relation not in POINTER_ONLY_SAFE_RELATIONS:
+                event_reasons.append("TRANSITION_RELATION")
+            if link_status != "EXACT":
+                event_reasons.append("LINK_NOT_EXACT")
+            if relation == "ENGINEERING_ATTEMPT_BOUND" and link_role != "PRIMARY":
+                event_reasons.append("PRIMARY_BINDING_REQUIRED")
+            if str(row["prev_hash"] or "") != expected_prev:
+                event_reasons.append("TAIL_HASH_LINK_MISMATCH")
+            if event_reasons:
+                reasons.extend(f"seq={int(row['seq'])}:{reason}" for reason in event_reasons)
+            expected_prev = str(row["event_hash"] or "")
+            tail_rows.append(
+                {
+                    "seq": int(row["seq"]),
+                    "event_id": str(row["event_id"] or ""),
+                    "event_hash": str(row["event_hash"] or ""),
+                    "relation_type": relation,
+                    "link_status": link_status,
+                    "link_role": link_role,
+                    "problem_revision": event_revision,
+                    "state_before": state_before,
+                    "state_after": state_after,
+                }
+            )
+        last = tail_rows[-1]
+        plans.append(
+            {
+                "problem_id": problem_id,
+                "classification": "POINTER_ONLY_SAFE" if not reasons else "BLOCKED_UNSAFE_TAIL",
+                "can_apply": False,
+                "authority_required": "RUNTIME_RECONCILIATION",
+                "current_pointer_seq": pointer_seq,
+                "current_pointer_hash": pointer_hash,
+                "proposed_pointer_seq": int(last["seq"]),
+                "proposed_pointer_hash": str(last["event_hash"]),
+                "tail_event_count": len(tail_rows),
+                "tail_events": tail_rows,
+                "reasons": reasons,
+            }
+        )
+    return {
+        "applicable": True,
+        "plans": plans,
+        "valid": all(plan["classification"] == "POINTER_ONLY_SAFE" for plan in plans),
+        "can_apply": False,
+        "requires_supported_runtime_api": True,
+    }
+
+
 def _unknown_effects(connection: sqlite3.Connection) -> dict[str, object]:
     result: dict[str, object] = {}
     unresolved = 0
@@ -270,6 +389,125 @@ def _append_and_duplicate_probe(candidate: Path) -> dict[str, object]:
         }
 
 
+def _isolated_projection_reconciliation_probe(candidate: Path) -> dict[str, object]:
+    """Apply only the proposed projection pointer update to a disposable clone.
+
+    This is a semantics probe for the quarantined candidate.  It is deliberately
+    not exposed as an importer/switch API and never opens the canonical ledger.
+    """
+    with tempfile.TemporaryDirectory(prefix="codex-ledger-projection-probe-") as temp:
+        root = Path(temp)
+        target = root / "ledger.sqlite3"
+        shutil.copyfile(candidate, target)
+        connection = sqlite3.connect(target)
+        connection.row_factory = sqlite3.Row
+        try:
+            plan_before = _problem_projection_reconciliation_plan(connection)
+            if not plan_before.get("applicable"):
+                return {
+                    "applicable": False,
+                    "can_apply": False,
+                    "valid": False,
+                    "reason": "PROBLEM_PROJECTION_SCHEMA_NOT_APPLICABLE",
+                }
+            plans = plan_before.get("plans") or []
+            if not plans or not plan_before.get("valid"):
+                return {
+                    "applicable": True,
+                    "can_apply": False,
+                    "valid": False,
+                    "reason": "POINTER_ONLY_PLAN_NOT_SAFE",
+                    "plans": plans,
+                }
+            before_threads = {
+                str(row["problem_id"]): (
+                    int(row["current_revision"]),
+                    str(row["resolution_state"]),
+                    int(row["latest_problem_event_seq"]),
+                    str(row["latest_problem_event_hash"] or ""),
+                )
+                for row in connection.execute(
+                    "SELECT problem_id,current_revision,resolution_state,latest_problem_event_seq,latest_problem_event_hash FROM problem_threads"
+                )
+            }
+            before_events = [
+                tuple(row)
+                for row in connection.execute(
+                    "SELECT problem_id,seq,event_id,event_hash,prev_hash FROM problem_events ORDER BY seq"
+                )
+            ]
+            connection.execute("BEGIN IMMEDIATE")
+            applied = 0
+            for plan in plans:
+                updated = connection.execute(
+                    """UPDATE problem_threads
+                          SET latest_problem_event_seq=?, latest_problem_event_hash=?
+                        WHERE problem_id=?
+                          AND latest_problem_event_seq=?
+                          AND latest_problem_event_hash=?""",
+                    (
+                        int(plan["proposed_pointer_seq"]),
+                        str(plan["proposed_pointer_hash"]),
+                        str(plan["problem_id"]),
+                        int(plan["current_pointer_seq"]),
+                        str(plan["current_pointer_hash"]),
+                    ),
+                )
+                if updated.rowcount != 1:
+                    raise RuntimeError("RECOVERY_PROJECTION_POINTER_COMPARE_AND_SWAP_FAILED")
+                applied += updated.rowcount
+            connection.commit()
+            after_projection = _problem_projection(connection)
+            after_plan = _problem_projection_reconciliation_plan(connection)
+            after_threads = {
+                str(row["problem_id"]): (
+                    int(row["current_revision"]),
+                    str(row["resolution_state"]),
+                    int(row["latest_problem_event_seq"]),
+                    str(row["latest_problem_event_hash"] or ""),
+                )
+                for row in connection.execute(
+                    "SELECT problem_id,current_revision,resolution_state,latest_problem_event_seq,latest_problem_event_hash FROM problem_threads"
+                )
+            }
+            after_events = [
+                tuple(row)
+                for row in connection.execute(
+                    "SELECT problem_id,seq,event_id,event_hash,prev_hash FROM problem_events ORDER BY seq"
+                )
+            ]
+            integrity = str(connection.execute("PRAGMA integrity_check").fetchone()[0])
+            foreign_keys = len(list(connection.execute("PRAGMA foreign_key_check")))
+            state_preserved = all(
+                after_threads.get(problem_id, (None, None))[0:2] == before[0:2]
+                for problem_id, before in before_threads.items()
+            )
+            events_preserved = before_events == after_events
+            return {
+                "applicable": True,
+                "can_apply": False,
+                "clone_only": True,
+                "applied_pointer_count": applied,
+                "projection_valid_after": bool(after_projection.get("valid")),
+                "remaining_plan_count": len(after_plan.get("plans") or []),
+                "state_and_revision_preserved": state_preserved,
+                "events_preserved": events_preserved,
+                "integrity": integrity,
+                "foreign_key_rows": foreign_keys,
+                "valid": bool(
+                    applied == len(plans)
+                    and after_projection.get("valid")
+                    and not after_plan.get("plans")
+                    and state_preserved
+                    and events_preserved
+                    and integrity == "ok"
+                    and foreign_keys == 0
+                ),
+            }
+        finally:
+            connection.close()
+
+
 def audit(current: Path, candidate: Path, historical: Path, expected_runs: set[str], expected: dict[str, str]) -> dict[str, object]:
     paths = [current.resolve(strict=True), candidate.resolve(strict=True), historical.resolve(strict=True)]
     if len(set(paths)) != 3:
@@ -306,11 +544,16 @@ def audit(current: Path, candidate: Path, historical: Path, expected_runs: set[s
         foreign_keys = {name: len(list(connection.execute("PRAGMA foreign_key_check"))) for name, connection in connections.items()}
         chains = {name: _event_chain(connection) for name, connection in connections.items()}
         projections = {name: _problem_projection(connection) for name, connection in connections.items()}
+        projection_plans = {
+            name: _problem_projection_reconciliation_plan(connection)
+            for name, connection in connections.items()
+        }
         effects = {name: _unknown_effects(connection) for name, connection in connections.items()}
     finally:
         for connection in connections.values():
             connection.close()
     append_probe = _append_and_duplicate_probe(candidate)
+    projection_probe = _isolated_projection_reconciliation_probe(candidate)
     projection_ok = bool(projections["candidate"].get("valid"))
     effect_ok = bool(effects["candidate"].get("reconciled"))
     structural_ok = preserved and authority_preserved and integrity["candidate"] == "ok" and not foreign_keys["candidate"] and bool(chains["candidate"].get("valid"))
@@ -329,13 +572,20 @@ def audit(current: Path, candidate: Path, historical: Path, expected_runs: set[s
         "foreign_key_rows": foreign_keys,
         "event_chains": chains,
         "problem_projections": projections,
+        "problem_projection_reconciliation": projection_plans,
         "unknown_effects": effects,
         "append_duplicate_authority_probe": append_probe,
+        "isolated_projection_reconciliation_probe": projection_probe,
         "gates": {
             "structural_candidate": structural_ok,
             "problem_projection_reconciled": projection_ok,
+            "problem_projection_pointer_plan_safe": bool(
+                projection_plans["candidate"].get("valid")
+                and projection_plans["candidate"].get("plans")
+            ),
             "unknown_effects_reconciled": effect_ok,
             "append_duplicate_probe": bool(append_probe.get("valid")),
+            "isolated_projection_reconciliation_probe": bool(projection_probe.get("valid")),
             "operator_review": False,
             "supported_canonical_switch": False,
         },

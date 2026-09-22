@@ -1,4 +1,5 @@
 import importlib.util
+import sqlite3
 import shutil
 import sys
 import tempfile
@@ -26,6 +27,98 @@ from coding_tools_mcp.orchestration_ledger import OrchestrationLedger  # noqa: E
 
 
 class RecoveryCandidateAuditTests(unittest.TestCase):
+    def test_projection_plan_is_pointer_only_and_read_only(self):
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        connection.executescript(
+            """
+            CREATE TABLE problem_threads (
+                problem_id TEXT PRIMARY KEY,
+                current_revision INTEGER NOT NULL,
+                resolution_state TEXT NOT NULL,
+                latest_problem_event_seq INTEGER NOT NULL,
+                latest_problem_event_hash TEXT NOT NULL
+            );
+            CREATE TABLE problem_events (
+                problem_id TEXT NOT NULL,
+                seq INTEGER PRIMARY KEY,
+                problem_revision INTEGER NOT NULL,
+                relation_type TEXT NOT NULL,
+                link_status TEXT NOT NULL,
+                link_role TEXT NOT NULL,
+                state_before TEXT NOT NULL,
+                state_after TEXT NOT NULL,
+                event_id TEXT NOT NULL,
+                event_hash TEXT NOT NULL,
+                prev_hash TEXT NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            "INSERT INTO problem_threads VALUES(?,?,?,?,?)",
+            ("prl-test", 1, "OPEN", 1, "h1"),
+        )
+        connection.executemany(
+            "INSERT INTO problem_events VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            [
+                ("prl-test", 1, 1, "ENGINEERING_ATTEMPT_BOUND", "EXACT", "PRIMARY", "OPEN", "OPEN", "e1", "h1", ""),
+                ("prl-test", 2, 1, "ENGINEERING_ATTEMPT_BOUND", "EXACT", "PRIMARY", "OPEN", "OPEN", "e2", "h2", "h1"),
+                ("prl-test", 3, 1, "ENGINEERING_ATTEMPT_BOUND", "EXACT", "PRIMARY", "OPEN", "OPEN", "e3", "h3", "h2"),
+            ],
+        )
+        before = connection.execute("SELECT * FROM problem_threads").fetchall()
+        plan = audit._problem_projection_reconciliation_plan(connection)
+        after = connection.execute("SELECT * FROM problem_threads").fetchall()
+        self.assertTrue(plan["valid"])
+        self.assertFalse(plan["can_apply"])
+        self.assertEqual(plan["plans"][0]["classification"], "POINTER_ONLY_SAFE")
+        self.assertEqual(plan["plans"][0]["current_pointer_seq"], 1)
+        self.assertEqual(plan["plans"][0]["proposed_pointer_seq"], 3)
+        self.assertEqual([item["seq"] for item in plan["plans"][0]["tail_events"]], [2, 3])
+        self.assertEqual([tuple(row) for row in before], [tuple(row) for row in after])
+        connection.close()
+
+    def test_projection_apply_probe_is_clone_only(self):
+        with tempfile.TemporaryDirectory(prefix="projection-probe-test-") as temp:
+            candidate = Path(temp) / "candidate.sqlite3"
+            connection = sqlite3.connect(candidate)
+            connection.executescript(
+                """
+                CREATE TABLE problem_threads (
+                    problem_id TEXT PRIMARY KEY,
+                    current_revision INTEGER NOT NULL,
+                    resolution_state TEXT NOT NULL,
+                    latest_problem_event_seq INTEGER NOT NULL,
+                    latest_problem_event_hash TEXT NOT NULL
+                );
+                CREATE TABLE problem_events (
+                    problem_id TEXT NOT NULL,
+                    seq INTEGER PRIMARY KEY,
+                    problem_revision INTEGER NOT NULL,
+                    relation_type TEXT NOT NULL,
+                    link_status TEXT NOT NULL,
+                    link_role TEXT NOT NULL,
+                    state_before TEXT NOT NULL,
+                    state_after TEXT NOT NULL,
+                    event_id TEXT NOT NULL,
+                    event_hash TEXT NOT NULL,
+                    prev_hash TEXT NOT NULL
+                );
+                INSERT INTO problem_threads VALUES('prl-test',1,'OPEN',1,'h1');
+                INSERT INTO problem_events VALUES('prl-test',1,1,'ENGINEERING_ATTEMPT_BOUND','EXACT','PRIMARY','OPEN','OPEN','e1','h1','');
+                INSERT INTO problem_events VALUES('prl-test',2,1,'ENGINEERING_ATTEMPT_BOUND','EXACT','PRIMARY','OPEN','OPEN','e2','h2','h1');
+                """
+            )
+            connection.commit()
+            connection.close()
+            before = audit.sha(candidate)
+            result = audit._isolated_projection_reconciliation_probe(candidate)
+            self.assertTrue(result["clone_only"])
+            self.assertTrue(result["valid"])
+            self.assertTrue(result["projection_valid_after"])
+            self.assertEqual(result["applied_pointer_count"], 1)
+            self.assertEqual(audit.sha(candidate), before)
+
     def test_clone_append_and_duplicate_probes_are_isolated(self):
         with tempfile.TemporaryDirectory(prefix="candidate-audit-test-") as temp:
             root = Path(temp)

@@ -4,7 +4,7 @@ Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-
 
 Trạng thái tài liệu: **RECOVERY REHEARSAL ACTIVE — người dùng đã cấp controlled recovery; backup/candidate cô lập đã tạo, canonical chưa thay, candidate chưa activation-eligible**.
 
-> **Cập nhật mới nhất 22/09 khoảng 19:32 +07:** verifier/recovery audit và authority-status fix đã commit trực tiếp trên `main` (`b0b6505`); focused authority test PASS nhưng push vẫn bị GitHub chặn bởi ba binary `output/**/Coding Tools MCP.exe` vượt 100 MB, xem **16.20–16.22**. Canonical hash vẫn nguyên; candidate chưa activation-eligible; goal ACTIVE, chưa complete.
+> **Cập nhật mới nhất 22/09 khoảng 19:46 +07:** verifier đã có pointer-only projection plan và clone-only apply probe; candidate tail `317→320` an toàn về invariant nhưng `can_apply=false`, xem **16.24**. Canonical hash vẫn nguyên; candidate chưa activation-eligible; goal ACTIVE, chưa complete.
 
 ## 0. Kết luận điều hành
 
@@ -1431,3 +1431,26 @@ git bundle verify: OK
 Bundle đầu tiên vẫn được giữ làm checkpoint lịch sử tại `a23c45d`; bundle `current` là snapshot chính xác tại thời điểm HEAD `abab565`. Vì các checkpoint tiếp theo có thể làm HEAD tiến thêm, phải recapture hoặc tạo bundle mới ngay trước history migration; không dùng tên `current` như một tuyên bố freshness vô thời hạn.
 
 **Trạng thái:** backup đã có, nhưng chưa có lệnh `git filter-repo`, `git lfs migrate`, `git update-ref`, `git reset`, `git rebase`, `git push --force-with-lease` hoặc canonical recovery switch. Tiếp theo vẫn cần owner xác nhận phương án và target history; sau đó mới chạy dry-run trên bản sao kiểm soát, đối chiếu `.coding-tools` retention, và publish.
+
+### 16.24. Pointer-only projection plan và clone apply probe — 22/09 khoảng 19:40–19:46 +07
+
+Đã mở rộng [audit-ledger-recovery-candidate.py](../../scripts/audit-ledger-recovery-candidate.py) với hai lớp read-only/clone-only:
+
+1. `problem_projection_reconciliation` chỉ phân loại tail event là `POINTER_ONLY_SAFE` khi cùng current revision/state, state không chuyển, relation là non-transition, link `EXACT`, primary binding hợp lệ và `prev_hash` nối đúng pointer hiện tại. Nó trả `can_apply=false` và yêu cầu authority `RUNTIME_RECONCILIATION`.
+2. `isolated_projection_reconciliation_probe` copy candidate sang thư mục tạm rồi mô phỏng compare-and-swap pointer update trên clone; kiểm tra event bytes, state/revision, integrity/FK và projection sau update. Không có đường mở canonical ledger.
+
+Kết quả trên candidate SHA `651f6c40c633974f0f2668f3b18ccfdb751e946f5ce6b8bd7bb96f7dc97d1be5`:
+
+| Gate | Kết quả | Bằng chứng |
+| --- | --- | --- |
+| Pointer plan | **POINTER_ONLY_SAFE** | `prl-22e…`, revision `1`, state `OPEN`, tail seq `318,319,320`, đều `ENGINEERING_ATTEMPT_BOUND/EXACT/PRIMARY`, `OPEN→OPEN` |
+| Proposed pointer | **317 → 320** | Current hash `380a108…`; proposed hash `1ee18f7…` |
+| Clone-only apply probe | **PASS** | `applied_pointer_count=1`, `projection_valid_after=true`, `remaining_plan_count=0` |
+| State/revision preservation | **PASS** | `state_and_revision_preserved=true`; current revision/state không đổi |
+| Immutable event preservation | **PASS** | `events_preserved=true`; không đổi event/hash/chain |
+| SQLite post-probe | **PASS** | `integrity=ok`, FK `0` |
+| Apply authority | **MISSING** | `can_apply=false`; chưa có supported runtime reconciliation API, quiesced receipt hoặc owner sign-off |
+
+Test bổ sung [test_ledger_recovery_candidate_audit.py](../../tests/test_ledger_recovery_candidate_audit.py) kiểm cả plan invariant và clone-only compare-and-swap. Focused recovery suite hiện tại: **7 tests PASS, 15.217s**; `py_compile` PASS. Đây là bằng chứng semantics trên quarantine/clone, **không** phải canonical projection reconciliation, live activation, Problem closure hoặc quyền replay unknown effects. `activation_eligible` vẫn `false`; unknown-effect và authority gates vẫn mở.
+
+**Next action:** dùng receipt này cho owner review; nếu được cấp supported `RUNTIME_RECONCILIATION` target-specific authority thì mới chạy importer chính thức với rollback backup/postflight. Nếu không, giữ candidate quarantine; không sửa trực tiếp `problem_threads` trên canonical chỉ vì clone probe PASS.
