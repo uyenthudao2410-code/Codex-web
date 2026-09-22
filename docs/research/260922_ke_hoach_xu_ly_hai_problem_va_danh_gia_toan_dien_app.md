@@ -3097,3 +3097,30 @@ Git vẫn chạy trực tiếp trên `main`; runtime evidence drift và
 vào commit release. Exact next action là strict discovery bằng connector được
 hỗ trợ; nếu không có connector, dừng ở `WAITING_FOR_SUPPORTED_CONNECTOR` và cập
 nhật báo cáo, không retry refresh.
+
+### 16.61. Recheck sau push: route TTL lại hết hạn, không mở rộng acceptance — 23/09/2026
+
+Read-only status sau khi commit/push section 16.60, không heartbeat hoặc
+refresh thêm, ghi nhận Recovery Host vẫn current (`PID 41648`, revision
+`94ea7118…`) và MCP running/disk vẫn khớp (`a49891f8…`), nhưng route evidence
+one-shot lại quá TTL:
+
+```text
+components_ready=true, fully_ready=false, runtime_update_incomplete=true
+central_connected=false, authority_ready=false
+activation READY / admission_open=false
+connector CHANGED_NEEDS_DISCOVERY, connector_rediscovered=false
+```
+
+`collect-boot-runtime-observation` vẫn là `OBSERVED` readback-only với
+`authority_granted=false`, `live_accepted=false`, `client=null`. Kết quả này
+không phủ nhận controlled recovery của section 16.60; nó chứng minh rằng local
+route readiness hiện phụ thuộc heartbeat TTL và chưa có lifecycle owner duy trì
+evidence sau idle. Không được gọi đây là product outage hoặc tự động bật Tunnel;
+`central_executor` vẫn có `tunnel_required=false`.
+
+**Cập nhật quyết định:** giữ nguyên bundle/epoch để tránh tạo thêm drift; không
+retry refresh, không ACK thủ công và không chạy reboot. Ưu tiên tiếp theo vẫn là
+strict connector discovery, rồi một `workspace_context` thật. Nếu connector
+không expose trong phiên được hỗ trợ, ghi `WAITING_FOR_SUPPORTED_CONNECTOR` và
+để `prl-22e…`/`prl-e918…` ở `OPEN`.

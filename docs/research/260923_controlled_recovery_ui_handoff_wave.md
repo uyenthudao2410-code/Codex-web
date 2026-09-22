@@ -1596,3 +1596,37 @@ missing           = REAL_CLIENT_WORKSPACE_READ,
 - **Trạng thái mạnh nhất hiện tại:** `RUNTIME_RECOVERY_VERIFIED + CENTRAL_ROUTE_READY + PRODUCT_ACCEPTANCE_OPEN`.
 - **Blocker thật:** current ChatWeb connector discovery và real `workspace_context`; sau đó mới có thể mở reboot/logon/Machine B, fault injection, natural-use và closure.
 - **Exact next action:** giữ epoch hiện tại, dùng connector được hỗ trợ để lấy một discovery receipt bind exact identity; nếu connector không xuất hiện trong phiên vận hành, ghi `WAITING_FOR_SUPPORTED_CONNECTOR` và dừng, không retry refresh/ACK.
+
+## 15.12. Read-only recheck sau khi route TTL hết hạn lần nữa — 23/09/2026
+
+Sau khi push commit của section 15.11, không gọi thêm heartbeat, refresh, ACK
+hay reboot. Read-only recheck lúc `2026-09-22T21:56:03Z` cho thấy MCP và
+Recovery Host vẫn current nhưng route evidence one-shot đã hết TTL lần nữa:
+
+```text
+UI state                    = CURRENT (PID 16916)
+Recovery Host               = PID 41648, instance 296aa20eea59f9b3c13e54940070a6b1
+Recovery Host running/disk  = 94ea7118… / 94ea7118…
+MCP running/disk            = a49891f8… / a49891f8…
+components_ready            = true
+fully_ready                 = false
+runtime_update_incomplete   = true
+central_connected           = false
+authority_ready             = false
+activation state/admission  = READY / false
+connector                   = CHANGED_NEEDS_DISCOVERY, rediscovered=false
+```
+
+`collect-boot-runtime-observation` vẫn trả `status=OBSERVED`,
+`authority_granted=false`, `live_accepted=false`, `client=null`. Đây là hành vi
+fail-closed dự kiến khi heartbeat không được duy trì; không phải bằng chứng
+MCP chết, source drift hay ledger corruption. Readback trước đó
+`READY/admission_open=true` chỉ có hiệu lực trong observation window của route
+evidence, không được kéo dài thành present-tense product acceptance.
+
+**Checkpoint:** trạng thái mạnh nhất hiện tại là
+`RUNTIME_RECOVERY_VERIFIED_AT_PRIOR_READBACK + ADMISSION_CLOSED_CURRENT +
+PRODUCT_ACCEPTANCE_OPEN`. Route heartbeat lifecycle vẫn là gap P1, nhưng không
+được giải quyết bằng loop heartbeat vô hạn trong wave discovery. Exact next
+action không đổi: lấy current-process strict discovery từ connector được hỗ trợ;
+nếu connector không expose, terminalize `WAITING_FOR_SUPPORTED_CONNECTOR`.
