@@ -1555,3 +1555,80 @@ Fresh rehearsal giữ nguyên current rows, integrity `ok`, FK `0`, và thêm đ
 **Lý do không apply live:** canonical hiện tại đã không còn `running`/`in_progress` effect rows của candidate cũ, trong khi candidate historical bắt buộc phải mang chúng để bảo toàn exact evidence. Copy candidate hoặc mark các row đó completed sẽ làm hồi sinh stale effect/authority và vi phạm fail-closed. Source hiện chỉ có `problem_reconcile_provisional_from_checkpoint` cho một accepted checkpoint hợp lệ; không có supported importer để nhập lại exact historical immutable rows và compare-and-swap projection `problem_threads` mà không trực tiếp SQL-copy. Vì vậy fresh rehearsal là bằng chứng recovery plan, không phải quyền canonical switch.
 
 **Trạng thái wave:** `REPLAN_REQUIRED / OPERATOR_REVIEW_PENDING`, không phải `COMPLETE` và chưa phải `BLOCKED` vĩnh viễn. Next action duy nhất để tiến tới live recovery là cung cấp supported importer/`RUNTIME_RECONCILIATION` contract với quiesce receipt, exact logical-SHA guard, per-row unknown disposition, rollback backup và postflight integrity/projection/authority readback. Cho tới khi có contract đó, giữ candidate ngoài repository ở quarantine, không sửa trực tiếp `ledger.sqlite3`, không replay unknown effect và không đóng hai Problem.
+
+### 16.29. Regression A0/A1/A2 và fresh rehearsal sau khi được phép tiếp tục — 22/09/2026 khoảng 20:05–20:26 +07
+
+Lượt này tiếp tục **trực tiếp trên `main`, không tạo worktree**. Trong khi chạy, một tiến trình delivery khác đã tạo commit snapshot `23f86f0` (`chore: refresh delivery snapshot before publish`); tôi giữ nguyên commit đó và không sửa/revert các file evidence concurrent. Tại checkpoint:
+
+```text
+HEAD         = 23f86f0d81d1bf03a66ad8c104805db29baca595
+origin/main  = 044dd96178faacc92a049a528eb05baa60b8816a
+remote change= none observed
+dirty        = .coding-tools/orchestration/ledger.sqlite3
+               .coding-tools/orchestration/task-context-workspaces.json
+               .coding-tools/performance.json
+```
+
+#### A0/A1 — source safety và rollback intent
+
+Không thêm một đường kill/restart mới. Source hiện hành đã giữ các guard của `recoveryBootstrap` và `recoveryIpc`, sau đó tôi chạy lại proof trên đúng checkout hiện tại:
+
+| Oracle | Kết quả |
+| --- | ---: |
+| `node --test tests/recovery-bootstrap.test.js` | **41/41 PASS**, 9.787 s |
+| `node --test tests/recovery-bootstrap.test.js tests/recovery-host.test.js` | **84/84 PASS**, 22.641 s |
+| `node --test tests/boot-acceptance.test.js tests/boot-runtime-observation.test.js` | **51/51 PASS**, 0.356 s |
+
+Các negative phân biệt được đúng ba lớp:
+
+1. **Semantic refusal có response provenance** (`busy`, `authority denied`, handler refusal, kể cả mã giống `ECONNRESET`) dừng handoff; `terminate=0`, `spawn=0`, `start rollback=0`.
+2. **Transport loss** chỉ được đi tiếp nếu forced authenticated snapshot chứng minh runtime/native/Tunnel đã dừng, đúng workspace và không busy/recovering; thiếu proof trả typed `RECOVERY_BOOTSTRAP_STOP_UNCONFIRMED`, không terminate.
+3. **Rollback** chỉ có thể gọi `runtime.start` khi baseline thật sự đang ON, owner/PID/start-token/descriptor vẫn exact, epoch/workspace/role còn nguyên và sau stop đã chứng minh stopped. Baseline OFF, UNKNOWN, partial, manual-stop, recovering hoặc epoch đổi đều không tự bật lại. Central executor không bị biến thành direct Tunnel.
+
+Điều này đóng **local source/test proof** cho P1/P2; nó chưa phải installed runtime, reboot, package hoặc live client acceptance. Snapshot observation là evidence để quyết định, không phải giấy phép bỏ qua lifecycle authority.
+
+#### A2 — role-aware oracle và false-green
+
+Oracle v2 và collector hiện hành cũng qua toàn bộ **51/51** test: receipt chỉ được nhất quán khi có reboot sequence, fresh packaged host/start-token, Supervisor target đúng, revision/epoch/contract đồng nhất, `fullyReady=true`, primary MCP/native sống, role-specific Tunnel/central binding, connector discovery và một `workspace_context` đã hoàn tất đúng target/request. Các biến thể chỉ có PID/hash/health, workspace sai, generation sai, epoch cũ, MCP/Tunnel chết, stale/future client, policy hết hạn hoặc compatible ACK bị ghi nhầm là strict đều **NOT_PROVEN**.
+
+#### Fresh controlled rehearsal — vẫn quarantine, không switch canonical
+
+Để không dùng candidate cũ sau live drift, đã tạo lại Online Backup snapshot và rehearsal mới bên ngoài repository:
+
+```text
+artifact directory = E:\Caches\Temp\codex-ledger-recovery-rehearsal-live-y7r_wey2
+historical blob    = bed5b266a83e4cbc3947f5dd15854d80f58f6264
+historical SHA     = e7700489c3ecd85afcd2c21c36967741793fef73f36aad47a47da8f9887de9b6
+current backup SHA = a318f2330fc7d391d3189332ce395fb8d810c6c745972c65d606e399cde2dc33
+candidate SHA      = 02f184cb62288fb82c8dc8724081050a0fc42bc880d683365605180b1f418ae5
+```
+
+Rehearsal/audit mới nhất giữ nguyên current rows, integrity `ok`, FK `0` và thêm đúng các historical rows đã allowlist:
+
+```text
+3 RUN / 4 WAVE / 3 checkpoint / 5 proof / 128 events / 3 problem_events
+12 continuity_telemetry / 1 controller_knowledge_ack
+6 background_operations / 18 idempotency_records / 7 managed_process_jobs
+```
+
+Các gate không đổi về bản chất:
+
+| Gate | Kết quả |
+| --- | --- |
+| Append/duplicate probe trên clone | **PASS** |
+| Pointer-only plan `problem_threads` | **SAFE TO PROPOSE**, clone CAS **PASS** |
+| `problem_projection_reconciled` | **false** |
+| Unknown effects | **664**, gồm `2 STALE_CANDIDATE` + `662 TERMINAL_UNKNOWN`; effect safety `OWNER_MANUAL_EVIDENCE=664` |
+| Replay unknown/stale effect | **0 allowed** |
+| `activation_eligible` | **false** |
+| Canonical mutation | **false** |
+
+Historical authority (`controller_leases`, `controller_reattach_receipts`, `hub_clients`) tiếp tục được withheld. Candidate vì thế **không được copy vào live**: làm vậy sẽ hồi sinh historical `running/in_progress` residue mà live canonical hiện không còn, đồng thời có thể trộn authority cũ vào workspace hiện tại. Không mark các row đó completed, không replay, không sửa SQL trực tiếp.
+
+#### Operator checkpoint
+
+- **Đã hoàn thành:** regression proof A0/A1, role-aware A2 oracle proof, fresh candidate rehearsal và audit trên clone.
+- **Trạng thái hiện tại:** hai Problem vẫn `OPEN`; candidate vẫn `QUARANTINED_REHEARSAL`, `activation_eligible=false`; canonical ledger chưa bị thay đổi, không restart/kill/reboot/install/deploy/push trong wave này.
+- **Blocker phân loại:** thiếu supported canonical importer/`RUNTIME_RECONCILIATION` cho historical immutable rows + pointer CAS; thiếu disposition có typed evidence cho 664 effect rows; thiếu quiesce/rollback/postflight receipt. Đây là blocker authority/evidence, không phải test failure.
+- **Còn lại:** chốt importer contract và operator approval; sau đó mới có thể quiesce đúng owner, snapshot/hash exact, apply transactional target-specific, postflight integrity/projection/authority readback và fresh MCP/Tunnel/client oracle. C09/C12/BG natural outcome/48-hour gate vẫn mở.
+- **Exact next action:** giữ candidate ngoài repository và chờ supported importer/receipt contract; không retry `git push` (GH001 large-file history blocker chưa đổi), không tự filter/LFS/force-push.
