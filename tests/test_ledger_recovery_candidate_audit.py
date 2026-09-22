@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sqlite3
 import shutil
 import sys
@@ -162,6 +163,131 @@ class RecoveryCandidateAuditTests(unittest.TestCase):
             self.assertEqual(rehearsal.sha(current_path), before_current)
             self.assertEqual(rehearsal.sha(candidate_path), before_candidate)
             self.assertFalse(result["activation_eligible"])
+
+    def test_unknown_effect_inventory_is_conservative_and_aggregated(self):
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        connection.executescript(
+            """
+            CREATE TABLE runs (
+                run_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL
+            );
+            CREATE TABLE waves (
+                wave_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL
+            );
+            CREATE TABLE background_operations (
+                operation_id TEXT PRIMARY KEY,
+                server_instance_id TEXT NOT NULL,
+                tool TEXT NOT NULL,
+                task_id TEXT NOT NULL,
+                run_id TEXT NOT NULL,
+                wave_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                summary_json TEXT NOT NULL
+            );
+            CREATE TABLE idempotency_records (
+                idempotency_key TEXT PRIMARY KEY,
+                operation TEXT NOT NULL,
+                request_hash TEXT NOT NULL,
+                status TEXT NOT NULL,
+                process_instance_id TEXT NOT NULL,
+                run_id TEXT NOT NULL,
+                wave_id TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                summary_json TEXT NOT NULL,
+                error_code TEXT NOT NULL
+            );
+            CREATE TABLE managed_process_jobs (
+                job_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                wave_id TEXT NOT NULL,
+                resource_class TEXT NOT NULL,
+                process_instance_id TEXT NOT NULL,
+                lifecycle_state TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                metadata_json TEXT NOT NULL
+            );
+            """
+        )
+        connection.executemany(
+            "INSERT INTO runs(run_id,status) VALUES(?,?)",
+            [("run-accepted", "accepted"), ("run-active", "active")],
+        )
+        connection.executemany(
+            "INSERT INTO waves(wave_id,status) VALUES(?,?)",
+            [("wave-accepted", "accepted"), ("wave-active", "active")],
+        )
+        connection.execute(
+            "INSERT INTO background_operations VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                "background-stale",
+                "server-old",
+                "agent_workflow",
+                "task-1",
+                "run-accepted",
+                "wave-accepted",
+                "running",
+                "2026-09-22T10:00:00Z",
+                "2026-09-22T10:00:01Z",
+                None,
+                "{}",
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO idempotency_records VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            [
+                (
+                    "idempotency-stale",
+                    "exec_command",
+                    "hash-1",
+                    "in_progress",
+                    "process-old",
+                    "",
+                    "",
+                    "2026-09-22T10:00:00Z",
+                    "2026-09-22T10:00:01Z",
+                    None,
+                    "{}",
+                    "",
+                ),
+                (
+                    "idempotency-safe-candidate",
+                    "workspace_context",
+                    "hash-2",
+                    "unknown",
+                    "process-old",
+                    "run-active",
+                    "wave-active",
+                    "2026-09-22T09:00:00Z",
+                    "2026-09-22T09:00:01Z",
+                    "2026-09-22T09:00:02Z",
+                    json.dumps({"effect_state": "not_applied", "outcome_unknown": False}),
+                    "PRE_EFFECT_REJECTED",
+                ),
+            ],
+        )
+        result = audit._unknown_effects(connection)
+        self.assertEqual(result["unresolved_effect_count"], 3)
+        self.assertEqual(result["stale_candidate_count"], 2)
+        self.assertEqual(result["orphan_safe_candidate_count"], 1)
+        self.assertEqual(result["owner_manual_evidence_count"], 2)
+        self.assertEqual(result["replay_allowed_count"], 0)
+        self.assertFalse(result["reconciled"])
+        self.assertEqual(result["classification_counts"]["STALE_CANDIDATE"], 2)
+        self.assertEqual(result["effect_safety_counts"]["ORPHAN_SAFE_CANDIDATE"], 1)
+        self.assertEqual(result["aggregate_counts"]["operation"]["agent_workflow"], 1)
+        self.assertEqual(result["aggregate_counts"]["operation"]["exec_command"], 1)
+        self.assertEqual(result["aggregate_counts"]["error_code"]["PRE_EFFECT_REJECTED"], 1)
+        connection.close()
 
 
 if __name__ == "__main__":

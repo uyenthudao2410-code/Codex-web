@@ -20,6 +20,7 @@ import sys
 import tempfile
 import uuid
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[1] / "resources" / "coding-tools-mcp"
@@ -44,6 +45,17 @@ AUTHORITY_TABLES = frozenset(
 UNKNOWN_EFFECT_TABLES = frozenset(
     {"background_operations", "idempotency_records", "managed_process_jobs"}
 )
+UNRESOLVED_EFFECT_STATUSES = {
+    "background_operations": frozenset({"running", "unknown", "in_progress"}),
+    "idempotency_records": frozenset({"running", "unknown", "in_progress"}),
+    # Managed jobs use lifecycle terminology rather than the idempotency
+    # vocabulary.  An orphaned job is still an unresolved process boundary;
+    # it is not evidence that the process is dead or that its effect is safe
+    # to replay.
+    "managed_process_jobs": frozenset(
+        {"starting", "running", "active", "waiting", "idle", "terminating", "orphaned", "unknown", "in_progress"}
+    ),
+}
 POINTER_ONLY_SAFE_RELATIONS = frozenset(
     {"ENGINEERING_ATTEMPT_BOUND", "LINK", "USER_FEEDBACK"}
 )
@@ -291,22 +303,227 @@ def _problem_projection_reconciliation_plan(connection: sqlite3.Connection) -> d
     }
 
 
+def _parse_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _json_object(value: object) -> dict[str, object]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _explicit_no_effect(summary: dict[str, object]) -> bool:
+    """Return True only when the record explicitly proves no effect occurred.
+
+    Error categories such as validation/security/permission are not enough:
+    a lost acknowledgement can happen after an effect even when the request
+    was rejected by a later guard.  This intentionally conservative predicate
+    keeps those rows in manual reconciliation unless a typed no-effect field
+    was persisted by the runtime.
+    """
+    if summary.get("outcome_unknown") is False:
+        return True
+    if summary.get("effect_applied") is False:
+        return True
+    if str(summary.get("effect_state") or "").strip().lower() in {
+        "not_applied",
+        "never_sent",
+        "not_started",
+        "rejected_before_effect",
+        "pre_effect_rejected",
+    }:
+        return True
+    if str(summary.get("dispatch_state") or "").strip().lower() in {
+        "not_sent",
+        "never_sent",
+        "rejected_before_effect",
+        "cancelled_before_send",
+    }:
+        return True
+    if str(summary.get("local_admission") or "").strip().lower() in {
+        "not_admitted",
+        "rejected_before_effect",
+        "never_sent",
+    }:
+        return True
+    return False
+
+
+def _effect_row_identity(table: str, row: sqlite3.Row) -> str:
+    if table == "background_operations":
+        return str(row["operation_id"] or "")
+    if table == "idempotency_records":
+        return str(row["idempotency_key"] or "")
+    return str(row["job_id"] or "")
+
+
+def _effect_row_operation(table: str, row: sqlite3.Row) -> str:
+    if table == "background_operations":
+        return str(row["tool"] or "")
+    if table == "idempotency_records":
+        return str(row["operation"] or "")
+    return str(row["resource_class"] or "")
+
+
+def _effect_row_process(table: str, row: sqlite3.Row) -> str:
+    if table == "background_operations":
+        return str(row["server_instance_id"] or "")
+    return str(row["process_instance_id"] or "")
+
+
+def _effect_row_summary(table: str, row: sqlite3.Row) -> dict[str, object]:
+    field = "summary_json" if table != "managed_process_jobs" else "metadata_json"
+    return _json_object(row[field])
+
+
+def _snapshot_frontier(connection: sqlite3.Connection) -> str:
+    candidates: list[str] = []
+    for table, columns in {
+        "background_operations": ("started_at", "updated_at", "finished_at"),
+        "idempotency_records": ("started_at", "updated_at", "finished_at"),
+        "managed_process_jobs": ("started_at", "updated_at", "finished_at"),
+        "events": ("event_time",),
+    }.items():
+        if table not in table_names(connection):
+            continue
+        available = {str(item[1]) for item in connection.execute(f"PRAGMA table_info({quote(table)})")}
+        for column in columns:
+            if column not in available:
+                continue
+            for row in connection.execute(f"SELECT {quote(column)} AS value FROM {quote(table)} WHERE {quote(column)} IS NOT NULL"):
+                value = str(row["value"] or "")
+                if _parse_timestamp(value) is not None:
+                    candidates.append(value)
+    if not candidates:
+        return ""
+    return max(candidates, key=lambda value: _parse_timestamp(value) or datetime.min.replace(tzinfo=timezone.utc))
+
+
 def _unknown_effects(connection: sqlite3.Connection) -> dict[str, object]:
+    """Inventory unresolved effect rows without changing any status.
+
+    The report deliberately has two independent classifications:
+
+    * ``liveness_classification`` says whether an unfinished row is a stale
+      candidate relative to its durable parent (not a live-process verdict);
+    * ``effect_safety_classification`` says whether a typed no-effect proof is
+      present.  Anything else remains owner/manual evidence and cannot be
+      replayed or silently terminalized.
+    """
     result: dict[str, object] = {}
-    unresolved = 0
+    all_rows: list[dict[str, object]] = []
+    frontier = _snapshot_frontier(connection)
+    run_status: dict[str, str] = {
+        str(row["run_id"]): str(row["status"] or "")
+        for row in connection.execute("SELECT run_id,status FROM runs")
+    } if "runs" in table_names(connection) else {}
+    wave_status: dict[str, str] = {
+        str(row["wave_id"]): str(row["status"] or "")
+        for row in connection.execute("SELECT wave_id,status FROM waves")
+    } if "waves" in table_names(connection) else {}
+
     for table in sorted(UNKNOWN_EFFECT_TABLES):
         if table not in table_names(connection):
             continue
         columns = {str(row[1]) for row in connection.execute(f"PRAGMA table_info({quote(table)})")}
-        status = next((name for name in ("status", "state", "lifecycle_state") if name in columns), None)
+        status = next((name for name in ("status", "lifecycle_state", "state") if name in columns), None)
         if status is None:
             result[table] = {"unknown_status": True}
             continue
-        counts = Counter(str(row[0] or "") for row in connection.execute(f"SELECT {quote(status)} FROM {quote(table)}"))
-        pending = sum(counts.get(value, 0) for value in ("unknown", "in_progress", "running"))
-        unresolved += pending
-        result[table] = {"counts": dict(sorted(counts.items())), "unresolved_effect_count": pending}
-    return {"tables": result, "unresolved_effect_count": unresolved, "reconciled": unresolved == 0}
+        rows = connection.execute(f"SELECT * FROM {quote(table)} ORDER BY rowid").fetchall()
+        counts = Counter(str(row[status] or "") for row in rows)
+        unresolved = 0
+        table_rows: list[dict[str, object]] = []
+        for row in rows:
+            row_status = str(row[status] or "")
+            if row_status not in UNRESOLVED_EFFECT_STATUSES.get(table, frozenset()):
+                continue
+            unresolved += 1
+            run_id = str(row["run_id"] or "") if "run_id" in columns else ""
+            wave_id = str(row["wave_id"] or "") if "wave_id" in columns else ""
+            parent_run = run_status.get(run_id, "") if run_id else ""
+            parent_wave = wave_status.get(wave_id, "") if wave_id else ""
+            summary = _effect_row_summary(table, row)
+            finished = str(row["finished_at"] or "") if "finished_at" in columns else ""
+            unfinished = not bool(finished)
+            parent_terminal_or_missing = not run_id or not parent_run or parent_run not in {"active", "running", "executing", "accepting"}
+            if unfinished and parent_terminal_or_missing:
+                liveness_classification = "STALE_CANDIDATE"
+            elif unfinished:
+                liveness_classification = "UNRESOLVED_ACTIVE_PARENT"
+            else:
+                liveness_classification = "TERMINAL_UNKNOWN"
+            no_effect = _explicit_no_effect(summary)
+            effect_safety = "ORPHAN_SAFE_CANDIDATE" if no_effect else "OWNER_MANUAL_EVIDENCE"
+            error_code = str(summary.get("error_code") or (row["error_code"] if "error_code" in columns else "") or "")
+            item = {
+                "table": table,
+                "identity": _effect_row_identity(table, row),
+                "status": row_status,
+                "operation": _effect_row_operation(table, row),
+                "process_or_server_instance_id": _effect_row_process(table, row),
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "parent_run_status": parent_run,
+                "parent_wave_status": parent_wave,
+                "error_code": error_code,
+                "liveness_classification": liveness_classification,
+                "effect_safety_classification": effect_safety,
+                "replay_allowed": False,
+                "finished_at_present": bool(finished),
+                "updated_at": str(row["updated_at"] or "") if "updated_at" in columns else "",
+            }
+            table_rows.append(item)
+            all_rows.append(item)
+        result[table] = {
+            "counts": dict(sorted(counts.items())),
+            "unresolved_effect_count": unresolved,
+            "rows": table_rows,
+            "classification_counts": dict(sorted(Counter(str(item["liveness_classification"]) for item in table_rows).items())),
+            "effect_safety_counts": dict(sorted(Counter(str(item["effect_safety_classification"]) for item in table_rows).items())),
+        }
+
+    def aggregate(field: str) -> dict[str, int]:
+        return dict(sorted(Counter(str(item.get(field) or "<empty>") for item in all_rows).items()))
+
+    safety_counts = Counter(str(item["effect_safety_classification"]) for item in all_rows)
+    liveness_counts = Counter(str(item["liveness_classification"]) for item in all_rows)
+    return {
+        "snapshot_frontier": frontier,
+        "tables": result,
+        "unresolved_effect_count": len(all_rows),
+        "classification_counts": dict(sorted(liveness_counts.items())),
+        "effect_safety_counts": dict(sorted(safety_counts.items())),
+        "orphan_safe_candidate_count": int(safety_counts.get("ORPHAN_SAFE_CANDIDATE", 0)),
+        "owner_manual_evidence_count": int(safety_counts.get("OWNER_MANUAL_EVIDENCE", 0)),
+        "stale_candidate_count": int(liveness_counts.get("STALE_CANDIDATE", 0)),
+        "replay_allowed_count": 0,
+        "aggregate_counts": {
+            "process_or_server_instance_id": aggregate("process_or_server_instance_id"),
+            "run_id": aggregate("run_id"),
+            "wave_id": aggregate("wave_id"),
+            "operation": aggregate("operation"),
+            "error_code": aggregate("error_code"),
+        },
+        "sample_rows": all_rows[:25],
+        # A non-zero unresolved count is intentionally not called reconciled,
+        # even if an individual row is an orphan-safe candidate.
+        "reconciled": not all_rows,
+    }
 
 
 def _append_and_duplicate_probe(candidate: Path) -> dict[str, object]:
