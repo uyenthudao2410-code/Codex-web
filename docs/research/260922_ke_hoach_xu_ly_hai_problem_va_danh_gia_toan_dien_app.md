@@ -2550,3 +2550,102 @@ criterion coverage vẫn thiếu. Exact next action không còn là thêm một 
 import, mà là owner-authorized runtime activation mới với source/package/epoch
 đồng nhất, sau đó strict connector discovery và real `workspace_context`; mọi
 reboot/admission chỉ sau khi các receipt đó có thật.
+
+### 16.49. Xác định đúng nguyên nhân activation store và hoàn tất source repair fail-closed — 22/09/2026 lúc 23:37 +07
+
+Wave này tiếp tục theo quyền xử lý recovery có kiểm soát nhưng **không ghi
+thêm vào canonical ledger** và không khởi động lại runtime. Mục tiêu là phân
+biệt lỗi cũ được hiển thị là “executable missing” với nguyên nhân hiện tại của
+Recovery Host, sau đó làm cho packaged host có thể đi tới một full-clean
+activation mới mà không thừa nhận READY cũ.
+
+**Reproduction live, chỉ đọc:** executable packaged thực tế tồn tại tại
+`C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP\Coding Tools MCP.exe`.
+Đọc log/store mới cho thấy lỗi khởi động là:
+
+```text
+ACTIVATION_EPOCH_STORE_INVALID
+details.code = ACTIVATION_EPOCH_READY_PROOF_REQUIRED
+```
+
+Hai snapshot persisted đều có READY proof cũ nhưng proof đó chứa
+`updateIncomplete=true`, `tunnelRunning=false`, `componentsReady=false`,
+`fullyReady=false`, vì vậy validator readiness hiện hành phải từ chối. Đây là
+**semantic incompatibility của persisted proof sau khi guard được siết**, không
+phải bằng chứng thiếu file executable và cũng không được xử lý bằng cách hạ
+guard hoặc lấy `.bak` làm authority.
+
+**Source repair đã áp dụng trên `main` (chưa được packaged runtime load):**
+
+1. `normalizeRecord()`/`normalizeSnapshot()` có một nhánh nội bộ chỉ dùng khi
+   `_read()` bắt đúng `ACTIVATION_EPOCH_READY_PROOF_REQUIRED` (kể cả mã lỗi nằm
+   trong `details.code` do lớp snapshot wrap). Mọi lỗi khác vẫn fail-closed.
+2. Khi primary/backup chứa READY proof stale, `_read()` chỉ tạo **projection
+   trong bộ nhớ** thành `FAILED`, `admission_state=CLOSED`, xoá digest READY và
+   gắn `ACTIVATION_EPOCH_STALE_READY_PROOF` cùng hành động bắt buộc
+   `controlled_full_clean_activation_required`. Không rewrite primary/backup,
+   không fallback sang backup và không mở authority.
+3. Bổ sung đường quarantine operator-confirmed cho trường hợp snapshot thực sự
+   invalid: bắt buộc `--confirm`, tùy chọn hash SHA-256 primary để chống nhầm
+   target, sao lưu nguyên byte primary/backup vào file quarantine có receipt và
+   chỉ thay bằng store rỗng hợp lệ với admission đóng. Đường này không được gọi
+   tự động khi host khởi động. CLI được expose qua
+   `npm run recovery:epoch:quarantine` và đã ghi hướng dẫn trong
+   `docs/RECOVERY_HOST.md`.
+
+**Proof đã chạy:**
+
+```text
+node --test tests/activation-epoch.test.js
+26 passed, 0 failed
+
+node --test tests/activation-epoch.test.js tests/full-clean-activation.test.js tests/recovery-host.test.js tests/boot-runtime-observation.test.js
+141 passed, 0 failed
+
+node --check electron/services/activationEpoch.js
+node --check tests/activation-epoch.test.js
+node --check scripts/quarantine-invalid-activation-epoch.js
+git diff --check
+npm run check:repository-secrets
+```
+
+Regression test mới đã sửa đúng failure mode: khi cả primary và backup bị
+đánh dấu `updateIncomplete=true` rồi recompute digest, reader trả
+`FAILED/CLOSED + ACTIVATION_EPOCH_STALE_READY_PROOF`, đồng thời byte của cả hai
+file không đổi. Các test quarantine chứng minh thiếu `--confirm` bị từ chối,
+hash mismatch không được thay target, snapshot hợp lệ không bị quarantine, và
+receipt giữ nguyên evidence trước khi tạo store rỗng.
+
+**Live readback sau source patch (không mutation):**
+
+```text
+file = C:\Users\Admin\AppData\Roaming\web-mcp-assistant\activation-epoch.json
+primary_sha256_before = 1c6f31af546f44369ac785f3d41af6145ccdfc3614fa6694665fbfda16849e1c
+backup_sha256_before  = cf84fa8015fad7a5df61feb39445d187e0a4335717c4195f7b48e97a5495dc7a
+projection = FAILED / CLOSED / ACTIVATION_EPOCH_STALE_READY_PROOF
+update_incomplete = true
+primary_sha256_after  = 1c6f31af546f44369ac785f3d41af6145ccdfc3614fa6694665fbfda16849e1c
+backup_sha256_after   = cf84fa8015fad7a5df61feb39445d187e0a4335717c4195f7b48e97a5495dc7a
+unchanged = true
+```
+
+Đây là bằng chứng source/focused và read-only projection, chưa phải
+`PACKAGED_RELEASED`, `LIVE_ACCEPTED`, strict connector discovery hay
+`workspace_context` thật. Bản runtime cài đặt hiện tại chưa được restart để
+nạp patch; do đó không được dùng kết quả trên để tuyên bố MCP/Tunnel đã phục
+hồi.
+
+**Checkpoint wave:** source repair và regression proof đã đạt; ledger recovery
+vẫn giữ `APPLIED_EVIDENCE_ONLY + IDEMPOTENCE_GUARDED`; không có restart,
+reboot, deploy, admission grant, effect replay hay ledger import mới. Hai
+Problem vẫn `OPEN` và các gate natural-use/independent outcome/criterion
+coverage vẫn thiếu.
+
+**Exact next action:** tạo delivery snapshot mới cho live ledger rồi chạy
+`check:coding-tools-delivery`, `check:coding-tools-history`,
+`check:repository-secrets` và `--verify-index`; commit trực tiếp trên `main`
+và push `origin/main`. Chỉ sau khi packaged runtime được cập nhật đúng source
+identity mới cân nhắc controlled full-clean activation, strict discovery,
+real `workspace_context`, reboot/logon oracle và natural-use. Không được gọi
+CLI quarantine cho snapshot hiện tại nếu chưa có một receipt operator xác nhận
+riêng; stale READY đang được xử lý an toàn bằng projection fail-closed.

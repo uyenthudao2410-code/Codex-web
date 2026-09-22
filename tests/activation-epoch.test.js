@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -28,6 +29,22 @@ function verificationFor(epochId, finalCensus = {}) {
     activation_epoch_id: epochId,
     final_census: { pass: true, activation_epoch_id: epochId, ...finalCensus }
   };
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function readyCommitDigest(record) {
+  return crypto.createHash('sha256').update(canonicalJson({
+    activation_epoch_id: record.activation_epoch_id,
+    expires_at_unix_ms: record.expires_at_unix_ms,
+    verification: record.verification
+  })).digest('hex');
 }
 
 test('activation epoch is durable, closes admission, and never mutates the ledger', (t) => {
@@ -182,6 +199,62 @@ test('a central READY proof rejects an incomplete primary runtime snapshot', (t)
   );
   assert.equal(store.current().state, 'VERIFYING');
   assert.equal(store.current().admission_state, 'CLOSED');
+});
+
+test('a persisted READY proof invalidated by the stricter runtime contract is projected FAILED/CLOSED without backup fallback or file mutation', (t) => {
+  const { paths, file } = fixture(t);
+  let clock = 1_700_000_190_000;
+  const store = new ActivationEpochStore({ paths, now: () => clock++ });
+  const created = store.create({
+    activation_epoch_id: epoch(204),
+    operation_id: operation(204),
+    metadata: {
+      execution_role: 'central_executor',
+      component_profile: 'central_executor_v1'
+    }
+  });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id, {
+    all_components_same_epoch: true,
+    epoch_matches: true,
+    workspace_matches: true,
+    device_matches: true,
+    revision_matches: true,
+    process_identity_verified: true,
+    ui_verified: true,
+    recovery_plane_verified: true,
+    central_route_verified: true,
+    central_connected: true,
+    authority_ready: true,
+    runtime: { mcpRunning: true, nativeAlive: true, updateIncomplete: false }
+  }));
+  const ready = store.ready(created.activation_epoch_id, committed.ready_commit_digest);
+  const backup = `${file}.bak`;
+  const primaryRaw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const backupRaw = JSON.parse(fs.readFileSync(backup, 'utf8'));
+  for (const raw of [primaryRaw.current, backupRaw.current]) {
+    raw.verification.final_census.runtime.updateIncomplete = true;
+    raw.verification.final_census.runtime.fullyReady = false;
+    raw.ready_commit_digest = readyCommitDigest(raw);
+  }
+  fs.writeFileSync(file, `${JSON.stringify(primaryRaw, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(backup, `${JSON.stringify(backupRaw, null, 2)}\n`, 'utf8');
+  const primaryBefore = fs.readFileSync(file, 'utf8');
+  const backupBefore = fs.readFileSync(backup, 'utf8');
+
+  const projected = new ActivationEpochStore({ paths, now: () => clock++ }).current();
+
+  assert.equal(projected.activation_epoch_id, ready.activation_epoch_id);
+  assert.equal(projected.state, 'FAILED');
+  assert.equal(projected.admission_state, 'CLOSED');
+  assert.equal(projected.error.code, 'ACTIVATION_EPOCH_STALE_READY_PROOF');
+  assert.equal(projected.error.details.projection, 'read_only_fail_closed');
+  assert.equal(projected.ready_commit_digest, null);
+  assert.equal(projected.transitions.at(-1).state, 'FAILED');
+  assert.equal(new ActivationEpochStore({ paths }).admissionClosed(), true);
+  assert.equal(fs.readFileSync(file, 'utf8'), primaryBefore);
+  assert.equal(fs.readFileSync(backup, 'utf8'), backupBefore);
 });
 
 test('a central pre-admission READY_COMMITTED proof permits admission-derived readiness flags', (t) => {
@@ -504,6 +577,59 @@ test('a semantically corrupt backup blocks an otherwise readable primary', (t) =
   // backup is evidence, not an alternate authority, so it must not be ignored.
   fs.writeFileSync(`${file}.bak`, JSON.stringify({ version: 1, current: {}, history: [] }), 'utf8');
   assert.throws(() => store.current(), { code: 'ACTIVATION_EPOCH_STORE_INVALID' });
+});
+
+test('invalid activation snapshots require explicit quarantine and preserve exact evidence', (t) => {
+  const { paths, file } = fixture(t);
+  let clock = 1_700_000_965_000;
+  const store = new ActivationEpochStore({ paths, now: () => clock++ });
+  const created = store.create({ activation_epoch_id: epoch(480), operation_id: operation(480) });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id));
+  store.ready(created.activation_epoch_id, committed.ready_commit_digest);
+
+  const invalid = JSON.parse(fs.readFileSync(file, 'utf8'));
+  invalid.current.verification.final_census.runtime = {
+    mcpRunning: true,
+    nativeAlive: true,
+    updateIncomplete: true
+  };
+  fs.writeFileSync(file, JSON.stringify(invalid), 'utf8');
+  const originalPrimary = fs.readFileSync(file);
+  const originalBackup = fs.readFileSync(`${file}.bak`);
+  const primarySha256 = require('node:crypto').createHash('sha256').update(originalPrimary).digest('hex');
+
+  assert.throws(
+    () => store.quarantineInvalidSnapshot(),
+    { code: 'ACTIVATION_EPOCH_QUARANTINE_CONFIRM_REQUIRED' }
+  );
+  assert.throws(() => store.current(), { code: 'ACTIVATION_EPOCH_STORE_INVALID' });
+
+  const result = store.quarantineInvalidSnapshot({
+    confirm: true,
+    expectedPrimarySha256: primarySha256,
+    reason: 'test-invalid-ready-proof'
+  });
+  assert.equal(result.quarantined, true);
+  assert.equal(result.primary_sha256, primarySha256);
+  assert.deepEqual(store.current(), null);
+  assert.deepEqual(store.history(), []);
+  assert.deepEqual(fs.readFileSync(result.primary_path), originalPrimary);
+  assert.deepEqual(fs.readFileSync(result.backup_path), originalBackup);
+  assert.equal(fs.existsSync(result.receipt_path), true);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).current, null);
+  assert.equal(JSON.parse(fs.readFileSync(`${file}.bak`, 'utf8')).current, null);
+});
+
+test('valid activation snapshots cannot be quarantined', (t) => {
+  const { paths } = fixture(t);
+  const store = new ActivationEpochStore({ paths, now: () => 1_700_000_966_000 });
+  store.create({ activation_epoch_id: epoch(481), operation_id: operation(481) });
+  assert.throws(
+    () => store.quarantineInvalidSnapshot({ confirm: true }),
+    { code: 'ACTIVATION_EPOCH_QUARANTINE_NOT_REQUIRED' }
+  );
 });
 
 test('transition compaction preserves STOPPING evidence for long activations', (t) => {

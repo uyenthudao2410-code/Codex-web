@@ -22,6 +22,7 @@
     "recovery:supervisor:status": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Status",
     "recovery:supervisor:once": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Once",
     "recovery:supervisor:uninstall": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Uninstall",
+    "recovery:epoch:quarantine": "node scripts/quarantine-invalid-activation-epoch.js",
     "test:mcp": "cd resources/coding-tools-mcp && node ../../scripts/run-python.js --module pytest tests",
     "test:all": "npm test && npm run test:mcp",
     "check:repository-secrets": "node scripts/check-sensitive-tracked.js",

@@ -333,6 +333,30 @@ ghi là `recovery-host` thay vì `electron`.
 - Log và IPC response có giới hạn kích thước; token/bearer không được trả về
   trong status/log projection.
 
+### Quarantine activation snapshot bị lỗi
+
+Nếu Recovery Host ghi `ACTIVATION_EPOCH_STORE_INVALID`, đó là dấu hiệu
+projection activation trên profile không còn thỏa validator hiện hành. Không
+được sửa tay `activation-epoch.json`, xóa `.bak`, hoặc hạ validator để nạp lại
+READY cũ. Giữ admission/authority đóng và kiểm tra hash primary trước khi
+thao tác.
+
+Đường recovery có xác nhận tường minh là:
+
+```powershell
+$sha = (Get-FileHash "$env:APPDATA\web-mcp-assistant\activation-epoch.json" -Algorithm SHA256).Hash.ToLowerInvariant()
+node scripts/quarantine-invalid-activation-epoch.js --confirm --expected-primary-sha256=$sha
+```
+
+Lệnh này chỉ chạy khi có `--confirm`; nó giữ nguyên byte primary và backup
+trong các file quarantine có hash, ghi receipt tại cùng data root, rồi thay
+projection bằng store rỗng hợp lệ không có active READY authority để Recovery
+Host phục vụ control-plane. Nó không tạo receipt READY, không chuyển action
+thành completed/cancelled, và không tự tạo activation mới. Sau đó phải cài/khởi
+động lại Supervisor theo đường
+được hỗ trợ, tạo một full-clean activation mới với source acceptance hợp lệ,
+và lặp strict identity/discovery/canary gates.
+
 ## Development code activation
 
 Source file thay đổi không tự cập nhật process đang chạy. Recovery Host hiện

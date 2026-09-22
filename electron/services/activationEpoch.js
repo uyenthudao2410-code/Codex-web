@@ -69,6 +69,29 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function sha256Bytes(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function writeBytesAtomic(file, bytes) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${Date.now()}.${crypto.randomBytes(6).toString('hex')}.tmp`;
+  let descriptor;
+  try {
+    descriptor = fs.openSync(temporary, 'wx', 0o600);
+    fs.writeFileSync(descriptor, bytes);
+    fs.fsyncSync(descriptor);
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+  try {
+    fs.renameSync(temporary, file);
+  } catch (error) {
+    try { fs.rmSync(temporary, { force: true }); } catch { /* preserve the original failure */ }
+    throw error;
+  }
+}
+
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -465,7 +488,7 @@ function validateReadyVerification(verification, epochId, record = null) {
   return census;
 }
 
-function normalizeRecord(value, { allowLegacy = false } = {}) {
+function normalizeRecord(value, { allowLegacy = false, allowStaleReadyProof = false } = {}) {
   if (!isPlainObject(value)) throw storeError('Activation epoch record must be an object.');
   const version = Number(value.version ?? value.schema_version ?? STORE_VERSION);
   if (version !== STORE_VERSION && !(allowLegacy && version === 0)) {
@@ -593,7 +616,8 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
   if (requestFp && requestFp !== requestFingerprint(requestIntent)) {
     throw storeError('Activation epoch request_fingerprint does not match request_intent.');
   }
-  if (!allowLegacy && (state === 'READY_COMMITTED' || state === 'READY')) {
+  const allowStaleProof = allowStaleReadyProof && (state === 'READY_COMMITTED' || state === 'READY');
+  if (!allowLegacy && !allowStaleProof && (state === 'READY_COMMITTED' || state === 'READY')) {
     validateReadyVerification(verification, id, { components, metadata });
   }
   if (readyCommitDigest) {
@@ -601,7 +625,7 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
       throw storeError('Activation epoch ready_commit_digest is only valid after verification commit.');
     }
     if (!verification) throw storeError('Activation epoch ready_commit_digest requires verification proof.');
-    validateReadyVerification(verification, id, { components, metadata });
+    if (!allowStaleProof) validateReadyVerification(verification, id, { components, metadata });
     if (readyCommitDigest !== readyCommitDigestFor(id, expires.unixMs, verification)) {
       throw storeError('Activation epoch ready_commit_digest does not bind the canonical verification proof.');
     }
@@ -660,7 +684,7 @@ function emptyStore() {
 // must be structurally valid before we trust the snapshot as a coherent
 // recovery projection.  We intentionally do not compare primary and backup
 // contents because a valid backup is expected to lag by one atomic write.
-function normalizeSnapshot(value, label = 'store') {
+function normalizeSnapshot(value, label = 'store', { allowStaleReadyProof = false } = {}) {
   if (!isPlainObject(value) || Number(value.version || 0) !== STORE_VERSION
     || (value.current !== null && !isPlainObject(value.current))
     || !Array.isArray(value.history)) {
@@ -672,8 +696,8 @@ function normalizeSnapshot(value, label = 'store') {
   let current;
   let history;
   try {
-    current = value.current === null ? null : normalizeRecord(value.current);
-    history = value.history.map((item) => normalizeRecord(item));
+    current = value.current === null ? null : normalizeRecord(value.current, { allowStaleReadyProof });
+    history = value.history.map((item) => normalizeRecord(item, { allowStaleReadyProof }));
   } catch (error) {
     if (error?.code === 'ACTIVATION_EPOCH_STORE_INVALID') throw error;
     throw storeError(`Activation epoch ${label} contains an invalid record.`, {
@@ -695,6 +719,11 @@ function normalizeSnapshot(value, label = 'store') {
     throw storeError(`Activation epoch ${label} has an active historical record without a current owner.`);
   }
   return { version: STORE_VERSION, current, history };
+}
+
+function isStaleReadyProofError(error) {
+  return error?.code === 'ACTIVATION_EPOCH_READY_PROOF_REQUIRED'
+    || error?.details?.code === 'ACTIVATION_EPOCH_READY_PROOF_REQUIRED';
 }
 
 class ActivationEpochStore {
@@ -801,6 +830,40 @@ class ActivationEpochStore {
     }
   }
 
+  _projectStaleReady(current) {
+    if (!current || !['READY_COMMITTED', 'READY'].includes(current.state)) return current;
+    const failedAtUnixMs = Number.isSafeInteger(current.updated_at_unix_ms)
+      ? current.updated_at_unix_ms
+      : current.created_at_unix_ms;
+    const failedAt = isoAt(failedAtUnixMs);
+    const transitions = [...current.transitions, {
+      state: 'FAILED',
+      at: failedAt,
+      reason: 'legacy-ready-proof-invalid-under-current-readiness-contract'
+    }].slice(-MAX_TRANSITIONS);
+    return normalizeRecord({
+      ...current,
+      state: 'FAILED',
+      admission_state: 'CLOSED',
+      ready_commit_digest: null,
+      ready_at: null,
+      ready_at_unix_ms: null,
+      failed_at: failedAt,
+      failed_at_unix_ms: failedAtUnixMs,
+      error: {
+        code: 'ACTIVATION_EPOCH_STALE_READY_PROOF',
+        message: 'Persisted READY proof is no longer admissible under the current runtime readiness contract.',
+        details: {
+          source_state: current.state,
+          source_admission_state: current.admission_state,
+          projection: 'read_only_fail_closed',
+          recovery_action: 'controlled_full_clean_activation_required'
+        }
+      },
+      transitions
+    });
+  }
+
   _read() {
     const primary = this._parseFile(this.file);
     const backup = this._parseFile(`${this.file}.bak`);
@@ -822,12 +885,36 @@ class ActivationEpochStore {
         backup_error: String(backup.error?.code || backup.error?.message || 'UNREADABLE')
       });
     }
-    const store = normalizeSnapshot(primary.value, 'primary store');
+    let store;
+    let primaryUsedStaleReadyProjection = false;
+    try {
+      store = normalizeSnapshot(primary.value, 'primary store');
+    } catch (error) {
+      // A stricter readiness contract may invalidate an older persisted READY
+      // proof (for example, a central route that was recorded while the local
+      // executor was already UPDATE_INCOMPLETE).  Do not resurrect that proof
+      // or fall back to the backup.  Read it as a terminal, CLOSED projection
+      // so Recovery Host can remain available for an explicit full-clean
+      // activation.  Other corruption still fails closed exactly as before.
+      if (!isStaleReadyProofError(error)) throw error;
+      store = normalizeSnapshot(primary.value, 'primary store', { allowStaleReadyProof: true });
+      primaryUsedStaleReadyProjection = true;
+    }
     // A syntactically valid but semantically malformed backup is evidence of a
     // potentially torn or tampered write.  Do not silently ignore it while
     // reporting the primary as a coherent durable state.
-    if (backup.exists) normalizeSnapshot(backup.value, 'backup store');
-    return { version: STORE_VERSION, current: store.current, history: store.history.slice(0, this.maxHistory) };
+    if (backup.exists) {
+      try {
+        normalizeSnapshot(backup.value, 'backup store');
+      } catch (error) {
+        if (!isStaleReadyProofError(error)) throw error;
+        normalizeSnapshot(backup.value, 'backup store', { allowStaleReadyProof: true });
+      }
+    }
+    const current = primaryUsedStaleReadyProjection
+      ? this._projectStaleReady(store.current)
+      : store.current;
+    return { version: STORE_VERSION, current, history: store.history.slice(0, this.maxHistory) };
   }
 
   _write(store) {
@@ -856,6 +943,170 @@ class ActivationEpochStore {
 
   current() {
     return clone(this._read().current);
+  }
+
+  // An invalid activation snapshot is a recovery incident, not a reason to
+  // weaken the normal reader or silently fall back to the backup.  This
+  // explicitly operator-confirmed path preserves the exact primary/backup
+  // bytes under a content-addressed quarantine receipt, then installs an
+  // empty valid store so Recovery Host can serve authenticated control-plane
+  // IPC and an operator can create a fresh full-clean epoch.  It is never
+  // called automatically during startup.
+  quarantineInvalidSnapshot({
+    confirm = false,
+    expectedPrimarySha256 = '',
+    reason = 'operator-confirmed-invalid-activation-epoch'
+  } = {}) {
+    if (confirm !== true) {
+      throw epochError(
+        'ACTIVATION_EPOCH_QUARANTINE_CONFIRM_REQUIRED',
+        'Invalid activation-epoch quarantine requires explicit operator confirmation.'
+      );
+    }
+    const expected = String(expectedPrimarySha256 || '').trim().toLowerCase();
+    if (expected && !/^[a-f0-9]{64}$/.test(expected)) {
+      throw epochError(
+        'ACTIVATION_EPOCH_QUARANTINE_HASH_INVALID',
+        'expectedPrimarySha256 must be a lowercase 64-hex SHA-256 digest.'
+      );
+    }
+    const boundedReason = String(reason || '').trim().slice(0, 240) || 'operator-confirmed-invalid-activation-epoch';
+    return this._withLock(() => {
+      const backupFile = `${this.file}.bak`;
+      const primary = this._parseFile(this.file);
+      const backup = this._parseFile(backupFile);
+      const failures = [];
+      const inspect = (entry, label) => {
+        if (!entry.exists) {
+          failures.push({ label, code: 'MISSING', message: `${label} is missing.` });
+          return;
+        }
+        if (!entry.readable) {
+          failures.push({ label, code: 'UNREADABLE', message: `${label} is unreadable.` });
+          return;
+        }
+        try {
+          normalizeSnapshot(entry.value, label);
+        } catch (error) {
+          failures.push({
+            label,
+            code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID'),
+            message: String(error?.message || 'Invalid activation snapshot.')
+          });
+        }
+      };
+      inspect(primary, 'primary store');
+      // A missing backup is valid for a freshly-created store.  Only inspect
+      // it when it exists; a missing primary remains an explicit failure.
+      if (backup.exists) inspect(backup, 'backup store');
+      if (failures.length === 0) {
+        throw epochError(
+          'ACTIVATION_EPOCH_QUARANTINE_NOT_REQUIRED',
+          'Activation epoch primary and backup snapshots are valid; no quarantine was performed.'
+        );
+      }
+
+      const readBytes = (file, label, exists) => {
+        if (!exists) return null;
+        try {
+          return fs.readFileSync(file);
+        } catch (error) {
+          throw epochError('ACTIVATION_EPOCH_QUARANTINE_READ_FAILED', `${label} could not be read for quarantine.`, {
+            code: String(error?.code || 'READ_FAILED')
+          });
+        }
+      };
+      const primaryBytes = readBytes(this.file, 'Primary activation snapshot', primary.exists);
+      const backupBytes = readBytes(backupFile, 'Backup activation snapshot', backup.exists);
+      const primarySha256 = primaryBytes ? sha256Bytes(primaryBytes) : null;
+      const backupSha256 = backupBytes ? sha256Bytes(backupBytes) : null;
+      if (expected && primarySha256 !== expected) {
+        throw epochError('ACTIVATION_EPOCH_QUARANTINE_HASH_MISMATCH', 'Primary activation snapshot changed or is not the expected target.', {
+          expected_primary_sha256: expected,
+          observed_primary_sha256: primarySha256
+        });
+      }
+
+      const quarantineId = `activation-epoch-quarantine-${Date.now().toString(36)}-${crypto.randomBytes(8).toString('hex')}`;
+      const primaryQuarantine = `${this.file}.${quarantineId}.primary.json`;
+      const backupQuarantine = `${this.file}.${quarantineId}.backup.json`;
+      const receiptFile = `${this.file}.${quarantineId}.receipt.json`;
+      if (primaryBytes) writeBytesAtomic(primaryQuarantine, primaryBytes);
+      if (backupBytes) writeBytesAtomic(backupQuarantine, backupBytes);
+      const verifyQuarantine = (file, bytes, label) => {
+        if (!bytes) return;
+        let observed;
+        try { observed = fs.readFileSync(file); } catch (error) {
+          throw epochError('ACTIVATION_EPOCH_QUARANTINE_VERIFY_FAILED', `${label} quarantine copy could not be read.`, {
+            code: String(error?.code || 'READ_FAILED')
+          });
+        }
+        if (sha256Bytes(observed) !== sha256Bytes(bytes)) {
+          throw epochError('ACTIVATION_EPOCH_QUARANTINE_VERIFY_FAILED', `${label} quarantine copy failed its SHA-256 check.`);
+        }
+      };
+      verifyQuarantine(primaryQuarantine, primaryBytes, 'Primary activation snapshot');
+      verifyQuarantine(backupQuarantine, backupBytes, 'Backup activation snapshot');
+      const unchanged = (file, bytes, label) => {
+        if (!bytes) return;
+        let observed;
+        try { observed = fs.readFileSync(file); } catch (error) {
+          throw epochError('ACTIVATION_EPOCH_QUARANTINE_SOURCE_CHANGED', `${label} changed while preparing quarantine.`, {
+            code: String(error?.code || 'READ_FAILED')
+          });
+        }
+        if (sha256Bytes(observed) !== sha256Bytes(bytes)) {
+          throw epochError('ACTIVATION_EPOCH_QUARANTINE_SOURCE_CHANGED', `${label} changed while preparing quarantine.`);
+        }
+      };
+      unchanged(this.file, primaryBytes, 'Primary activation snapshot');
+      unchanged(backupFile, backupBytes, 'Backup activation snapshot');
+
+      const empty = emptyStore();
+      // writeJsonAtomic deliberately keeps an unreadable backup.  A second
+      // identical write copies the now-valid primary over that old backup,
+      // giving the new reader two independently valid snapshots.
+      writeJsonAtomic(this.file, empty);
+      writeJsonAtomic(this.file, empty);
+      const replaced = this._read();
+      const receipt = {
+        version: 1,
+        kind: 'activation_epoch_invalid_snapshot_quarantine',
+        quarantine_id: quarantineId,
+        recorded_at: new Date().toISOString(),
+        reason: boundedReason,
+        failures,
+        primary: primaryBytes ? {
+          bytes: primaryBytes.length,
+          sha256: primarySha256,
+          path: primaryQuarantine
+        } : null,
+        backup: backupBytes ? {
+          bytes: backupBytes.length,
+          sha256: backupSha256,
+          path: backupQuarantine
+        } : null,
+        replacement: {
+          primary_path: this.file,
+          backup_path: backupFile,
+          current: null,
+          ready_authority: false,
+          requires_explicit_new_activation: true
+        }
+      };
+      writeJsonAtomic(receiptFile, receipt);
+      return {
+        quarantined: true,
+        quarantine_id: quarantineId,
+        receipt_path: receiptFile,
+        primary_path: primaryQuarantine,
+        backup_path: backupBytes ? backupQuarantine : null,
+        primary_sha256: primarySha256,
+        backup_sha256: backupSha256,
+        failure_codes: failures.map((item) => item.code),
+        replacement: replaced
+      };
+    });
   }
 
   enforceCurrentExpiry(boundary = 'observe') {
