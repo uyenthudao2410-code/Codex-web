@@ -203,6 +203,69 @@ hai Problem.** Blocker tiếp theo là package/runtime identity: bản patch ph�
 guard hoặc source/checkpoint authority còn thiếu, giữ fail-closed và ghi
 `BLOCKED` kèm bằng chứng cụ thể thay vì bypass.
 
+## 8. Post-push, package và live-boundary recheck
+
+Commit đã push trực tiếp lên `origin/main`:
+
+```text
+889e76c10a76822e2d942bd8500ee862c046f020
+HEAD = origin/main
+```
+
+Sau push, supported `npm start` đã được thử một lần. CLI nhận diện đúng
+`idle_packaged_handoff` nhưng vẫn dừng fail-closed:
+
+```text
+RECOVERY_HOST_IDLE_HANDOFF_REFUSED
+```
+
+Lý do runtime không được đổi là descriptor đang thuộc packaged process cũ:
+
+```text
+Recovery Host PID = 40120
+executable = C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP\Coding Tools MCP.exe
+DEV_UI status = host=available installation=mismatch
+full-clean preflight/status = RECOVERY_HOST_INSTALLATION_MISMATCH
+```
+
+Postflight không thấy epoch mới, không thay PID/instance của Recovery Host và
+không mở admission. Đây là blocker **installed-runtime/package deployment**,
+không phải lý do để sửa descriptor, xoá process bằng tên, hoặc nạp source
+thủ công vào app.asar đang chạy.
+
+### 8.1 Installer candidate
+
+Đã chạy release-boundary build không cài đè production:
+
+```text
+npm run dist
+  JavaScript: 1022/1022 PASS
+  MCP Python: 1162 passed, 5 skipped
+  NSIS: dist/coding-tools-mcp-setup-1.0.7.exe
+  installer_size = 121588717 bytes
+  installer_sha256 = D17E71CC89CF80C1C2E75BD4148E873FB9015808183070D11FE71333F3DE24F2
+  blockmap_size = 129158 bytes
+```
+
+`node scripts/installed-recovery-smoke.js` đã cài candidate vào target cô lập,
+kiểm tra executable/app.asar/resources/smart-v3/recovery/MCP/Supervisor, rồi
+uninstall thành công:
+
+```text
+installer installed=true registered=true version=1.0.7
+packaged_smoke.ok=true
+uninstall.exit_code=0
+installed_files_removed=true
+registration_removed=true
+production_descriptor_stable=true
+scheduled_task_definition_stable=true
+```
+
+Đây là bằng chứng **isolated installed package**, không phải bằng chứng rằng
+instance production PID `40120` đã nạp patch. Việc cài đè vào production path,
+restart packaged host và chạy full-clean activation vẫn cần một execution wave
+được ủy quyền riêng; không tự thực hiện bằng copy thô hay `taskkill`.
+
 ## 8. Hậu kiểm commit và Ubuntu transport — 2026-09-23 00:35 +07
 
 Source wave đã được ghi vào commit `889e76c10a76822e2d942bd8500ee862c046f020`.
