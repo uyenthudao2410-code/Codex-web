@@ -492,7 +492,8 @@ def _unknown_effects(connection: sqlite3.Connection) -> dict[str, object]:
         result[table] = {
             "counts": dict(sorted(counts.items())),
             "unresolved_effect_count": unresolved,
-            "rows": table_rows,
+            "row_sample_limit": 25,
+            "rows": table_rows[:25],
             "classification_counts": dict(sorted(Counter(str(item["liveness_classification"]) for item in table_rows).items())),
             "effect_safety_counts": dict(sorted(Counter(str(item["effect_safety_classification"]) for item in table_rows).items())),
         }
@@ -520,6 +521,9 @@ def _unknown_effects(connection: sqlite3.Connection) -> dict[str, object]:
             "error_code": aggregate("error_code"),
         },
         "sample_rows": all_rows[:25],
+        "stale_candidates": [
+            item for item in all_rows if item["liveness_classification"] == "STALE_CANDIDATE"
+        ][:25],
         # A non-zero unresolved count is intentionally not called reconciled,
         # even if an individual row is an orphan-safe candidate.
         "reconciled": not all_rows,

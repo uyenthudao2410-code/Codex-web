@@ -1454,3 +1454,32 @@ Kết quả trên candidate SHA `651f6c40c633974f0f2668f3b18ccfdb751e946f5ce6b8b
 Test bổ sung [test_ledger_recovery_candidate_audit.py](../../tests/test_ledger_recovery_candidate_audit.py) kiểm cả plan invariant và clone-only compare-and-swap. Focused recovery suite hiện tại: **7 tests PASS, 15.217s**; `py_compile` PASS. Đây là bằng chứng semantics trên quarantine/clone, **không** phải canonical projection reconciliation, live activation, Problem closure hoặc quyền replay unknown effects. `activation_eligible` vẫn `false`; unknown-effect và authority gates vẫn mở.
 
 **Next action:** dùng receipt này cho owner review; nếu được cấp supported `RUNTIME_RECONCILIATION` target-specific authority thì mới chạy importer chính thức với rollback backup/postflight. Nếu không, giữ candidate quarantine; không sửa trực tiếp `problem_threads` trên canonical chỉ vì clone probe PASS.
+
+### 16.25. Windows packaged refresh và delivery revalidation — 22/09 khoảng 19:40–20:00 +07
+
+Wave này hoàn tất phần source → package → installation → packaged runtime trên Windows, nhưng không tự mở rộng sang canonical recovery hoặc history rewrite.
+
+**Package/installation:**
+
+- Local source trước wave build là `main@abab565`; từ commit này đến `HEAD=ac24f18` chỉ có thay đổi audit/test/docs/evidence, không thay đổi các đường dẫn được đóng gói (`electron/**`, `renderer/**`, `resources/**`, `control-plane/control_plane/**`, `package.json`).
+- Build `electron-builder --win dir` và NSIS chạy PASS ở thư mục ngoài repository. Exact byte/SHA-256 comparison PASS cho `node_agent.py`, bốn Recovery adapter và `runtime_activity.py`; installer NSIS mới có SHA-256 `7D242FD9EA3350A57EA14FE746395428D36BEF2705242B2930E5BEBE2D362281`.
+- Installer đã chạy silent exit `0`. Sau cài, các payload critical trong `C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP` trùng source từng byte; package cũ không còn là payload đang được kiểm tra.
+- Supervisor được cài lại bằng flow chính thức với `-Packaged -Executable ... -AppRoot ...`; scheduled task `WebMCP Recovery Supervisor` ở `Running`, status `healthy`, host PID/instance mới, không sửa manifest bằng tay.
+
+**Runtime/authority:**
+
+- Packaged `reconcile-authority-status` exit `0`, target count `1`, `workspace_id=workspace_f93b5bac9dc74fae9cea66f44c4ebc94`, `workspace_generation=generation_a91d1829c5bf4c7093a30cec14105c76`, `dispatch_state=dispatchable`, capability chỉ `read=true` (`write=false`, `exec=false`).
+- Sau `runtime.restart` chính thức với `full_clean_refresh`, packaged observer đọc `strict_ready=true` trên installation/instance mới. Route evidence là heartbeat authenticated fresh, đúng `device_id`, `endpoint_id`, server origin và `policy_state=enabled`.
+- Supervisor vẫn `control_plane_agent_state=started_heartbeat_only`; đây là fail-closed đúng thiết kế khi chưa có standing file-read/patch/exec policy hợp lệ. Không tự cấp thêm C3, write hoặc exec.
+- `connector_rediscovered`/natural task outcome chưa được tuyên bố từ heartbeat hoặc strict runtime; đây vẫn là các gate riêng.
+
+**Ubuntu/server boundary:**
+
+- Lượt trước đã có bằng chứng deploy package control-plane `b0b6505` với schema 24, SQLite integrity `ok`, admission vẫn `recovery` và unresolved action chưa được mở. Wave này gọi lại `/healthz` nhưng Windows không resolve được `svhome.tail0e403.ts.net`, nên không ghi đè bằng chứng cũ và không tuyên bố fresh remote readback.
+- Không canonical SQLite write, không quarantine/reconcile unknown action, không mở admission và không restart Ubuntu trong wave này.
+
+**Git delivery:**
+
+- Delivery guard PASS (`4876` files); runtime snapshot mới đã được commit cùng source verifier/test. Current local `HEAD=ac24f18`, `origin/main=044dd961`, local ahead `19`, worktree sạch sau commit.
+- `git push origin main` đã bị GitHub pre-receive từ chối với `GH001` vì đúng ba executable generated trong lịch sử local chưa publish, mỗi file khoảng `215 MB`, vượt giới hạn `100 MB`. Remote ref không đổi.
+- Không dùng `reset`, `rebase`, `filter-repo`, `git lfs migrate` hoặc `push --force-with-lease`. Muốn publish `main` cần owner chọn rõ: loại `output/**` khỏi lịch sử có backup và force-with-lease, chuyển đúng binary sang LFS sau khi xác nhận quota/policy, hoặc chỉ định artifact/release channel khác. Đây là blocker delivery ngoài code, không phải test/source failure.
