@@ -1735,3 +1735,44 @@ python -B -m unittest -v tests.test_ledger_recovery_candidate_audit tests.test_l
 Tại observation gần nhất, canonical ledger vẫn `integrity_check=ok`, foreign-key `0`, `compact_allowed=true`, active controller/write-fence/managed-job/background-operation ownership đều `0`; native primary MCP đã được dừng bằng authenticated Recovery Host trước wave này. Recovery Supervisor/Recovery Host/recovery plane vẫn resident để giữ quyền điều khiển an toàn, nhưng không có bằng chứng chúng đang ghi ledger. Chưa có canonical mutation, pointer CAS, effect replay, restart, reboot, Problem closure hoặc natural-outcome proof.
 
 **Exact next action:** trong một cửa sổ bounded duy nhất, tạo Online Backup mới từ canonical hiện tại → merge historical blob với ba RUN allowlist và hai `continuity_telemetry` identity hiện hữu → preflight với exact current/candidate physical+logical hash → capture quiesce receipt → apply atomic dưới `ledger_access_gate` với rollback backup mới → postflight integrity/FK/event-chain/pointer/authority/effect readback. Nếu bất kỳ hash hoặc mtime nào drift trước commit, dừng và giữ candidate quarantine; không dùng candidate cũ.
+
+### 16.34. Controlled recovery evidence-only đã apply và postflight đạt — 22/09/2026 lúc 21:24 +07
+
+Đã thực hiện đúng một bounded sequence mới trên canonical `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3`, sau khi native primary MCP được dừng qua authenticated Recovery Host. Không dùng candidate cũ, không copy file đè, không replay effect và không restart/reboot.
+
+**Artifact/receipt ngoài repository:**
+
+- Candidate mới: `E:\Caches\Temp\codex-ledger-recovery-rehearsal-7ogq2l4i\QUARANTINED-candidate.sqlite3`, physical SHA `2657fc2b6388b6c632e4ea9aee3adda9015c404e9bab287c653c70ddfd45d301`, logical SHA `012c2542270e48267acf2f9a443f0648b073430c24ee1986341ada4feffba5c5`.
+- Preflight: `E:\Caches\Temp\codex-ledger-controlled-t8c1u72\preflight-receipt.json`; quiesce: `quiesce-receipt.json`; apply: `apply-receipt.json`; rollback: `rollback-before-apply.sqlite3`.
+- Pre-apply canonical SHA/logical SHA: `07e39583d46a21f5b01602ba4cb0a88de0eaa335fbd9e2723e4be181458eed75` / `b7d3fb6138b6b9cc2e4b21fa8a3215d6d2436ca156b927d425d744ddcc410eba`.
+- Post-apply canonical SHA/logical SHA: `07d76b2fd37e3872f278b4835ea29b49cb39b751642df0f247fcb4113f837663` / `988e557c1ad10954f32e71927684e36cb527ab297942cee57fcdc771cd38964d`.
+- Rollback backup giữ đúng pre-apply physical/logical SHA và `integrity=ok`, FK `0`; artifact được đặt read-only.
+
+**Import và projection:**
+
+```text
+runs                       +3
+waves                      +4
+checkpoints                +3
+proofs                     +5
+events                    +128
+problem_events             +3
+continuity_telemetry       +12
+controller_knowledge_acks  +1
+```
+
+- `prl-22e670302757c9b7663170e226ed7c26`: exact CAS pointer `317 → 320`, revision `1`, `OPEN → OPEN`, `closed_at=null`.
+- `prl-e918c7d33e70c2d304d0797e11b05fcb`: revision `2`, `OPEN`, `closed_at=null`, pointer `316` và hash không đổi.
+- Không import authority table; effect additions bị withheld: `background_operations=6`, `idempotency_records=18`, `managed_process_jobs=7`. `replay_allowed=0`; các trạng thái `running/in_progress/unknown` vẫn là unknown-effect evidence, không bị mark completed/orphaned bằng recovery này.
+
+**Postflight độc lập:**
+
+- `PRAGMA integrity_check=ok`, foreign-key violations `0`.
+- Event hash-chain kiểm tra lại `25,822/25,822` event hợp lệ.
+- So sánh toàn bộ authority/effect tables với rollback backup cho kết quả **không table nào thay đổi**; không resurrect lease, fence, hub client, continuation, job hay effect.
+- Ba RUN historical hiện có status `accepted` đúng theo source evidence, nhưng đây chỉ là nối lại causal evidence; không phải Problem resolution hoặc natural outcome.
+- Sau apply, native primary MCP PID `50956` vẫn absent; Recovery Supervisor `47772`, Recovery Host `42556`, recovery MCP `38200` và control-plane agent `37104` vẫn resident. Ledger mtime ổn định trong 4 giây; không có post-apply writer drift quan sát được.
+
+**Phân loại kết quả:** recovery **đã hoàn tất ở tầng evidence continuity + safe pointer CAS**. Đây không phải activation/admission, không phải reboot acceptance, không chứng minh MCP/Tunnel/client discovery, không tạo authority continuation grant và không đóng Problem. Hai Problem vẫn `OPEN`; C09/C12, 18-criterion durable continuation, natural-use/independent outcome, strict workspace-context read và release gates vẫn mở.
+
+**Exact next action:** review diff/runtime evidence, chạy `npm run stage:coding-tools-delivery` và `npm run check:coding-tools-delivery`, rồi commit/push evidence trực tiếp trên `main`. Không redeploy/restart control plane trong wave này; GH001 generated-executable history warning và các gate runtime/natural outcome phải được báo riêng, không trộn vào acceptance của recovery ledger.
