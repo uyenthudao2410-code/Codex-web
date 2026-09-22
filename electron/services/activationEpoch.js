@@ -414,6 +414,38 @@ function validateReadyVerification(verification, epochId, record = null) {
       }
     }
   }
+  // A final census may carry a richer runtime snapshot than its legacy
+  // top-level flags.  Never allow an explicitly unhealthy snapshot to
+  // contradict a READY proof: the route can be authenticated while the
+  // primary MCP/native components are stopped or an update is incomplete.
+  // `commitReady()` is the first phase of a two-phase activation and keeps
+  // admission CLOSED.  In central mode, componentsReady/fullyReady include
+  // the admission bit itself, so they are allowed to remain false until the
+  // independent pre-admission revalidation opens the epoch.  The final
+  // census producer remains responsible for proving those fields before it
+  // returns pass=true.  Direct legacy execution additionally requires its
+  // Tunnel when that runtime field is present.
+  if (isPlainObject(census.runtime)) {
+    const runtimeAliases = {
+      mcpRunning: 'mcp_running',
+      nativeAlive: 'native_alive'
+    };
+    for (const flag of ['mcpRunning', 'nativeAlive']) {
+      const value = census.runtime[flag] ?? census.runtime[runtimeAliases[flag]];
+      if (value === false) {
+        throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', `Final runtime census reports ${flag}=false.`);
+      }
+    }
+    if (census.runtime.updateIncomplete === true || census.runtime.update_incomplete === true) {
+      throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', 'Final runtime census reports UPDATE_INCOMPLETE.');
+    }
+    if (!centralExecutor) {
+      const tunnelRunning = census.runtime.tunnelRunning ?? census.runtime.tunnel_running;
+      if (tunnelRunning === false) {
+        throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', 'Direct runtime census reports tunnelRunning=false.');
+      }
+    }
+  }
   if (record && Array.isArray(record.components) && record.components.length > 0 && census.components && isPlainObject(census.components)) {
     for (const component of record.components) {
       const evidence = census.components[component];

@@ -2109,3 +2109,55 @@ UI/runbook và tests xanh trong working tree, nhưng vẫn chưa được nhận
 để commit; remote Ubuntu chưa được migrate/deploy schema 25. Vì vậy trạng thái
 strongest vẫn là `SOURCE_PRESENT + FOCUSED_PROOF`, chưa phải
 `PACKAGED_RELEASED`, `LIVE_ACCEPTED` hay natural outcome.
+
+### 16.42. Sửa boundary two-phase activation để không mở READY từ runtime hỏng — 22/09/2026
+
+Wave này xử lý lỗi do invariant mới đặt nhầm ở tầng `ActivationEpochStore`:
+`commitReady()` được gọi khi activation còn `READY_COMMITTED/admission=CLOSED`,
+nhưng `componentsReady` và `fullyReady` của central executor có thể vẫn là
+`false` vì hai cờ này bao gồm chính admission bit. Nếu bắt buộc chúng `true` ở
+`commitReady()`, store tạo circular dependency và từ chối một central route đã
+được xác thực trước khi có cơ hội chạy `revalidateBeforeAdmission()`.
+
+Đã sửa [electron/services/activationEpoch.js](../../electron/services/activationEpoch.js)
+theo nguyên tắc hai pha:
+
+- `validateReadyVerification()` vẫn fail-closed nếu runtime snapshot **ghi rõ**
+  `mcpRunning=false`, `nativeAlive=false`, `tunnelRunning=false` ở direct mode,
+  hoặc `updateIncomplete=true` (hỗ trợ cả tên snake_case tương ứng).
+- Không bắt buộc `componentsReady`/`fullyReady` tại `READY_COMMITTED`, vì chúng
+  có thể phụ thuộc admission; producer `fullCleanActivation.finalCensus()` và
+  `revalidateBeforeAdmission()` vẫn là nơi quyết định `pass=true` và mở admission.
+- Central execution không bị buộc có local Tunnel; direct legacy vẫn bị chặn
+  nếu census hiện rõ Tunnel đã tắt.
+
+Đã thêm regression trong
+[tests/activation-epoch.test.js](../../tests/activation-epoch.test.js):
+
+1. primary runtime `mcpRunning=false/nativeAlive=false/updateIncomplete=true`
+   bị từ chối và epoch vẫn `VERIFYING/CLOSED`;
+2. central `READY_COMMITTED` với `mcpRunning=true/nativeAlive=true`, route/policy
+   hợp lệ nhưng `componentsReady=false/fullyReady=false` vẫn được commit an toàn
+   ở trạng thái `CLOSED`, để bước revalidation độc lập xử lý admission sau đó.
+
+**Focused proof:**
+
+```text
+node --test tests/activation-epoch.test.js tests/full-clean-activation.test.js tests/recovery-host.test.js
+129 passed, 0 failed
+duration_ms = 34,371.8122
+```
+
+Bộ proof bao phủ store two-phase commit, central route/policy, direct connector,
+full-clean census, pre-admission identity revalidation, Recovery Host adoption,
+handoff và các guard `UPDATE_INCOMPLETE`. Đây là source/focused proof; chưa phải
+runtime activation proof. Không restart/reboot, không deploy Ubuntu, không gọi
+route quarantine và không mở admission trong wave này.
+
+**Operator checkpoint:** invariant đã được đặt đúng boundary: runtime hỏng không
+thể trở thành READY proof, nhưng central pre-admission không còn bị circular
+dependency. Git vẫn làm trực tiếp trên `main`; cần chạy diff/syntax và toàn bộ
+delivery/history/secret guards trước commit. Exact next action là snapshot
+`.coding-tools`, commit/push source + research lên `origin/main`, sau đó recapture
+Windows/Ubuntu readback; nếu runtime vẫn `UPDATE_INCOMPLETE`, tiếp tục giữ
+`admission=recovery` và không tuyên bố Problem nào đã đóng.

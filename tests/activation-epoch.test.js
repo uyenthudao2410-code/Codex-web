@@ -142,6 +142,89 @@ test('a central executor epoch requires its authenticated route proof instead of
   assert.equal(Object.hasOwn(committed.verification.final_census, 'connector_acknowledged'), false);
 });
 
+test('a central READY proof rejects an incomplete primary runtime snapshot', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_175_000;
+  const store = new ActivationEpochStore({ paths, now: () => clock++ });
+  const created = store.create({
+    activation_epoch_id: epoch(202),
+    operation_id: operation(202),
+    metadata: {
+      execution_role: 'central_executor',
+      component_profile: 'central_executor_v1'
+    }
+  });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+
+  assert.throws(
+    () => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id, {
+      all_components_same_epoch: true,
+      epoch_matches: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      process_identity_verified: true,
+      ui_verified: true,
+      recovery_plane_verified: true,
+      central_route_verified: true,
+      central_connected: true,
+      authority_ready: true,
+      runtime: {
+        mcpRunning: false,
+        nativeAlive: false,
+        componentsReady: false,
+        fullyReady: false,
+        updateIncomplete: true
+      }
+    })),
+    { code: 'ACTIVATION_EPOCH_READY_PROOF_REQUIRED' }
+  );
+  assert.equal(store.current().state, 'VERIFYING');
+  assert.equal(store.current().admission_state, 'CLOSED');
+});
+
+test('a central pre-admission READY_COMMITTED proof permits admission-derived readiness flags', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_180_000;
+  const store = new ActivationEpochStore({ paths, now: () => clock++ });
+  const created = store.create({
+    activation_epoch_id: epoch(203),
+    operation_id: operation(203),
+    metadata: {
+      execution_role: 'central_executor',
+      component_profile: 'central_executor_v1'
+    }
+  });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id, {
+    all_components_same_epoch: true,
+    epoch_matches: true,
+    workspace_matches: true,
+    device_matches: true,
+    revision_matches: true,
+    process_identity_verified: true,
+    ui_verified: true,
+    recovery_plane_verified: true,
+    central_route_verified: true,
+    central_connected: true,
+    authority_ready: true,
+    runtime: {
+      mcpRunning: true,
+      nativeAlive: true,
+      componentsReady: false,
+      fullyReady: false,
+      updateIncomplete: false,
+      tunnelRunning: false
+    }
+  }));
+
+  assert.equal(committed.state, 'READY_COMMITTED');
+  assert.equal(committed.admission_state, 'CLOSED');
+});
+
 test('failure is terminal, remains fail-closed, and replay is idempotent', (t) => {
   const { paths } = fixture(t);
   let clock = 1_700_000_200_000;
