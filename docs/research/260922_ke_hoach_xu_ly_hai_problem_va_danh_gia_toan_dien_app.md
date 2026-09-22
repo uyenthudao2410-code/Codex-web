@@ -4,7 +4,7 @@ Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-
 
 Trạng thái tài liệu: **RECOVERY REHEARSAL ACTIVE — người dùng đã cấp controlled recovery; backup/candidate cô lập đã tạo, canonical chưa thay, candidate chưa activation-eligible**.
 
-> **Cập nhật mới nhất 22/09 khoảng 19:08 +07:** rehearsal candidate đã qua structural/event/append/duplicate probes trên clone writable; projection và unknown-effect gates vẫn fail-closed, xem **16.19**. Canonical hash vẫn nguyên; goal ACTIVE, chưa complete.
+> **Cập nhật mới nhất 22/09 khoảng 19:20 +07:** verifier/recovery audit đã commit trực tiếp trên `main`; push bị GitHub từ chối bởi binary `output/**/Coding Tools MCP.exe` vượt giới hạn 100 MB, xem **16.20**. Canonical hash vẫn nguyên; candidate chưa activation-eligible; goal ACTIVE, chưa complete.
 
 ## 0. Kết luận điều hành
 
@@ -1342,3 +1342,29 @@ Kết quả trên candidate SHA `651f6c40c633974f0f2668f3b18ccfdb751e946f5ce6b8b
 Focused suite hiện tại: **5 tests PASS, 11.58s** (`test_ledger_recovery_rehearsal.py` + `test_ledger_recovery_candidate_audit.py`); verifier `py_compile` PASS. Đây là proof cho safety behavior của rehearsal và clone, không phải source acceptance của toàn app, không phải live runtime/client proof.
 
 **Phân loại checkpoint:** PROGRESS. Hai probe mới đã đóng phần “candidate có thể mở/append/không replay duplicate” trong môi trường cô lập, nhưng không làm thay đổi verdict `activation_eligible=false`. Không thực hiện canonical write, runtime restart, reboot, package/install, deploy, push hoặc tạo outcome tự nhiên. Next action vẫn là owner review + contract reconciliation cho `prl-22e…` và unknown effects; nếu không có supported API/authority, phải giữ candidate quarantine và không gọi đây là recovery đã áp dụng.
+
+### 16.20. Direct `main` push bị chặn bởi GitHub large-file gate — 22/09 khoảng 19:17–19:20 +07
+
+Đã commit trực tiếp trên `main` và chạy lại delivery guard trước push:
+
+- `5413dc7` — `feat: audit controlled ledger recovery candidate` (verifier, test, checkpoint 16.19).
+- `25e7cfd` — `chore: refresh delivery snapshot before push` (receipt snapshot mới nhất).
+- `npm run check:coding-tools-delivery`: **PASS**; `ledger_blob=131f76e2582c2e0b73e53338296d40f450deb2a9`, `size_bytes=97509376`, `user_version=12`, history **PASS (4876 files)**; `git diff --cached --check` sạch.
+
+Lệnh `git push origin HEAD:main` đã chạy nhưng server từ chối ở pre-receive với `GH001`: ba binary generated đã có trong **lịch sử local chưa có trên remote**, mỗi file khoảng 215 MB:
+
+| Path bị GitHub nêu | Kích thước theo remote |
+| --- | ---: |
+| `output/packaged-candidate-final/win-unpacked/Coding Tools MCP.exe` | 215.21 MB |
+| `output/packaged-candidate-revalidated-20260922-135500/win-unpacked/Coding Tools MCP.exe` | 215.21 MB |
+| `output/packaged-candidate-revalidated-20260922-140500/win-unpacked/Coding Tools MCP.exe` | 215.16 MB |
+
+`origin/main` **không đổi**, vẫn `044dd96178faacc92a049a528eb05baa60b8816a`; local `main` vẫn sạch ở `25e7cfd0ce5ef17b7fb927fb8561ef54f03c3c24`, ahead `6`, behind `0`. Các thư mục này nằm dưới `output/` vốn bị ignore nhưng đã bị track trong các commit local trước đó; không được đánh đồng với retention bắt buộc của `.coding-tools`, và không được tự xóa/rollback chỉ để vượt gate. Canonical `.coding-tools/orchestration/ledger.sqlite3` không bị đổi.
+
+**Phân loại:** `EXTERNAL_DELIVERY_BLOCKED_LARGE_FILE`, không phải test/source failure. Không dùng `--force`, không rewrite history, không xóa artifact hay đổi `.coding-tools` khi chưa có lựa chọn rõ ràng. Để push `main`, owner phải chọn và cấp quyền cụ thể cho một trong các đường sau:
+
+1. Rewrite có backup các commit local chưa publish để bỏ generated `output/**/win-unpacked` khỏi Git history, giữ manifest/hash và artifact ngoài Git, rồi `git push --force-with-lease origin main`.
+2. Di chuyển đúng binary lớn sang Git LFS, kiểm tra LFS quota/remote policy, vẫn phải history migration và force-with-lease cho phần local chưa publish.
+3. Giữ `main` local như hiện tại và phát hành binary qua artifact store/release channel được chỉ định; chỉ push source/evidence history sau khi path contract được chốt.
+
+**Next action an toàn:** chờ owner xác nhận chính xác phương án history/artifact. Khi được cấp, tạo backup ref/receipt trước rewrite, dry-run lọc đúng các path nêu trên, kiểm tra `.coding-tools` retention, chạy lại `stage:coding-tools-delivery` + `check:coding-tools-delivery`, rồi chỉ force-with-lease nếu remote vẫn đúng `044dd961…`. Cho tới lúc đó không gọi lần push này là thành công và không coi hai Problem đã đóng.
