@@ -439,7 +439,13 @@ class RecoveryIpcClient {
   }
 
   ping(options = {}) { return this.call('recovery.ping', [], { timeout: 1500, ...options }); }
-  status(options = {}) { return this.call('recovery.status', [], options); }
+  status(options = {}) {
+    const request = options && typeof options === 'object' && !Array.isArray(options)
+      ? options
+      : {};
+    const { fresh = false, ...callOptions } = request;
+    return this.call('recovery.status', fresh === true ? [{ fresh: true }] : [], callOptions);
+  }
   activationPreflight(request) { return this.call('code.activation_preflight', [request]); }
   activateUpdate(request) { return this.call('code.activate_update', [request]); }
   activationStatus(operationId) { return this.call('code.activation_status', [operationId]); }

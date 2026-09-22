@@ -438,6 +438,22 @@ test('Recovery IPC is loopback-only, authenticated, bounded, and allowlisted', a
   assert.equal(descriptor.device_instance_id, 'device-instance-test-0001');
 });
 
+test('Recovery IPC client keeps fresh status as a read argument, not transport authority', async () => {
+  const client = new RecoveryIpcClient({ paths: {} });
+  let observed = null;
+  client.call = async (...args) => {
+    observed = args;
+    return { ok: true };
+  };
+
+  await client.status({ fresh: true, timeout: 321, expectedOwnerPid: 42 });
+  assert.deepEqual(observed, [
+    'recovery.status',
+    [{ fresh: true }],
+    { timeout: 321, expectedOwnerPid: 42 }
+  ]);
+});
+
 test('Recovery Host lock rejects a second live owner and replaces a dead owner', (t) => {
   const paths = fixture(t);
   acquireRecoveryHostLock(paths, 'first-owner');
@@ -1606,6 +1622,33 @@ test('Recovery Host publishes the completed UI observation into its cached IPC p
     'status must retain the exact completed UI absence observation');
   assert.equal(snapshot.recoveryHost.electron_ui_recovery.alive, false,
     'the lightweight cached projection must carry the same exact observation');
+});
+
+test('fresh Recovery Host status proves an unregistered UI is missing for idle handoff', async (t) => {
+  const { host } = uiRecoveryFixture(t);
+  host.uiRecoveryInitialGraceUntil = 0;
+
+  const observed = await host.handlers()['recovery.status']({ fresh: true });
+  assert.equal(observed.electron_ui_recovery.registered, false);
+  assert.equal(observed.electron_ui_recovery.alive, false);
+  assert.equal(observed.electron_ui_recovery.state, 'missing');
+});
+
+test('fresh Recovery Host status keeps a registered but unverified UI fail closed', async (t) => {
+  const { host, revision } = uiRecoveryFixture(t);
+  host.activation.uiRegistration = {
+    instance_id: 'fresh-status-uncertain-ui-0001',
+    pid: 42001,
+    process_start_token: '123456789',
+    revision,
+    registered_at_unix_ms: Date.now()
+  };
+  host.activation.asyncProcessIdentityObserver = async (pid) => ({ state: 'unavailable', pid });
+
+  const observed = await host.handlers()['recovery.status']({ fresh: true });
+  assert.equal(observed.electron_ui_recovery.registered, true);
+  assert.equal(observed.electron_ui_recovery.alive, null);
+  assert.equal(observed.electron_ui_recovery.state, 'unknown');
 });
 
 test('Recovery Host identity observation is a read-only exact MCP projection', async (t) => {

@@ -414,7 +414,7 @@ async function proveIdlePackagedHandoff({
   for (let attempt = 0; attempt < snapshotAttempts; attempt += 1) {
     try {
       status = await withinIdleHandoffDeadline(
-        (remaining) => client.status({ ...requestOptions, timeout: remaining }),
+        (remaining) => client.status({ ...requestOptions, timeout: remaining, fresh: true }),
         snapshotRetryDeadline
       );
       runtime = await withinIdleHandoffDeadline(

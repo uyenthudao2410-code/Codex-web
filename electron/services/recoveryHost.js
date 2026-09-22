@@ -1440,7 +1440,25 @@ class RecoveryHost {
     return this.hostStatus({ preferCachedRuntime: true });
   }
 
-  hostStatus({ preferCachedRuntime = false } = {}) {
+  async freshHostStatus() {
+    // Idle handoff is a bounded, authenticated read that needs a completed UI
+    // identity observation.  Keep ordinary status/heartbeat calls on the
+    // cached projection, but do not let that projection turn an unregistered
+    // UI into `alive: null` forever after the initial grace period.  A
+    // registered UI whose asynchronous identity probe is unavailable remains
+    // `alive: null` and therefore still blocks the handoff.
+    const presence = await this.activation.observeUiPresence();
+    const cached = this.cachedHostStatus();
+    if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
+      return {
+        ...cached,
+        electron_ui_recovery: this.uiRecoveryStatus({ presence })
+      };
+    }
+    return this.hostStatus({ preferCachedRuntime: true, uiPresenceOverride: presence });
+  }
+
+  hostStatus({ preferCachedRuntime = false, uiPresenceOverride = null } = {}) {
     // Cached IPC projections must remain a pure read model: invoking the
     // durable store here would turn a lightweight heartbeat into a blocking
     // disk/lock read.  Fresh operator/status reads, however, are an
@@ -1458,7 +1476,10 @@ class RecoveryHost {
         error_code: String(error?.code || 'REVISION_UNAVAILABLE')
       };
     }
-    const electronUiPresence = this.activation.uiPresence({ preferCached: preferCachedRuntime });
+    const electronUiPresence = uiPresenceOverride && typeof uiPresenceOverride === 'object'
+      && !Array.isArray(uiPresenceOverride)
+      ? uiPresenceOverride
+      : this.activation.uiPresence({ preferCached: preferCachedRuntime });
     const electronUiRevision = this.activation.uiRevisionStatus({
       force: !preferCachedRuntime,
       presence: electronUiPresence
@@ -2323,7 +2344,9 @@ class RecoveryHost {
       // Activation/mutation paths retain their own exact preflight and fresh
       // runtime snapshot authority; cached presentation is never mutation
       // authority.
-      'recovery.status': async () => this.cachedHostStatus(),
+      'recovery.status': async (options = {}) => options?.fresh === true
+        ? this.freshHostStatus()
+        : this.cachedHostStatus(),
       'code.activation_preflight': async (request) => this.activation.preflight(request),
       'code.activate_update': async (request) => {
         this.assertBootstrapMutationAllowed();
