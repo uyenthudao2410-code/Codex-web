@@ -2060,3 +2060,37 @@ reconcile action hoặc mở admission trong wave này.
   giữ `admission=recovery` cho tới khi unresolved action được xử lý bằng evidence
   thật. Tiếp theo mới tạo activation epoch mới để chứng minh strict discovery,
   real `workspace_context`, fault/reattach, reboot/logon và natural-use.
+
+### 16.41. Tách validation schema-25 khỏi lỗi fixture OAuth phụ thuộc POSIX — 22/09/2026 sau 22:20 +07
+
+Đã chạy thêm boundary validation cho các module chịu ảnh hưởng schema/version:
+
+```text
+test_deployment_verifier.py + test_mcp_permission_requests.py
+14 passed in 17.35s
+
+test_store.py + test_http_api.py
+129 passed, 50 subtests passed
+
+focused historical-dispatch selector
+3 passed, 129 deselected
+```
+
+Lần chạy gộp `test_deployment_verifier.py + test_mcp_permission_requests.py +
+test_mcp_oauth.py` có `40 passed, 5 failed, 35 subtests passed`. Cả 5 failure
+đều nằm trong `test_mcp_oauth.py`, tại fixture kiểm tra file credential
+owner-private và symlink. Trên Windows hiện tại, `chmod(0o600)` không tạo mode
+POSIX tương ứng nên file bị từ chối như thiết kế; việc tạo symlink cũng trả
+`WinError 1314` vì process không có privilege symlink. Không có failure nào ở
+store, HTTP disposition, deployment verifier hay permission-request migration.
+
+Phân loại đúng là **test-environment portability gap**, không phải lý do để nới
+policy credential hoặc bỏ kiểm tra symlink. Cần chạy OAuth suite trên POSIX/CI
+được cấp symlink privilege (hoặc bổ sung fixture Windows riêng ở một change lane
+được sở hữu) trước khi gọi toàn bộ control-plane suite xanh.
+
+**Checkpoint bổ sung:** source lane schema-25 hiện có focused implementation,
+UI/runbook và tests xanh trong working tree, nhưng vẫn chưa được nhận ownership
+để commit; remote Ubuntu chưa được migrate/deploy schema 25. Vì vậy trạng thái
+strongest vẫn là `SOURCE_PRESENT + FOCUSED_PROOF`, chưa phải
+`PACKAGED_RELEASED`, `LIVE_ACCEPTED` hay natural outcome.
