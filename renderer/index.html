@@ -256,7 +256,7 @@
             <div class="setup-progress" role="list" aria-label="Tiến độ thiết lập">
               <div class="setup-step" id="setupStepConnection" role="listitem"><i>1</i><span><b>Kết nối máy chủ</b><small>Máy này và Ubuntu</small></span></div>
               <div class="setup-step" id="setupStepFolder" role="listitem"><i>2</i><span><b>Thư mục & quyền</b><small>Phạm vi làm việc</small></span></div>
-              <div class="setup-step" id="setupStepAccount" role="listitem"><i>3</i><span><b>Quyền truy cập</b><small>Route và policy</small></span></div>
+              <div class="setup-step" id="setupStepAccount" role="listitem"><i>3</i><span><b>Liên kết tài khoản</b><small>Máy chủ cấp quyền</small></span></div>
               <div class="setup-step" id="setupStepVerify" role="listitem"><i>4</i><span><b>Kiểm tra</b><small>Sẵn sàng nhận việc</small></span></div>
             </div>
             <div class="setup-card-actions"><p id="setupNextDetail">Chưa có trạng thái mới.</p><button class="primary-button" id="setupPrimaryAction" type="button">Kiểm tra lại</button></div>
@@ -278,7 +278,7 @@
         </section>
 
         <section class="page" data-page-view="deploy">
-          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN TRIỂN KHAI</span><h2>Cấu hình triển khai nhanh</h2><p>Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.</p></div><div class="step-pill"><span>1</span>Cấu hình <i></i><span>2</span>Kiểm tra <i></i><span>3</span>Triển khai</div></div>
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN TRIỂN KHAI</span><h2 id="deploySectionTitle">Cấu hình triển khai nhanh</h2><p id="deploySectionSubtitle">Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.</p></div><div class="step-pill" data-direct-only><span>1</span>Cấu hình <i></i><span>2</span>Kiểm tra <i></i><span>3</span>Triển khai</div></div>
 
           <div class="two-column deploy-grid">
             <article class="panel">
@@ -287,7 +287,7 @@
                 <p id="centralExecutorNoticeText">Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. Máy này chỉ giữ MCP nội bộ, workspace và policy/action được cấp.</p>
                 <p id="centralExecutorActivationStatus"></p>
                 <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
-                <label class="field"><span>Địa chỉ HTTPS của Ubuntu Control Plane</span><div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://ubuntu-host.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu pairing</button></div><small id="controlPlaneEnrollmentStatus">Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI.</small></label>
+                <label class="field"><span>Địa chỉ máy chủ Ubuntu</span><div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://ubuntu-host.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Kết nối máy chủ</button></div><small id="controlPlaneEnrollmentStatus">Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI.</small></label>
                 <div id="controlPlaneCredentialRotation" class="setting-row" hidden><span><b>Credential máy</b><small id="controlPlaneCredentialRotationStatus">Chỉ đổi sau khi Ubuntu đã duyệt máy; raw credential không hiển thị trong UI.</small></span><button id="rotateControlPlaneCredential" class="secondary-button" type="button">Đổi credential</button></div>
                 <div id="controlPlaneAuthorityStatusCard" class="authority-status-card" hidden>
                   <div class="panel-title"><div><h3>Liên kết tài khoản & target</h3><p>Enrollment chỉ xác minh máy. Card này đọc binding/target mà Ubuntu đã cấp cho máy, không tạo quyền mới.</p></div><span id="controlPlaneAuthorityStatusBadge" class="soft-badge neutral">Chưa kiểm tra</span></div>
@@ -316,7 +316,7 @@
               </div>
             </article>
 
-            <article class="panel">
+            <article class="panel" data-direct-only>
               <div class="panel-title"><div><h3>Mạng & Proxy</h3><p>Mặc định tự động chọn kết nối trực tiếp, Proxy hệ thống Windows hoặc Proxy cục bộ phổ biến, không còn cố định vào phần mềm Proxy hay cổng cụ thể nào.</p></div></div>
               <label class="field"><span>Chế độ Proxy</span><select id="proxyModeSelect"><option value="auto">Tự động phát hiện (Khuyến nghị)</option><option value="system">Theo hệ thống Windows</option><option value="manual">Proxy thủ công</option><option value="direct">Bắt buộc kết nối trực tiếp</option></select><small>Chế độ tự động sẽ xác minh kết nối mạng thực tế tới OpenAI.</small></label>
               <label class="field" id="manualProxyField"><span>Địa chỉ Proxy thủ công</span><input id="proxyUrlInput" placeholder="Ví dụ http://127.0.0.1:7890"><small id="proxyHint">Chỉ cần điền ở chế độ thủ công, hỗ trợ Proxy HTTP/HTTPS.</small></label>
@@ -327,7 +327,7 @@
             </article>
           </div>
 
-          <article class="deploy-footer panel accent-panel">
+          <article class="deploy-footer panel accent-panel" data-direct-only>
             <div><span class="section-kicker">SẴN SÀNG TRIỂN KHAI</span><h3>Lưu cấu hình và triển khai dịch vụ</h3><p id="deploySummary">Vui lòng chọn thư mục làm việc và điền thông tin Tunnel.</p></div>
             <div class="deploy-actions"><button class="secondary-button" id="saveDeploySettings">Chỉ lưu cấu hình</button><button class="primary-button large" id="deployNow">Lưu và bắt đầu triển khai</button></div>
           </article>

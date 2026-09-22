@@ -13,7 +13,7 @@ test('Settings has one obvious entry and a resumable four-step setup surface', (
   for (const id of ['setupStepConnection', 'setupStepFolder', 'setupStepAccount', 'setupStepVerify']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
-  assert.match(html, /<b>Quyền truy cập<\/b>/);
+  assert.match(html, /<b>Liên kết tài khoản<\/b>/);
   for (const id of ['settingsConnectionSummary', 'settingsWorkspaceSummary', 'settingsAppSummary']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
@@ -53,6 +53,35 @@ test('Central workspace setup uses understandable presets and keeps opaque IDs o
   assert.match(app, /centralWorkspaceCapabilityLabel/);
   assert.doesNotMatch(app, /workspace\.workspace_id\.slice\(-8\)/);
   assert.doesNotMatch(app, /workspace\.workspace_generation\.slice\(-8\)/);
+});
+
+test('Central wizard resumes from the registered Ubuntu inventory, not legacy direct workspace settings', () => {
+  const app = read('renderer/app.js');
+  assert.match(app, /function centralWorkspaceEntries\(\)/);
+  assert.match(app, /function centralDispatchableTargetForLocalWorkspace\(\)/);
+  assert.match(app, /const workspaceReady = central\s*\?\s*centralWorkspaceEntries\(\)\.length > 0/);
+  assert.match(app, /Boolean\(centralDispatchableTargetForLocalWorkspace\(\)\)/);
+  assert.match(app, /centralWorkspaceSummary\(\)/);
+  assert.match(app, /if \(isCentralExecutor\(state\.snapshot\?\.settings\)\) await chooseControlPlaneWorkspace\(\);/);
+  assert.match(app, /action\.dataset\.setupAction[\s\S]*?\? 'account'/);
+  assert.match(app, /card\.scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\)/);
+});
+
+test('Central setup rehydrates local workspace inventory after reopening the window', () => {
+  const app = read('renderer/app.js');
+  assert.match(app, /await reconcileControlPlaneAuthorityStatus\(\{ quiet: true \}\);[\s\S]*?await refreshControlPlaneWorkspaces\(\{ quiet: true \}\)/);
+  assert.match(app, /Chưa liên kết tài khoản/);
+  assert.match(app, /Đã liên kết/);
+});
+
+test('Central connection page hides direct-mode network and deployment controls', () => {
+  const html = read('renderer/index.html');
+  const app = read('renderer/app.js');
+  assert.match(html, /id="centralExecutorNotice"/);
+  assert.match(html, /<article class="panel" data-direct-only>[\s\S]*?Mạng & Proxy/);
+  assert.match(html, /class="deploy-footer panel accent-panel" data-direct-only/);
+  assert.match(html, /class="step-pill" data-direct-only/);
+  assert.match(app, /deployTitle\.textContent = central \? 'Kết nối máy chủ Ubuntu'/);
 });
 
 test('The last Ubuntu origin is an ordinary setting, not a credential or context id', () => {

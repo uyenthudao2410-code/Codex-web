@@ -304,6 +304,7 @@ Không ẩn DOM rác chỉ để giữ test khóa theo layout cũ.
 - Continue đúng request/operation; không mất input khi chuyển nhóm, không
   duplicate effect; pending là trạng thái chờ bình thường, không spinner vô hạn.
 - Đã làm: một mục Cài đặt cố định, nhóm Kết nối/Thư mục & quyền/Ứng dụng/Hỗ trợ, setup 4 bước có thể tiếp tục và CTA theo blocker; pending không biến thành success; workspace central dùng preset “Chỉ xem / Làm việc với mã nguồn / Tùy chỉnh” và giấu ID opaque khỏi inventory thường.
+- Bổ sung: wizard central lấy bước “Thư mục & quyền” từ inventory workspace Ubuntu đã đăng ký (không đọc nhầm `settings.workspace` của direct legacy), tự nạp inventory khi mở lại app, mở đúng luồng chọn thư mục central và đưa CTA liên kết tài khoản tới đúng card. Khi central đã bật, các panel Proxy/Python/cổng và nút triển khai của direct legacy được ẩn; người dùng chỉ thấy kết nối Ubuntu, pairing và authority status.
 - Bước 3 trên UI dùng nhãn **Liên kết & quyền** cho central và **Kiểm tra kết nối** cho direct legacy. `authorityReady` chỉ là bằng chứng policy local/route hiện tại; không được diễn giải thành OAuth principal hoặc account binding đã liên kết.
 - Đã nối projection `POST /v1/nodes/{device_id}/authority-status` qua node-agent/IPC. Card chỉ hiển thị “Chưa có liên kết tài khoản”, “Đã có target được cấp”, “Binding bị thu hồi”, “Workspace chưa được đăng ký” hoặc trạng thái chờ/chặn; không hiển thị ID/path/credential. Projection là bằng chứng riêng, chưa thay thế phép thử ChatGPT.
 - Exit còn lại: policy preset/lifecycle và xác minh server deployed; không báo completed khi backend chưa có bằng chứng.
@@ -406,7 +407,7 @@ disabled trên trang cơ bản. Đây là lựa chọn theo ranh giới của s�
 
 - Hoàn thành: audit source, phương án, bản phác UI cô lập, P1 nền tảng, P2 UI nền tảng, preset quyền dễ hiểu và projection account/binding node-safe; `npm test` pass 867, skip 16 mục Windows-only, kiểm tra secret pass.
 - Chưa làm: policy adapter/lifecycle P3 và test tương tác renderer thực tế, P4 đóng gói và test runtime Windows mới, deploy/approve/OAuth, nghiệm thu LIVE. Projection account/binding mới có bằng chứng source/focused test, chưa xác minh server deployed. Preset UI đã có nhưng vẫn chỉ là inventory capability; không được gọi là policy authority.
-- Git đầu lượt: `main@50ae5c4`, có ledger runtime dirty từ trước; không thay
+- Git đầu lượt: `main@b95cc2e`, có ledger runtime evidence drift; không thay
   ledger bằng tay, không tạo commit/branch hoặc push trong bước thiết kế.
-- Bằng chứng mới: `npm test` **867 pass, 16 skip Windows-only, 0 fail**; focused Settings/authority/health **10 pass**; Control Plane store/HTTP **43 pass**; preview `index.html?preview=1#system` đã mở được và không có lỗi tải resource.
+- Bằng chứng mới: bản cập nhật UI central có `node --check renderer/app.js`, `git diff --check`, focused Settings/dev lifecycle **77 pass**, và full `npm test` **870 pass, 16 skip Windows-only, 0 fail**; Control Plane store/HTTP **43 pass** và preview `index.html?preview=1#system` không lỗi tải resource. Packaged runtime Windows/Ubuntu vẫn cần nghiệm thu riêng.
 - Bước tiếp theo: hoàn thiện policy adapter + lifecycle, chạy packaged Windows/Ubuntu contract test, rồi mới build/đồng bộ artifact exact theo P4.

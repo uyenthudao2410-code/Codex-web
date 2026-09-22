@@ -1521,7 +1521,7 @@ test('Command Center reports Ubuntu route evidence instead of a Windows Tunnel f
   snapshot.status.centralStatusReason = 'CENTRAL_LOCAL_POLICY_NOT_READY';
   fixture.render(snapshot);
   assert.equal(fixture.elements.get('#runtimeTunnelSourceState').textContent, 'WAITING');
-  assert.match(fixture.elements.get('#runtimeTunnelSourceMeta').textContent, /Chờ policy action cục bộ/);
+  assert.match(fixture.elements.get('#runtimeTunnelSourceMeta').textContent, /Đã nối Ubuntu · chờ quyền/);
   assert.equal(fixture.elements.get('#runtimeSourceSummary').className, 'cc-pill is-waiting');
 });
 
