@@ -834,3 +834,180 @@ strict connector discovery, ChatWeb `workspace_context`, reboot matrix hoặc
 natural outcome. Bước delivery tiếp theo vẫn phải snapshot lại volatile
 `.coding-tools/**`, chạy các guard delivery bắt buộc, rồi commit/push trực tiếp
 trên `main` theo chính sách repository.
+
+## 14. Controlled recovery tiếp theo — route/epoch đã hội tụ, connector vẫn mở — 2026-09-23
+
+### 14.1. Mục tiêu và nguyên tắc thực hiện
+
+Wave này được thực hiện trực tiếp trên checkout `main`, không tạo worktree và
+không chỉnh byte của `ledger.sqlite3`. Trước mutation, route evidence được đọc
+bằng chính `readControlPlaneRouteEvidence()` với `Date.now()`, descriptor được
+đối chiếu với PID/instance/installation/start-token, và census canonical được
+chạy bằng Backup API/query-only. Không dùng epoch cũ để nhận là mới, không tạo
+epoch thủ công, không truyền source checkpoint cho `refresh=true`, không gọi
+`npm start` cạnh tranh và không bật local Coding Tunnel cho
+`central_executor`.
+
+### 14.2. Phát hiện nguyên nhân của lần handoff đầu
+
+Preflight đầu tiên lúc khoảng `2026-09-22T19:51Z` cho thấy route parser đã
+`CENTRAL_ROUTE_READY` (policy `enabled`, endpoint đúng, age khoảng vài giây),
+connected agent PID `37192` và Recovery Host PID `19628` đều sống đúng
+identity. Request `full_clean_refresh` được gửi qua `RecoveryIpcClient` với
+đúng owner PID/instance/start-token, nhưng socket trả `ECONNRESET` sau khi
+handoff bắt đầu. Không retry mù; epoch mới ghi lại `FAILED/ECONNRESET` và
+Recovery Host replacement đã chuyển sang source `development`.
+
+Sau handoff, packaged connected-agent của Supervisor vẫn chạy với
+`runtime-mode=packaged`, trong khi descriptor mới là `development`. Official
+`runtime-heartbeat` packaged trả `runtime_status_unavailable`; route evidence
+không được cập nhật và sau hơn 60 giây parser trả
+`CENTRAL_ROUTE_EVIDENCE_STALE`. Đây là mismatch package–epoch–runtime, không
+phải bằng chứng Control Plane đã mất enrollment. Process PID `37192` còn
+`Responding` nhưng không có socket và heartbeat không tiến; sau khi xác minh
+lock instance/start-token, chỉ đúng PID này được terminate bằng
+`terminateExactProcessTree()`. Supervisor đã spawn replacement PID `50576`,
+nhưng replacement packaged vẫn không đọc được host development.
+
+Không sửa route evidence bằng tay. Một lần gọi official source
+`runtime-heartbeat` với `runtime-mode=development` và `node.exe` của source
+đã ghi evidence fresh (`policy_state=enabled`, route parser `CENTRAL_ROUTE_READY`)
+và phân loại readiness là `degraded` vì strict connector discovery chưa có.
+Đây là lý do hợp lệ để mở một epoch mới; nó không được nâng thành connector
+receipt hay natural outcome.
+
+### 14.3. Epoch mới và postcondition runtime
+
+Sau khi route fresh, một request có owner identity ràng buộc được gửi duy nhất
+một lần:
+
+```text
+reason=operator_route_recovery_retry_after_dev_heartbeat
+executionRole=central_executor
+componentProfile=central_executor_v1
+refresh=true
+mode=full_clean_refresh
+allowAcceptancePending=false
+```
+
+Request trả `HANDOFF` với:
+
+```text
+operation_id=full-clean-mud3kybn-1c42c9b4abcc0bc7dba2d758
+activation_epoch_id=activation-mud3l2r5-24df6bcefa255d01e213d0556c167be4
+```
+
+Readback authoritative lúc `2026-09-22T20:00:48.441Z` UTC (03:00:48 +07):
+
+| Gate | Kết quả | Phân loại |
+|---|---|---|
+| Recovery Host | PID `52256`, identity sống, mode `development` | PASS cho current source host |
+| Epoch | `READY`, `admission_open=true`, `update_incomplete=false` | PASS |
+| MCP/native | `true/true`; `componentsReady=true`; `fullyReady=true` | PASS |
+| Central route | `centralConnected=true`; `authorityReady=true`; reason `null` | PASS |
+| Role/Tunnel | `central_executor`; `tunnelRunning=false` | PASS — local Tunnel không được yêu cầu |
+| MCP identity | `identity_current=true`; epoch hiện tại khớp | PASS |
+| Contract | `smart-v3`, SHA `bc44c044…` | PASS cho loaded runtime |
+| Connector | `connectorReady=false`; `CHANGED_NEEDS_DISCOVERY`; `connectorRediscovered=false` | OPEN |
+| Workspace read | `null` trong snapshot identity | Chưa có client receipt |
+
+`mcp_process_instance_id` và `mcp_server_instance_id` của lần đọc này đã được
+đối chiếu với `runtime.identity_observation`; chúng chỉ là runtime binding,
+không phải bằng chứng ChatWeb đã gọi `tools/list`/`server/discover`.
+
+`node scripts/dev-ui-lifecycle.js status` cùng cửa sổ cũng cho
+`state=CURRENT`, UI/MCP revision current, `components_ready=true`,
+`fully_ready=true`, nhưng vẫn `connector_state=CHANGED_NEEDS_DISCOVERY` và
+`connector_refresh_required=true`. Vì vậy source fix ở Section 12.5 đã được
+kiểm chứng trên runtime mới: central executor không bị ép có Tunnel, nhưng
+không được làm xanh connector bằng `fullyReady`.
+
+### 14.4. Canonical ledger và chỉ số tri thức sau wave
+
+Reporter chính thức query-only lúc `2026-09-22T20:02:07.512Z` UTC trả:
+
+```text
+content_free=true
+mutated_canonical_ledger=false
+canonical_writer_instantiated=false
+runtime_instantiated=false
+integrity_check=ok
+foreign_key_check_rows=0
+schema_version=12
+projection.classification=CONTEXTUAL_PROJECTIONS
+context_count=1079
+contextual_sha256=8ffd702686dde2da39eda737f79589e942a41fc0a465bea7037a5f67a8c2398f
+projection_drift=false
+ordinary_active_runs=17
+P5_EXPERIMENT_ANCHOR=6
+THRESHOLD_SENSITIVE_STALE_CANDIDATE=17
+stale_background_operation_residues=0
+unbound_live_resource_residues=0
+unexplained_active_runs=0
+```
+
+Immutable read hiện tại của hai Problem vẫn tách revision:
+
+| Problem/revision | accepted | aborted | active | Tổng RUN bind | State |
+|---|---:|---:|---:|---:|---|
+| `prl-22e670302757c9b7663170e226ed7c26` / rev 1 | 47 | 16 | 3 | 66 | `OPEN` |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / rev 2 | 16 | 10 | 13 | 39 | `OPEN` |
+
+Các số này là status mix của RUN đã bind; không phải completion rate và không
+phải criterion PASS. Trên current revision vẫn chưa có canonical
+`coverage_manifest`/`criterion_dispositions`/`problem_outcome_claim` đủ để
+đóng 12 hoặc 18 criterion. `context_count=1079` là projection ngữ cảnh, không
+phải 1.079 natural task. P5 vẫn có 6 shadow A/A anchor nhưng chưa có
+enrollment/assignment/protocol/binding/outcome; efficacy/ROI vẫn
+`UNESTIMABLE`. Knowledge ACK missingness, P4 mismatch và 48-hour natural-use
+gate nêu ở Section 3–10 giữ nguyên; không tự ACK, không biến report-gate thành
+outcome.
+
+Physical/logical SHA của các cửa sổ ledger thay đổi theo runtime evidence; wave
+này chỉ ghi snapshot được reporter trả về, không dùng drift đó làm lý do
+VACUUM/truncate/reconcile hay insert history. Trước delivery tiếp theo phải
+stage lại snapshot canonical và chạy đủ delivery/history/secret guards.
+
+### 14.5. Quyết định lựa chọn và backlog còn lại
+
+**Lựa chọn đã thực hiện:** giữ `central_executor`, route central authenticated,
+local Tunnel `not_required`, runtime source/epoch mới và admission mở. Đây là
+lựa chọn ít state nhất cho host hiện tại và phù hợp role contract; không chuyển
+sang `direct_legacy` chỉ để ép Tunnel lên.
+
+**P1 cần bổ sung cho app:** Supervisor hiện hard-code connected-agent
+`runtime-mode=packaged`. Khi full-clean handoff từ installed host sang source
+development, agent sẽ không đọc được runtime và heartbeat sẽ stale. Cần chọn
+một trong hai hướng trước acceptance reboot lâu dài:
+
+1. **Khuyến nghị:** freeze acceptance trên một packaged bundle duy nhất và giữ
+   Supervisor/Recovery Host/agent cùng `packaged` identity; source `main` chỉ
+   là authority để build/verify bundle.
+2. Nếu sản phẩm chính thức cho phép development runtime tự resume, bổ sung
+   mode-aware Supervisor manifest/agent (development node, explicit data-root,
+   exact app-root/install identity) cùng focused tests và reinstall proof. Không
+   trộn agent packaged với host development và không dùng one-shot heartbeat
+   như workaround vận hành.
+
+Các gate sau vẫn mở và phải có receipt độc lập:
+
+- current ChatWeb connector `tools/list` hoặc `server/discover`, bind với MCP
+  process/server/epoch/contract SHA;
+- một `workspace_context` thật trên `E:\DEV\Codex-web`, có
+  `workspace_accessed=true` và delivery/receipt readback;
+- reboot/logon installed matrix, Machine B, authorized fault injection;
+- ít nhất 48 giờ natural-use theo canonical capsule, một natural case và
+  independent outcome;
+- exact criterion coverage/disposition và closure authority riêng cho từng
+  Problem revision.
+
+Cho tới khi các gate trên có bằng chứng, trạng thái được ghi chính thức là:
+
+```text
+RUNTIME_RECOVERY_VERIFIED
+PRODUCT_ACCEPTANCE_OPEN
+```
+
+Không gọi `LIVE_ACCEPTED`, không gọi `PROBLEM_CLOSED`, không coi
+`fullyReady=true` là strict connector discovery và không gộp trạng thái rev 1
+với rev 2.

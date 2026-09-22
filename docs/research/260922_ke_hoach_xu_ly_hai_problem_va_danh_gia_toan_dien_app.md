@@ -2881,3 +2881,38 @@ readiness, strict discovery, real workspace read, reboot và natural outcome
 vẫn thiếu. Bước tiếp theo phải là một acceptance wave chính thức ghi exact
 closure/checkpoint cho source repair hoặc packaged delivery được owner duyệt;
 chỉ sau đó mới chạy full-clean handoff. Hai Problem vẫn `OPEN`.
+
+### 16.54. Thực thi controlled recovery trên `main` — cập nhật 23/09/2026
+
+Đã triển khai controlled recovery theo đúng kế hoạch, trực tiếp trên branch
+`main` và không tạo worktree. Wave chi tiết, receipt và phân tích chỉ số mới
+được ghi tại [260923_controlled_recovery_ui_handoff_wave.md](260923_controlled_recovery_ui_handoff_wave.md).
+
+Kết quả đã xác minh:
+
+- route evidence được đọc bằng parser chính thức; sau khi xử lý agent stale,
+  `CENTRAL_ROUTE_READY`, `policy_state=enabled`, đúng device/endpoint;
+- một `full_clean_refresh` mới đạt `READY`, `admission_open=true`,
+  `update_incomplete=false`, MCP/native/components/`fullyReady=true`,
+  `centralConnected=true`, `authorityReady=true` cho role `central_executor`;
+- local Coding Tunnel vẫn `not_required`, không được bật thêm để làm xanh
+  acceptance;
+- canonical census mới vẫn `integrity_check=ok`, FK `0`, projection
+  `CONTEXTUAL_PROJECTIONS`, `context_count=1079`, 17 stale candidates, 6 P5
+  anchors và không có stale background/unbound live residue;
+- Problem `prl-22e...` rev 1 hiện có 66 RUN (`47/16/3`), Problem
+  `prl-e918...` rev 2 có 39 RUN (`16/10/13`); cả hai vẫn `OPEN`.
+
+Các gate chưa được nâng cấp: current-process strict `tools/list`/
+`server/discover`, real `workspace_context`, reboot/logon/Machine B, fault
+injection, 48-hour natural-use, independent outcome, exact criterion
+coverage/disposition và closure authority. Runtime hiện chỉ được phân loại
+`RUNTIME_RECOVERY_VERIFIED / PRODUCT_ACCEPTANCE_OPEN`.
+
+Một gap P1 được xác định trong wave: installed Supervisor vẫn khởi chạy
+connected-agent ở `runtime-mode=packaged`; nếu handoff đưa host sang source
+`development`, agent không đọc được runtime và route heartbeat sẽ stale. Không
+dùng one-shot source heartbeat như workaround dài hạn. Hướng ưu tiên là freeze
+acceptance trên packaged bundle đồng nhất; nếu sản phẩm phải hỗ trợ development
+auto-resume thì cần mode-aware Supervisor manifest/agent, focused tests và
+reinstall proof trước reboot acceptance.
