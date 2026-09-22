@@ -1361,6 +1361,8 @@ Lệnh `git push origin HEAD:main` đã chạy nhưng server từ chối ở pre
 
 `origin/main` **không đổi**, vẫn `044dd96178faacc92a049a528eb05baa60b8816a`; local `main` vẫn sạch ở `25e7cfd0ce5ef17b7fb927fb8561ef54f03c3c24`, ahead `6`, behind `0`. Các thư mục này nằm dưới `output/` vốn bị ignore nhưng đã bị track trong các commit local trước đó; không được đánh đồng với retention bắt buộc của `.coding-tools`, và không được tự xóa/rollback chỉ để vượt gate. Canonical `.coding-tools/orchestration/ledger.sqlite3` không bị đổi.
 
+`25e7cfd` là HEAD tại thời điểm lệnh push bị reject; checkpoint 16.20 sau đó được ghi và commit local thành `bf3a181`. Vì vậy local `main` hiện vẫn sạch ở `bf3a181`, ahead `7`, behind `0`; remote ref vẫn không đổi.
+
 **Phân loại:** `EXTERNAL_DELIVERY_BLOCKED_LARGE_FILE`, không phải test/source failure. Không dùng `--force`, không rewrite history, không xóa artifact hay đổi `.coding-tools` khi chưa có lựa chọn rõ ràng. Để push `main`, owner phải chọn và cấp quyền cụ thể cho một trong các đường sau:
 
 1. Rewrite có backup các commit local chưa publish để bỏ generated `output/**/win-unpacked` khỏi Git history, giữ manifest/hash và artifact ngoài Git, rồi `git push --force-with-lease origin main`.
