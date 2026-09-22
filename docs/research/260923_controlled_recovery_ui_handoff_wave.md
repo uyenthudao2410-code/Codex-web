@@ -1676,3 +1676,53 @@ source+test+docs trực tiếp trên `main`, sau đó reinstall Supervisor bằn
 được hỗ trợ, capture command line/hash mới và quan sát tối thiểu hai chu kỳ
 heartbeat. Chỉ nếu route evidence tự refresh mới quay lại strict discovery;
 không ACK thủ công, không sửa byte ledger, không reboot trong wave này.
+
+## 15.14. Live activation proof sau reinstall Supervisor — 23/09/2026
+
+Sau commit `eb244709` và `npm run recovery:supervisor:install`, replacement
+đã dừng agent cũ còn giữ lock và publish process mới:
+
+```text
+Supervisor PID       = 50720 (parent Task Scheduler, state healthy)
+Connected-agent PID  = 33404, parent PID = 50720
+Python               = E:\DEV\Codex-web\resources\native-python\python.exe
+Agent                = E:\DEV\Codex-web\control-plane\control_plane\node_agent.py
+--node               = C:\Program Files\nodejs\node.exe
+--runtime-mode       = development
+--data-root          = C:\Users\Admin\AppData\Roaming\web-mcp-assistant
+```
+
+Manifest mới có `control_plane_node_path` và `control_plane_node_sha256`
+(`3602f2bb…`); lock PID khớp `33404`. Route evidence tự cập nhật qua hai chu
+kỳ độc lập, không gọi one-shot heartbeat trong lúc đo:
+
+```text
+route mtime               = 22:33:04 (baseline)
+route mtime/observed_at   = 22:33:35 / 1790116415472
+route mtime/observed_at   = 22:34:06 / 1790116446528
+runtime_readiness       = degraded (mcp_revision_unproven)
+policy_state            = enabled
+```
+
+Đây là `LIVE_CONTROLLED_ACTIVATION + HEARTBEAT_LIFECYCLE_PROOF`, xác nhận
+đúng root cause đã sửa. Nó chưa nâng product acceptance: `dev:status` vẫn
+`components_ready=true`, `fully_ready=false`, `runtime_update_incomplete=true`,
+`connector_state=CHANGED_NEEDS_DISCOVERY`, `connector_rediscovered=false`;
+`full-clean-activation --status` cho thấy Recovery Host running `94ea7118…`
+nhưng disk `4158c76a…`, `current_for_full_clean=false`, `admission_open=false`.
+`collect-boot-runtime-observation` vẫn là `OBSERVED`, `authority_granted=false`,
+`live_accepted=false`, `client=null`; không có strict discovery hoặc real
+`workspace_context`.
+
+Ledger readback cùng thời điểm dùng Backup API/query-only, không mutate
+canonical bytes: physical SHA `9bad16da…`, logical SHA `0e0b3a9c…`, schema `12`,
+integrity `ok`, FK `0`, `ordinary_active_runs=17`, `p5_epochs=6`,
+`projection_drift=false`, stale background residues `0`, unbound live resource
+residues `0`. Không có candidate exact/bound mới, nên **không apply evidence
+recovery lần hai** và không chỉnh byte `ledger.sqlite3`.
+
+**Checkpoint:** heartbeat lifecycle và Supervisor replacement đã đạt proof live;
+Problem `prl-22e…`/`prl-e918…` vẫn `OPEN`. Exact next action là giữ bundle/epoch
+fail-closed, lấy strict connector discovery bằng client được hỗ trợ; sau đó mới
+real `workspace_context`, reboot matrix và natural-use/outcome. Không bật Tunnel
+chỉ để làm xanh `fully_ready`, không ACK thủ công và không gộp hai Problem.

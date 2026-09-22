@@ -3166,3 +3166,45 @@ Node adapter ngoài mode đã cho phép. Exact next action: commit/push trực t
 capture process identity và ít nhất hai heartbeat liên tiếp. Nếu route vẫn
 stale, giữ `WAITING_FOR_SUPPORTED_CONNECTOR`/`OPEN` và phân tích tiếp theo
 evidence mới; không bypass strict discovery.
+
+### 16.63. Live proof sau controlled Supervisor replacement — 23/09/2026
+
+Sau khi commit/push `eb244709`, reinstall Supervisor đã thay đúng agent cũ
+đang giữ lock. Process readback hiện tại:
+
+```text
+supervisor PID       = 50720, state=healthy
+connected-agent PID  = 33404, parent=50720
+python               = E:\DEV\Codex-web\resources\native-python\python.exe
+node_agent           = E:\DEV\Codex-web\control-plane\control_plane\node_agent.py
+--node               = C:\Program Files\nodejs\node.exe
+--runtime-mode       = development
+--data-root          = C:\Users\Admin\AppData\Roaming\web-mcp-assistant
+```
+
+Route evidence tự refresh qua hai chu kỳ (mtime `22:33:04` baseline,
+`22:33:35` với `observed_at_ms=1790116415472`, và `22:34:06` với
+`observed_at_ms=1790116446528`). Điều này đóng gap heartbeat lifecycle ở mức
+`LIVE_CONTROLLED_ACTIVATION + HEARTBEAT_LIFECYCLE_PROOF`; không phải strict
+connector acceptance. `runtime_readiness` vẫn `degraded/mcp_revision_unproven`
+và policy state là `enabled`.
+
+Readback app sau activation vẫn giữ các gate đúng:
+
+* UI/MCP/native/central IPC còn sống, nhưng `fully_ready=false` và
+  `runtime_update_incomplete=true`;
+* Recovery Host running `94ea7118…` khác disk `4158c76a…`, nên
+  `current_for_full_clean=false`, `admission_open=false`;
+* connector là `CHANGED_NEEDS_DISCOVERY`, `connector_rediscovered=false`,
+  `client=null`; boot observation chỉ `OBSERVED`, `authority_granted=false`,
+  `live_accepted=false`;
+* ledger Backup-API census không mutate: physical SHA `9bad16da…`, logical SHA
+  `0e0b3a9c…`, schema `12`, integrity `ok`, FK `0`, `ordinary_active_runs=17`,
+  `p5_epochs=6`, projection drift/residue đều `0`. Không có candidate exact mới,
+  nên không apply evidence recovery lần hai.
+
+**Quyết định:** giữ hai Problem `OPEN`; không bật Tunnel để làm xanh trạng thái,
+không ACK/`workspace_context` giả và không dùng runtime proof này để đóng
+natural outcome. Next action có giá trị phân biệt cao nhất vẫn là strict
+discovery bằng connector được hỗ trợ, rồi real `workspace_context`; sau đó mới
+reboot/Machine B/fault injection/natural-use và closure authority.
