@@ -107,25 +107,80 @@ def _regular_files(root: Path) -> list[Path]:
     return files
 
 
-def _copy_tree(source: Path, destination: Path, *, allowed_suffixes: frozenset[str] | None = None) -> None:
+def _git_blob_bytes(source_root: Path, relative: Path) -> bytes:
+    """Read the selected revision's bytes instead of the checkout's EOL view."""
+
+    relative_name = relative.as_posix()
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(source_root), "show", f"HEAD:{relative_name}"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise ReleaseBuildError(f"selected Git source file is unavailable: {relative_name}") from error
+    return completed.stdout
+
+
+def _copy_tree(
+    source: Path,
+    destination: Path,
+    *,
+    allowed_suffixes: frozenset[str] | None = None,
+    canonical_source_root: Path | None = None,
+) -> None:
     for path in _regular_files(source):
         relative = path.relative_to(source)
         if allowed_suffixes is not None and path.suffix.lower() not in allowed_suffixes:
             continue
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, target)
+        if canonical_source_root is None:
+            shutil.copy2(path, target)
+        else:
+            target.write_bytes(_git_blob_bytes(canonical_source_root, Path("control-plane/control_plane") / relative))
+            shutil.copystat(path, target)
 
 
-def _copy_file(source: Path, destination: Path, *, normalize_crlf: bool = False) -> None:
+def _copy_file(
+    source: Path,
+    destination: Path,
+    *,
+    normalize_crlf: bool = False,
+    canonical_source_root: Path | None = None,
+    canonical_relative: Path | None = None,
+) -> None:
     if source.is_symlink() or not source.is_file():
         raise ReleaseBuildError(f"required release input is missing or unsafe: {source}")
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if canonical_source_root is None:
+        source_bytes = source.read_bytes()
+    else:
+        if canonical_relative is None:
+            raise ReleaseBuildError("canonical release input is missing its Git-relative path")
+        source_bytes = _git_blob_bytes(canonical_source_root, canonical_relative)
     if not normalize_crlf:
-        shutil.copy2(source, destination)
+        destination.write_bytes(source_bytes)
+        shutil.copystat(source, destination)
         return
-    destination.write_bytes(source.read_bytes().replace(b"\r\n", b"\n"))
+    destination.write_bytes(source_bytes.replace(b"\r\n", b"\n"))
     shutil.copystat(source, destination)
+
+
+def _package_source_sha256(package_root: Path) -> str:
+    """Fingerprint the exact Python bytes that will be installed."""
+
+    source_files = sorted(path for path in package_root.glob("*.py") if path.is_file())
+    if not source_files:
+        raise ReleaseBuildError("release package source files are unavailable")
+    aggregate = hashlib.sha256()
+    for source_path in source_files:
+        aggregate.update(source_path.name.encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(hashlib.sha256(source_path.read_bytes()).digest())
+        aggregate.update(b"\0")
+    return f"sha256:{aggregate.hexdigest()}"
 
 
 def _git_text(source_root: Path, *args: str) -> str:
@@ -317,7 +372,8 @@ def build_release(
     if final_release.exists() or final_archive.exists():
         raise ReleaseBuildError("release output already exists; choose a new output directory")
 
-    schema_version, package_fingerprint = _control_plane_metadata(source_root)
+    schema_version, _source_package_fingerprint = _control_plane_metadata(source_root)
+    canonical_source_root = source_root if require_clean_source else None
     staging_root = Path(tempfile.mkdtemp(prefix=".control-plane-release-", dir=output_dir))
     staging_release = staging_root / release_name
     temporary_archive = staging_root / f"{release_name}.tar.gz"
@@ -326,16 +382,26 @@ def build_release(
             source_root / "control-plane" / "control_plane",
             staging_release / "control-plane" / "control_plane",
             allowed_suffixes=CONTROL_PLANE_RUNTIME_SUFFIXES,
+            canonical_source_root=canonical_source_root,
         )
         for relative in CONTROL_PLANE_FILES:
-            _copy_file(source_root / "control-plane" / relative, staging_release / "control-plane" / relative)
+            _copy_file(
+                source_root / "control-plane" / relative,
+                staging_release / "control-plane" / relative,
+                canonical_source_root=canonical_source_root,
+                canonical_relative=Path("control-plane") / relative,
+            )
         for relative in DEPLOY_FILES:
             _copy_file(
                 source_root / "deploy" / relative,
                 staging_release / "deploy" / relative,
                 normalize_crlf=relative.lower().endswith(".sh"),
+                canonical_source_root=canonical_source_root,
+                canonical_relative=Path("deploy") / relative,
             )
         (staging_release / "DEPLOYMENT.md").write_text(_deployment_guide(release_name), encoding="utf-8")
+
+        package_fingerprint = _package_source_sha256(staging_release / "control-plane" / "control_plane")
 
         records = _manifest_files(staging_release)
         released_paths = {str(record["path"]) for record in records}

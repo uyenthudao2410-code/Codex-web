@@ -74,6 +74,32 @@ def post_json(url: str, payload: dict, *, authorization: str = "") -> tuple[int,
 
 
 class ControlPlaneReleaseArtifactTests(unittest.TestCase):
+    def test_clean_build_uses_selected_git_blob_bytes(self) -> None:
+        revision = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+        ).strip()
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            receipt = BUILDER.build_release(
+                ROOT,
+                output,
+                revision,
+                require_clean_source=True,
+            )
+            release = Path(receipt["release_directory"])
+            package_file = release / "control-plane" / "control_plane" / "node_agent.py"
+            selected_git_bytes = subprocess.check_output(
+                ["git", "show", f"{revision}:control-plane/control_plane/node_agent.py"],
+                cwd=ROOT,
+            )
+            self.assertEqual(package_file.read_bytes(), selected_git_bytes)
+            self.assertEqual(
+                receipt["package_source_sha256"],
+                BUILDER._package_source_sha256(release / "control-plane" / "control_plane"),
+            )
+
     def test_builds_secret_free_versioned_release_and_archive(self) -> None:
         revision = "a" * 40
         with tempfile.TemporaryDirectory() as temporary:
