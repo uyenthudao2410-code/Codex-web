@@ -2649,3 +2649,69 @@ identity mới cân nhắc controlled full-clean activation, strict discovery,
 real `workspace_context`, reboot/logon oracle và natural-use. Không được gọi
 CLI quarantine cho snapshot hiện tại nếu chưa có một receipt operator xác nhận
 riêng; stale READY đang được xử lý an toàn bằng projection fail-closed.
+
+### 16.50. Post-push runtime boundary và ledger census mới — 22/09/2026 lúc 23:44 +07
+
+Sau khi commit `6f507fda` đã được push, controller chỉ thực hiện các lệnh
+quan sát. Kết quả hiện tại:
+
+```text
+DEV_UI state=MISSING
+host=unavailable
+connector_state=UNAVAILABLE
+error_code=RECOVERY_DESCRIPTOR_STALE
+
+boot_runtime_observation = NOT_PROVEN
+failure_code = RECOVERY_DESCRIPTOR_STALE
+authority_granted = false
+live_accepted = false
+
+Supervisor task_state=Running
+supervisor state=suppressed
+last_error_code=OWNER_DEAD
+last_host_pid=42556
+last_spawned_pid=null
+consecutive_failures=63
+suppressed_until=2026-09-22T16:48:12.9353536Z
+last_healthy_at=2026-09-22T16:11:21.6495570Z
+```
+
+`Running` của Scheduled Task chỉ chứng minh task tồn tại; không phải
+Recovery Host healthy. `OWNER_DEAD` và `last_spawned_pid=null` cho thấy
+packaged host chưa nạp source repair và chưa có activation mới. Không gọi
+`recovery:supervisor:once`, `dev:refresh`, reboot, deploy, admission grant hay
+quarantine trong bước này.
+
+**Canonical census read-only mới:**
+
+```text
+snapshot_at = 2026-09-22T16:44:04.753Z
+physical_sha256 = b65bf7e066b2929987f43fa2feefae14090dfbdb63c06741c2f8d372792e5b1e
+logical_sha256 = 988e557c1ad10954f32e71927684e36cb527ab297942cee57fcdc771cd38964d
+schema_version = 12
+size_bytes = 97742848
+integrity_check = ok
+foreign_key_check_rows = 0
+ordinary_active_runs = 17
+p5_epochs = 6
+run_classification = 17 THRESHOLD_SENSITIVE_STALE_CANDIDATE + 6 P5_EXPERIMENT_ANCHOR
+unexplained_active_runs = 0
+stale_background_operation_residues = 0
+unbound_live_resource_residues = 0
+mutated_canonical_ledger = false
+```
+
+Logical/physical hash và số census khớp snapshot 16.48; Backup API vẫn
+`query_only + immutable`, không khởi tạo writer/runtime. Điều này củng cố rằng
+controlled ledger recovery vẫn ở trạng thái
+`APPLIED_EVIDENCE_ONLY + IDEMPOTENCE_GUARDED`; không cần và không được replay
+candidate cũ.
+
+**Checkpoint:** source repair đã được commit/push, nhưng packaged runtime,
+primary MCP/Tunnel, strict discovery và real `workspace_context` vẫn chưa
+được chứng minh. Hai Problem vẫn `OPEN`; các gate reboot/logon, natural-use,
+independent outcome và criterion coverage vẫn chưa đạt. Bước tiếp theo có thể
+thực hiện chỉ khi có owner-authorized controlled packaged activation; khi được
+cấp, phải dùng đúng source/package/epoch identity rồi mới kiểm tra
+`fullyReady`, connector freshness, `tools/list`/`server/discover` và một
+`workspace_context` thật.
