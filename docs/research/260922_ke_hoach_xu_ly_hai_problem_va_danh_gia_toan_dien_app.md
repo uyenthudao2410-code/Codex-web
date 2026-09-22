@@ -1632,3 +1632,105 @@ Historical authority (`controller_leases`, `controller_reattach_receipts`, `hub_
 - **Blocker phân loại:** thiếu supported canonical importer/`RUNTIME_RECONCILIATION` cho historical immutable rows + pointer CAS; thiếu disposition có typed evidence cho 664 effect rows; thiếu quiesce/rollback/postflight receipt. Đây là blocker authority/evidence, không phải test failure.
 - **Còn lại:** chốt importer contract và operator approval; sau đó mới có thể quiesce đúng owner, snapshot/hash exact, apply transactional target-specific, postflight integrity/projection/authority readback và fresh MCP/Tunnel/client oracle. C09/C12/BG natural outcome/48-hour gate vẫn mở.
 - **Exact next action:** giữ candidate ngoài repository và chờ supported importer/receipt contract; không retry `git push` (GH001 large-file history blocker chưa đổi), không tự filter/LFS/force-push.
+
+### 16.30. Evidence-only recovery importer và clone proof — 22/09/2026 lúc 20:54 +07
+
+Đã triển khai trực tiếp trên `main`, không tạo worktree, một primitive hỗ trợ recovery có kiểm soát:
+
+- [ledger_evidence_recovery.py](../../resources/coding-tools-mcp/coding_tools_mcp/ledger_evidence_recovery.py) tách rõ `preflight_evidence_recovery`, `capture_quiesce_receipt` và `apply_evidence_recovery`.
+- [recover_ledger_evidence.py](../../resources/coding-tools-mcp/scripts/recover_ledger_evidence.py) cung cấp CLI `preflight`, `capture-quiesce`, `apply` với exact hash/allowlist/receipt guards.
+- [test_ledger_evidence_recovery.py](../../resources/coding-tools-mcp/tests/test_ledger_evidence_recovery.py) chứng minh importer không phải đường SQL copy tự do: append evidence trong transaction, compare-and-swap pointer, withheld effect/authority, source drift refusal và stopped-runtime refusal.
+
+Boundary của importer được đóng như sau:
+
+1. Chỉ cho phép append các bảng immutable evidence (`runs`, `waves`, `checkpoints`, `proofs`, `events`, `problem_events`, `continuity_telemetry`, `controller_knowledge_acks`) từ candidate có cùng schema và không được thay đổi row hiện tại.
+2. `controller_leases`, `hub_clients`, reattach/continuation/claim/cursor authority và các bảng effect (`background_operations`, `idempotency_records`, `managed_process_jobs`) không bao giờ được nhập. Các row historical này chỉ được đếm, phân loại và trả lại trong receipt `withheld_*`; `replay_allowed` cố định bằng `0`.
+3. `problem_threads` chỉ được cập nhật pointer sau khi event tail đã tồn tại và qua CAS exact `problem_id + revision + state + old seq/hash`; tail phải cùng revision/state, `EXACT`, quan hệ non-transition và hash-chain nối đúng. Không đổi resolution state, closed time, revision hoặc outcome.
+4. Apply yêu cầu exact current/candidate physical + logical SHA, quiesce receipt có `runtime_stopped=true`, ownership live bằng `0`, exclusive `ledger_access_gate`, rollback backup mới, transaction `BEGIN IMMEDIATE`, foreign-key/integrity/event-chain postflight và expected logical SHA từ clone.
+
+Focused proof:
+
+```text
+python -B -m py_compile resources/coding-tools-mcp/coding_tools_mcp/ledger_evidence_recovery.py resources/coding-tools-mcp/scripts/recover_ledger_evidence.py resources/coding-tools-mcp/tests/test_ledger_evidence_recovery.py  PASS
+python -B -m unittest -v tests/test_ledger_evidence_recovery.py                 3/3 PASS
+python -B -m unittest -v tests/test_ledger_recovery_candidate_audit.py tests/test_ledger_recovery_rehearsal.py  8/8 PASS
+```
+
+Trong cùng observation window, canonical live ledger vẫn sạch về SQLite nhưng đang volatile:
+
+```text
+HEAD = 5b5c775d668fa3ac4f564de0d018bd6933243bad
+ledger physical SHA = 8cdb5cc817c120f907fa1dd99342c23149b90697641450d43b1790785ec0dece
+ledger logical SHA  = 5cad9211f9c80724eba44d6a3e9c1b44e06586641ca6223639255f2f36a7ab0d
+integrity = ok; foreign-key rows = 0; schema = 12
+dirty runtime evidence = ledger.sqlite3, task-context-workspaces.json, performance.json
+```
+
+Candidate `E:\Caches\Temp\codex-ledger-recovery-rehearsal-live-y7r_wey2\QUARANTINED-candidate.sqlite3` vẫn là candidate của snapshot cũ (`physical SHA 02f184...`, `logical SHA 2b9d...`), nên **chưa được phép dùng apply**: importer phải từ chối source/candidate mismatch thay vì ghép candidate cũ vào canonical mới. Chưa có canonical mutation, restart, reboot, replay effect, Problem closure hay natural-outcome proof trong checkpoint này.
+
+**Operator checkpoint:** phần còn thiếu để chạy live là (a) quiesce runtime qua owner hợp lệ, (b) tạo fresh candidate từ cùng snapshot current và historical allowlist, (c) capture quiesce receipt mới, (d) chạy preflight CLI rồi review receipt, và chỉ sau đó (e) apply một lần với rollback backup. Exact next action là dừng writer có kiểm soát và tạo fresh rehearsal; nếu live snapshot drift hoặc ownership không-zero, giữ `REPLAN_REQUIRED`, không cưỡng ép importer.
+
+### 16.31. Fresh preflight bị từ chối vì runtime-ledger drift — 22/09/2026 lúc 20:56 +07
+
+Đã tạo một fresh rehearsal bên ngoài repository với historical blob exact `bed5b266...` và allowlist ba RUN (`dcb539e0...`, `d01a5dce...`, `b194ab1...`):
+
+```text
+artifact directory = E:\Caches\Temp\codex-ledger-recovery-xhveo95j
+candidate SHA      = ecc7a08c7815f574e058e9006d22166b56073950b062c321e2582d2be48c0215
+candidate logical  = 26fb496aab7505df50c6d67f335c2ba9d5e89f3e040c5610da0216e3e0fee374
+```
+
+Lần gọi CLI `preflight` đầu tiên **không được phép chạy tiếp** với receipt đã chuẩn bị: guard trả `RECOVERY_CURRENT_SHA256_MISMATCH`. Khi đọc lại ngay sau đó, canonical đã chuyển từ physical/logical `86d6d29e... / ad161247...` sang `ed196da8... / 663d6f63...` trong cùng cửa sổ. SQLite vẫn `integrity=ok`, FK `0`, nhưng causal ledger là volatile do các writer/evidence events khác; đây là drift thật, không phải lỗi candidate.
+
+**Operator checkpoint:** importer đã chứng minh guard drift hoạt động; không canonical mutation, không pointer update, không effect replay và không Problem closure xảy ra trong wave này. Exact next action là chạy một bounded sequence duy nhất trong cửa sổ đã quiesce: snapshot live → tạo candidate từ đúng snapshot → preflight → capture stopped receipt → apply transaction + rollback backup. Nếu sequence đó còn thấy drift dưới exclusive gate, dừng ở `REPLAN_REQUIRED` và giữ candidate quarantine.
+
+### 16.32. Publish và triển khai Ubuntu đã xác minh; admission vẫn đóng — 22/09/2026
+
+Wave này hoàn tất việc đưa bản source đã publish lên control plane Ubuntu theo release identity cố định, đồng thời ghi nhận rõ các gate chưa được phép đóng. Đây là deployment evidence, không phải bằng chứng rằng execution/admission đã sẵn sàng.
+
+**Git và release identity:**
+
+- Lịch sử local đã được làm sạch các blob `output/**` vượt giới hạn GitHub; backup refs/bundle vẫn được giữ riêng. Push `--force-with-lease` đã thành công trước wave này.
+- `main` và `origin/main` cùng ở `5b5c775d668fa3ac4f564de0d018bd6933243bad` tại thời điểm triển khai.
+- Package source fingerprint: `sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2`.
+- Release archive SHA-256: `bb5f8ebcfe6b2de0b48e05488637c03b00bed6cb1d57a934db80aa648790b48f`.
+
+**Ubuntu readback sau activation:**
+
+- Release hiện tại: `/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-5b5c775d668fa3ac4f564de0d018bd6933243bad`.
+- Schema `24`; package fingerprint và declared source revision khớp release trên.
+- `codex-control-plane.service` ở trạng thái `active` và `enabled`; service instance `cp_73a8a26bbc4f4504b341abe6f3619ee0`, `MainPID=984081`.
+- Backup trước deploy có SHA-256 `f5a3160676054e64f5d09bc589f9e236dd97b8b829f97a0b6acedcebfb5ddf3c`, SQLite integrity `ok`, schema `24`.
+- HTTPS root/admin trả HTTP `200`; `/healthz` trả `ok=true`, SQLite integrity `ok`, schema `24`, đúng package/source revision.
+
+Healthcheck tự động vẫn **fail-closed** với `control-plane automatic backup is stale or not restorable`. Nguyên nhân cụ thể đã đọc lại là `unquarantined_unresolved_action_count=1`, không phải kết luận backup hỏng. Action còn mở là `act_0f0a49c6424d42d3bc7bc49ad46e4ffa` (`workspace_context`, `dispatch_unconfirmed`, không có receipt), gắn với canary cũ `canary-fixture-daochienthang` đang stale/unavailable. Không mark completed/cancelled, không replay, không sửa trực tiếp SQLite và không mở admission; `admission_mode=recovery`, unresolved count `11`, trong đó `10` historical unknown đã quarantine và `1` vẫn cần node-side reconciliation hoặc operator decision có evidence.
+
+**Windows boundary:** profile `DESKTOP-63643J4` đã `approved`, route evidence báo `runtime_readiness=ready`, `policy_state=enabled`, origin `https://svhome.tail0e4032.ts.net`, và Supervisor packaged đang `healthy`. Tuy nhiên `npm start` không được handoff sang checkout dev vì guard trả `RECOVERY_HOST_IDLE_HANDOFF_REFUSED`; packaged Recovery Host chưa chứng minh idle. `npm run dev:status` vì vậy chỉ phản ánh development UI `MISSING`/`connector_state=UNAVAILABLE`, không phủ nhận packaged node đang sống. Không kill theo tên process, không restart để bypass guard, không lặp `dev:refresh`.
+
+**Importer/evidence:** ba file importer evidence-only và focused tests đã được thêm ở section 16.30–16.31; chúng chưa được chạy `apply` trên canonical ledger. Các thay đổi source/document/evidence ở wave này sẽ được commit và push, nhưng không cần redeploy package Ubuntu vì không chạm `control-plane/**` hoặc package fingerprint đã deploy. Natural task/canary outcome, strict client discovery và điều kiện mở admission vẫn chưa được chứng minh.
+
+**Operator checkpoint:** Git publish và Ubuntu package/service update đã hoàn tất, admin page đã tồn tại và node Windows đã có route/approval evidence. Blocker còn lại là một `dispatch_unconfirmed` thiếu receipt, development handoff thiếu idle proof, và thiếu natural-work outcome. Exact next action là giữ `recovery`, thu thập reconciliation evidence cho action trên hoặc quyết định operator có target-bound receipt; chỉ sau đó mới chạy canary có kiểm soát. Không gọi goal là `COMPLETE` chỉ từ HTTP `200`, `/healthz`, package fingerprint hay test importer.
+
+### 16.33. Đóng contract gap allowlist cho evidence thuộc RUN hiện hữu — 22/09/2026 lúc 21:11 +07
+
+Rehearsal trước đã chỉ ra đúng một gap của importer: hai row `continuity_telemetry` mới có `run_id` thuộc RUN đã tồn tại (`076dbebd4f1a464092905c388398709f`), trong khi guard chỉ cho phép `allowed_run_ids` là các RUN mới. Không sửa bằng cách cho phép mọi RUN hiện hữu.
+
+Đã cập nhật trực tiếp trên `main`, không tạo worktree:
+
+- [ledger_evidence_recovery.py](../../resources/coding-tools-mcp/coding_tools_mcp/ledger_evidence_recovery.py) tách bốn tập kiểm soát: `allowed_run_ids` (RUN mới), `allowed_existing_run_ids` (RUN hiện hữu nhận evidence), `allowed_evidence_ids` (identity của `controller_knowledge_acks` như trước), và `allowed_existing_evidence_ids` (identity chính xác của từng row bổ sung vào RUN hiện hữu).
+- Identity dùng primary key của bảng; với `continuity_telemetry` là đúng `logical_id`, do đó không thể mở rộng quyền chỉ bằng tên RUN. Allowlist RUN/evidence phải khớp **exact set**, không nhận identity thừa hoặc thiếu.
+- Preflight receipt ghi rõ `run_ids`, `existing_run_ids`, `evidence_ids`, `existing_evidence_ids`; apply đọc lại chính receipt đó và chạy lại guard dưới exclusive gate.
+- [recover_ledger_evidence.py](../../resources/coding-tools-mcp/scripts/recover_ledger_evidence.py) thêm `--allow-existing-run-id` và `--allow-existing-evidence-id`; flag cũ `--allow-evidence-id` vẫn giữ riêng cho knowledge-ack evidence.
+- [test_ledger_evidence_recovery.py](../../resources/coding-tools-mcp/tests/test_ledger_evidence_recovery.py) thêm negative/positive proof: thiếu existing RUN bị từ chối; có RUN nhưng thiếu/wrong logical ID bị từ chối; đúng RUN + đúng identity được preflight; current rows/pointer/effect boundary không bị nới.
+
+Validation sau patch:
+
+```text
+python -B -m py_compile coding_tools_mcp/ledger_evidence_recovery.py scripts/recover_ledger_evidence.py tests/test_ledger_evidence_recovery.py  PASS
+python -B -m unittest -v tests/test_ledger_evidence_recovery.py                                      5/5 PASS
+python -B -m unittest -v tests.test_ledger_recovery_candidate_audit tests.test_ledger_recovery_rehearsal 8/8 PASS
+```
+
+Tại observation gần nhất, canonical ledger vẫn `integrity_check=ok`, foreign-key `0`, `compact_allowed=true`, active controller/write-fence/managed-job/background-operation ownership đều `0`; native primary MCP đã được dừng bằng authenticated Recovery Host trước wave này. Recovery Supervisor/Recovery Host/recovery plane vẫn resident để giữ quyền điều khiển an toàn, nhưng không có bằng chứng chúng đang ghi ledger. Chưa có canonical mutation, pointer CAS, effect replay, restart, reboot, Problem closure hoặc natural-outcome proof.
+
+**Exact next action:** trong một cửa sổ bounded duy nhất, tạo Online Backup mới từ canonical hiện tại → merge historical blob với ba RUN allowlist và hai `continuity_telemetry` identity hiện hữu → preflight với exact current/candidate physical+logical hash → capture quiesce receipt → apply atomic dưới `ledger_access_gate` với rollback backup mới → postflight integrity/FK/event-chain/pointer/authority/effect readback. Nếu bất kỳ hash hoặc mtime nào drift trước commit, dừng và giữ candidate quarantine; không dùng candidate cũ.
