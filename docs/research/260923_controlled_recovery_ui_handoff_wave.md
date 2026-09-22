@@ -243,3 +243,44 @@ acceptance hay release/production acceptance. Windows source patch đã build v�
 packaged smoke PASS trong working tree, nhưng installed Recovery Host vẫn
 phải được cài bằng đường được hỗ trợ và vẫn đang bị installation/source
 acceptance guard chặn; không được gọi `npm start` là hoàn tất.
+
+## 9. Rollout Ubuntu theo HEAD hiện tại — 2026-09-23 01:01 +07
+
+Sau khi mục tiêu vận hành yêu cầu server nhận đúng HEAD, control-plane release
+đã được build lại từ `2b432b030cd8c94b3bf9ae0601d0b444e6edaec5` và verify độc lập:
+
+- schema `25`, manifest có `34` file;
+- package source fingerprint giữ nguyên
+  `sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c`;
+- archive SHA-256
+  `c60c283729ca381fe0d29aee74a569378a8bc9e227b67db1f59bf3c1aa8cbec1`;
+- backup trước rollout chạy qua systemd, SQLite `integrity=ok`, schema `25`,
+  snapshot SHA-256
+  `781868516bdd708c461f151b1e4d4116ba70800bb3c9de0cd08a3c75f7f65b2d`,
+  `unquarantined_unresolved_action_count=0`.
+
+Archive được upload/extract vào release directory versioned, verifier remote
+PASS, immutable environment/drop-in được chuẩn bị bằng
+`prepare-control-plane-activation.py`, rồi symlink `current` được chuyển
+atomic. Sau `systemctl --user daemon-reload` và restart service, readback thực
+tế xác nhận:
+
+```text
+current = /home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-2b432b030cd8c94b3bf9ae0601d0b444e6edaec5
+declared_source_revision = 2b432b030cd8c94b3bf9ae0601d0b444e6edaec5
+package_source_sha256 = expected_package_source_sha256
+sqlite_integrity = ok
+schema_version = 25
+admission_mode = recovery
+service_instance_id = cp_f21afc55faca4c2da313f3592186d71d
+unquarantined_unresolved_action_count = 0
+codex-control-plane.service = active
+codex-control-plane-mcp-tunnel.service = active
+8768/readyz = ready
+```
+
+Sau rollout, authenticated local MCP `initialize` và `tools/list` vẫn PASS với
+đúng tám tool và contract SHA `c947f8d5…`. Đây là **server deployment + local
+strict discovery** của HEAD hiện tại; admission vẫn cố ý đóng ở `recovery`,
+không tự retry 11 action unresolved đã quarantine, không phải Windows
+installed-runtime acceptance hoặc natural-work outcome.
