@@ -1909,3 +1909,27 @@ Kết quả đối chiếu:
 Ranh giới còn lại không đổi: remote service vẫn `declared_source_revision=02e2a6b5...`, `admission_mode=recovery`, `unquarantined_unresolved_action_count=1`; package fingerprint khớp không tự nâng service thành current-HEAD deployment, không mở admission, không chứng minh Windows connector/discovery hoặc natural outcome.
 
 **Operator checkpoint:** package code provenance đã được thu hẹp từ “chưa xác minh” thành **fingerprint khớp Git-export HEAD**, còn release identity vẫn lệch revision metadata. Không deploy/restart/reconcile thêm trong wave này. Exact next action nếu có deployment authority là build/install release canonical từ Git-export của HEAD hiện tại, đọc lại cả `declared_source_revision` và fingerprint, rồi vẫn giữ `recovery` cho đến khi action unresolved và các gate Windows/natural-use được xử lý.
+
+### 16.39. Hardening release builder và đính chính fingerprint canonical — 22/09/2026 khoảng 22:00 +07
+
+Đã sửa release builder để clean build (`require_clean_source=true`) đọc trực tiếp bytes của `git show HEAD:<path>` thay vì bytes đã qua Windows checkout/EOL conversion; package fingerprint được tính lại trên đúng staging bytes sẽ đưa vào archive. Đây là source fix nhằm loại bỏ sai lệch reproducibility, không phải deploy.
+
+Thay đổi và proof:
+
+- [build-control-plane-release.py](../../scripts/build-control-plane-release.py) dùng canonical Git blob cho `control-plane/` và `deploy/` trong clean build; `require_clean_source=false` vẫn giữ hành vi fixture/test cũ.
+- [test_release_artifact.py](../../control-plane/tests/test_release_artifact.py) thêm regression chứng minh `node_agent.py` trong clean artifact khớp chính xác `git show HEAD`, và receipt fingerprint khớp staging package.
+- Release artifact canonical từ `HEAD=b4698a611280d2ce9c2840cd2bf3f06bf8fdd288`:
+
+```text
+package_source_sha256 = sha256:77d6441e3e4f79da238d017683974da26dd18caee61ca8e20ba74f60ac09e0af
+archive_sha256 = 74d5516b7ce337da36ba5263d177ec57b09e837c0d1989c431fbf2805eca8f71
+package Python files checked = 10
+byte mismatches against git show HEAD = 0
+```
+
+- `control-plane.tests.test_release_artifact`: **4 tests PASS, 1 POSIX-launcher test skipped trên Windows**.
+- `py_compile` của builder/test và `git diff --check`: PASS.
+- Remote `/healthz` hiện vẫn báo package `8fc57c65...` và revision `02e2a6b5...`; vì vậy remote không phải exact canonical Git-blob artifact `77d6441e...` của HEAD hiện hành.
+- Section 16.38 ghi fingerprint `8fc` từ một `git archive` export trên Windows; phép export đó giữ CRLF, nên không phải canonical Git-blob proof. Section 16.39 này là correction có authority cao hơn vì kiểm trực tiếp `git show` và staging output.
+
+**Operator checkpoint:** đã loại bỏ một nguồn fingerprint churn có thể làm package/revision continuity sai lệch giữa Windows và Ubuntu. Chưa deploy/restart, chưa đổi admission và chưa mở canary. Exact next action nếu được cấp deployment authority là dùng builder canonical này để tạo release từ HEAD, verify manifest, deploy package đã chọn và đọc lại `/healthz`; nếu chưa có authority, giữ remote `recovery` và các Problem OPEN.
