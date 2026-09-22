@@ -445,13 +445,17 @@ def _evidence_identity(
 ) -> str:
     """Return the exact operator-facing identity for one immutable row.
 
-    All current evidence tables use a single, globally meaningful text primary
-    key (for example ``continuity_telemetry.logical_id``).  Composite keys are
-    represented with a table-qualified deterministic token so an operator can
-    never accidentally authorize an identity shared by two tables.
+    Prefer the table's stable semantic identity (for example
+    ``continuity_telemetry.logical_id`` or ``events.event_id``) over a storage
+    sequence.  Composite keys are represented with a table-qualified
+    deterministic token so an operator can never accidentally authorize an
+    identity shared by two tables.
     """
 
     record = dict(zip(columns, values))
+    for preferred in ("logical_id", "event_id", "ack_id", "checkpoint_id", "proof_id", "wave_id"):
+        if preferred in record and record.get(preferred) not in (None, ""):
+            return str(record[preferred])
     primary_values = [str(record.get(name) or "") for name in primary_columns]
     if len(primary_values) == 1:
         return primary_values[0]
@@ -753,16 +757,16 @@ def preflight_evidence_recovery(
                 "authority_imported": False,
                 "effect_rows_imported": False,
                 "replay_allowed": 0,
+                "activation_eligible": False,
                 "runtime_stopped_required_for_apply": True,
                 "exclusive_gate_required_for_apply": True,
                 "rollback_backup_required_for_apply": True,
+                "withheld_rows_require_separate_owner_review": bool(withheld),
             },
-            "apply_eligible": bool(
-                plans
-                and maintenance.get("compact_allowed")
-                and not withheld.get("controller_leases")
-                and not withheld.get("hub_clients")
-            ),
+            # Withheld authority/effect rows are deliberately *not* a reason
+            # to block an evidence-only append. They are never imported or
+            # replayed; they remain an explicit owner-review obligation.
+            "apply_eligible": bool(plans and maintenance.get("compact_allowed")),
         }
     finally:
         source_candidate.close()
@@ -852,6 +856,8 @@ def apply_evidence_recovery(
         raise LedgerEvidenceRecoveryError("RECOVERY_PREFLIGHT_WORKSPACE_MISMATCH")
     if str(Path(str(preflight.get("candidate_path") or "")).resolve(strict=False)) != str(candidate_path):
         raise LedgerEvidenceRecoveryError("RECOVERY_PREFLIGHT_CANDIDATE_MISMATCH")
+    if preflight.get("apply_eligible") is not True:
+        raise LedgerEvidenceRecoveryError("RECOVERY_PREFLIGHT_NOT_APPLY_ELIGIBLE")
     expected_current = preflight.get("current_snapshot") if isinstance(preflight.get("current_snapshot"), dict) else {}
     expected_candidate = preflight.get("candidate_snapshot") if isinstance(preflight.get("candidate_snapshot"), dict) else {}
     expected_probe = preflight.get("probe", {}).get("snapshot", {}) if isinstance(preflight.get("probe"), dict) else {}

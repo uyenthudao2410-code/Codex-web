@@ -222,6 +222,8 @@ class LedgerEvidenceRecoveryTests(unittest.TestCase):
         self.assertEqual(receipt["withheld_effects"]["idempotency_records"]["row_count"], 1)
         self.assertEqual(receipt["pointer_plans"][0]["current_pointer_seq"], 1)
         self.assertEqual(receipt["pointer_plans"][0]["proposed_pointer_seq"], 2)
+        self.assertTrue(receipt["apply_eligible"])
+        self.assertFalse(receipt["recovery_policy"]["activation_eligible"])
         self.assertTrue(receipt["probe"]["canonical_mutated"] is False)
 
     def test_apply_requires_stopped_runtime_and_exact_receipt_then_preserves_unknown_effect(self) -> None:

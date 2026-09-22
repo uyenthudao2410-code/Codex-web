@@ -1718,8 +1718,9 @@ Rehearsal trước đã chỉ ra đúng một gap của importer: hai row `conti
 Đã cập nhật trực tiếp trên `main`, không tạo worktree:
 
 - [ledger_evidence_recovery.py](../../resources/coding-tools-mcp/coding_tools_mcp/ledger_evidence_recovery.py) tách bốn tập kiểm soát: `allowed_run_ids` (RUN mới), `allowed_existing_run_ids` (RUN hiện hữu nhận evidence), `allowed_evidence_ids` (identity của `controller_knowledge_acks` như trước), và `allowed_existing_evidence_ids` (identity chính xác của từng row bổ sung vào RUN hiện hữu).
-- Identity dùng primary key của bảng; với `continuity_telemetry` là đúng `logical_id`, do đó không thể mở rộng quyền chỉ bằng tên RUN. Allowlist RUN/evidence phải khớp **exact set**, không nhận identity thừa hoặc thiếu.
+- Identity ưu tiên khóa semantic ổn định của từng bảng (`logical_id`, `event_id`, `ack_id`, `checkpoint_id`, `proof_id`, `wave_id`), fallback về primary key/composite key đúng schema; với `continuity_telemetry` là đúng `logical_id`, do đó không thể mở rộng quyền chỉ bằng tên RUN. Allowlist RUN/evidence phải khớp **exact set**, không nhận identity thừa hoặc thiếu.
 - Preflight receipt ghi rõ `run_ids`, `existing_run_ids`, `evidence_ids`, `existing_evidence_ids`; apply đọc lại chính receipt đó và chạy lại guard dưới exclusive gate.
+- `apply_eligible` trong receipt chỉ có nghĩa là append evidence-only có thể tiếp tục sau khi đủ quiesce/rollback/owner gates; `activation_eligible` vẫn `false` khi còn authority/effect bị withheld, nên không được hiểu là admission hay execution đã mở.
 - [recover_ledger_evidence.py](../../resources/coding-tools-mcp/scripts/recover_ledger_evidence.py) thêm `--allow-existing-run-id` và `--allow-existing-evidence-id`; flag cũ `--allow-evidence-id` vẫn giữ riêng cho knowledge-ack evidence.
 - [test_ledger_evidence_recovery.py](../../resources/coding-tools-mcp/tests/test_ledger_evidence_recovery.py) thêm negative/positive proof: thiếu existing RUN bị từ chối; có RUN nhưng thiếu/wrong logical ID bị từ chối; đúng RUN + đúng identity được preflight; current rows/pointer/effect boundary không bị nới.
 
