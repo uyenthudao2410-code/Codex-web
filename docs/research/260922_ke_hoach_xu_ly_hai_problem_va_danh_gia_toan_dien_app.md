@@ -1383,3 +1383,22 @@ Lệnh `git push origin HEAD:main` đã chạy nhưng server từ chối ở pre
 Đây là bằng chứng đủ để khoanh phạm vi migration, không phải quyền tự thực hiện migration. Không sửa `.gitattributes`, không chạy `git lfs migrate`, không reset/rebase/force-push và không xóa các output vật lý. Canonical ledger, `.coding-tools` retention và local `main` không đổi trong probe này.
 
 **Kết luận cập nhật:** nếu owner chọn loại generated output khỏi lịch sử, dry-run có thể giới hạn chính xác ở `output/**` (giữ artifact ngoài Git, giữ manifest/hash trong docs). Nếu owner chọn LFS, migration tối thiểu phải bao phủ ba executable và kiểm quota/remote policy trước khi rewrite. Cả hai đều là history mutation; vẫn chờ xác nhận phương án và target `main`.
+
+### 16.22. Concurrent authority-status fix đã được commit trên `main` — 22/09 khoảng 19:30–19:32 +07
+
+Trong lúc đối soát large-file blocker, một tiến trình concurrent đã hoàn tất commit trực tiếp trên cùng `main`:
+
+```text
+b0b6505 fix: accept enriched authority status targets
+```
+
+Commit này thay đổi `control-plane/control_plane/node_agent.py` để nhận đúng hai shape target legacy/enriched bằng một `target_keys` đã kiểm tra kiểu, đồng thời thêm [test_node_agent_authority_status.py](../../control-plane/tests/test_node_agent_authority_status.py). Focused proof chạy sau commit:
+
+```text
+python -B -m unittest -v control-plane/tests/test_node_agent_authority_status.py
+Ran 1 test ... OK
+```
+
+Tôi không sửa, stage, revert hoặc gộp nội dung source/test của commit này. Commit có cập nhật `delivery-snapshot.json`; tiến trình concurrent đã chạy delivery verification trước đó, nhưng lane hiện tại chưa claim full repository/release acceptance từ một focused test. `origin/main` vẫn chưa đổi vì push trước đó đã bị `GH001`; commit này cũng chưa được publish.
+
+**Current-state note:** sau commit này local `main` đã tiến thêm một commit so với snapshot 16.21. Trước mọi delivery/rewrite tiếp theo phải recapture HEAD/divergence và kiểm tra lại các file ngoài scope; không staging `control-plane/control_plane/node_agent.py` hoặc test khác nếu chưa có owner packet tương ứng.
