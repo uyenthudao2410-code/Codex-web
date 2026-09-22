@@ -1058,6 +1058,55 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(fs.existsSync(paths.recoveryHostDescriptorFile()), false);
 });
 
+test('runtime projection closes stale READY admission when the current primary runtime is incomplete', (t) => {
+  const { host } = readyAdoptionHost(t);
+  const ready = seedReadyEpoch(host);
+  host.lastSupervisionStatus = {
+    executionRole: 'direct_legacy',
+    mcpRunning: false,
+    nativeAlive: false,
+    tunnelRunning: false,
+    fullyReady: false,
+    connectorRefreshRequired: false,
+    connectorAcknowledgementPending: false,
+    connectorContractState: 'UNAVAILABLE'
+  };
+
+  const projected = host.decorate({
+    mcpRunning: false,
+    nativeAlive: false,
+    tunnelRunning: false,
+    fullyReady: false,
+    updateIncomplete: false,
+    activationEpoch: {
+      activation_epoch_id: ready.activation_epoch_id,
+      operation_id: ready.operation_id,
+      state: 'READY',
+      admission_open: true,
+      update_incomplete: false
+    },
+    status: {
+      fullyReady: false,
+      activationEpoch: {
+        activation_epoch_id: ready.activation_epoch_id,
+        operation_id: ready.operation_id,
+        state: 'READY',
+        admission_open: true,
+        update_incomplete: false
+      }
+    }
+  }, { preferCachedRuntime: true });
+
+  assert.equal(projected.updateIncomplete, true);
+  assert.equal(projected.activationEpoch.admission_open, false);
+  assert.equal(projected.activationEpoch.update_incomplete, true);
+  assert.equal(projected.activationEpoch.state, 'READY', 'durable state remains visible as history');
+  assert.equal(projected.status.activationEpoch.admission_open, false);
+  assert.equal(projected.recoveryHost.activation_epoch.admission_open, false);
+  assert.equal(host.activationEpochStore.current().state, 'READY');
+  assert.equal(host.activationEpochStore.current().admission_state, 'OPEN');
+});
+
 test('connector-pending supervision wakes final census for an exact compatible bootstrap', async (t) => {
   const paths = fixture(t);
   const revision = 'a'.repeat(64);

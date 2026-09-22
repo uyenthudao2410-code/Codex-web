@@ -1717,10 +1717,30 @@ class RecoveryHost {
     // to recoveryHost.runtime.update_incomplete=true.
     const aggregateReady = recoveryHost.runtime?.fully_ready === true;
     const incomplete = epochIncomplete || !aggregateReady;
+    // A durable READY record is immutable history, not proof that the current
+    // process set is still admitted.  When the fresh runtime projection is
+    // incomplete, close the *read-model* admission bit as well so clients
+    // cannot observe READY/open next to updateIncomplete=true and accidentally
+    // treat a stale epoch envelope as a live authority grant.  Do not rewrite
+    // the durable epoch here; a controlled full-clean activation owns that
+    // mutation boundary.
+    const projectedEpochStatus = incomplete && epochStatus?.admission_open === true
+      ? {
+        ...epochStatus,
+        admission_open: false,
+        update_incomplete: true,
+        error_code: epochStatus.error_code || 'RUNTIME_READINESS_INCOMPLETE'
+      }
+      : epochStatus;
+    if (status && projectedEpochStatus) status.activationEpoch = projectedEpochStatus;
+    const projectedRecoveryHost = projectedEpochStatus && recoveryHost
+      && typeof recoveryHost === 'object' && !Array.isArray(recoveryHost)
+      ? { ...recoveryHost, activation_epoch: projectedEpochStatus }
+      : recoveryHost;
     if (status && (incomplete || status.fullyReady !== true)) status.fullyReady = false;
     if (Object.prototype.hasOwnProperty.call(value, 'fullyReady')
       && (incomplete || value.fullyReady !== true)) value.fullyReady = false;
-    return { ...value, ...(status ? { status } : {}), activationClosure, activationEpoch: epochStatus, updateIncomplete: incomplete, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
+    return { ...value, ...(status ? { status } : {}), activationClosure, activationEpoch: projectedEpochStatus, updateIncomplete: incomplete, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost: projectedRecoveryHost };
   }
 
   async connectorPendingObservation(record) {

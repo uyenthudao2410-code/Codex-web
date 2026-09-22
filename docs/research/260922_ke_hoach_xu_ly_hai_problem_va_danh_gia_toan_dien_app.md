@@ -2403,3 +2403,62 @@ trên `main` trong lúc controller này đang chạy source/oracle work; control
 không tự gọi SSH/deploy/quarantine trong wave đó. Các trạng thái remote ở trên đã
 được kiểm tra độc lập bằng GET `/healthz` read-only sau khi commit xuất hiện;
 không coi mệnh đề “đã deploy” là bằng chứng Windows runtime hoặc Problem closure.
+
+### 16.47. Projection admission fail-closed khi durable READY đã lỗi thời — 22/09/2026
+
+Wave này sửa đúng lớp read-model đang cho phép một snapshot biểu diễn đồng thời
+`activation=READY/admission_open=true` và runtime hiện tại
+`mcpRunning=false/nativeAlive=false/tunnelRunning=false/fullyReady=false`.
+Trong `RecoveryHost.decorate()`, khi aggregate runtime readiness không đạt hoặc
+`UPDATE_INCOMPLETE` đang hiện hữu, projection mới:
+
+- giữ nguyên durable `READY` trong activation-epoch store để bảo toàn lịch sử,
+  không sửa tay và không rewrite SQLite;
+- đóng `admission_open` ở snapshot hiệu dụng và đặt
+  `update_incomplete=true/error_code=RUNTIME_READINESS_INCOMPLETE` nếu trước đó
+  envelope đang mở;
+- chiếu cùng một giá trị fail-closed vào top-level `activationEpoch`,
+  `status.activationEpoch` và `recoveryHost.activation_epoch`, để caller không
+  lấy một nhánh xanh cũ làm authority grant;
+- không tự restart, không tạo activation epoch mới và không biến projection thành
+  bằng chứng đã phục hồi MCP/Tunnel.
+
+Regression proof:
+
+```text
+node --test tests/recovery-host.test.js
+44 passed, 0 failed
+
+node --test tests/activation-epoch.test.js tests/full-clean-activation.test.js tests/recovery-host.test.js tests/boot-runtime-observation.test.js
+138 passed, 0 failed
+
+node --check electron/services/recoveryHost.js
+node --check tests/recovery-host.test.js
+git diff --check
+```
+
+Trong lần chạy đầu, patch đã lộ một lỗi integration do dùng shorthand
+`projectedRecoveryHost`, làm mất key contract `recoveryHost` và khiến 4 test cũ
+fail. Key đã được khôi phục thành `recoveryHost: projectedRecoveryHost`; lần
+chạy lại toàn bộ suite đạt `44/44` và boundary đạt `138/138`. Đây là lỗi của
+patch trong cùng wave, đã được sửa và không phải bằng chứng runtime Windows.
+
+Ý nghĩa acceptance cần giữ tách lớp:
+
+| Lớp | Trạng thái hiện tại |
+|---|---|
+| Durable epoch history | Có thể vẫn đọc `READY/OPEN` như lịch sử immutable |
+| Effective IPC admission projection | Đã đóng khi runtime hiện tại incomplete |
+| Packaged primary MCP/Tunnel | Chưa chứng minh sống lại |
+| Strict connector discovery | Chưa chạy/không có receipt mới |
+| Real `workspace_context` | Chưa có trong observation hiện tại |
+| Reboot/logon matrix | Chưa chạy |
+| Natural-use / independent Problem outcome | Chưa có |
+
+Current branch tại lúc ghi nhận là `main@6551b34e`, đồng bộ với
+`origin/main`; `.coding-tools/orchestration/ledger.sqlite3` vẫn là live evidence
+dirty và không bị reset/revert. Không restart/reboot/deploy/remote route trong
+wave này. Exact next action là tạo snapshot delivery mới cho ledger hiện tại,
+chạy đủ delivery/history/secrets guards, rồi commit trực tiếp trên `main`; sau
+đó chỉ khi có authority riêng mới thực hiện controlled activation epoch để
+đồng nhất source/package/runtime trước strict discovery và reboot acceptance.
