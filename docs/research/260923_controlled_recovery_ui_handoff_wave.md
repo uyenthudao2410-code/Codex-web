@@ -224,10 +224,12 @@ Readback SSH sau commit cho thấy:
 - MCP grant cũ đã hết hạn theo đúng TTL; không hồi sinh record cũ. Một grant
   mới được cấp qua `POST /v1/mcp-access-grants` cho context hiện tại với
   principal `ubuntu-root-tunnel-da7d8273`, hết hạn lúc
-  `1790120514335`, grant id
-  `mcpgrant_614e473663b44f83a3e31492a8e5059f`. Raw bearer không được ghi vào
-  repository, log hoặc báo cáo; header private được thay thế atomic với mode
-  owner-only và metadata redacted được cập nhật.
+  `1790120919948`, grant id
+  `mcpgrant_1785dd64202a4f4cbd5db07a4849eb51`. Raw bearer không được ghi vào
+  repository, log hoặc báo cáo; header private được thay thế atomic đúng
+  launcher contract (file chứa giá trị thuần `Bearer <grant>`, mode
+  `0600`) và metadata redacted được cập nhật. Grant trung gian ghi nhầm dạng
+  `Authorization: ...` đã được revoke qua API trước khi kết thúc wave.
 - Sau restart Tunnel, `healthz=live`, `readyz=ready`; authenticated loopback
   MCP `initialize` và `tools/list` đều thành công. `tools/list` trả đủ tám
   public tools và contract `schema_version=6`,
