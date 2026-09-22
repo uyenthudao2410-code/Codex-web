@@ -1536,3 +1536,22 @@ Cardinality unresolved: **157** process/server instance IDs, **121** `run_id` bu
 Đây là **external delivery blocker**, không phải lỗi verifier/test hay canonical recovery. Không được coi push thành công, không được tự `filter-repo`, `git lfs migrate`, reset/rebase hoặc `push --force-with-lease`. Owner cần chọn rõ một đường history/artifact: loại generated `output/**/win-unpacked` khỏi lịch sử local chưa publish và giữ manifest/hash ngoài Git; chuyển đúng executable sang LFS sau khi xác nhận quota/policy; hoặc chỉ định artifact/release channel khác. Mọi history mutation phải có bundle backup mới, dry-run path allowlist, kiểm tra `.coding-tools` retention và force-with-lease theo remote guard.
 
 Sau push, runtime tiếp tục tạo dirty evidence (`ledger.sqlite3`, `task-context-workspaces.json`, `performance.json`); hash live ledger đã là `e8cd1aa2dac11f2fca0a4b71a1e32d6b37ed49e4499b867c9d17ffa0d428866b`, không dùng hash này để thay receipt delivery snapshot đã commit. Hai Problem vẫn OPEN; candidate recovery vẫn quarantine, `activation_eligible=false`, và không có canonical switch.
+
+### 16.28. Fresh rehearsal sau live drift: candidate vẫn quarantine — 22/09 lúc 20:12–20:14 +07
+
+Không dùng candidate rehearsal cũ sau khi runtime đã thay đổi canonical. Đã tạo lại một snapshot bằng SQLite Online Backup API từ live ledger hiện tại với exact historical allowlist gồm `dcb539e0e1694bc1bb29eed2b2e07f8b`, `d01a5dce50c846fc8e13673cdfc8b3b3`, `b194ab1e311e42efa1dd0614ca245037`.
+
+| Artifact | Giá trị |
+| --- | --- |
+| Capture UTC | `2026-09-22T13:12:58.981897+00:00` |
+| Fresh current backup SHA | `2caabf5c1a0a21bdcca3e5ec530cfe53e2d70dbef4381e4ff78ba532f5e33957` |
+| Fresh candidate SHA | `54d184807dd9af667fda67d2e7735578d4b7d03d845477d3b626328db62ee8e9` |
+| Artifact directory | `E:\Caches\Temp\codex-ledger-recovery-rehearsal-9ncd608f` |
+| Historical SHA | `e7700489c3ecd85afcd2c21c36967741793fef73f36aad47a47da8f9887de9b6` |
+| Artifact protection | current backup, historical blob và candidate đều write-protected |
+
+Fresh rehearsal giữ nguyên current rows, integrity `ok`, FK `0`, và thêm đúng 3 RUN / 4 WAVE / 3 checkpoint / 5 proof / 128 event / 3 problem-event cùng các row telemetry/evidence nêu ở checkpoint trước. Historical authority (`3 controller_leases`, `1 reattach receipt`, `3 hub clients`) vẫn withheld. Kết quả verifier không đổi về bản chất: pointer plan `POINTER_ONLY_SAFE` nhưng `can_apply=false`; `problem_projection_reconciled=false`; `unknown_effects_reconciled=false`; 664 effect rows vẫn cần owner/manual evidence; `activation_eligible=false`.
+
+**Lý do không apply live:** canonical hiện tại đã không còn `running`/`in_progress` effect rows của candidate cũ, trong khi candidate historical bắt buộc phải mang chúng để bảo toàn exact evidence. Copy candidate hoặc mark các row đó completed sẽ làm hồi sinh stale effect/authority và vi phạm fail-closed. Source hiện chỉ có `problem_reconcile_provisional_from_checkpoint` cho một accepted checkpoint hợp lệ; không có supported importer để nhập lại exact historical immutable rows và compare-and-swap projection `problem_threads` mà không trực tiếp SQL-copy. Vì vậy fresh rehearsal là bằng chứng recovery plan, không phải quyền canonical switch.
+
+**Trạng thái wave:** `REPLAN_REQUIRED / OPERATOR_REVIEW_PENDING`, không phải `COMPLETE` và chưa phải `BLOCKED` vĩnh viễn. Next action duy nhất để tiến tới live recovery là cung cấp supported importer/`RUNTIME_RECONCILIATION` contract với quiesce receipt, exact logical-SHA guard, per-row unknown disposition, rollback backup và postflight integrity/projection/authority readback. Cho tới khi có contract đó, giữ candidate ngoài repository ở quarantine, không sửa trực tiếp `ledger.sqlite3`, không replay unknown effect và không đóng hai Problem.
