@@ -2261,3 +2261,37 @@ recovery + một unresolved action và remote chưa theo HEAD. Exact next action
 stage một snapshot mới của ledger hiện tại cùng receipt, kiểm tra lại guards và
 chỉ commit/push nếu muốn bảo toàn snapshot evidence; sau đó cần activation epoch
 mới có source/package/epoch đồng nhất trước mọi reboot/admission test.
+
+### 16.44. Xác nhận P1/P2 handoff đã có trên main và proof hồi quy — 22/09/2026
+
+Đã đối chiếu lại source thay vì tạo patch trùng. Hai gap handoff từng nêu trong
+đánh giá trước đã có implementation trên ancestor `e6626062` của `main`:
+
+- `electron/services/recoveryBootstrap.js` gọi `observeHandoffRuntime()` trước
+  `stop`, coi `recoveryResponseReceived=true` là semantic refusal và **không**
+  chuyển nó thành quyền terminate/spawn; transport loss chỉ được tiếp tục khi
+  một snapshot exact workspace chứng minh runtime đã stopped.
+- Rollback chỉ gọi `client.start()` nếu snapshot trước stop chứng minh runtime
+  thật sự `running`, có epoch/workspace/role rõ; `off`, `unknown`, partial,
+  manual-stop, recovering hoặc epoch drift đều không được tự bật service. Snapshot
+  sau stop phải khớp role/epoch/workspace trước khi compensation chạy.
+
+Focused proof mới:
+
+```text
+node --test tests/recovery-bootstrap.test.js
+41 passed, 0 failed
+```
+
+Các regression trực tiếp đã xanh: semantic refusal cho
+`RECOVERY_REQUEST_FAILED/RUNTIME_BUSY/AUTHORITY_DENIED/ECONNRESET`, transport loss
+không terminate runtime chưa xác nhận, rollback giữ nguyên off/unknown/partial/
+manual-stop và central rollback không bật direct Tunnel. Vì vậy P1/P2 là
+`SOURCE_PRESENT + FOCUSED_PROOF` trên `main`, không còn là source gap cần sửa
+thêm trong wave này; chúng vẫn chưa có live packaged handoff/reboot proof.
+
+**Operator checkpoint:** không thêm writer/store hay thay đổi runtime. Exact next
+action chuyển sang activation packet mới: freeze package/source/epoch đồng nhất,
+revalidate primary MCP/Tunnel/connector/workspace trước admission, rồi mới chạy
+reboot matrix. Giữ các gate Machine B, 48-hour natural-use, independent outcome
+và Problem closure ở `NOT_RUN/OPEN` cho tới khi có receipt thật.
