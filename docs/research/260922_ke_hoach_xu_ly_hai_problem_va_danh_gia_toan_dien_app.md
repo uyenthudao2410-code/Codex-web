@@ -1483,3 +1483,43 @@ Wave này hoàn tất phần source → package → installation → packaged ru
 - Delivery guard PASS (`4876` files); runtime snapshot mới đã được commit cùng source verifier/test. Current local `HEAD=ac24f18`, `origin/main=044dd961`, local ahead `19`, worktree sạch sau commit.
 - `git push origin main` đã bị GitHub pre-receive từ chối với `GH001` vì đúng ba executable generated trong lịch sử local chưa publish, mỗi file khoảng `215 MB`, vượt giới hạn `100 MB`. Remote ref không đổi.
 - Không dùng `reset`, `rebase`, `filter-repo`, `git lfs migrate` hoặc `push --force-with-lease`. Muốn publish `main` cần owner chọn rõ: loại `output/**` khỏi lịch sử có backup và force-with-lease, chuyển đúng binary sang LFS sau khi xác nhận quota/policy, hoặc chỉ định artifact/release channel khác. Đây là blocker delivery ngoài code, không phải test/source failure.
+
+### 16.26. Phân loại unknown-effect trên candidate và hiệu chỉnh checkpoint live — 22/09 khoảng 20:00–20:08 +07
+
+Checkpoint này bổ sung inventory read-only cho [audit-ledger-recovery-candidate.py](../../scripts/audit-ledger-recovery-candidate.py); không sửa lại các snapshot lịch sử 16.19–16.25. Vì runtime Windows tiếp tục ghi evidence trong lúc làm việc, số hash/live-state dưới đây là một observation window mới, không thay thế hash của candidate quarantine.
+
+**Thay đổi đã triển khai trực tiếp trên `main`:**
+
+- Tách hai trục phân loại: `liveness_classification` (`STALE_CANDIDATE`, `UNRESOLVED_ACTIVE_PARENT`, `TERMINAL_UNKNOWN`) và `effect_safety_classification` (`ORPHAN_SAFE_CANDIDATE`, `OWNER_MANUAL_EVIDENCE`). Không dùng một nhãn stale để suy ra process đã chết hoặc effect chưa xảy ra.
+- Inventory theo table/status, process hoặc server instance, `run_id`, `wave_id`, operation/tool và `error_code`; trả thêm cardinality, top aggregates và stale-candidate sample. Output được giới hạn sample 25 dòng/table để không biến verifier thành một kho sao chép payload.
+- Chỉ gắn `ORPHAN_SAFE_CANDIDATE` khi summary có field typed chứng minh no-effect (`outcome_unknown=false`, `effect_applied=false`, `effect_state=not_applied/never_sent/...`, hoặc dispatch/admission bị reject trước effect). Category `validation/security/permission` tự nó **không** đủ bằng chứng. `replay_allowed` luôn bằng `0` và `reconciled=false` khi còn bất kỳ unresolved row nào.
+- Thêm test regression cho running/in-progress stale candidate, terminal unknown cần owner evidence và typed no-effect candidate. Đây là code/test proof; chưa có importer hỗ trợ để đổi trạng thái canonical.
+
+**Kết quả chạy lại verifier trên candidate quarantine:**
+
+| Hạng mục | Kết quả quan sát | Diễn giải đúng |
+| --- | ---: | --- |
+| Candidate SHA-256 | `651f6c40c633974f0f2668f3b18ccfdb751e946f5ce6b8bd7bb96f7dc97d1be5` | Candidate không đổi; chỉ đọc + clone probe |
+| Snapshot frontier | `2026-09-15T11:37:30.275Z` | Mốc cuối của snapshot candidate, không phải live clock hiện tại |
+| `background_operations` | `1309 completed`, `37 orphaned`, `1 running`, `2 timed_out` | `1 running` là stale candidate vì parent RUN/WAVE đã `accepted`; không được mark completed/orphaned trên canonical |
+| `idempotency_records` | `8347 completed`, `832 failed`, `662 unknown`, `1 in_progress` | `1 in_progress` không bind RUN/WAVE và cùng process/server lineage với operation reboot; phải giữ unknown/reconcile-required |
+| `managed_process_jobs` | `8433 exited`, `155 quiesced`, `40 timeout`, `8 closed`, `2 spawn_failed` | Không còn active/unknown/in-progress managed job trong candidate |
+| Tổng unresolved effect | **664** | `1 running background + 662 unknown + 1 in_progress`; con số 663 trước đây chỉ đếm idempotency, chưa cộng background |
+| Liveness | `2 STALE_CANDIDATE`, `662 TERMINAL_UNKNOWN` | Stale chỉ là phân loại theo parent/status trong snapshot, không phải live PID proof |
+| Effect safety | `0 ORPHAN_SAFE_CANDIDATE`, `664 OWNER_MANUAL_EVIDENCE` | Không có typed no-effect receipt đủ mạnh để tự terminalize |
+| Replay | `0 allowed` | Không retry/replay effect unknown hoặc stale |
+
+Cardinality unresolved: **157** process/server instance IDs, **121** `run_id` buckets (trong đó **403/664** rows không bind RUN), và **177** `wave_id` buckets (cùng **403** rows không bind WAVE). Top operation: `agent_workflow=351`, `task_control=162`, `exec_command=144`, `document_workflow=3`, `workspace_context=3`, `command_control=1`. Top error categories: `EXECUTION_OWNER_INVALID=88`, `PREPARED_RUN_BINDING_MISMATCH=83`, `OPERATOR_REPORT_ACK_REQUIRED=60`, `FINAL_ACCEPTANCE_NOT_READY=52`, `SOLUTION_SHADOW_REQUIRED=51`, `REPLAN_REASON_REQUIRED=41`, empty=`32`, `RUNTIME_BUSY=32`, `TASK_STOPPED=31`, `PERMISSION_REQUIRED=30`.
+
+**Đối soát canonical live tại observation mới:**
+
+- `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3` tại `2026-09-22T13:00:19Z` có SHA-256 `10671e3ea80ef459b32badf25f80b3d1b59b5465d94fdca2b0513664ec470076`, kích thước `97,509,376` bytes, `user_version=12`, `integrity_check=ok`, foreign-key violations `0`, `events=25,694`, `problem_events=304`.
+- Hash live khác backup rehearsal `c894f57e…` vì runtime tiếp tục tạo evidence; đây là drift/volatility cần snapshot delivery mới, **không** phải bằng chứng candidate đã được switch hoặc canonical đã được recovery.
+- `activation_eligible=false`, `problem_projection_reconciled=false`, `problem_projection_pointer_plan_safe=true`, `unknown_effects_reconciled=false`. Pointer `317→320` vẫn chỉ được mô phỏng trên clone; không có canonical write, runtime restart, reboot, package/install, deploy hoặc history rewrite trong checkpoint này.
+- Khi capture, `main@ac24f18` là HEAD; sau đó working tree có thay đổi verifier sample/output và report này, cùng các artifact runtime dirty. Không dùng claim “worktree sạch” của checkpoint 16.25 làm current state.
+
+**Quyết định xử lý:** giữ nguyên fail-closed. Owner/support phải cung cấp (1) receipt quiesce + logical SHA mới, (2) supported `RUNTIME_RECONCILIATION` API cho pointer `problem_threads`, (3) per-record classification/evidence cho 664 effect rows, và (4) rollback/postflight receipt trước mọi canonical switch. Chỉ những row có typed no-effect proof mới có thể được xem xét `orphan-safe`; mọi row còn lại vẫn `UNKNOWN/RECONCILE_REQUIRED`, không được đổi thành `completed`, không được replay và không được dùng để đóng hai Problem.
+
+**Validation:** `python -B -m unittest -v tests/test_ledger_recovery_rehearsal.py tests/test_ledger_recovery_candidate_audit.py` — **8 tests PASS, 11.320s**; `python -B -m py_compile scripts/audit-ledger-recovery-candidate.py` — PASS. Đây là proof verifier/rehearsal/clone, chưa phải runtime activation, client strict discovery, reboot, natural-use hay outcome proof.
+
+**Next action exact:** stage snapshot mới theo `npm run stage:coding-tools-delivery`, chạy `npm run check:coding-tools-delivery`, review diff và commit trực tiếp trên `main`; sau đó chỉ thử `git push origin main` một lần. Nếu vẫn gặp `GH001`, dừng ở external delivery blocker và chờ owner chọn history/artifact strategy; không tự filter/LFS/force-push.
