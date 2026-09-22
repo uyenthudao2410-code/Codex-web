@@ -1887,3 +1887,25 @@ Readback này xác nhận section 16.36 có remote service/package identity th�
 - Windows vẫn còn `tunnelRunning=false`, `fullyReady=false`, `UPDATE_INCOMPLETE`, `CHANGED_NEEDS_DISCOVERY`; vì vậy remote package readback không thay thế strict Windows client discovery.
 
 **Operator checkpoint:** đã thêm bằng chứng endpoint hiện tại và sửa cách diễn đạt package/server thành “đã xác minh release 02e2” thay vì “đã nạp HEAD hiện hành”. Không triển khai/restart Ubuntu từ wave này, không tạo worktree, không sửa ledger và không đóng Problem. Exact next action là chỉ deploy package `a2eb0eb4` nếu có deployment authority riêng; sau đó phải đọc lại exact service/package identity và giữ admission `recovery` cho tới khi unresolved action, Windows strict discovery và natural outcome được xử lý.
+
+### 16.38. Git-export provenance: package code khớp fingerprint, revision metadata trên Ubuntu còn cũ — 22/09/2026 khoảng 21:52 +07
+
+Để tách ảnh hưởng line-ending của Windows checkout khỏi provenance package, đã tạo một source export tạm bằng `git archive HEAD` ngoài repository và chạy release builder ở chế độ artifact-only. Đây không phải Git worktree, không ghi vào checkout, không đọc credential/SQLite và không deploy.
+
+```text
+source HEAD = 541c4c314c572b95896352b2b9a9a3c2679a5db7
+package_source_sha256 = sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2
+archive_sha256 = 3e7655099a3bbcb7a404347c500e3b52c346e343148d333116888231906496f6
+schema = 24
+```
+
+Kết quả đối chiếu:
+
+- Fingerprint package từ Git-export `HEAD` **trùng chính xác** fingerprint `/healthz` của Ubuntu và artifact release `02e2` (`8fc57c65...`).
+- `git diff 02e2a6b5...HEAD -- control-plane deploy` không có file thay đổi; các commit sau `02e2` chỉ cập nhật docs/delivery snapshot. Vì vậy package code đang chạy có thể được coi là cùng package-source fingerprint với source hiện hành, dù server khai báo revision cũ.
+- Build trực tiếp từ Windows working tree cho fingerprint `3e13c165...` vì `control-plane/control_plane/node_agent.py` đang có line-ending mixed/CRLF; đây là lý do không dùng fingerprint đó để đối chiếu release. Git-export là phép build canonical đáng tin cậy hơn cho release provenance.
+- Archive `02e2` đã kiểm tra có payload CRLF ở checkout Windows; nhãn “LF sạch” trong section 16.36 là không chính xác về byte line-ending và đã được điều chỉnh bằng finding này. Không dùng nhãn đó làm proof riêng.
+
+Ranh giới còn lại không đổi: remote service vẫn `declared_source_revision=02e2a6b5...`, `admission_mode=recovery`, `unquarantined_unresolved_action_count=1`; package fingerprint khớp không tự nâng service thành current-HEAD deployment, không mở admission, không chứng minh Windows connector/discovery hoặc natural outcome.
+
+**Operator checkpoint:** package code provenance đã được thu hẹp từ “chưa xác minh” thành **fingerprint khớp Git-export HEAD**, còn release identity vẫn lệch revision metadata. Không deploy/restart/reconcile thêm trong wave này. Exact next action nếu có deployment authority là build/install release canonical từ Git-export của HEAD hiện tại, đọc lại cả `declared_source_revision` và fingerprint, rồi vẫn giữ `recovery` cho đến khi action unresolved và các gate Windows/natural-use được xử lý.
