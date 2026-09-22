@@ -12,6 +12,7 @@ const {
   unavailableObservation,
   createRuntimeDependencies,
   refreshLifecycle,
+  refreshRuntimeReady,
   classifyRefreshEpoch,
   previousRefreshIdentitiesFromRecord,
   readPostMutationRefreshEpoch
@@ -846,6 +847,148 @@ test('dev:refresh exits successfully after exact process refresh while connector
   assert.equal(result.readiness.tunnelRunning, true);
   assert.equal(result.runtime.tunnelRunning, false, 'the stale lightweight bit remains visible as evidence');
   assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*mcp=ready tunnel=ready admission=closed fully_ready=false connector=pending connector_state=CHANGED_NEEDS_DISCOVERY/);
+});
+
+test('central-executor refresh accepts route proof without inventing a Coding Tunnel', () => {
+  const epoch = 'activation-central-refresh-0001';
+  const runtime = {
+    executionRole: 'central_executor',
+    mcpRunning: true,
+    tunnelRunning: false,
+    nativeAlive: true,
+    activationEpoch: { activation_epoch_id: epoch, admission_open: true },
+    codeRevision: { codingMcp: { running_revision: REVISION, disk_revision: REVISION } }
+  };
+  const state = {
+    nativePid: 45001,
+    nativeInstanceId: 'central-mcp-instance-0001',
+    nativeActivationEpochId: epoch,
+    tunnelPid: null,
+    tunnelInstanceId: null
+  };
+  const record = {
+    verification: {
+      final_census: {
+        activation_epoch_id: epoch,
+        execution_role: 'central_executor',
+        tunnel_required: false,
+        host_pid: 45000,
+        recovery_mcp_pid: 45003,
+        process_identity_verified: true,
+        process_identity_changed: true,
+        tunnel_identity_changed: null,
+        tunnel_health_verified: false,
+        recovery_host_revision_matches: true,
+        recovery_host_epoch_matches: true,
+        ui_verified: true,
+        recovery_plane_identity_changed: true,
+        recovery_plane_epoch_matches: true,
+        recovery_plane_verified: true,
+        projection_rebuild_verified: true,
+        workspace_matches: true,
+        device_matches: true,
+        revision_matches: true,
+        epoch_matches: true,
+        central_connected: true,
+        authority_ready: true,
+        central_route_verified: true
+      }
+    }
+  };
+
+  const readiness = refreshRuntimeReady(runtime, state, epoch, () => true, record);
+
+  assert.equal(readiness.executionRole, 'central_executor');
+  assert.equal(readiness.tunnelRequired, false);
+  assert.equal(readiness.tunnelRunning, false);
+  assert.equal(readiness.processIdentitiesPresent, true);
+  assert.equal(readiness.ownedProcessesAlive, true);
+  assert.equal(readiness.freshPids, true);
+  assert.equal(readiness.componentCensusVerified, true);
+});
+
+test('dev:refresh accepts a central executor without a local tunnel', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const operationId = 'full-clean-refresh-central-operation-0001';
+  const epoch = 'full-clean-refresh-central-epoch-0001';
+  const oldState = {
+    nativePid: 44001,
+    tunnelPid: null,
+    nativeInstanceId: 'old-central-mcp-instance-01',
+    tunnelInstanceId: null,
+    nativeActivationEpochId: 'old-central-epoch-0001',
+    tunnelActivationEpochId: null,
+    executionRole: 'central_executor'
+  };
+  const newState = {
+    nativePid: 45001,
+    tunnelPid: null,
+    nativeInstanceId: 'new-central-mcp-instance-01',
+    tunnelInstanceId: null,
+    nativeActivationEpochId: epoch,
+    tunnelActivationEpochId: null,
+    executionRole: 'central_executor'
+  };
+  let runtimeStateReads = 0;
+  fixture.deps.runtimeState = () => (++runtimeStateReads === 1 ? oldState : newState);
+  fixture.deps.refresh = async () => ({ operationId, result: { activation_epoch_id: epoch } });
+  fixture.deps.descriptor = () => ({
+    owner_pid: 45000,
+    instance_id: 'new-central-recovery-host-0001',
+    activation_epoch_id: epoch
+  });
+  fixture.deps.activationRecord = () => ({
+    operation_id: operationId,
+    activation_epoch_id: epoch,
+    state: 'READY',
+    admission_state: 'OPEN',
+    metadata: { execution_role: 'central_executor' },
+    verification: {
+      activation_epoch_id: epoch,
+      execution_role: 'central_executor',
+      tunnel_required: false,
+      host_pid: 45000,
+      process_identity_verified: true,
+      process_identity_changed: true,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      ui_instance_id: 'new-central-electron-ui-0001',
+      recovery_plane_identity_changed: true,
+      recovery_plane_epoch_matches: true,
+      recovery_plane_verified: true,
+      projection_rebuild_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      epoch_matches: true,
+      central_connected: true,
+      authority_ready: true,
+      central_route_verified: true,
+      runtime: {
+        executionRole: 'central_executor',
+        mcpRunning: true,
+        nativeAlive: true,
+        tunnelRunning: false,
+        fullyReady: true,
+        connectorContractState: 'CHANGED_NEEDS_DISCOVERY',
+        activationEpoch: { activation_epoch_id: epoch, admission_open: true },
+        codeRevision: { codingMcp: { running_revision: REVISION, disk_revision: REVISION } }
+      }
+    }
+  });
+  fixture.deps.processAlive = () => true;
+
+  const result = await runLifecycle('refresh', fixture.deps);
+  assert.equal(result.epochId, epoch);
+  assert.equal(result.readiness.executionRole, 'central_executor');
+  assert.equal(result.readiness.tunnelRequired, false);
+  assert.equal(result.readiness.tunnelRunning, false);
+  assert.equal(result.readiness.processIdentitiesPresent, true);
+  assert.equal(result.readiness.ownedProcessesAlive, true);
+  assert.equal(result.readiness.componentCensusVerified, true);
+  assert.equal(result.readiness.freshPids, true);
+  assert.match(fixture.lines.at(-1), /mcp=ready tunnel=not-required admission=open fully_ready=true connector=pending connector_state=CHANGED_NEEDS_DISCOVERY/);
 });
 
 test('dev:refresh bootstraps a missing Recovery Host and then performs the same full refresh', async () => {

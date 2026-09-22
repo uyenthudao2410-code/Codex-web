@@ -569,3 +569,268 @@ chạy **một** controlled activation từ packaged installer. Nếu central ro
 stale, dừng ở `BLOCKED_EXTERNAL_DISCOVERY` và xử lý heartbeat/discovery trước;
 không coi local `fullyReady` hay epoch cũ là product closure. Hai Problem vẫn
 OPEN, tách revision và không được gộp trạng thái.
+
+## 12. Controlled refresh hậu kiểm — epoch mới READY, ledger chỉ đọc — 2026-09-23 02:29 +07
+
+### 12.1 Không tạo activation cạnh tranh
+
+Trước khi gửi bất kỳ lệnh restart nào, preflight phát hiện một lifecycle owner
+đang tồn tại:
+
+```text
+PID 37968  node scripts/dev-ui-lifecycle.js refresh
+PID 53240  Electron --recovery-host --activation-epoch-id=activation-mud2ehak-...
+PID 53176  recovery-supervisor.ps1 -Action Run
+PID 37192  packaged control-plane node_agent.py run-connected-agent
+```
+
+Vì vậy wave không gửi restart thứ hai, không kill theo tên/process tree và
+không sửa descriptor. Owner hiện tại đã tự hoàn tất controlled refresh; việc
+để PID `37968` tồn tại được ghi nhận như trạng thái concurrent owner, không được
+diễn giải thành một activation mới do wave này tự tạo.
+
+### 12.2 Receipt Recovery IPC chính thức
+
+Bản đọc dùng `RecoveryIpcClient` với cả `owner_pid`, `instance_id` và
+`owner_process_start_token` lấy từ descriptor rồi kiểm tra lại cùng owner trong
+mọi request. Thời điểm receipt: `2026-09-22T19:28:47.176Z` UTC.
+
+| Gate | Kết quả hiện tại | Bằng chứng |
+|---|---|---|
+| Recovery Host | `healthy`, packaged/development descriptor hợp lệ, PID `53240`, instance `f0f47e1682e1ff18b78bb8492f9caeda` | `recovery.status({fresh:true})` và process-start-token khớp |
+| Epoch | `READY`, `admission_open=true`, `update_incomplete=false` | `activation-mud2ehak-7ad885728cf77543cc9c84c30c851c46`, operation `full-clean-refresh-mud2e765-086d9a39c0c6c5573b757f03`, ready digest `26b95907ada975a1344b020df021bcb8f8d89fcd5356fe7d5cd147a0b316d28e` |
+| MCP/native | `mcpRunning=true`, `nativeAlive=true`, `componentsReady=true`, `fullyReady=true` | lightweight snapshot fresh, telemetry available, signal không stale, snapshot không busy |
+| Central route | `centralConnected=true`, `authorityReady=true`, `centralStatusReason=null`, `central_route_verified=true` | runtime snapshot + `health.inspect()` control-plane route `ok=true` |
+| Tunnel | `tunnelRunning=false`, `tunnel_state=not_configured` | đúng với `executionRole=central_executor`; không bật tunnel cục bộ để làm xanh số liệu |
+| Identity/epoch binding | `identity_current=true`, MCP process `gEEsgwMs2LiE6Cxu`, server `pXqwTEXehcD0eBZ-`, cả hai cùng epoch | `runtime.identity_observation` khớp descriptor/epoch hiện tại |
+| Workspace | `E:\DEV\Codex-web`, device `4c4b7a5b-7744-49ae-a490-78a528a00471`, branch `main`, HEAD `b02fe564` | lightweight snapshot và health inspect |
+| Connector | **chưa đạt** | `connectorRediscovered=false`, `connectorRefreshRequired=true`, `connectorContractState=CHANGED_NEEDS_DISCOVERY` |
+| Client workspace read | **chưa có** | `workspace_read=null`; chưa có current-process `tools/list`/`server/discover` và `workspace_context` thật từ ChatWeb |
+
+Receipt này chứng minh **local/central runtime recovery**, không chứng minh
+strict connector discovery, ChatWeb delivery hay natural product outcome.
+`runtime_readiness=degraded` trong route evidence vẫn được lưu đúng như một
+trường advisory; các predicate acceptance đã dùng là `centralConnected`,
+`authorityReady` và `central_route_verified`, không biến advisory đó thành
+`connector_ready`.
+
+### 12.3 Ledger census sau controlled refresh
+
+Đã chạy reporter chính thức query-only lúc `2026-09-22T19:29:22.119Z` UTC:
+
+```text
+content_free=true
+mutated_canonical_ledger=false
+canonical_writer_instantiated=false
+runtime_instantiated=false
+integrity_check=ok
+foreign_key_check_rows=0
+schema_version=12
+projection.classification=CONTEXTUAL_PROJECTIONS
+context_count=1079
+projection_drift=false
+ordinary_active_runs=17
+P5_EXPERIMENT_ANCHOR=6
+THRESHOLD_SENSITIVE_STALE_CANDIDATE=17
+stale_background_operation_residues=0
+unbound_live_resource_residues=0
+unexplained_active_runs=0
+```
+
+Snapshot của chính lần census này:
+
+```text
+physical SHA-256: 209f743e3f730ad37923e115165361d6a119951332eaf5200ffdd44eccdbf68d
+logical SHA-256:  66a7bcffcc6f9e53d2520aff3cefc2871cca7323662e3b36654937d11c935d48
+size:             97,742,848 bytes
+```
+
+Đọc trực tiếp read-only cùng cửa sổ cho thấy canonical hiện đã nhìn thấy ba
+RUN lịch sử trước đây từng chỉ xuất hiện trong generated report:
+
+| Problem/revision | accepted | aborted | active | Tổng RUN bind hiện tại |
+|---|---:|---:|---:|---:|
+| `prl-22e670302757c9b7663170e226ed7c26` / rev 1 | 47 | 16 | 3 | 66 |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / rev 2 | 16 | 10 | 13 | 39 |
+
+Ba RUN đã được thấy trong canonical snapshot hiện tại là `dcb539e0e1694bc1bb29eed2b2e07f8b`,
+`d01a5dce50c846fc8e13673cdfc8b3b3` và `b194ab1e311e42efa1dd0614ca245037`,
+đều `accepted` và đều bind Problem `prl-22e...` rev 1. Việc snapshot trước
+đó không nhìn thấy chúng và snapshot hiện tại nhìn thấy chúng là một sai khác
+giữa các cửa sổ/copy ledger; chưa có căn cứ quy nguyên nhân, không gọi là
+corruption và không tự insert/reconcile SQLite. Current canonical read là số
+được dùng cho đánh giá này; các số `44/16/3` ở Section 11 chỉ giữ nguyên như
+lịch sử của snapshot cũ.
+
+Hai Problem vẫn `OPEN`: số RUN/accepted tăng không tạo criterion disposition,
+independent outcome, natural-use, reboot/logon matrix, Machine B, fault
+injection hoặc closure authority. Không được gộp rev 1 với rev 2.
+
+### 12.4 Checkpoint wave và bước tiếp theo
+
+Wave này được phân loại **RUNTIME_RECOVERY_VERIFIED / PRODUCT_ACCEPTANCE_OPEN**:
+
+- **Đã đạt:** controlled refresh không cạnh tranh; Recovery Host identity;
+  epoch mới `READY/OPEN`; MCP/native/central route/authority; matching
+  process identity và workspace; ledger census integrity/FK/projection không
+  drift; Problem counts current được đọc lại trực tiếp.
+- **Chưa đạt:** current-process connector strict discovery; `tools/list` hoặc
+  `server/discover` receipt; một `workspace_context` thật có delivery
+  confirmation; reboot/logon; Machine B; authorized fault injection; natural
+  48-hour use; independent outcome; criterion coverage và closure.
+- **Không thực hiện:** không sửa byte `ledger.sqlite3`, không tạo RUN/checkpoint
+  thủ công, không acknowledge connector bằng hash cũ, không bật local tunnel
+  trái role, không kill process theo tên, không dùng epoch cũ làm acceptance.
+
+Exact next action là thu current ChatWeb connector receipt bằng đường client
+chính thức (strict `tools/list`/`server/discover`), sau đó mới gọi một
+`workspace_context` thật trên đúng workspace và lưu readback bound vào process,
+server, epoch và contract SHA. Nếu không có client/connector receipt, giữ
+`PRODUCT_ACCEPTANCE_OPEN`; không hạ guard và không tuyên bố hai Problem đã đóng.
+
+### 12.5 Source gap được sửa sau receipt
+
+Receipt runtime đã tái hiện một lỗi ở **lifecycle CLI**, không phải lỗi MCP hay
+central route: `refreshRuntimeReady()` và postflight trước đây bắt buộc
+`tunnelPid`, `tunnelInstanceId` và `tunnel_health_verified` cho mọi role. Với
+`central_executor`, đây là sai hợp đồng vì local Coding Tunnel được cấu hình
+`not_configured`; kết quả là epoch đã `READY/OPEN` nhưng
+`npm run dev:refresh` tiếp tục polling và không trả thành công.
+
+Đã sửa trực tiếp trên `main`:
+
+- role `central_executor` lấy `tunnel_required=false` từ final census/role
+  contract;
+- central route phải có đủ `central_connected`, `authority_ready` và
+  `central_route_verified` — không được bỏ qua route proof để làm xanh CLI;
+- PID/identity/process-alive và freshness chỉ yêu cầu Coding Tunnel khi
+  `tunnel_required=true`;
+- direct-legacy vẫn giữ nguyên yêu cầu tunnel và connector pending gate;
+- dòng postflight hiển thị `tunnel=not-required` cho central executor, giữ
+  `tunnel=ready/stopped` cho role cần tunnel.
+
+Focused regression đã chạy:
+
+```text
+node --test tests/dev-ui-lifecycle.test.js
+71/71 PASS
+
+- central-executor refresh accepts route proof without inventing a Coding Tunnel
+- dev:refresh accepts a central executor without a local tunnel
+- direct-legacy exact refresh vẫn yêu cầu tunnel/identity như trước
+```
+
+Đây là source/focused proof cho CLI gate. Cần chạy lại một lifecycle refresh
+được giám sát sau khi owner `37968` terminalize để chứng minh installed/runtime
+postflight dùng logic mới; không dùng lại epoch cũ như một receipt mới.
+
+## 13. Refresh mới sau khi owner terminalize — runtime READY, connector vẫn mở — 2026-09-23 02:38 +07
+
+### 13.1 Controlled refresh receipt
+
+Sau khi PID `37968` đã kết thúc và không còn lifecycle owner cạnh tranh, đã chạy
+đúng một lệnh:
+
+```text
+node scripts/dev-ui-lifecycle.js refresh
+exit=0
+epoch=activation-mud2rqud-3343e319a40c7e2c9fc856be6434546f
+activation=READY
+host=fb0d900d04874005df606f065dc78cbe
+ui=ea980597bb5477d74fbbdb84f1ddcc16
+mcp_pid=21000
+tunnel_pid=unknown
+mcp=ready
+tunnel=not-required
+admission=open
+fully_ready=true
+```
+
+Lệnh trên được chạy trước khi bản sửa connector-presentation ở Section 12.5
+được nạp vào CLI, nên dòng cuối của chính lần chạy đó in
+`connector=ready`. Dòng này **không phải connector receipt** và không được dùng
+làm bằng chứng strict discovery; readback Recovery IPC ngay sau đó là authority
+cho connector và trả `connectorReady=false`/`CHANGED_NEEDS_DISCOVERY`.
+
+### 13.2 Readback authoritative sau refresh
+
+Receipt `RecoveryIpcClient` có ràng buộc descriptor tại
+`2026-09-22T19:38:34.323Z` UTC:
+
+```text
+Recovery Host: PID 50572, instance fb0d900d04874005df606f065dc78cbe
+Epoch: READY / admission_open=true / update_incomplete=false
+Operation: full-clean-refresh-mud2regy-33ff5646c80036e675e39f0b
+Ready digest: cd8070bb14745c2cde3f48694c2d10abcd2fdd37494e9bce2df2927c6075f8e4
+MCP/native: true / true; componentsReady=true; fullyReady=true
+Central: centralConnected=true; authorityReady=true; centralStatusReason=null
+Tunnel: false; tunnel_state=not_configured; executionRole=central_executor
+MCP process/server: iT8OpsOV6dDu1Knq / XQTIoNq7bXLmcZUD
+identity_current=true; current_activation_epoch_id khớp epoch
+connectorReady=false; connectorRefreshRequired=true
+connectorRediscovered=false; connectorContractState=CHANGED_NEEDS_DISCOVERY
+workspace_read=null
+health control-plane-route: ok=true
+```
+
+`node scripts/dev-ui-lifecycle.js status` lúc `2026-09-22T19:38:11.706Z`
+cũng phản ánh đúng phân tách mới: `fully_ready=true` nhưng
+`connector_state=CHANGED_NEEDS_DISCOVERY` và `connector_refresh_required=true`.
+Sau Section 12.5, các lần refresh tiếp theo sẽ in `connector=pending` cho tuple
+này; không còn lấy `fullyReady` của central executor làm connector readiness.
+
+### 13.3 Ledger census cuối cửa sổ refresh
+
+Reporter query-only lúc `2026-09-22T19:38:43.679Z` UTC tiếp tục cho:
+
+```text
+content_free=true
+mutated_canonical_ledger=false
+canonical_writer_instantiated=false
+runtime_instantiated=false
+integrity_check=ok
+foreign_key_check_rows=0
+projection_drift=false
+context_count=1079
+ordinary_active_runs=17
+P5_EXPERIMENT_ANCHOR=6
+THRESHOLD_SENSITIVE_STALE_CANDIDATE=17
+stale_background_operation_residues=0
+unbound_live_resource_residues=0
+unexplained_active_runs=0
+physical SHA-256: cd0291b9e1e7da017d9699489606c14fe8781b7399212f89ec42b15871fd7273
+logical SHA-256:  a0e6c6753c2a6029ad237e3a4be9463d39fb982db63795b66d9100b323b75337
+```
+
+Hash vật lý/logical tiếp tục thay đổi giữa các immutable read window trong khi
+integrity/FK và census predicates vẫn PASS. Đây là runtime/evidence drift cần
+được gắn snapshot khi delivery; không phải căn cứ để sửa, truncate, VACUUM hay
+reconcile thủ công ledger.
+
+### 13.4 Kết luận wave
+
+Controlled recovery hiện đã chứng minh được **runtime layer** trên một epoch mới
+và source CLI đã được sửa cho đúng role/connector semantics. Mục tiêu của hai
+Problem vẫn chưa đạt vì còn thiếu strict connector discovery, một
+`workspace_context` thật, reboot/Machine B/fault-injection, natural-use,
+independent outcome và criterion closure. Trạng thái chính xác là
+`RUNTIME_RECOVERY_VERIFIED / PRODUCT_ACCEPTANCE_OPEN`, không phải
+`LIVE_ACCEPTED` hay `PROBLEM_CLOSED`.
+
+### 13.5 Validation sau source patch
+
+```text
+node --test tests/dev-ui-lifecycle.test.js
+  71/71 PASS
+
+npm test
+  1025/1025 PASS
+  source root clean
+  repository secret check: PASS
+```
+
+`npm test` là source/test proof ở HEAD làm việc hiện tại; nó không thay thế
+strict connector discovery, ChatWeb `workspace_context`, reboot matrix hoặc
+natural outcome. Bước delivery tiếp theo vẫn phải snapshot lại volatile
+`.coding-tools/**`, chạy các guard delivery bắt buộc, rồi commit/push trực tiếp
+trên `main` theo chính sách repository.

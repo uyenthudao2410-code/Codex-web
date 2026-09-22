@@ -480,12 +480,39 @@ function refreshRuntimeReady(runtime, state, epochId, processAlive, record = nul
   const census = activationCensus(record);
   const exactCensusPresent = Boolean(census
     && String(census.activation_epoch_id || '') === epochId);
+  const executionRole = String(
+    runtime?.executionRole
+      || state?.executionRole
+      || census?.execution_role
+      || record?.metadata?.execution_role
+      || record?.request_intent?.metadata?.execution_role
+      || ''
+  ).trim().toLowerCase();
+  // A central executor is intentionally tunnel-less on this machine.  The
+  // final census is authoritative when present; otherwise use the explicit
+  // role contract and keep direct_legacy fail-closed on its local tunnel.
+  const declaredTunnelRequired = typeof census?.tunnel_required === 'boolean'
+    ? census.tunnel_required
+    : null;
+  const tunnelRequired = exactCensusPresent
+    ? (declaredTunnelRequired ?? executionRole !== 'central_executor')
+    : executionRole !== 'central_executor';
+  const censusTunnelVerified = !tunnelRequired || (
+    census?.tunnel_identity_changed === true
+    && census?.tunnel_health_verified === true
+  );
+  const centralRouteVerified = executionRole === 'central_executor'
+    && census?.central_connected === true
+    && census?.authority_ready === true
+    && census?.central_route_verified === true;
+  const roleSpecificCensusProof = executionRole === 'central_executor'
+    ? (!tunnelRequired && centralRouteVerified)
+    : connectorGateIsPending(census);
   const componentCensusVerified = Boolean(census
     && String(census.activation_epoch_id || '') === epochId
     && census.process_identity_verified === true
     && census.process_identity_changed === true
-    && census.tunnel_identity_changed === true
-    && census.tunnel_health_verified === true
+    && censusTunnelVerified
     && census.recovery_host_revision_matches === true
     && census.recovery_host_epoch_matches === true
     && census.ui_verified === true
@@ -497,7 +524,7 @@ function refreshRuntimeReady(runtime, state, epochId, processAlive, record = nul
     && census.device_matches === true
     && census.revision_matches === true
     && census.epoch_matches === true
-    && connectorGateIsPending(census));
+    && roleSpecificCensusProof);
   const previousMcpPid = Number(previous?.coding_mcp?.pid || 0);
   const previousTunnelPid = Number(previous?.coding_tunnel?.pid || 0);
   const previousRecoveryMcpPid = Number(previous?.recovery_mcp?.pid || 0);
@@ -506,11 +533,11 @@ function refreshRuntimeReady(runtime, state, epochId, processAlive, record = nul
   const newRecoveryMcpPid = Number(census?.recovery_mcp_pid || 0);
   const newRecoveryTunnelPid = Number(census?.recovery_tunnel_pid || 0);
   const freshPids = Boolean(
-    mcpPid > 0 && tunnelPid > 0
+    mcpPid > 0 && (!tunnelRequired || tunnelPid > 0)
     && (!previousMcpPid || mcpPid !== previousMcpPid)
-    && (!previousTunnelPid || tunnelPid !== previousTunnelPid)
+    && (!tunnelRequired || !previousTunnelPid || tunnelPid !== previousTunnelPid)
     && (!previousRecoveryMcpPid || newRecoveryMcpPid !== previousRecoveryMcpPid)
-    && (!previousRecoveryTunnelPid || newRecoveryTunnelPid !== previousRecoveryTunnelPid)
+    && (!tunnelRequired || !previousRecoveryTunnelPid || newRecoveryTunnelPid !== previousRecoveryTunnelPid)
     && (!previousHostPid || Number(census?.host_pid || 0) !== previousHostPid)
   );
   // finalCensus probes the Coding Tunnel after the lightweight runtime
@@ -523,6 +550,8 @@ function refreshRuntimeReady(runtime, state, epochId, processAlive, record = nul
     ? census.tunnel_health_verified === true
     : runtime?.tunnelRunning === true;
   return {
+    executionRole: executionRole || null,
+    tunnelRequired,
     mcpRunning: runtime?.mcpRunning === true,
     tunnelRunning,
     nativeAlive: runtime?.nativeAlive === true,
@@ -532,9 +561,10 @@ function refreshRuntimeReady(runtime, state, epochId, processAlive, record = nul
     mcpPid: Number.isSafeInteger(mcpPid) && mcpPid > 0 ? mcpPid : null,
     tunnelPid: Number.isSafeInteger(tunnelPid) && tunnelPid > 0 ? tunnelPid : null,
     processIdentitiesPresent: Boolean(String(state?.nativeInstanceId || '').trim()
-      && String(state?.tunnelInstanceId || '').trim()),
+      && (!tunnelRequired || String(state?.tunnelInstanceId || '').trim())),
     ownedProcessesAlive: Boolean(
-      mcpPid > 0 && tunnelPid > 0 && processAlive(mcpPid) && processAlive(tunnelPid)
+      mcpPid > 0 && processAlive(mcpPid)
+      && (!tunnelRequired || (tunnelPid > 0 && processAlive(tunnelPid)))
     ),
     componentCensusVerified,
     freshPids,
@@ -1673,7 +1703,7 @@ async function refreshLifecycle(deps) {
         && uiInstance
         && uiInstance !== previousUiInstance
         && readiness.mcpRunning
-        && readiness.tunnelRunning
+        && (!readiness.tunnelRequired || readiness.tunnelRunning)
         && readiness.nativeAlive
         && readiness.revisionMatches
         && readiness.epochMatches
@@ -1690,7 +1720,15 @@ async function refreshLifecycle(deps) {
           : lastRuntime?.fullyReady === true;
         const activation = String(refreshEpochState(lastRecord) || (fullyReady ? 'READY' : 'VERIFYING'));
         const connectorState = String(lastRuntime?.connectorContractState || 'UNAVAILABLE');
-        const connector = fullyReady && admission === 'open' ? 'ready' : 'pending';
+        // Central readiness/admission is deliberately independent from the
+        // current ChatWeb connector receipt.  A READY central executor may
+        // still require strict current-process discovery or an attested
+        // compatibility acknowledgement; never project local `fullyReady`
+        // as connector readiness.
+        const connector = lastRuntime?.connectorReady === true
+          && lastRuntime?.connectorRefreshRequired === false
+          && fullyReady && admission === 'open'
+          ? 'ready' : 'pending';
         deps.output([
           'DEV_UI REFRESHED',
           'action=full_clean',
@@ -1701,7 +1739,7 @@ async function refreshLifecycle(deps) {
           `mcp_pid=${readiness.mcpPid || 'unknown'}`,
           `tunnel_pid=${readiness.tunnelPid || 'unknown'}`,
           `mcp=${readiness.mcpRunning ? 'ready' : 'stopped'}`,
-          `tunnel=${readiness.tunnelRunning ? 'ready' : 'stopped'}`,
+          `tunnel=${readiness.tunnelRequired ? (readiness.tunnelRunning ? 'ready' : 'stopped') : 'not-required'}`,
           `admission=${admission}`,
           `fully_ready=${fullyReady ? 'true' : 'false'}`,
           `connector=${connector}`,
