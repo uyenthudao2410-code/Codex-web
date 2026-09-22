@@ -3004,3 +3004,11 @@ Controlled evidence-only ledger recovery đã **apply một lần trước đó*
 Metrics hiện hành: exact revision binding `193/211`; structural criterion-to-proof `34/34`; authoritative confirmation `3/3` (small-n); independent outcome `3/49`; P4 `COLLECTING` với 100 shadow tasks, 20 raw-patch nhưng 0 causal repair và 29 unknown. Hai Problem tiếp tục tách rev 1/rev 2 và `OPEN` (`66 = 47/16/3`, `39 = 16/10/13`), chưa có `typed_natural`, technical acceptance, strict connector discovery hoặc real `workspace_context`.
 
 **Checkpoint:** source patch đã publish và ledger integrity/continuity vẫn đọc được; runtime activation chưa usable. Exact next action là stage/verify delivery snapshot rồi push trực tiếp `main`; sau đó mới mở một activation packaged exact-identity có owner authority. Không replay ledger candidate, không gọi connector ACK, reboot hoặc Problem closure từ snapshot này.
+
+### 16.59. Activation window mới hết hạn trong postflight — 23/09/2026
+
+Sau commit/push `2e505d41`, Recovery Host đã current theo source hash `94ea…` và có `full_clean_capability_available=true`. Một request `dev-ui-lifecycle refresh` duy nhất được gửi với epoch `activation-mud67x1j…` và operation `full-clean-refresh-mud67l9n…`; request terminalize bằng `ACTIVATION_REQUEST_EXPIRED`, giữ `UPDATE_INCOMPLETE` và `admission_open=false`.
+
+Điều này xác nhận blocker hiện tại là activation deadline/epoch continuity và downstream MCP/Tunnel/UI readiness, không phải lỗi integrity của `ledger.sqlite3`. Không retry cùng epoch, không mở admission bằng tay và không dùng `READY` lịch sử. `HEAD == origin/main == 2e505d41`; runtime ledger drift vẫn là evidence ngoài snapshot, còn `dist-recovery-6d2b0dec/` chỉ là build output untracked chưa phát hành.
+
+**Checkpoint:** controlled ledger recovery vẫn ở tầng evidence continuity đã apply trước đó; runtime activation chưa usable. Bước kế tiếp cần một activation window mới được owner duyệt với exact packaged/source identity, sau đó strict connector discovery và `workspace_context`; hai Problem vẫn `OPEN`, không được suy closure từ expiry/readiness cũ.

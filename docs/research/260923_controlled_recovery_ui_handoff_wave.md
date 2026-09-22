@@ -1452,3 +1452,66 @@ Không được gộp `66/39 RUN`, không dùng 3 confirmation của revision kh
   candidate ledger cũ, không gọi connector ACK, không reboot và không đóng
   Problem trước strict discovery + real `workspace_context` + independent
   outcome.
+
+## 15.10. Một refresh có kiểm soát mới hết hạn trong postflight — 23/09/2026
+
+Sau delivery `2e505d41`, Recovery Host đã đạt điều kiện identity đầu vào:
+
+```text
+PID = 35616
+running_revision = disk_revision = 94ea711860aba7b21527b9b081744a8e5b6d8dc519b6de6ebf8f53425f00eb00
+current_for_full_clean = true
+full_clean_capability_available = true
+```
+
+Theo đúng quy tắc chỉ thử một request, đã gửi một `dev-ui-lifecycle refresh`
+duy nhất:
+
+```text
+epoch = activation-mud67x1j-36d6d1214646926eb647054603117bda
+operation = full-clean-refresh-mud67l9n-da18537154680aa635b74390
+initial_state = VERIFYING
+```
+
+Process đã terminalize với lỗi chính thức:
+
+```text
+DEV_UI ERROR code=ACTIVATION_REQUEST_EXPIRED
+The durable activation epoch expired during postflight and remains admission-closed.
+```
+
+Postflight không có readiness mới để nâng trạng thái:
+
+```text
+epoch_state = UPDATE_INCOMPLETE
+admission_open = false
+components_ready = false
+fully_ready = false
+connector_state = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered = false
+connector_refresh_required = true
+```
+
+Đây là **deadline/activation continuity failure**, không phải lỗi SQLite và
+không được xử lý bằng cách retry cùng epoch, mở admission bằng tay, hoặc dùng
+snapshot `READY` cũ. Recovery Host vẫn current về byte revision nhưng primary
+MCP/Tunnel/UI aggregate chưa có proof end-to-end.
+
+### Checkpoint sau expiry
+
+- **Đã hoàn thành:** một refresh có kiểm soát duy nhất đã được terminalize;
+  `ACTIVATION_REQUEST_EXPIRED` được ghi nhận; không có request song song,
+  không sửa ledger trực tiếp, không ACK connector và không reboot.
+- **Ledger:** trạng thái read-only gần nhất vẫn `integrity=ok`, FK `0`,
+  `mutated_canonical_ledger=false`; live `ledger.sqlite3` có drift ngoài
+  delivery snapshot như chính sách cho phép.
+- **Git:** `HEAD == origin/main == 2e505d41`; source/docs đã publish. Chỉ
+  runtime ledger drift và `dist-recovery-6d2b0dec/` build output untracked còn
+  thấy; build output không phải release artifact và chưa được đưa vào Git.
+- **Blocker:** activation request deadline/epoch expiry, strict connector
+  discovery, real `workspace_context`, reboot/Machine B, fault injection,
+  natural-use, independent outcome và closure authority.
+- **Exact next action:** không retry epoch đã hết hạn. Owner phải cấp một
+  activation window mới với packaged/source identity exact và deadline đủ dài;
+  sau đó mới chạy một refresh mới, đọc `READY`/`admission_open`, rồi mới xin
+  current-process `tools/list`/`server/discover`. Hai Problem vẫn `OPEN`.
