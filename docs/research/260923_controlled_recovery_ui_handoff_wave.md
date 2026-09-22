@@ -202,3 +202,42 @@ hai Problem.** Blocker tiếp theo là package/runtime identity: bản patch ph�
 được nạp vào packaged Recovery Host qua đường được hỗ trợ; nếu installation
 guard hoặc source/checkpoint authority còn thiếu, giữ fail-closed và ghi
 `BLOCKED` kèm bằng chứng cụ thể thay vì bypass.
+
+## 8. Hậu kiểm commit và Ubuntu transport — 2026-09-23 00:35 +07
+
+Source wave đã được ghi vào commit `889e76c10a76822e2d942bd8500ee862c046f020`.
+Delivery receipt được refresh trong commit
+`a8aff1ad2f1f6b733ddd67040d40893d73fcfc5f`; cả hai đã được push tới
+`origin/main`. Các commit này không thay đổi `control-plane/` hoặc `deploy/`.
+Vì vậy Ubuntu không cần nhận một control-plane package mới cho source wave
+fresh-UI này; release immutable đang chạy vẫn được đối chiếu độc lập với
+revision `da7d8273fe94d082d873d186b95bf75886c3dbfa`.
+
+Readback SSH sau commit cho thấy:
+
+- `codex-control-plane.service` và `codex-control-plane-mcp-tunnel.service`
+  đều `active`; health của control-plane qua `100.116.112.22:8765/healthz`
+  trả `ok=true`, SQLite `integrity=ok`, schema `25`, admission `recovery`,
+  actual/expected package SHA cùng là
+  `sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c`,
+  declared revision `da7d8273…`, và `unquarantined_unresolved_action_count=0`.
+- MCP grant cũ đã hết hạn theo đúng TTL; không hồi sinh record cũ. Một grant
+  mới được cấp qua `POST /v1/mcp-access-grants` cho context hiện tại với
+  principal `ubuntu-root-tunnel-da7d8273`, hết hạn lúc
+  `1790120514335`, grant id
+  `mcpgrant_614e473663b44f83a3e31492a8e5059f`. Raw bearer không được ghi vào
+  repository, log hoặc báo cáo; header private được thay thế atomic với mode
+  owner-only và metadata redacted được cập nhật.
+- Sau restart Tunnel, `healthz=live`, `readyz=ready`; authenticated loopback
+  MCP `initialize` và `tools/list` đều thành công. `tools/list` trả đủ tám
+  public tools và contract `schema_version=6`,
+  `profile=control-plane-scoped-read-only-relay-v5`,
+  `sha256=c947f8d5f3fed1355bc1236f0d45c8e7c7877a3d0b2c1a17344a90ead98c8f1b`.
+
+Đây là bằng chứng **remote service + authenticated local MCP strict
+discovery**. Nó không phải Windows installed-runtime proof, ChatGPT cloud
+client discovery, `workspace_context` natural task, admission mở, reboot
+acceptance hay release/production acceptance. Windows source patch đã build và
+packaged smoke PASS trong working tree, nhưng installed Recovery Host vẫn
+phải được cài bằng đường được hỗ trợ và vẫn đang bị installation/source
+acceptance guard chặn; không được gọi `npm start` là hoàn tất.
