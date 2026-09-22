@@ -2,9 +2,9 @@
 
 Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-web`.
 
-Trạng thái tài liệu: **BLOCKED — chờ quyền recovery/operational gates; A0/A1/A2/X0-G có local proof, B1 focused proof; chưa hoàn tất hai Problem**.
+Trạng thái tài liệu: **RECOVERY REHEARSAL ACTIVE — người dùng đã cấp controlled recovery; backup/candidate cô lập đã tạo, canonical chưa thay, candidate chưa activation-eligible**.
 
-> **Cập nhật mới nhất 22/09 khoảng 18:19 +07:** blocked audit lần thứ ba, authority gate chưa được gỡ; xem **16.16**. Full-state recovery audit ở 16.14 xác nhận không copy đè historical DB. X0-G ở 16.13; HEAD `5aae18e`, chưa restore/activation; không đổi local proof thành live/outcome closure.
+> **Cập nhật mới nhất 22/09 khoảng 18:28 +07:** user đã cho phép recovery theo phạm vi backup/isolated rehearsal trước; candidate QUARANTINED có lịch sử thiếu và giữ current rows, xem **16.17**. Canonical hash vẫn nguyên. HEAD do luồng khác chuyển sang `ee11ec2`; goal ACTIVE, chưa complete.
 
 ## 0. Kết luận điều hành
 
@@ -1246,3 +1246,77 @@ Lượt trước=NO PROGRESS. Recheck hiện tại HEAD/status/tool inventory kh
 **Điều kiện gỡ blocker trước mắt:** người dùng chấp thuận triển khai gói recovery cho `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3`, giới hạn backup và isolated rehearsal trước; actual canonical switch chỉ sau review riêng. Tiếp đó cần target-specific activation/installed/central/reboot scope và real-client/consent/outcome actors. Chấp thuận local source trước đây không được mở rộng ngầm sang live DB/lifecycle.
 
 Git cuối main@5aae18e; receipt/X0-G/report được staged bởi hoạt động concurrent, working-copy Markdown có cập nhật mới chưa staged. Không unstage/reset/overwrite index; delivery owner phải review/recapture khi commit. Lượt này chỉ checkpoint Markdown, không test rerun/source mutation/restore/restart/reboot/install/deploy/commit/push/paid inference; các query terminal. Toàn bộ remaining objective được giữ nguyên để resume, không hạ Definition of Done.
+
+### 16.17. Controlled recovery backup + isolated rehearsal — 22/09 khoảng 18:20–18:28 +07
+
+**Quyền mới:** user cho phép controlled recovery cho exact `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3`, trong ngữ cảnh backup/diễn tập cô lập trước và chuyển canonical thật sau review riêng. Goal đã trở lại ACTIVE; blocked-audit counter được reset cho resumed run. Không coi consent này là quyền restart/reboot/deploy hoặc bỏ unknown-effect gates.
+
+Thêm [rehearse-ledger-recovery.py](../../scripts/rehearse-ledger-recovery.py) và [tests](../../tests/test_ledger_recovery_rehearsal.py). Tool **không có apply/switch/restart mode**, chỉ tạo artifact mới trong temp directory riêng; live ledger mở mode=ro và copy bằng Online Backup API. Historical Git blob phải match expected SHA; current snapshot phải match expected SHA; missing RUN set phải đúng ba exact IDs được truyền. Không ghi live DB/index hoặc tái tạo accepted event từ report text.
+
+Strategy rehearsal:
+
+- Candidate bắt đầu từ current snapshot, không bắt đầu từ historical replacement.
+- Schema phải bằng nhau, immutable-row conflicts bị từ chối. Nhập historical-only rows trên bản cô lập; giữ nguyên toàn bộ existing row values hiện tại, kể cả hub observations mới.
+- Không nhập historical authority tables: controller attachments/leases/reattach, write fences, hub clients/cursors, active lanes/resource claims, continuation grants. Current authority không được thay bằng historical owner.
+- Không đổi historical unknown/in_progress/running effects thành completed; giữ nguyên fact và đánh dấu required reconciliation. Problem-thread projection chưa tự promote theo event mới; candidate không thể activation chỉ vì integrity đạt.
+- FK deferred trong transaction và kiểm trước commit candidate; conflict rollback. Output luôn `QUARANTINED_REHEARSAL`, `activation_eligible=false`; backup/source/candidate được đặt file read-only sau diễn tập. Read-only file flag là guard thao tác, không thay authority review.
+
+**Artifacts thực tế** tại `E:\Caches\Temp\codex-ledger-recovery-rehearsal-ho9mu2yt` (giữ nguyên để review, không Git-stage/publish raw DB):
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| current-backup.sqlite3 | 97,509,376 | `c894f57ebdb0c1c7995cb5dc315edbc39a317d6143afe2d1cda1184b9034f39a` |
+| historical-original.sqlite3 | 97,824,768 | `e7700489c3ecd85afcd2c21c36967741793fef73f36aad47a47da8f9887de9b6` |
+| QUARANTINED-candidate.sqlite3 | 97,837,056 | `5f003d4cb80a3b6bfa4aca28e0ead57ca011b613a39fb0888ce63f8b700657d3` |
+| rehearsal-report.json | Content-free result | Chụp `2026-09-22T11:25:56.266243Z`; không phải EOCL receipt |
+
+Directory này là artifact diễn tập ở temp, **không** là backup-retention policy production. Trước actual switch phải chọn durable backup location/ACL/retention và fresh snapshot. Không xóa các artifact trong lượt này. Read-only attribute được xác minh 18:27 cho ba SQLite files; original report giữ nguyên, không backfill timestamp/acceptance.
+
+**Kết quả candidate:** thêm events128, problem_events3, runs3, waves4, checkpoints3, proofs5, continuity_telemetry12, knowledge_acks1, background_operations6, idempotency_records18, managed_jobs7. Withheld historical leases3, reattach receipts1, hub_clients3. Giữ nguyên mọi existing row, gồm attachment/lease/hub/problem-thread/fence conflicts đã nêu 16.14. Integrity `ok`, FK0.
+
+Historical-only effect labels còn nguyên: background 5 completed/1 running; idempotency 15 completed/1 failed/1 unknown/1 in_progress; jobs7 exited. Không có attempt replay hoặc process execution; các nhãn này không phải current-live liveness.
+
+**Validation đã làm:**
+
+1. Focused recovery unit suite **4 tests OK, 9.10s**, gồm evidence merge/current hub preservation/authority withheld/unknown giữ nguyên; immutable conflict rollback; wrong allowlist và overwrite refusal; FK dependency không được kéo authority cũ vào bằng đường vòng.
+2. Tool rehearsal chạy thật trên backup cô lập, exit0 và report như trên. Canonical source chỉ đọc. `activation_eligible=false` không phải thất bại SQLite, mà là gate bảo vệ chưa đóng.
+3. Recompute per-RUN event hash chain trên candidate: 32/32/62 events PASS, head hashes đúng historical 16.2, không failed sequence.
+4. SQLite allocator/rollback probe chỉ trên candidate trước khi write-protect: next seq59823 >59822, rollback toàn transaction; candidate bytes/SHA không đổi. Đây **không** là committed causal event hoặc canonical append/authority acceptance. Không giữ synthetic probe row trong artifact.
+5. Postflight official read-only census `snapshot_at=2026-09-22T11:26:59.821Z`: canonical physical/logical hashes vẫn E02, integrity ok/FK0; 17 stale candidates, no managed job/unbound live residue. Chứng minh live canonical chưa đổi, không suy candidate runtime safety từ census của canonical.
+6. File write-protection xác minh trực tiếp trên đúng ba artifact paths; scoped source/test whitespace checks PASS. CLI được bổ sung write-protect sau rehearsal core test; không claim core suite đã test một live restore path.
+
+Local source fingerprints: rehearsal script `27bee60f52e6dd8db852de5b5a446583bb3fa52546940c80baa2a5a958042217`; test `331c51a7c82b795a6bc7672c7d9b2a2066b86a98c49adbbb1ac52ba272792080`.
+
+**Các gate còn thiếu trước đề nghị switch:** problem projection reconciliation; monotonic authority generation/fencing với lịch sử đã phục hồi nhưng không hồi sinh owner cũ; unknown/in-progress effect reconciliation; full startup/duplicate-effect dry-run và operator review. Candidate hiện **KHÔNG ĐƯỢC dùng làm live DB**. Source rehearsal generic table copy chỉ phục vụ isolated diagnosis, không phải sanctioned canonical importer/apply API.
+
+**Checkpoint:** consent blocker backup/rehearsal đã được gỡ và có concrete progress. Luồng khác tạo commit `ee11ec2e0177b69e37438420dca7ef08aebb9d5f` (chore: guard coding-tools delivery history), đã recheck; lượt này không commit/push. Chỉ thêm rehearsal script/test, artifact tạm có kiểm soát và cập nhật Markdown; không thay canonical/index, không restart/install/deploy/reboot/paid dispatch. Test/rehearsal/census handles terminal. Goal ACTIVE, chưa COMPLETE; tiếp tục xử lý các gate candidate nêu trên trước khi xin duyệt actual canonical switch, không hỏi lại quyền backup đã được cấp.
+
+### 16.18. Chạy lại controlled recovery rehearsal và startup-guard probe — 22/09 khoảng 18:55–18:57 +07
+
+Đây là wave **PROGRESS** sau khi user cấp phạm vi controlled recovery. Tôi không switch/copy/INSERT vào canonical; `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3` chỉ được mở `mode=ro`, sau đó Online Backup API tạo artifact mới ngoài repository.
+
+**Input và identity đã kiểm:**
+
+| Input | Giá trị |
+| --- | --- |
+| Branch/HEAD | `main@ee11ec2e0177b69e37438420dca7ef08aebb9d5f` |
+| Live backup | `E:\Caches\Temp\codex-ledger-recovery-rehearsal-udbg894e\current-backup.sqlite3` |
+| Live backup SHA-256 | `c894f57ebdb0c1c7995cb5dc315edbc39a317d6143afe2d1cda1184b9034f39a` |
+| Historical Git blob | `bed5b266a83e4cbc3947f5dd15854d80f58f6264` |
+| Historical SHA-256 | `e7700489c3ecd85afcd2c21c36967741793fef73f36aad47a47da8f9887de9b6` |
+| Exact historical RUN allowlist | `dcb539e0e1694bc1bb29eed2b2e07f8b`, `d01a5dce50c846fc8e13673cdfc8b3b3`, `b194ab1e311e42efa1dd0614ca245037` |
+
+Rehearsal report: `E:\Caches\Temp\codex-ledger-recovery-rehearsal-udbg894e\rehearsal-report.json`; candidate `QUARANTINED-candidate.sqlite3` SHA `651f6c40c633974f0f2668f3b18ccfdb751e946f5ce6b8bd7bb96f7dc97d1be5`; all three artifacts write-protected. Result là `QUARANTINED_REHEARSAL`, `canonical_mutated=false`, `activation_eligible=false`, `integrity=ok`, FK `0`, current rows preserved. Candidate thêm đúng 3 RUN, 4 WAVE, 3 checkpoint, 5 proof, 128 `events`, 3 `problem_events`, 12 continuity telemetry, 6 background operations, 18 idempotency records và 7 managed jobs. Các historical authority rows vẫn bị giữ lại: 3 controller leases, 1 reattach receipt, 3 hub clients.
+
+Đối soát sâu trên candidate:
+
+- Ba event hash-chain theo RUN lịch sử hợp lệ; candidate có `events=25,822`, seq `26897..59822`, không trùng seq/hash-chain error. `problem_events=307` cũng giữ chain liên tục; không tạo event acceptance mới.
+- Tất cả row hiện tại của 36 bảng được bảo toàn; không current-only row bị mất và không common row bị overwrite. `integrity_check=ok`, FK `0` trên current/candidate/historical.
+- Projection Problem `prl-22e…` **chưa thể coi là reconciled**: event mới nhất là seq `320`, trong khi `problem_threads.latest_problem_event_seq` vẫn `317` vì rehearsal cố ý giữ current projection khi gặp conflict. `prl-e918…` không có drift mới. Đây là blocker có chủ đích, không sửa bằng cách copy historical thread row.
+- Historical write-fence/reattach generation đạt `1681/29`, current/candidate giữ `1677/28`; candidate không resurrect authority high-water mark cũ. Historical `background_operations` có 1 `running`, idempotency có `unknown`/`in_progress`; đây là unknown-effect inventory, không phải quyền replay.
+
+**Startup guard probe** trên một workspace temp mới, input candidate SHA đúng, cho `ISOLATED_STARTUP_GUARDS_PROVED`: source unchanged; integrity/FK `ok/0`; events count unchanged; `background_marked_orphaned=1`; `idempotency_marked_unknown=1`; **663** unknown/in-progress claims bị từ chối; `controller_leases_expired=0`; `real_runtime_started=false`; probe artifact `E:\Caches\Temp\codex-ledger-startup-probe-0e1p3vj4\startup-probe-report.json`. Probe SHA của target sau guard là `b312aba43f1acd8b1e5987c4d4d85f8cb165bc01de73bd4f235f793909649963`; input candidate không đổi.
+
+**Đã đạt trong wave:** backup nhất quán, allowlist exact, isolated merge, all-table preservation, integrity/FK, event lineage, authority withholding và unknown-effect refusal. **Chưa đạt:** supported problem-projection reconciliation cho seq `318–320`, authority high-water review/owner sign-off, exact runtime activation/loaded package, client strict discovery/MCP-Tunnel/workspace read, reboot/two-machine, natural continuation và independent outcome. Vì vậy không được copy candidate lên live ledger, không restart/reboot/install/deploy/push, và không đánh dấu hai Problem đã đóng.
+
+**Next action chính:** bổ sung verifier append-after-recovery và negative duplicate/authority checks trên clone writable của candidate; sau đó owner review một receipt bất biến. Chỉ khi có supported reconciliation contract + quiesced runtime + target-specific approval mới xem xét canonical switch; mọi switch vẫn phải có rollback backup, postflight integrity/projection/readback và acceptance riêng.
