@@ -1936,6 +1936,12 @@ class ControlPlaneStore:
             safe_targets = [
                 {
                     "node_display_name": target["node_display_name"],
+                    # Opaque workspace identity is safe to expose to the
+                    # local setup client and is required to correlate a
+                    # target when two roots share the same display name.
+                    # Paths, owner IDs and task/context data remain redacted.
+                    "workspace_id": target["workspace_id"],
+                    "workspace_generation": target["workspace_generation"],
                     "workspace_display_name": target["workspace_display_name"],
                     "capabilities": target["capabilities"],
                     "binding_state": target["binding_state"],

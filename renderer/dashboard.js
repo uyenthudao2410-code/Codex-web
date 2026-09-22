@@ -75,11 +75,6 @@
   const $ = (selector) => document.querySelector(selector);
   const byId = (id) => document.getElementById(id);
 
-  // Manager overview tab embeds the standalone token window instead of
-  // hosting dashboard markup: skip its analytics fetch/render there so each
-  // pulse is not queried twice. Button bindings below stay active.
-  const embeddedDashboardHost = () => !byId('daChart') && !!byId('overviewTokenFrame');
-
   function unwrap(result) {
     if (!result?.ok) throw new Error(result?.error || 'Dashboard request failed');
     return result.data;
@@ -2328,7 +2323,6 @@
 
   async function applyOverviewPulse(event) {
     const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
-    if (embeddedDashboardHost()) return;
     if (Object.prototype.hasOwnProperty.call(detail, 'snapshot')) {
       snapshot = detail.snapshot;
       loadCostSettings();
@@ -2346,45 +2340,11 @@
     document.dispatchEvent(new CustomEvent('coding-tools:overview-refresh-request'));
   }
 
-  // Parent side of the embedded overview iframe: keep the child theme in
-  // sync and grow the frame to its content so the token board reads as one
-  // page instead of a nested scroll box. Same-origin file:// only; any
-  // access failure keeps the CSS fallback height.
-  function syncEmbeddedFrame() {
-    const frame = byId('overviewTokenFrame');
-    if (!frame) return;
-    const fit = () => {
-      try {
-        const doc = frame.contentDocument;
-        if (!doc) return;
-        const theme = document.body?.dataset?.theme
-          || document.documentElement.getAttribute('data-theme')
-          || 'light';
-        doc.documentElement.setAttribute('data-theme', theme);
-        if (doc.body) {
-          doc.body.setAttribute('data-theme', theme);
-          doc.body.dataset.theme = theme;
-        }
-        const height = Math.max(
-          doc.documentElement.scrollHeight || 0,
-          doc.body ? doc.body.scrollHeight || 0 : 0
-        );
-        if (height > 400) frame.style.height = `${Math.min(height + 24, 4200)}px`;
-      } catch { /* keep fallback height */ }
-    };
-    frame.addEventListener('load', () => { fit(); window.setTimeout(fit, 600); });
-    window.setInterval(() => { if (document.visibilityState !== 'hidden') fit(); }, 2500);
-    fit();
-  }
-
-  if (embeddedDashboardHost()) syncEmbeddedFrame();
-
+  // Dashboard markup is hosted directly in the Control Center overview, so
+  // refresh/theme sync stays in this document. No embedded frame to mirror.
   byId('daRefreshButton')?.addEventListener('click', () => {
     lastAnalyticsReadAt = 0;
     requestOverviewRefresh();
-  });
-  byId('daTokenBoardButton')?.addEventListener('click', () => {
-    if (typeof api.openTokenDashboard === 'function') api.openTokenDashboard().catch(() => {});
   });
   byId('daApply')?.addEventListener('click', applyCostModel);
 
@@ -2419,7 +2379,7 @@
 
   reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
 
-  Promise.all([Promise.resolve(loadCostSettings()), embeddedDashboardHost() ? Promise.resolve(null) : refreshAnalytics(true)])
+  Promise.all([Promise.resolve(loadCostSettings()), refreshAnalytics(true)])
     .then(() => renderAll())
     .finally(requestOverviewRefresh);
 })();

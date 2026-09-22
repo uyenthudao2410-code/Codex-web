@@ -23,6 +23,7 @@ from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from control_plane.maintenance import main as maintenance_main
 from control_plane.node_agent import (
     READ_ONLY_JOURNAL_SCHEMA_VERSION,
+    _config,
     _journal_path,
     _pid_is_live,
     _read_only_poll_lock_path,
@@ -1484,9 +1485,10 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(active["target_count"], 1)
         self.assertEqual(active["dispatchable_target_count"], 1)
         self.assertEqual(active["targets"][0]["workspace_display_name"], "Canary workspace")
+        self.assertEqual(active["targets"][0]["workspace_id"], "workspace-alpha")
+        self.assertEqual(active["targets"][0]["workspace_generation"], "generation-1")
         self.assertNotIn(target["binding_id"], json.dumps(active))
-        self.assertNotIn("workspace-alpha", json.dumps(active))
-        self.assertNotIn("generation-1", json.dumps(active))
+        self.assertNotIn("owner_default", json.dumps(active))
 
         self.store.revoke_binding(owner_id="owner_default", binding_id=target["binding_id"])
         revoked = self.store.node_authority_status(device_id="device-alpha", node_secret=self.node_secret)
@@ -1506,6 +1508,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
 
         output = io.StringIO()
         errors = io.StringIO()
+        secret_field = "node_secret_dpapi" if os.name == "nt" else "node_secret"
         with mock.patch("control_plane.node_agent._request", side_effect=request), redirect_stdout(output), redirect_stderr(errors):
             self.assertEqual(node_agent_main([
                 "request-enrollment", "--config", str(config_path), "--server-url", "https://CONTROL.example.test/",
@@ -1516,11 +1519,13 @@ class ControlPlaneStoreTests(unittest.TestCase):
             self.assertEqual(original["server_url"], "https://control.example.test")
             self.assertEqual(original["enrollment_id"], "enroll-node-target-0001")
             self.assertEqual(original["enrollment_state"], "pending_operator_approval")
+            original_secret = _config(config_path)["node_secret"]
             self.assertEqual(node_agent_main([
                 "request-enrollment", "--config", str(config_path), "--server-url", "https://other.example.test",
                 "--device-id", "device-target-0001", "--endpoint-id", "endpoint-target-0001", "--display-name", "Office executor",
             ]), 1)
-            self.assertEqual(json.loads(config_path.read_text(encoding="utf-8"))["node_secret"], original["node_secret"])
+            unchanged = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(unchanged[secret_field], original[secret_field])
             self.assertEqual(node_agent_main([
                 "request-enrollment", "--config", str(config_path), "--server-url", "https://other.example.test",
                 "--device-id", "device-target-0001", "--endpoint-id", "endpoint-target-0001", "--display-name", "Office executor",
@@ -1531,10 +1536,12 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(len(calls), 2)
         self.assertEqual(calls[0][0], "https://control.example.test")
         self.assertEqual(calls[1][0], "https://other.example.test")
-        self.assertNotEqual(replaced["node_secret"], original["node_secret"])
+        self.assertNotEqual(replaced[secret_field], original[secret_field])
+        if os.name == "nt":
+            self.assertNotIn("node_secret", replaced)
         self.assertIn("CONTROL_PLANE_ENROLLMENT_CONFIG_REPLACEMENT_REQUIRED", errors.getvalue())
-        self.assertNotIn(original["node_secret"], output.getvalue())
-        self.assertNotIn(replaced["node_secret"], output.getvalue())
+        self.assertNotIn(original_secret, output.getvalue())
+        self.assertNotIn(_config(config_path)["node_secret"], output.getvalue())
 
     def test_node_enrollment_reconcile_persists_approved_state_and_keeps_stale_state_on_transport_loss(self) -> None:
         config_path = Path(self.tempdir.name) / "reconcile-node.json"
@@ -1570,6 +1577,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
             receipt = json.loads(output.getvalue())
             self.assertEqual(receipt["state"], "approved")
             self.assertTrue(receipt["fresh"])
+            self.assertEqual(receipt["server_origin"], "https://control.example.test")
             persisted = json.loads(config_path.read_text(encoding="utf-8"))
             self.assertEqual(persisted["enrollment_state"], "approved")
             self.assertEqual(persisted["credential_generation"], 2)
@@ -1585,6 +1593,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
             self.assertEqual(stale["state"], "approved")
             self.assertFalse(stale["fresh"])
             self.assertEqual(stale["error_code"], "CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+            self.assertEqual(stale["server_origin"], "https://control.example.test")
         self.assertGreaterEqual(len(request_calls), 2)
 
     def test_node_enrollment_refuses_non_loopback_http_before_writing_a_config(self) -> None:
@@ -2272,6 +2281,12 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with mock.patch("control_plane.node_agent.os.name", "nt"), \
              mock.patch("control_plane.node_agent.os.kill", side_effect=missing_process):
             self.assertFalse(_pid_is_live(71_001))
+
+    def test_windows_exited_process_is_not_reported_live_after_child_exit(self) -> None:
+        child = subprocess.Popen([sys.executable, "-c", "pass"])
+        child_pid = child.pid
+        self.assertEqual(child.wait(timeout=10), 0)
+        self.assertFalse(_pid_is_live(child_pid))
 
     def test_read_only_agent_reclaims_only_a_confirmed_dead_lock_owner(self) -> None:
         config_path = Path(self.tempdir.name) / "agent-stale-lock-node.json"
@@ -3445,6 +3460,7 @@ with mock.patch('control_plane.node_agent._request', side_effect=request), \
         with mock.patch("control_plane.node_agent._request", side_effect=request), \
              mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
              mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent._harden_windows_private_file"), \
              mock.patch(
                  "control_plane.node_agent.subprocess.run",
                  side_effect=subprocess.TimeoutExpired(cmd=["node"], timeout=args.timeout_seconds),
@@ -3461,6 +3477,7 @@ with mock.patch('control_plane.node_agent._request', side_effect=request), \
         with mock.patch("control_plane.node_agent._request", side_effect=request), \
              mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
              mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent._harden_windows_private_file"), \
              mock.patch("control_plane.node_agent.subprocess.run") as bridge:
             self.assertEqual(poll_read_only_once(args), 0)
         bridge.assert_not_called()

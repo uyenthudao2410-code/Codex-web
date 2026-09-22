@@ -32,7 +32,7 @@ const { activationSourceCheckpoint } = require('./services/activationClosure');
 const { startRecoveryHostApplication } = require('./recoveryHost');
 const { UiPerformanceMetrics, jsonByteLength } = require('./services/uiPerformanceMetrics');
 const { loadOrCreateDeviceIdentity } = require('./services/deviceIdentity');
-const { ControlPlaneEnrollmentService } = require('./services/controlPlaneEnrollment');
+const { ControlPlaneEnrollmentService, centralServerOrigin } = require('./services/controlPlaneEnrollment');
 
 // Version 1.0 has a new product identity but retains the existing encrypted
 // desktop profile so an upgrade does not orphan its runtime configuration.
@@ -42,7 +42,6 @@ configureElectronUserDataPath(app, { argv: process.argv, recoveryHostMode });
 
 let chatWindow;
 let managerWindow;
-let tokenWindow;
 let chatController;
 let orchestrator;
 let forceQuit = false;
@@ -911,39 +910,6 @@ function openManagerWindow() {
   return managerWindow;
 }
 
-function openTokenWindow() {
-  if (tokenWindow && !tokenWindow.isDestroyed()) {
-    tokenWindow.show();
-    tokenWindow.focus();
-    return tokenWindow;
-  }
-
-  tokenWindow = new BrowserWindow({
-    width: 1100,
-    height: 800,
-    minWidth: 900,
-    minHeight: 620,
-    show: false,
-    autoHideMenuBar: true,
-    backgroundColor: '#0b0f19',
-    title: 'Coding Tools MCP · Bảng Token',
-    icon: appIconPath(),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
-    }
-  });
-  tokenWindow.removeMenu();
-  const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
-  tokenWindow.once('ready-to-show', () => tokenWindow.show());
-  tokenWindow.loadFile(path.join(__dirname, '..', 'renderer', 'token-dashboard.html'), { query: { theme: initialTheme } });
-  // Destroy (not hide) on close so every open loads current disk files.
-  tokenWindow.on('closed', () => { tokenWindow = null; });
-  return tokenWindow;
-}
-
 function registerIpc() {
   secureHandle('app:snapshot', (_event, options) => invokeSafely(() => orchestrator.snapshot(options || {})));
   secureHandle('app:lightweight-snapshot', (event) => invokeSafely(async () => {
@@ -968,6 +934,15 @@ function registerIpc() {
     return uiPerformanceMetrics.report();
   }));
   secureHandle('workspace:hub', () => invokeSafely(async () => { const current = settings.load(); return { activeWorkspace: current.workspace, recentWorkspaces: current.recentWorkspaces || [] }; }));
+  secureHandle('control-plane:open-console', (event, serverUrl) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    // Navigation only: no pairing, credentials, settings writes or runtime
+    // changes. Reuse the credential-free HTTPS origin validator; never accept
+    // an arbitrary shell URL, /mcp path, token, query or fragment.
+    const origin = centralServerOrigin(serverUrl || settings.load().controlPlaneServerUrl);
+    await shell.openExternal(`${origin}/`);
+    return true;
+  }));
   secureHandle('control-plane:enroll', (event, serverUrl) => invokeSafely(async () => {
     // Pairing creates a pending central enrollment record. Keep it confined
     // to the Command Center and an Ubuntu-managed executor; it is neither a
@@ -997,9 +972,20 @@ function registerIpc() {
         code: 'CONTROL_PLANE_ENROLLMENT_ROLE_REQUIRED'
       });
     }
-    return controlPlaneEnrollment.reconcileEnrollment({
+    const receipt = await controlPlaneEnrollment.reconcileEnrollment({
       deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
     });
+    // Resume an existing node enrollment when the ordinary UI setting was
+    // lost.  The node-agent returns only a normalized HTTPS origin here; it
+    // never returns the node credential or account/binding material.  Do not
+    // overwrite a non-empty user setting because changing the target is an
+    // explicit replacement flow, not a side effect of opening Settings.
+    const currentSettings = settings.load();
+    if (!String(currentSettings.controlPlaneServerUrl || '').trim()
+      && receipt?.server_origin) {
+      settings.save({ controlPlaneServerUrl: receipt.server_origin });
+    }
+    return receipt;
   }));
   secureHandle('control-plane:authority-status', (event) => invokeSafely(async () => {
     // Enrollment approval is not account/binding authority. This read-only
@@ -1179,11 +1165,6 @@ function registerIpc() {
     return true;
   }));
   secureHandle('manager:open', () => invokeSafely(async () => { openManagerWindow(); return true; }));
-  secureHandle('token-dashboard:open', () => invokeSafely(async () => { openTokenWindow(); return true; }));
-  secureHandle('token-dashboard:close', () => invokeSafely(async () => {
-    if (tokenWindow && !tokenWindow.isDestroyed()) tokenWindow.close();
-    return true;
-  }));
   secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));
   secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
   secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
@@ -1454,7 +1435,6 @@ if (recoveryHostMode) {
         }
         sendManager('runtime:heartbeat', status);
         if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
-        if (tokenWindow && !tokenWindow.isDestroyed()) tokenWindow.webContents.send('runtime:heartbeat', status);
       }).then(() => registerUiRevision()).catch(() => {});
       runtimeHeartbeatInFlight = operation;
       return operation.finally(() => {

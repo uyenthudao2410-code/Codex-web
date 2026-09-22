@@ -228,6 +228,28 @@ function buildMcpIdentityObservation({
     && activationEpoch?.admission_open === true
     && activationEpoch?.update_incomplete !== true
   );
+  const contact = health?.connector_client_contact;
+  const read = contact?.workspace_read;
+  const safeId = (value) => typeof value === 'string' && /^[A-Za-z0-9_.:@-]{1,256}$/.test(value);
+  const readAt = typeof read?.observed_at === 'string' ? Date.parse(read.observed_at) : NaN;
+  const observedMs = Date.parse(observedAt);
+  let workspaceRead = null;
+  if (exactIdentity && contact?.current_contract_contact === true
+    && contact?.identity_source === 'attested_transport' && contact?.attestation_verified === true
+    && read?.schema_version === 1 && read?.kind === 'workspace_read_completed'
+    && read?.tool === 'workspace_context' && read?.completed === true && read?.workspace_accessed === true
+    && read.process_instance_id === processInstanceId && read.server_instance_id === serverInstanceId
+    && read.activation_epoch_id === currentEpochId && read.contract_sha256 === contractSha256
+    && ['device_id', 'endpoint_id', 'workspace_id'].every((key) => safeId(read[key]))
+    && Number.isSafeInteger(read.workspace_generation) && read.workspace_generation > 0
+    && /^rpc-[a-f0-9]{64}$/.test(read.request_id || '')
+    && Number.isFinite(readAt) && readAt <= observedMs && observedMs - readAt <= 30_000) {
+    workspaceRead = Object.fromEntries(['request_id', 'device_id', 'endpoint_id', 'workspace_id',
+      'workspace_generation', 'process_instance_id', 'server_instance_id', 'activation_epoch_id',
+      'contract_sha256'].map((key) => [key, read[key]]));
+    Object.assign(workspaceRead, { observed_at_ms: readAt, tool: 'workspace_context', completed: true,
+      workspace_accessed: true, ok: true, source: 'attested_mcp_contact', delivery_confirmed: false });
+  }
   return {
     observation_schema_version: 1,
     observation_kind: 'mcp_identity_read_only',
@@ -240,6 +262,7 @@ function buildMcpIdentityObservation({
     tool_contract_sha256: READY_CONNECTOR_SHA_PATTERN.test(contractSha256) ? contractSha256 : null,
     mcp_ready: health?.ready === true,
     identity_current: exactIdentity,
+    workspace_read: workspaceRead,
     ...(errorCode ? { error_code: String(errorCode).slice(0, 80) } : {})
   };
 }

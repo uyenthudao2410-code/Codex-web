@@ -26,7 +26,7 @@ function createPreviewApi() {
     saveSettings: (patch) => { Object.assign(snapshot.settings, patch); return ok(snapshot.settings); },
     saveRuntimeKey: () => ok(snapshot.secrets), removeRuntimeKey: () => ok(snapshot.secrets), regenerateMcpToken: () => ok(snapshot.secrets),
     requestControlPlaneEnrollment: (serverUrl) => ok({ enrollment_id: 'enroll_preview_0001', device_id: snapshot.device.device_id, state: 'pending_operator_approval', server_origin: serverUrl || '' }),
-    reconcileControlPlaneEnrollment: () => ok({ device_id: snapshot.device.device_id, enrollment_id: 'enroll_preview_0001', state: 'pending_operator_approval', credential_generation: null, fresh: true, observed_at_ms: Date.now(), error_code: null }),
+    reconcileControlPlaneEnrollment: () => ok({ device_id: snapshot.device.device_id, enrollment_id: 'enroll_preview_0001', state: 'pending_operator_approval', credential_generation: null, fresh: true, observed_at_ms: Date.now(), error_code: null, server_origin: snapshot.settings.controlPlaneServerUrl || null }),
     reconcileControlPlaneAuthorityStatus: () => ok({ device_id: snapshot.device.device_id, state: 'no_binding', node_display_name: 'Máy bàn', workspace_count: 1, target_count: 0, dispatchable_target_count: 0, targets: [], fresh: true, observed_at_ms: Date.now(), error_code: null }),
     rotateControlPlaneCredential: () => ok({ device_id: snapshot.device.device_id, rotation_id: 'rotate_' + 'a'.repeat(32), state: 'completed', current_generation: 1, next_generation: 2, fresh: true, error_code: null }),
     registerControlPlaneWorkspace: ({ capabilities } = {}) => ok({ workspace_id: 'workspace_0123456789abcdef0123456789abcdef', workspace_generation: 'generation_abcdef0123456789abcdef0123456789', display_name: 'my-project', capabilities: { read: true, write: capabilities?.write === true, exec: capabilities?.exec === true }, replayed: false, state: 'registered' }),
@@ -39,7 +39,7 @@ function createPreviewApi() {
     logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: 'Chế độ xem trước giao diện tĩnh' }]), clearLogs: () => ok(true),
     taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true), recordUiPerformance: () => ok({ accepted: false }), uiPerformance: () => ok(null),
     inspectBuild: () => ok({ type: 'electron', name: 'demo', version: '0.1.0', testCommand: 'npm test', buildCommand: 'npm run dist', artifacts: ['dist'] }), runBuild: () => ok({ overallStatus: 'passed', project: { type: 'electron', name: 'demo', version: '0.1.0' }, testResult: { status: 'passed' }, buildResult: { status: 'passed' }, artifacts: [] }), inspectHealth: () => ok({ healthy: true, checks: [] }), repairHealth: () => ok({ healthy: true, checks: [], actions: [], unresolved: [] }),
-    openExternal: () => ok(true), installPython: () => ok(true), detectProxy: () => ok(snapshot.environment.proxy), onProgress: () => () => {}, onLog: () => () => {}, onStatus: () => () => {}, onHeartbeat: () => () => {}, onBuildProgress: () => () => {}
+    openControlPlaneConsole: () => ok(true), openExternal: () => ok(true), installPython: () => ok(true), detectProxy: () => ok(snapshot.environment.proxy), onProgress: () => () => {}, onLog: () => () => {}, onStatus: () => () => {}, onHeartbeat: () => () => {}, onBuildProgress: () => () => {}
   };
 }
 
@@ -49,7 +49,7 @@ const pageMeta = {
   deploy: ['KẾT NỐI', 'Kết nối máy chủ', 'Kết nối Ubuntu hoặc cấu hình direct legacy trong phần nâng cao.'],
   workspace: ['THƯ MỤC & QUYỀN', 'Thư mục & quyền', 'Chọn đường dẫn local và xem rõ quyền đọc, ghi, chạy đang được áp dụng.'],
   task: ['TASKS & PROOF', 'Tasks & Proof', 'Theo dõi durable task state, kiểm thử, proof, lịch sử và hiệu năng.'],
-  system: ['CÀI ĐẶT', 'Cài đặt máy này', 'Kết nối, thư mục, quyền và tùy chọn ứng dụng trong một luồng dễ tiếp tục.'],
+  system: ['THIẾT LẬP HỆ THỐNG', 'Thiết lập hệ thống', 'Máy chủ, tài khoản, thư mục và tùy chọn ứng dụng trong cùng một nơi.'],
   build: ['BUILD & XÁC MINH', 'Xác minh & Build', 'Tự động nhận diện dự án, thực thi kiểm thử và build, đồng thời kiểm tra sản phẩm đầu ra.'],
   health: ['CHẨN ĐOÁN & SỬA CHỮA', 'Chẩn đoán & Sửa chữa', 'Kiểm tra môi trường vận hành và tự động sửa chữa các sự cố an toàn.'],
   guide: ['HƯỚNG DẪN CẤU HÌNH', 'Hướng dẫn Kết nối', 'Hoàn thành các bước kết nối OpenAI Tunnel và ChatGPT Web.'],
@@ -67,6 +67,7 @@ const state = {
   centralEnrollmentBusy: false,
   centralEnrollmentReceipt: null,
   centralEnrollmentStatus: null,
+  centralEnrollmentStatusChecked: false,
   centralAuthorityBusy: false,
   centralAuthorityStatus: null,
   centralCredentialRotationBusy: false,
@@ -83,6 +84,8 @@ const state = {
   centralPolicyBusy: false,
   centralWorkspaceListBusy: false,
   centralWorkspaces: null,
+  centralWorkspaceInventoryStatus: 'not_loaded',
+  centralWorkspaceInventoryError: null,
   centralWorkspaceRetirementReceipt: null,
   initializedForms: false
 };
@@ -185,12 +188,24 @@ function centralDispatchableTargetForLocalWorkspace() {
     ? state.centralAuthorityStatus.targets
     : [];
   const dispatchable = targets.filter((target) => target?.dispatch_state === 'dispatchable');
-  const matches = dispatchable.filter((target) => entries.some((entry) => entry.display_name === target.workspace_display_name));
-  // A display name is intentionally the only user-facing selector.  Refuse
-  // to claim readiness when it is absent or ambiguous instead of guessing an
-  // opaque workspace generation behind the user's back.
+  const matches = dispatchable.filter((target) => entries.some((entry) => {
+    if (target.workspace_id && target.workspace_generation) {
+      return entry.workspace_id === target.workspace_id
+        && entry.workspace_generation === target.workspace_generation;
+    }
+    return entry.display_name === target.workspace_display_name;
+  }));
+  // Prefer opaque identity/generation when the server supplies it. Legacy
+  // receipts may contain only a display name; still refuse ambiguity rather
+  // than guessing a target behind the user's back.
   if (matches.length !== 1) return null;
-  const matchingEntries = entries.filter((entry) => entry.display_name === matches[0].workspace_display_name);
+  const matchingEntries = entries.filter((entry) => {
+    if (matches[0].workspace_id && matches[0].workspace_generation) {
+      return entry.workspace_id === matches[0].workspace_id
+        && entry.workspace_generation === matches[0].workspace_generation;
+    }
+    return entry.display_name === matches[0].workspace_display_name;
+  });
   return matchingEntries.length === 1 ? matches[0] : null;
 }
 
@@ -247,11 +262,170 @@ function centralRoutePresentation(status = {}) {
   };
 }
 
+function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null) {
+  const mode = snapshot.recoveryHost?.electron_ui_recovery?.runtime_mode;
+  const status = snapshot?.status || {};
+  const centralStatusReason = String(status.centralStatusReason || '').trim();
+  const packagedRequired = [enrollment?.error_code, authority?.error_code]
+    .some((code) => /PACKAGED_REQUIRED|candidate packaged/.test(String(code || '')));
+  const packagedRuntimeMissing = [enrollment?.error_code, authority?.error_code]
+    .some((code) => /RUNTIME_MISSING/.test(String(code || '')));
+  if (mode === 'development' || packagedRequired) return {
+    key: 'development', owner: 'TRÊN WINDOWS', title: 'Cần bản cài đặt để hoàn tất kết nối',
+    detail: 'Bạn đang chạy npm start. Mở bản Coding Tools MCP đã cài và được xác minh để duyệt máy, thêm thư mục và kiểm tra quyền. Bật Ubuntu hoặc bấm kiểm tra lại không gỡ giới hạn của bản dev.',
+    action: 'details', actionLabel: 'Xem hướng dẫn kết nối'
+  };
+  if (packagedRuntimeMissing) return {
+    key: 'runtime-missing', owner: 'TRÊN WINDOWS', title: 'Bản cài đặt thiếu thành phần kết nối',
+    detail: 'Candidate packaged không có đủ Python hoặc node-agent để kiểm tra/enrollment. Cài lại đúng gói đã xác minh; không gửi lại yêu cầu và không duyệt máy mới để né lỗi.',
+    action: 'check', actionLabel: 'Kiểm tra lại bản cài'
+  };
+  if (mode !== 'packaged') return {
+    key: 'runtime-unverified', owner: 'TRÊN WINDOWS', title: 'Chưa xác minh bản chạy của máy này',
+    detail: 'Không thể xác nhận cửa sổ đang dùng bản cài packaged đã được xác minh. Giữ pairing, workspace và policy ở trạng thái đóng; mở bản cài đặt đúng hoặc kiểm tra lại runtime trước khi tiếp tục.',
+    action: 'details', actionLabel: 'Xem chi tiết runtime'
+  };
+  if (enrollment?.fresh === false && enrollment?.state !== 'unconfigured') return {
+    key: 'unverified', owner: 'KIỂM TRA KẾT NỐI', title: 'Chưa xác minh được trạng thái máy',
+    detail: 'Kiểm tra địa chỉ Ubuntu và kết nối mạng chung, rồi kiểm tra trạng thái máy. Giữ nguyên yêu cầu đã lưu; không gửi đăng ký mới chỉ vì lần kiểm tra này chưa thành công.',
+    action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
+  };
+  if (enrollment?.state === 'revoked' || authority?.state === 'revoked') return {
+    key: 'revoked', owner: 'QUẢN TRỊ VIÊN UBUNTU', title: 'Máy đã bị thu hồi quyền',
+    detail: 'Nhờ quản trị viên kiểm tra máy trên Ubuntu. Không tự đăng ký lại hoặc chuyển công việc sang máy khác.',
+    action: 'details', actionLabel: 'Xem hướng xử lý'
+  };
+  if (['request_sent', 'pending_operator_approval'].includes(enrollment?.state)) return {
+    key: 'pending', owner: 'QUẢN TRỊ VIÊN UBUNTU', title: 'Đã gửi yêu cầu · chờ duyệt máy',
+    detail: 'Quản trị viên cần duyệt yêu cầu của máy này trên Ubuntu. Sau khi được duyệt, bấm “Kiểm tra trạng thái máy”, rồi thêm thư mục. Không cần gửi lại yêu cầu.',
+    action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
+  };
+  const supportedEnrollmentState = new Set(['unconfigured', 'request_sent', 'pending_operator_approval', 'approved', 'revoked', 'unknown']);
+  if (enrollment?.state && !supportedEnrollmentState.has(enrollment.state)) return {
+    key: 'unverified', owner: 'KIỂM TRA KẾT NỐI', title: 'Trạng thái máy chưa được xác minh',
+    detail: 'Ubuntu trả về một trạng thái chưa có trong contract hiện tại. Không tự đăng ký lại hoặc suy ra máy đã được duyệt; cần kiểm tra phiên bản và receipt.',
+    action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
+  };
+  const approved = enrollment?.fresh === true && enrollment?.state === 'approved';
+  if (!approved && enrollment?.state === 'approved') return {
+    key: 'unverified', owner: 'KIỂM TRA KẾT NỐI', title: 'Yêu cầu đã lưu nhưng chưa có receipt mới',
+    detail: 'Máy từng được báo approved nhưng lần đọc hiện tại chưa fresh. Giữ cấu hình và kiểm tra lại; không gửi enrollment mới.',
+    action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
+  };
+  if (!approved && status.centralConnected !== true) return {
+    key: 'connect', owner: 'TRÊN WINDOWS', title: 'Nhập địa chỉ và gửi yêu cầu kết nối',
+    detail: 'Dùng địa chỉ HTTPS của máy chủ Ubuntu mà máy này truy cập được. Gửi một yêu cầu, sau đó nhờ quản trị viên Ubuntu duyệt máy. Không cần nhập API key, Tunnel hay token.',
+    action: 'details', actionLabel: 'Nhập địa chỉ Ubuntu'
+  };
+  if (!approved) return {
+    key: 'unverified', owner: 'KIỂM TRA KẾT NỐI', title: 'Chưa xác minh được trạng thái máy',
+    detail: 'Runtime đang phản hồi nhưng chưa có receipt enrollment fresh ở client. Giữ nguyên cấu hình và kiểm tra lại; không coi heartbeat là approve.',
+    action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
+  };
+  if (authority?.fresh === false) return {
+    key: 'authority-stale', owner: 'KIỂM TRA QUYỀN UBUNTU', title: 'Máy đã duyệt nhưng quyền hiện tại chưa xác minh',
+    detail: 'Lần đọc account/target từ Ubuntu đang stale hoặc lỗi. Không giữ nhãn xanh từ receipt cũ, không gửi lại enrollment và không chạy task cho tới khi có receipt mới.',
+    action: 'check', actionLabel: 'Kiểm tra lại quyền'
+  };
+  if (centralStatusReason === 'LOCAL_EXECUTOR_NOT_READY') return {
+    key: 'local-executor', owner: 'TRÊN WINDOWS', title: 'Máy đã duyệt nhưng runtime local chưa sẵn sàng',
+    detail: 'Enrollment không có vấn đề. Kiểm tra activation/runtime local theo hướng dẫn; không duyệt lại máy và không đăng ký workspace mới để né blocker.',
+    action: 'details', actionLabel: 'Xem chi tiết runtime'
+  };
+  if (centralStatusReason === 'CENTRAL_LOCAL_POLICY_NOT_READY') return {
+    key: 'policy', owner: 'WINDOWS → UBUNTU', title: 'Đã nối Ubuntu nhưng chưa đủ policy thực thi',
+    detail: 'Route trung tâm đã được nhìn thấy nhưng policy local hoặc target chưa hợp lệ. Kiểm tra binding, workspace generation và policy; không tự cấp quyền mới.',
+    action: 'details', actionLabel: 'Xem liên kết & quyền'
+  };
+  if (status.centralConnected !== true) return {
+    key: 'route', owner: 'WINDOWS → UBUNTU', title: 'Máy đã duyệt nhưng route Ubuntu chưa sẵn sàng',
+    detail: 'Giữ enrollment hiện tại và kiểm tra route trung tâm. Không gửi lại enrollment hoặc chuyển task sang máy khác.',
+    action: 'check', actionLabel: 'Kiểm tra route'
+  };
+  return {
+    key: 'approved', owner: 'WINDOWS → UBUNTU', title: 'Máy đã được xác nhận · tiếp tục thư mục và quyền',
+    detail: 'Thêm thư mục ở phần “Thư mục & quyền”. Quản trị viên cấp thư mục cho tài khoản; sau đó kiểm tra liên kết ở dưới. Duyệt máy không đồng nghĩa đã sẵn sàng chạy nhiệm vụ.',
+    action: 'workspace', actionLabel: 'Mở thư mục & quyền'
+  };
+}
+
+function centralSetupRuntimeBlocked(guidance = centralSetupGuidance(state.snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus)) {
+  return ['development', 'runtime-unverified', 'runtime-missing'].includes(guidance?.key);
+}
+
+function centralSetupDevelopmentBlocked() {
+  return isCentralExecutor(state.snapshot?.settings)
+    && centralSetupRuntimeBlocked();
+}
+
+function assertPackagedCentralSetup(action) {
+  if (centralSetupDevelopmentBlocked()) {
+    const guidance = centralSetupGuidance(state.snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus);
+    const detail = guidance?.key === 'runtime-missing'
+      ? 'Bản cài đặt đang thiếu Python hoặc node-agent đóng gói; cài lại candidate đã xác minh.'
+      : 'npm start chỉ hỗ trợ preview và chẩn đoán; hãy mở bản cài đặt packaged đã được xác minh.';
+    throw new Error(`${action} cần runtime packaged hợp lệ. ${detail}`);
+  }
+}
+
+function renderConnectionGuidance(snapshot) {
+  const guidance = centralSetupGuidance(snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus);
+  const devNotice = $('#setupDevelopmentNotice');
+  const runtimeBlocked = centralSetupRuntimeBlocked(guidance);
+  if (devNotice) {
+    devNotice.hidden = !runtimeBlocked;
+    const title = devNotice.querySelector('b');
+    const detail = devNotice.querySelector('p');
+    if (guidance.key === 'development') {
+      if (title) title.textContent = 'Bạn đang dùng bản phát triển · npm start';
+      if (detail) detail.textContent = 'Bản này dùng để phát triển giao diện. Các bước xác minh máy, thư mục và quyền Ubuntu cần bản cài đặt đã được xác minh. Máy chủ đang bật không đồng nghĩa máy Windows đã được cấp quyền.';
+    } else if (guidance.key === 'runtime-unverified') {
+      if (title) title.textContent = 'Chưa xác minh bản packaged';
+      if (detail) detail.textContent = 'Không thể xác nhận runtime hiện tại là bản cài đặt packaged đã được xác minh. Không gửi pairing hoặc cấp policy từ cửa sổ này; kiểm tra lại runtime trước.';
+    } else if (guidance.key === 'runtime-missing') {
+      if (title) title.textContent = 'Bản cài đặt thiếu thành phần kết nối';
+      if (detail) detail.textContent = 'Python hoặc node-agent packaged không có/không hợp lệ. Cài lại candidate đã xác minh trước khi gửi pairing, đăng ký workspace hoặc cài policy.';
+    }
+  }
+  for (const [id, text] of [['connectionNextOwner', guidance.owner], ['connectionNextTitle', guidance.title], ['connectionNextText', guidance.detail]]) {
+    const element = $(`#${id}`);
+    if (element) element.textContent = text;
+  }
+  const check = $('#refreshControlPlaneEnrollment');
+  if (check) check.disabled = state.busy || state.centralEnrollmentBusy || runtimeBlocked;
+  const technical = $('#controlPlaneTechnicalStatus');
+  if (technical) technical.textContent = [
+    `Máy: ${snapshot?.device?.display_name || 'chưa xác định'}`,
+    `Yêu cầu: ${state.centralEnrollmentStatus?.enrollment_id || state.centralEnrollmentReceipt?.enrollment_id || 'chưa đọc được'}`,
+    `Kiểm tra máy: ${state.centralEnrollmentStatus?.error_code || state.centralEnrollmentStatus?.state || 'chưa kiểm tra'}`,
+    `Kiểm tra tài khoản: ${state.centralAuthorityStatus?.error_code || state.centralAuthorityStatus?.state || 'chưa kiểm tra'}`
+  ].join('\n');
+  renderControlPlaneConsoleLink();
+  return guidance;
+}
+
+function renderControlPlaneConsoleLink() {
+  const origin = String($('#controlPlaneServerUrl')?.value || state.snapshot?.settings?.controlPlaneServerUrl || '').trim();
+  const button = $('#openControlPlaneConsole');
+  if (button) button.disabled = !origin || typeof api.openControlPlaneConsole !== 'function';
+  const hint = $('#controlPlaneConsoleHint');
+  if (hint) hint.textContent = origin
+    ? 'Mở địa chỉ đã nhập trong trình duyệt. Chỉ nhập operator token trên trang quản trị đúng máy chủ; ứng dụng không chuyển token hoặc tự đăng nhập.'
+    : 'Nhập địa chỉ Ubuntu ở trên để mở trang quản trị. Mở trang không đăng ký máy hoặc cấp quyền.';
+}
+
+async function openControlPlaneConsole() {
+  const origin = String($('#controlPlaneServerUrl')?.value || state.snapshot?.settings?.controlPlaneServerUrl || '').trim();
+  try { unwrap(await api.openControlPlaneConsole(origin)); }
+  catch (error) { toast('Không thể mở trang quản trị Ubuntu', error.message, 'error'); }
+}
+
 function renderCentralWorkspaceRegistrations(central) {
   const container = $('#controlPlaneWorkspaceRegistrations');
   if (!container) return;
   container.replaceChildren();
   if (!central) return;
+  const development = centralSetupDevelopmentBlocked();
   if (state.centralWorkspaceListBusy) {
     const loading = document.createElement('span');
     loading.className = 'task-muted';
@@ -259,7 +433,14 @@ function renderCentralWorkspaceRegistrations(central) {
     container.append(loading);
     return;
   }
-  if (state.centralWorkspaces === null) {
+  if (state.centralWorkspaceInventoryStatus === 'unknown') {
+    const pending = document.createElement('span');
+    pending.className = 'task-muted';
+    pending.textContent = `Không đọc được inventory workspace local (${state.centralWorkspaceInventoryError || 'lỗi chưa rõ'}). Bấm “Tải workspace đã đăng ký” để thử lại.`;
+    container.append(pending);
+    return;
+  }
+  if (state.centralWorkspaceInventoryStatus !== 'loaded' || state.centralWorkspaces === null) {
     const pending = document.createElement('span');
     pending.className = 'task-muted';
     pending.textContent = 'Chưa tải inventory workspace local';
@@ -282,7 +463,9 @@ function renderCentralWorkspaceRegistrations(central) {
     const detail = document.createElement('small');
     const capabilities = workspace.capabilities || {};
     const targetMatches = (state.centralAuthorityStatus?.targets || [])
-      .filter((item) => item.workspace_display_name === workspace.display_name);
+      .filter((item) => (item.workspace_id && item.workspace_generation
+        ? item.workspace_id === workspace.workspace_id && item.workspace_generation === workspace.workspace_generation
+        : item.workspace_display_name === workspace.display_name));
     const target = targetMatches.length === 1 ? targetMatches[0] : null;
     const targetLabel = targetMatches.length > 1
       ? 'Nhiều target trùng tên · cần xác định'
@@ -304,7 +487,7 @@ function renderCentralWorkspaceRegistrations(central) {
     retire.type = 'button';
     retire.className = 'secondary-button';
     retire.textContent = 'Thu hồi thư mục';
-    retire.disabled = state.busy || state.centralWorkspaceBusy || state.centralWorkspaceListBusy;
+    retire.disabled = development || state.busy || state.centralWorkspaceBusy || state.centralWorkspaceListBusy;
     retire.addEventListener('click', () => {
       retireControlPlaneWorkspace(workspace).catch((error) => {
         toast('Không thể thu hồi workspace Ubuntu', error.message, 'error');
@@ -315,7 +498,7 @@ function renderCentralWorkspaceRegistrations(central) {
     replace.className = 'secondary-button';
     replace.textContent = 'Đổi mức quyền';
     replace.title = 'Đóng generation cũ, tạo generation mới và yêu cầu liên kết lại target.';
-    replace.disabled = state.busy || state.centralWorkspaceBusy || state.centralWorkspaceListBusy;
+    replace.disabled = development || state.busy || state.centralWorkspaceBusy || state.centralWorkspaceListBusy;
     replace.addEventListener('click', () => {
       replaceControlPlaneWorkspace(workspace).catch((error) => {
         toast('Không thể đổi mức quyền workspace Ubuntu', error.message, 'error');
@@ -326,7 +509,7 @@ function renderCentralWorkspaceRegistrations(central) {
     policy.className = 'secondary-button';
     policy.textContent = 'Đồng bộ quyền chỉ xem';
     policy.title = 'Chỉ dùng khi quản trị viên yêu cầu; không phải thủ tục cấp quyền hằng ngày.';
-    policy.disabled = state.busy || state.centralWorkspaceBusy || state.centralWorkspaceListBusy || state.centralPolicyBusy;
+    policy.disabled = development || state.busy || state.centralWorkspaceBusy || state.centralWorkspaceListBusy || state.centralPolicyBusy;
     policy.addEventListener('click', () => {
       installControlPlaneReadOnlyPolicyAssignment(workspace).catch((error) => {
         toast('Không thể đồng bộ read-only policy', error.message, 'error');
@@ -342,6 +525,7 @@ function renderCentralWorkspaceRegistrations(central) {
 function renderCentralExecutorMode(snapshot) {
   const settings = snapshot?.settings || {};
   const central = isCentralExecutor(settings);
+  const development = central && centralSetupRuntimeBlocked(centralSetupGuidance(snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus));
   const route = centralRoutePresentation(snapshot?.status || {});
   document.body.dataset.executionRole = central ? 'central-executor' : 'direct-legacy';
   $$('[data-direct-only]').forEach((element) => { element.hidden = central; });
@@ -403,12 +587,27 @@ function renderCentralExecutorMode(snapshot) {
   if (noticeText && central) {
     noticeText.textContent = `Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. ${route.label}: ${route.detail}`;
   }
+  if (central) renderConnectionGuidance(snapshot);
+  const enrollmentState = String(
+    state.centralEnrollmentStatus?.state || state.centralEnrollmentReceipt?.state || ''
+  ).toLowerCase();
+  const enrollmentSubmitted = ['request_sent', 'pending_operator_approval', 'approved'].includes(enrollmentState);
   if (pairingInput) pairingInput.disabled = !central || state.centralEnrollmentBusy === true;
-  if (pairingButton) pairingButton.disabled = !central || state.busy || state.centralEnrollmentBusy === true;
+  if (pairingButton) {
+    pairingButton.disabled = !central || development || state.busy || state.centralEnrollmentBusy === true
+      || !state.centralEnrollmentStatusChecked || enrollmentSubmitted;
+    pairingButton.title = development
+      ? 'Mở bản cài đặt đã được xác minh để gửi yêu cầu kết nối.'
+      : enrollmentSubmitted
+        ? 'Yêu cầu pairing đã tồn tại; mở quản trị Ubuntu hoặc kiểm tra trạng thái máy.'
+        : !state.centralEnrollmentStatusChecked
+          ? 'Kiểm tra trạng thái máy trước khi gửi yêu cầu mới.'
+          : '';
+  }
   const enrollmentApproved = state.centralEnrollmentStatus?.state === 'approved';
   if (credentialRotation) credentialRotation.hidden = !central || !enrollmentApproved;
   if (credentialRotationButton) {
-    credentialRotationButton.disabled = !central || state.busy || state.centralCredentialRotationBusy === true;
+    credentialRotationButton.disabled = !central || development || state.busy || state.centralCredentialRotationBusy === true;
   }
   if (credentialRotationStatus && central && enrollmentApproved) {
     const rotation = state.centralCredentialRotationStatus;
@@ -422,10 +621,10 @@ function renderCentralExecutorMode(snapshot) {
       credentialRotationStatus.textContent = 'Rotation ' + rotation.state + '; generation ' + (rotation.next_generation || rotation.current_generation || 'hiện hành') + '. Raw secret chỉ nằm trong storage bảo vệ của node.';
     }
   }
-  if (workspaceChoose) workspaceChoose.disabled = !central || state.busy || state.centralWorkspaceBusy === true;
-  if (workspaceButton) workspaceButton.disabled = !central || state.busy || state.centralWorkspaceBusy === true
+  if (workspaceChoose) workspaceChoose.disabled = !central || development || state.busy || state.centralWorkspaceBusy === true;
+  if (workspaceButton) workspaceButton.disabled = !central || development || state.busy || state.centralWorkspaceBusy === true
     || !String(state.centralWorkspaceCandidate || '').trim();
-  if (workspaceRefresh) workspaceRefresh.disabled = !central || state.busy || state.centralWorkspaceListBusy === true;
+  if (workspaceRefresh) workspaceRefresh.disabled = !central || development || state.busy || state.centralWorkspaceListBusy === true;
   if (capabilityRead) {
     capabilityRead.checked = true;
     capabilityRead.disabled = true;
@@ -434,7 +633,7 @@ function renderCentralExecutorMode(snapshot) {
   state.centralWorkspacePreset = selectedPreset;
   for (const input of capabilityPresets) {
     input.checked = input.value === selectedPreset;
-    input.disabled = !central || state.busy || state.centralWorkspaceBusy === true;
+    input.disabled = !central || development || state.busy || state.centralWorkspaceBusy === true;
   }
   if (customCapabilities) customCapabilities.open = selectedPreset === 'custom';
   if (capabilitySummary) {
@@ -443,11 +642,11 @@ function renderCentralExecutorMode(snapshot) {
   }
   if (capabilityWrite) {
     capabilityWrite.checked = state.centralWorkspaceCapabilities.write === true;
-    capabilityWrite.disabled = !central || selectedPreset !== 'custom' || state.busy || state.centralWorkspaceBusy === true;
+    capabilityWrite.disabled = !central || development || selectedPreset !== 'custom' || state.busy || state.centralWorkspaceBusy === true;
   }
   if (capabilityExec) {
     capabilityExec.checked = state.centralWorkspaceCapabilities.exec === true;
-    capabilityExec.disabled = !central || selectedPreset !== 'custom' || state.busy || state.centralWorkspaceBusy === true;
+    capabilityExec.disabled = !central || development || selectedPreset !== 'custom' || state.busy || state.centralWorkspaceBusy === true;
   }
   if (workspaceCandidate) {
     const candidate = String(state.centralWorkspaceCandidate || '').trim();
@@ -465,16 +664,17 @@ function renderCentralExecutorMode(snapshot) {
   if (pairingStatus && central) {
     const enrollment = state.centralEnrollmentStatus;
     if (!enrollment && !state.centralEnrollmentReceipt) {
-      pairingStatus.textContent = 'Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI. Sau đó tài khoản OAuth được liên kết sẽ chọn target và tạo authority riêng.';
+      pairingStatus.textContent = 'Chỉ gửi định danh máy tới Ubuntu. Không gửi API key, Tunnel ID hoặc thông tin đăng nhập OpenAI.';
     } else if (enrollment?.fresh !== true) {
-      const id = enrollment?.enrollment_id || state.centralEnrollmentReceipt?.enrollment_id || 'đã lưu cục bộ';
-      pairingStatus.textContent = `Đã lưu trạng thái pairing ${id}, nhưng chưa liên lạc được Ubuntu (${enrollment?.error_code || 'trạng thái cũ'}). Không tạo enrollment mới và chưa coi máy là online.`;
+      pairingStatus.textContent = 'Chưa có kết quả kiểm tra mới. Cấu hình đã lưu được giữ nguyên; chưa thể xác nhận kết nối Ubuntu.';
     } else if (enrollment?.state === 'approved') {
-      pairingStatus.textContent = `Ubuntu đã duyệt máy ${enrollment.enrollment_id || state.centralEnrollmentReceipt?.enrollment_id || ''}. Credential generation ${enrollment.credential_generation || 'hiện hành'} được giữ qua restart; binding/workspace vẫn là bước chọn đích riêng.`;
+      pairingStatus.textContent = 'Ubuntu đã duyệt máy. Tiếp tục thêm thư mục và liên kết tài khoản.';
     } else if (enrollment?.state === 'revoked') {
-      pairingStatus.textContent = `Credential máy đã bị Ubuntu thu hồi${enrollment.enrollment_id ? ` (${enrollment.enrollment_id})` : ''}. Cần thao tác rotation/re-enrollment rõ ràng; UI không tự cấp lại quyền.`;
+      pairingStatus.textContent = 'Ubuntu đã thu hồi quyền của máy. Cần quản trị viên kiểm tra trước khi kết nối lại.';
     } else {
-      pairingStatus.textContent = `Đã gửi ${enrollment?.enrollment_id || state.centralEnrollmentReceipt?.enrollment_id || 'yêu cầu pairing'}. Chờ Ubuntu duyệt identity; pairing chưa cấp target binding hay quyền chạy.`;
+      pairingStatus.textContent = enrollment?.state === 'pending_operator_approval'
+        ? 'Đã gửi yêu cầu. Đang chờ quản trị viên Ubuntu duyệt máy.'
+        : 'Chưa xác nhận máy được duyệt. Xem bước xử lý bên dưới.';
     }
   }
   if (workspaceStatus && central && !state.centralWorkspaceReceipt) {
@@ -577,11 +777,18 @@ function renderSetupState(snapshot) {
   const status = snapshot?.status || {};
   const environment = snapshot?.environment || {};
   const central = isCentralExecutor(settings);
+  const inventoryKnown = !central || state.centralWorkspaceInventoryStatus === 'loaded';
+  const inventoryUnknown = central && state.centralWorkspaceInventoryStatus !== 'loaded';
   const workspaceReady = central
-    ? centralWorkspaceEntries().length > 0
+    ? inventoryKnown && centralWorkspaceEntries().length > 0
     : environment.workspace?.exists === true && Boolean(settings.workspace);
   const directConnectionReady = Boolean(snapshot?.secrets?.runtimeApiKey) && Boolean(settings.tunnelId);
-  const connectionReady = central ? status.centralConnected === true : directConnectionReady;
+  // Enrollment is the first step; a verified execution route also depends on
+  // workspace/policy. Waiting for that route here used to trap setup at step 1.
+  const enrollmentReady = state.centralEnrollmentStatus?.fresh === true
+    && state.centralEnrollmentStatus?.state === 'approved';
+  const connectionReady = central ? enrollmentReady || status.centralConnected === true : directConnectionReady;
+  const guidance = central ? centralSetupGuidance(snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus) : null;
   const authorityStatus = state.centralAuthorityStatus;
   const accountTargetReady = authorityStatus?.fresh === true
     && authorityStatus?.state === 'active'
@@ -599,9 +806,13 @@ function renderSetupState(snapshot) {
   if (accessStepTitle) accessStepTitle.textContent = central ? 'Liên kết & quyền' : 'Kiểm tra kết nối';
   const steps = [
     ['setupStepConnection', connectionReady, central
-      ? (status.centralConnected === true ? 'Đã có route Ubuntu' : 'Đã chọn Ubuntu · chờ pairing')
+      ? (connectionReady ? 'Máy đã được xác nhận' : guidance.title)
       : (directConnectionReady ? 'Tunnel và khóa đã lưu' : 'Cần cấu hình kết nối')],
-    ['setupStepFolder', workspaceReady, workspaceReady ? 'Đã chọn thư mục local' : 'Chưa chọn thư mục'],
+    ['setupStepFolder', workspaceReady, workspaceReady
+      ? 'Đã chọn thư mục local'
+      : inventoryUnknown
+        ? 'Chưa đọc được inventory · cần tải lại'
+        : 'Chưa chọn thư mục'],
     ['setupStepAccount', authorityReady, central
       ? (accountTargetReady ? 'Đã có target được cấp' : authorityStatus?.state === 'no_binding' ? 'Chưa có liên kết tài khoản' : 'Chờ Ubuntu xác nhận target')
       : (status.tunnelRunning === true ? 'Tunnel đã phản hồi' : 'Chờ Tunnel phản hồi')],
@@ -612,7 +823,7 @@ function renderSetupState(snapshot) {
     if (!item) return;
     const current = !done && ((id === 'setupStepConnection' && !connectionReady)
       || (id === 'setupStepFolder' && connectionReady && !workspaceReady)
-      || (id === 'setupStepAccount' && workspaceReady && !authorityReady)
+      || (id === 'setupStepAccount' && connectionReady && workspaceReady && !authorityReady)
       || (id === 'setupStepVerify' && workspaceReady && authorityReady && !fullyReady));
     item.classList.toggle('done', done);
     item.classList.toggle('current', current);
@@ -630,17 +841,21 @@ function renderSetupState(snapshot) {
   const connectionSummary = $('#settingsConnectionSummary');
   const workspaceSummary = $('#settingsWorkspaceSummary');
   if (connectionSummary) connectionSummary.textContent = central
-    ? (status.centralConnected === true ? `Đã nối Ubuntu · ${authorityStatusPresentation(authorityStatus).label}` : 'Chờ pairing / duyệt máy')
+    ? (connectionReady ? 'Máy đã được xác nhận' : guidance.title)
     : (directConnectionReady ? 'Đã cấu hình direct' : 'Cần cấu hình kết nối');
   if (workspaceSummary) workspaceSummary.textContent = central
-    ? centralWorkspaceSummary()
+    ? inventoryUnknown
+      ? 'Chưa xác minh inventory workspace · tải lại để phân biệt lỗi đọc với danh sách trống'
+      : centralWorkspaceSummary()
     : workspaceReady ? settings.workspace : 'Chưa chọn thư mục';
   if (summary) summary.textContent = fullyReady
     ? 'Máy này đã sẵn sàng trong phạm vi quyền được cấp'
-    : central && !status.centralConnected
-      ? 'Cần hoàn tất kết nối với Ubuntu'
-      : !workspaceReady
-        ? 'Chưa chọn thư mục làm việc'
+    : central && !connectionReady
+      ? guidance.title
+      : inventoryUnknown
+        ? 'Chưa xác minh được inventory workspace'
+        : !workspaceReady
+          ? 'Chưa chọn thư mục làm việc'
         : 'Cần hoàn tất một bước thiết lập';
   if (summaryText) summaryText.textContent = fullyReady
     ? 'Sẵn sàng không có nghĩa đã nghiệm thu bản phát hành; bằng chứng ChatGPT vẫn được hiển thị riêng.'
@@ -654,30 +869,36 @@ function renderSetupState(snapshot) {
   if (nextDetail) {
     nextDetail.textContent = fullyReady
       ? 'Có thể mở Command Center để xem bằng chứng runtime.'
-      : central && !status.centralConnected
-        ? 'Ubuntu cần duyệt pairing; thao tác này không khởi động lại Windows.'
+      : central && !connectionReady
+        ? guidance.detail
+      : inventoryUnknown
+        ? `Không đọc được inventory workspace (${state.centralWorkspaceInventoryError || 'lỗi chưa rõ'}). Bấm tải lại; không đăng ký lại chỉ vì lỗi đọc.`
         : !workspaceReady
           ? 'Chọn một thư mục trước khi cấp quyền.'
-          : !authorityReady
+        : !authorityReady
             ? (central ? 'Chờ target được liên kết và local policy hợp lệ; không tự tạo quyền.' : 'Chờ route/policy hợp lệ; không tự tạo quyền.')
             : 'Kiểm tra lại snapshot runtime hiện tại.';
   }
   if (action) {
     action.textContent = fullyReady
       ? 'Mở Command Center'
-      : central && !status.centralConnected
-        ? 'Mở kết nối Ubuntu'
+      : central && !connectionReady
+        ? guidance.actionLabel
+      : inventoryUnknown
+        ? 'Tải lại inventory'
         : !workspaceReady
           ? 'Chọn thư mục'
           : central && !authorityReady
-            ? 'Mở liên kết tài khoản'
+            ? 'Mở quản trị & liên kết tài khoản'
             : 'Kiểm tra lại';
     action.dataset.setupAction = fullyReady
       ? 'overview'
-      : central && !status.centralConnected
-        ? 'deploy'
-        : !workspaceReady
-          ? 'workspace'
+      : central && !connectionReady
+        ? (guidance.action === 'check' ? 'check-connection' : 'deploy')
+        : inventoryUnknown
+          ? 'workspace-refresh'
+          : !workspaceReady
+            ? 'workspace'
           : central && !authorityReady
             ? 'account'
             : 'refresh';
@@ -686,9 +907,21 @@ function renderSetupState(snapshot) {
 
 async function handleSetupPrimaryAction() {
   const action = $('#setupPrimaryAction')?.dataset.setupAction;
+  if (action === 'check-connection') {
+    await refreshSystemSetup();
+    return;
+  }
+  if (action === 'workspace-refresh') {
+    await refreshControlPlaneWorkspaces({ quiet: false });
+    return;
+  }
   if (action === 'overview' || action === 'deploy' || action === 'workspace' || action === 'account') {
     if (action === 'account') {
       navigate('deploy');
+      // This is an explicit operator action: open the shared Ubuntu console
+      // so the user can bind the account/target, while keeping the local card
+      // read-only and truthful about what the client can observe.
+      await openControlPlaneConsole();
       const card = $('#controlPlaneAuthorityStatusCard');
       if (card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       return;
@@ -705,18 +938,24 @@ async function handleSetupPrimaryAction() {
 
 function navigate(page) {
   if (!pageMeta[page]) return;
+  const setupPages = ['system', 'deploy', 'workspace', 'settings'];
+  const inSetup = setupPages.includes(page);
   state.currentPage = page;
+  document.body.dataset.setupView = inSetup ? page : '';
   if (location.hash !== `#${page}`) history.replaceState(null, '', `#${page}`);
-  const primaryPage = ['build', 'health', 'guide', 'logs', 'settings'].includes(page) ? 'system' : page;
+  const primaryPage = inSetup || ['build', 'health', 'guide', 'logs'].includes(page) ? 'system' : page;
   $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.page === primaryPage));
-  $$('.page').forEach((item) => item.classList.toggle('active', item.dataset.pageView === page));
-  let [eyebrow, title, subtitle] = pageMeta[page];
+  $$('.page').forEach((item) => item.classList.toggle('active', item.dataset.pageView === page
+    || (inSetup && item.dataset.pageView === 'system')));
+  $$('.setup-section-link').forEach((item) => {
+    const selected = item.dataset.nav === page;
+    item.classList.toggle('active', selected);
+    if (selected) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+  let [eyebrow, title, subtitle] = pageMeta[inSetup ? 'system' : page];
   if (isCentralExecutor(state.snapshot?.settings)) {
-    if (page === 'deploy') {
-      eyebrow = 'UBUNTU CONTROL PLANE';
-      title = 'Kết nối executor với Ubuntu';
-      subtitle = 'Máy này không tạo OpenAI Tunnel hoặc Runtime API Key; pairing và policy từ Ubuntu quyết định route.';
-    } else if (page === 'guide') {
+    if (page === 'guide') {
       eyebrow = 'CENTRAL EXECUTOR';
       title = 'Hướng dẫn pairing với Ubuntu';
       subtitle = 'Theo dõi route evidence và policy action; connector OpenAI chỉ được quản lý tại server Ubuntu.';
@@ -1185,7 +1424,7 @@ function renderSnapshot(snapshot, options = {}) {
       ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
       : 'Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.');
   $('#heroStartButton').textContent = ready ? 'Triển khai lại' : (central ? 'Mở kết nối Ubuntu' : 'Bắt đầu triển khai');
-  $('#topStartButton').textContent = ready ? 'Triển khai lại' : (central ? 'Mở kết nối Ubuntu' : 'Khởi động nhanh');
+  $('#topStartButton').textContent = central ? 'Thiết lập hệ thống' : ready ? 'Triển khai lại' : 'Khởi động nhanh';
   renderSetupState(snapshot);
 
   $('#runtimeKeyHint').textContent = central ? 'Không dùng tại central executor; Ubuntu giữ credential.' : (secrets.runtimeApiKey ? 'Đã lưu bằng kho lưu trữ an toàn Windows' : 'Chưa lưu');
@@ -1300,21 +1539,62 @@ function renderDeploySummary() {
 
 async function reconcileControlPlaneEnrollment({ quiet = true } = {}) {
   if (!isCentralExecutor(state.snapshot?.settings) || typeof api.reconcileControlPlaneEnrollment !== 'function') return null;
+  if (centralSetupDevelopmentBlocked()) return null;
   try {
     const status = unwrap(await api.reconcileControlPlaneEnrollment());
+    state.centralEnrollmentStatusChecked = true;
     state.centralEnrollmentStatus = status;
     if (status?.enrollment_id) {
       state.centralEnrollmentReceipt = {
         enrollment_id: status.enrollment_id,
         device_id: status.device_id,
-        state: status.state
+        state: status.state,
+        server_origin: status.server_origin || null
       };
     }
-    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+    // The server origin is credential-free resume metadata owned by the
+    // node-agent.  Keep the current snapshot/input in sync immediately; the
+    // main process persists it only when the ordinary setting is empty.
+    if (status?.server_origin && state.snapshot?.settings
+      && !String(state.snapshot.settings.controlPlaneServerUrl || '').trim()) {
+      state.snapshot.settings.controlPlaneServerUrl = status.server_origin;
+      const field = $('#controlPlaneServerUrl');
+      if (field) field.value = status.server_origin;
+    }
     return status;
   } catch (error) {
+    state.centralEnrollmentStatusChecked = false;
+    state.centralEnrollmentStatus = {
+      ...(state.centralEnrollmentStatus || {}), fresh: false,
+      error_code: error?.code || error?.message || 'CONTROL_PLANE_ENROLLMENT_STATUS_FAILED'
+    };
     if (!quiet) toast('Không thể đồng bộ trạng thái pairing', error.message, 'warning');
     return null;
+  } finally {
+    if (state.snapshot) {
+      renderCentralExecutorMode(state.snapshot);
+      renderSetupState(state.snapshot);
+    }
+  }
+}
+
+async function refreshSystemSetup() {
+  const button = $('#refreshSystemSetup');
+  if (button?.disabled) return;
+  if (button) button.disabled = true;
+  try {
+    await refreshSnapshot({ forceForms: false });
+    if (isCentralExecutor(state.snapshot?.settings)
+      && !centralSetupRuntimeBlocked(centralSetupGuidance(state.snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus))) {
+      await reconcileControlPlaneEnrollment({ quiet: false });
+      await reconcileControlPlaneAuthorityStatus({ quiet: false });
+      await refreshControlPlaneWorkspaces({ quiet: true });
+    }
+  } catch (error) {
+    toast('Chưa kiểm tra được thiết lập', error.message, 'warning');
+  } finally {
+    if (button) button.disabled = false;
+    if (state.snapshot) renderSetupState(state.snapshot);
   }
 }
 
@@ -1372,11 +1652,13 @@ function renderCentralAuthorityStatus(central) {
     empty.textContent = 'Không có target nào được hiển thị ở máy này.';
     targets.append(empty);
   }
-  if (refresh) refresh.disabled = !central || state.busy || state.centralAuthorityBusy;
+  if (refresh) refresh.disabled = !central || state.busy || state.centralAuthorityBusy
+    || centralSetupRuntimeBlocked(centralSetupGuidance(state.snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus));
 }
 
 async function reconcileControlPlaneAuthorityStatus({ quiet = true } = {}) {
   if (!isCentralExecutor(state.snapshot?.settings) || typeof api.reconcileControlPlaneAuthorityStatus !== 'function') return null;
+  if (centralSetupDevelopmentBlocked()) return null;
   state.centralAuthorityBusy = true;
   if (state.snapshot) renderCentralExecutorMode(state.snapshot);
   try {
@@ -1397,7 +1679,10 @@ async function reconcileControlPlaneAuthorityStatus({ quiet = true } = {}) {
     return null;
   } finally {
     state.centralAuthorityBusy = false;
-    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+    if (state.snapshot) {
+      renderCentralExecutorMode(state.snapshot);
+      renderSetupState(state.snapshot);
+    }
   }
 }
 
@@ -1405,6 +1690,7 @@ async function rotateControlPlaneCredential() {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Đổi credential Ubuntu chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Đổi credential Ubuntu');
   if (state.centralEnrollmentStatus?.state !== 'approved') {
     throw new Error('Ubuntu phải duyệt máy trước khi đổi credential.');
   }
@@ -1536,6 +1822,16 @@ async function requestControlPlaneEnrollment() {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Pairing Ubuntu chỉ khả dụng cho central executor.');
   }
+  const existingState = String(
+    state.centralEnrollmentStatus?.state || state.centralEnrollmentReceipt?.state || ''
+  ).toLowerCase();
+  if (!state.centralEnrollmentStatusChecked) {
+    throw new Error('Hãy kiểm tra trạng thái yêu cầu hiện có trước khi gửi pairing mới.');
+  }
+  if (['request_sent', 'pending_operator_approval', 'approved'].includes(existingState)) {
+    throw new Error('Máy đã có yêu cầu pairing đang lưu. Không cần gửi lại; hãy mở quản trị Ubuntu hoặc kiểm tra trạng thái máy.');
+  }
+  assertPackagedCentralSetup('Pairing Ubuntu');
   const field = $('#controlPlaneServerUrl');
   const serverUrl = String(field?.value || '').trim();
   if (!serverUrl) throw new Error('Nhập HTTPS origin của Ubuntu Control Plane trước.');
@@ -1544,7 +1840,8 @@ async function requestControlPlaneEnrollment() {
   try {
     const receipt = unwrap(await api.requestControlPlaneEnrollment(serverUrl));
     state.centralEnrollmentReceipt = receipt;
-    state.centralEnrollmentStatus = { ...receipt, credential_generation: null, fresh: true, observed_at_ms: Date.now(), error_code: null };
+    state.centralEnrollmentStatusChecked = true;
+    state.centralEnrollmentStatus = { ...receipt, credential_generation: null, fresh: true, observed_at_ms: Date.now(), error_code: null, server_origin: receipt.server_origin || null };
     if (receipt?.server_origin && state.snapshot?.settings) {
       state.snapshot.settings.controlPlaneServerUrl = receipt.server_origin;
       if (field) field.value = receipt.server_origin;
@@ -1564,6 +1861,7 @@ async function chooseControlPlaneWorkspace() {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Chọn root đăng ký Ubuntu chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Chọn workspace Ubuntu');
   state.centralWorkspaceBusy = true;
   renderCentralExecutorMode(state.snapshot);
   try {
@@ -1585,6 +1883,7 @@ async function registerControlPlaneWorkspace() {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Đăng ký workspace Ubuntu chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Đăng ký workspace Ubuntu');
   const workspacePath = String(state.centralWorkspaceCandidate || '').trim();
   if (!workspacePath) throw new Error('Chọn thư mục local trước.');
   state.centralWorkspaceBusy = true;
@@ -1616,6 +1915,7 @@ async function replaceControlPlaneWorkspace(workspace) {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Đổi mức quyền thư mục Ubuntu chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Đổi mức quyền workspace Ubuntu');
   if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name) {
     throw new Error('Thư mục local được chọn không hợp lệ.');
   }
@@ -1662,13 +1962,23 @@ async function refreshControlPlaneWorkspaces({ quiet = false } = {}) {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Danh sách workspace Ubuntu chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Đọc inventory workspace Ubuntu');
   state.centralWorkspaceListBusy = true;
+  state.centralWorkspaceInventoryStatus = 'loading';
+  state.centralWorkspaceInventoryError = null;
   renderCentralExecutorMode(state.snapshot);
   try {
     const workspaces = unwrap(await api.listControlPlaneWorkspaces());
     state.centralWorkspaces = Array.isArray(workspaces) ? workspaces : [];
+    state.centralWorkspaceInventoryStatus = 'loaded';
+    state.centralWorkspaceInventoryError = null;
     if (!quiet) toast('Đã tải workspace local', `${state.centralWorkspaces.length} workspace đang đăng ký.`, 'success');
     return state.centralWorkspaces;
+  } catch (error) {
+    state.centralWorkspaces = null;
+    state.centralWorkspaceInventoryStatus = 'unknown';
+    state.centralWorkspaceInventoryError = error?.code || error?.message || 'CONTROL_PLANE_WORKSPACE_LIST_FAILED';
+    throw error;
   } finally {
     state.centralWorkspaceListBusy = false;
     if (state.snapshot) renderCentralExecutorMode(state.snapshot);
@@ -1679,6 +1989,7 @@ async function installControlPlaneReadOnlyPolicyAssignment(workspace) {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Đồng bộ policy read-only chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Đồng bộ policy read-only');
   if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name) {
     throw new Error('Workspace local được chọn không hợp lệ.');
   }
@@ -1721,6 +2032,8 @@ async function refreshCentralWorkspaceUiAfterCommit() {
   } catch {
     stale = true;
     state.centralWorkspaces = null;
+    state.centralWorkspaceInventoryStatus = 'unknown';
+    state.centralWorkspaceInventoryError = 'CONTROL_PLANE_WORKSPACE_REFRESH_FAILED';
   }
   try {
     await refreshSnapshot({ forceForms: false });
@@ -1736,6 +2049,7 @@ async function retireControlPlaneWorkspace(workspace) {
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Thu hồi workspace Ubuntu chỉ khả dụng cho central executor.');
   }
+  assertPackagedCentralSetup('Thu hồi workspace Ubuntu');
   if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name) {
     throw new Error('Workspace local được chọn không hợp lệ.');
   }
@@ -2060,7 +2374,15 @@ function bindEvents() {
     $$('.choice').forEach((choice) => choice.classList.toggle('selected', choice.contains(input) && input.checked));
   }));
 
+  $('#refreshSystemSetup')?.addEventListener('click', () => refreshSystemSetup());
+  $('#openControlPlaneConsole')?.addEventListener('click', () => openControlPlaneConsole());
+  $('#controlPlaneServerUrl')?.addEventListener('input', () => renderControlPlaneConsoleLink());
+  $('#refreshControlPlaneEnrollment')?.addEventListener('click', () => refreshSystemSetup());
   $('#refreshButton').addEventListener('click', () => {
+  if (['system', 'deploy', 'workspace', 'settings'].includes(state.currentPage)) {
+      refreshSystemSetup();
+      return;
+    }
     // Overview refreshes have one owner: Control Center.  Keep this top-bar
     // affordance on the same lightweightSnapshot + liveOrchestration path.
     document.dispatchEvent(new CustomEvent('coding-tools:overview-refresh-request'));
@@ -2071,10 +2393,10 @@ function bindEvents() {
   $('#deviceStop')?.addEventListener('click', () => runRuntime('stop'));
   $('#deviceRepair')?.addEventListener('click', async () => { await repairHealth(); await refreshSnapshot(); });
   $('#topStartButton').addEventListener('click', () => isCentralExecutor(state.snapshot?.settings)
-    ? navigate('deploy')
+    ? navigate('system')
     : runRuntime(state.snapshot?.status.fullyReady ? 'restart' : 'start'));
   $('#heroStartButton').addEventListener('click', () => isCentralExecutor(state.snapshot?.settings)
-    ? navigate('deploy')
+    ? navigate('system')
     : state.snapshot?.status.fullyReady ? runRuntime('restart') : navigate('deploy'));
   $('#setupPrimaryAction')?.addEventListener('click', () => handleSetupPrimaryAction());
   $('#overviewRestart').addEventListener('click', () => runRuntime('restart'));
@@ -2278,7 +2600,8 @@ async function initialize() {
     $('#bootScreen')?.setAttribute('aria-hidden', 'true');
 
     const firstSnapshot = await refreshSnapshot({ forceForms: true });
-    if (firstSnapshot && isCentralExecutor(firstSnapshot.settings)) {
+    if (firstSnapshot && isCentralExecutor(firstSnapshot.settings)
+      && !centralSetupRuntimeBlocked(centralSetupGuidance(firstSnapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus))) {
       // The receipt is reconstructed from the node's durable config/central
       // status, so a renderer reload does not look like a new enrollment.
       await reconcileControlPlaneEnrollment({ quiet: true });
@@ -2288,7 +2611,11 @@ async function initialize() {
       // resumes at the correct step after the window is reopened.
       if (typeof api.listControlPlaneWorkspaces === 'function') {
         try { await refreshControlPlaneWorkspaces({ quiet: true }); }
-        catch (_) { /* The setup card keeps an explicit unknown/pending state. */ }
+        catch (_) {
+          state.centralWorkspaceInventoryStatus = 'unknown';
+          state.centralWorkspaceInventoryError ||= 'CONTROL_PLANE_WORKSPACE_LIST_FAILED';
+          /* The setup card keeps an explicit unknown state. */
+        }
       }
     }
     if (firstSnapshot && !firstSnapshot.settings.firstRunCompleted) {

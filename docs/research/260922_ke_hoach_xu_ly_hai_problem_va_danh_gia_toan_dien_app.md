@@ -1,0 +1,1114 @@
+# Kế hoạch xử lý hai Problem và đánh giá toàn diện khả năng theo đuổi mục tiêu của app
+
+Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-web`.
+
+Trạng thái tài liệu: **A0/A1 + A2 ORACLE/IPC READER LOCAL PROOF; B1 FOCUSED PROOF — đã đọc runtime thật nhưng chưa có client/reboot receipt, EOCL acceptance/live activation hoặc đóng Problem**.
+
+> **Cập nhật mới nhất 22/09 khoảng 17:59 +07:** đã nối sanitized completed contact qua official Host identity projection tới collector với exact target/request filter; 50 oracle/collector + 3 affected Host tests PASS. Xem **16.11**. Mục tiêu toàn bộ vẫn ACTIVE; không đổi source proof thành natural/activation closure. Các mục 1–15 giữ baseline nghiên cứu lịch sử.
+
+## 0. Kết luận điều hành
+
+App có nền tảng thực thi, quyền, continuation, recovery và phân tích khá sâu, nhưng khoảng cách lớn nhất hiện nay nằm ở **tính liên tục của bằng chứng, sự thống nhất source–package–runtime, và kết quả sử dụng đầu-cuối**. Không đủ căn cứ nói app đã theo đuổi một Goal đến kết quả tin cậy mà người dùng không phải liên tục chuyển tin/nhắc tiếp tục.
+
+Hướng được khuyến nghị là **hội tụ trên kiến trúc hiện có, ưu tiên đường central đã được sản phẩm lựa chọn**, không viết lại Goal Engine, không thêm database tri thức có quyền điều hành, không tăng routing tự động hoặc nới guard để làm xanh status. Cần đối chiếu contract của Problem boot cũ với role central trước khi dùng proof mới; không tự sửa tiêu chí để làm closure dễ hơn.
+
+Thứ tự quyết định:
+
+1. Khóa baseline và đối soát ba RUN/checkpoint còn trong report nhưng không có trong canonical hiện tại.
+2. Chốt exact Problem Revision, mode sử dụng, owner, package và điều kiện nghiệm thu; giữ hai Problem riêng.
+3. Sửa P1/P2 handoff và oracle; tận dụng các sửa đổi source/candidate đã có, tránh làm lại.
+4. Đưa đúng package/runtime/epoch/central route về trạng thái dùng được bằng một activation được cấp quyền và có postflight đầy đủ.
+5. Kiểm chứng continuation bằng worker/model thật trong cửa sổ không có controller can thiệp; giữ nguyên ngân sách, quyền và chốt nghiệm thu.
+6. Chạy recovery/reboot/hai máy và natural-use, nối exact criterion coverage và independent outcome.
+7. Sau một Problem tự nhiên, thu 5–10 Problem để hiệu chỉnh phương pháp; chỉ mở nghiên cứu P5 A/A rồi A/B khi dữ liệu và quyền đủ. Không dùng cohort nhỏ như bằng chứng thống kê xác nhận hiệu quả.
+
+**Không công bố một phần trăm hoàn thiện chung.** Một số phần đã có source/test hoặc candidate package, nhưng còn thiếu live, outcome và lịch sử canonical. Gộp các mức này thành một điểm số sẽ che đúng các rủi ro cần giải quyết.
+
+### 0.1. Phạm vi và giới hạn của lần đánh giá
+
+- Đã đọc source/test/docs liên quan, dữ liệu canonical qua snapshot nhất quán và các projection. Đã đối chiếu trạng thái runtime trong phiên audit liền trước ngày 22/09; thời điểm từng nguồn được ghi riêng.
+- Đánh giá toàn diện **theo mục tiêu sản phẩm và các ranh giới nghiệm thu**, không phải pentest, kiểm thử mọi dòng code, benchmark tải, kiểm toán nhà cung cấp hay UAT toàn bộ giao diện.
+- Không sửa source, không mở RUN/Goal/experiment, không cấp consent, không accept/reconcile ledger, không restart/kill/reboot, không đổi IAM/credential/policy, không commit/push/install/deploy.
+- Chỉ file Markdown này được tạo trong repository. Các kế hoạch, report lịch sử và dirty work của tác vụ khác không bị sửa.
+- Số liệu thiếu là `UNKNOWN`; sự vắng mặt trong snapshot hiện tại không chứng minh sự kiện chưa từng xảy ra ở bất kỳ máy/ledger nào.
+
+## 1. Nguồn chứng cứ và baseline
+
+### 1.1. Hệ quy chiếu
+
+| Mã | Nguồn | Cửa sổ/identity | Dùng để kết luận | Không dùng thay cho |
+| --- | --- | --- | --- | --- |
+| E01 | Git/source checkout | Quan sát 22/09 16:47, `main@77d73471dc896a1f1ac189b2df46529276481552`; worktree dirty | Source có gì, delta thuộc ai | Package hoặc loaded runtime |
+| E02 | `.coding-tools/orchestration/ledger.sqlite3` qua SQLite Backup API | Snapshot 22/09 **16:38:44.074**; causal event cuối 15/09 **18:21:44.082** | Problem/Revision, RUN/WAVE, checkpoint, authority và lịch sử trong bản hiện có | Các report ngoài ledger hoặc state trên Ubuntu |
+| E03 | `.coding-tools/performance.json` | Quan sát riêng, hash/cửa sổ ở mục 3 | Tool/error/cache/search/routing/timing projection | Billing, causal outcome hoặc full-history percentiles |
+| E04 | `.coding-tools/task-history.json`, `task-state.json`, contextual projections | Dữ liệu rolling/archived có freshness riêng | Continuity và UI diagnostics | Canonical causal ordering |
+| E05 | Official Recovery IPC, `dev:status`, Scheduled Task và OS process read | 22/09 **16:33–16:38** | Process, role, loaded/disk revision, epoch/readiness tại thời điểm đọc | Reboot acceptance, real-client task hoặc remote production |
+| E06 | Generated run summaries và pre-reboot receipt | Embedded event time ngày 15/09, không phải filesystem mtime | Lịch sử report, exact ID cần đối soát | Acceptance canonical nếu row/chain không có |
+| E07 | Maintained docs và candidate setup plan | Có checkpoint tới 22/09; mỗi checkpoint có fingerprint riêng | Tiến triển được tài liệu ghi nhận, tránh làm lại | Live proof độc lập của phiên này |
+| E08 | Golden HR / EGRI research | Calibration lịch sử | Bài học, giả thuyết và thiết kế phép đo | Outcome mới, quyền HR hoặc causal ROI |
+
+Snapshot E02 dùng để tái kiểm tra: `E:\Caches\Temp\codex-prl-readonly-audit-3vu2z_az\ledger.sqlite3`, kích thước `97,509,376` byte, schema `12`, mở `immutable=1`, `query_only=ON`.
+
+- Physical SHA-256: `c894f57ebdb0c1c7995cb5dc315edbc39a317d6143afe2d1cda1184b9034f39a`.
+- Logical SHA-256: `06351abf428ef9c854c2f0a8f8bf09b59e52632630eb8ab7dd9b603482db5ffb`.
+- `integrity_check=ok`, foreign-key violations `0`; reporter chính thức ghi `mutated_canonical_ledger=false`.
+- Snapshot tạm là vật chứng audit, không phải DB để thay canonical. Hash này không được dùng làm preflight cho một mutation tương lai.
+
+SQLite Backup API cung cấp bản sao nhất quán trong khi nguồn có thể đang hoạt động. Điều đó bảo đảm tính nhất quán của **bản được chụp**, không chứng minh bản đó chứa mọi sự kiện từng phát sinh ở các nhánh lịch sử khác. Nguồn phương pháp: [SQLite Online Backup API](https://www.sqlite.org/backup.html).
+
+Git đầu phiên: HEAD bằng `origin/main` **lưu cục bộ**, chưa fetch; 40 tracked changes và 25 untracked entries, không staged/unmerged. Không coi source root scanner PASS là Git clean. Dirty setup/UI/control-plane/icon/evidence phải được phân loại owner trước bất kỳ implementation/delivery nào.
+
+### 1.2. Hai hợp đồng riêng
+
+| Problem chính xác | Revision | Tiêu chí | Canonical state | RUN trong snapshot | Kết luận |
+| --- | --- | ---: | --- | --- | --- |
+| `prl-22e670302757c9b7663170e226ed7c26` | 1 | 12: C01–C12 | OPEN; `closed_at=null` | 63 = 44 accepted + 16 aborted + 3 active | Boot/host/recovery/reboot chưa closure |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` | 2 | 18: 4 continuity/telemetry + BG01–BG14 | OPEN; `closed_at=null` | 39 = 16 accepted + 10 aborted + 13 active | Durable Goal/no-manual-nudge chưa closure |
+
+18 tiêu chí của revision 2 đã được đọc trực tiếp từ `problem_revisions.typed_contract_capsule`: **BG01–BG14 thực sự đã nằm trong canonical revision 2**, không còn chỉ là đề xuất trong file kế hoạch. Provisional resolution của revision 1 cũ không được kế thừa sang revision 2.
+
+Trong metadata WAVE/checkpoint của hai current revision: số trường `coverage_manifest`, `criterion_dispositions`, `problem_outcome_claim` có nội dung đều **0**. Không có provisional/confirmed resolution event cho hai current revision. Đây là **thiếu proof linking**, không phải kết luận source làm được 0/30 tiêu chí.
+
+### 1.3. Chênh lệch lịch sử cần xử lý trước closure
+
+| Generated report | Checkpoint được ghi | Canonical snapshot hiện tại |
+| --- | --- | --- |
+| `run-dcb539e0e1694bc1bb29eed2b2e07f8b`: safe canary arming | `8d10f27638e2498cba80edf0bcbe77ce` | Không có RUN tương ứng |
+| `run-d01a5dce50c846fc8e13673cdfc8b3b3`: packaged cold-start | `6fb3de41a26349f5995a6a2bd92d82f2` | Không có RUN/checkpoint tương ứng |
+| `run-b194ab1e311e42efa1dd0614ca245037`: pre-reboot arming | `c8f32a66c7714204bcdd64162dc20ee1` | Không có RUN/checkpoint tương ứng |
+
+Canonical `events` có 25,694 row, max seq `59694`, event cuối `2026-09-15T11:21:44.082Z`; checkpoint cuối `11:21:42.754Z`. Các report trên có event muộn hơn, gồm seq `59702/59734/59815`. Ba accepted report ngoài canonical khớp chênh lệch **63→66 RUN, 44→47 accepted** của báo cáo cũ. Đây không đơn thuần là thay đổi số đếm do runtime chạy tiếp.
+
+Không phủ nhận packaged spawn lịch sử, nhưng không tái cấp authority từ report. Nguyên nhân khác biệt ledger chưa xác lập. Integrity/FK PASS không chứng minh lịch sử đầy đủ. Phải phân biệt: sai ledger target, snapshot cũ, branch/delivery divergence, archival omission, hoặc thiếu provenance khác; chưa gán nguyên nhân nào là fact.
+
+### 1.4. Runtime và candidate
+
+| Thành phần | E05 đã quan sát | Ý nghĩa |
+| --- | --- | --- |
+| Recovery Host | Healthy, PID 14300, `development`, đúng checkout | Host sống; không phải packaged acceptance host 1.0.0 trong report cũ |
+| Role | `central_executor` | Không dùng local Tunnel xanh làm oracle duy nhất |
+| MCP/native | Cả hai true; MCP running=disk `396e1692…` | MCP local sống và revision khớp tại thời điểm đọc |
+| Recovery Host revision | Running `80f71aa1…`, disk `ec6c20ea…`, update pending | Toàn hệ thống chưa source-continuous |
+| Epoch | `activation-mucbq2r3-51dffc08603d42b6c30e1413ec68862f`; durable FAILED, `ACTIVATION_REQUEST_EXPIRED` | Projection UPDATE_INCOMPLETE; admission đóng; không sửa record thành READY |
+| Readiness | localReady/centralConnected/authorityReady/fullyReady đều false | Chưa usable đầu-cuối |
+| Connector/local Tunnel | CHANGED_NEEDS_DISCOVERY; rediscovered false; Tunnel false | Cần oracle theo role; không tự kết luận local Tunnel hỏng trong central mode |
+| Supervisor | Exact Scheduled Task không tồn tại | Không có current installed-autostart proof |
+| Startup settings | `startWithWindows=false`, `autoStartServices=false` | Không được tự bật chỉ vì muốn auto-recovery PASS |
+
+Source `runtimeReadiness()` tách `central_executor` và `direct_legacy`: central cần localReady + centralConnected + authorityReady, không giả local Tunnel. MCP revision khớp không loại trừ Host drift hoặc epoch hết hạn. Epoch expired là lỗi được quan sát; chưa chứng minh Host drift là nguyên nhân làm epoch đó expired.
+
+Candidate setup đang có nhiều proof mới trong [kế hoạch thiết lập 22/09](../260922_SYSTEM_SETUP_SIMPLIFICATION_PLAN.md), gồm source/UI checks, candidate resource/smoke và Control Plane artifact portability. Đây là **documented candidate evidence**, có cả failed/rebuilt attempt; không gán tất cả vào một fingerprint, không dùng các tổng test 939/943/944 của những lượt khác nhau làm một mẫu tăng trưởng. Chưa cài candidate thay runtime hiện tại trong audit này. Tái dùng exact candidate còn khớp bytes; nếu drift thì chỉ chạy lại phần bị invalidated.
+
+## 2. Mục tiêu app và tiêu chuẩn thành công
+
+Mục tiêu vận hành rút từ [ROADMAP](../ROADMAP.md), [shared-account status](../SHARED_ACCOUNT_WORKSPACE_STATUS.md) và hai canonical capsule:
+
+1. Người dùng chọn đúng workspace bằng binding; client cùng account điều khiển đúng node/workspace, không copy credential/context hoặc đổi target ngầm.
+2. Một Goal được giao một lần, có scope/ngân sách; runtime thực sự gọi lượt worker tiếp theo khi hợp lệ, không biến người dùng thành người chuyển báo cáo.
+3. Hệ thống thực thi an toàn qua lỗi/reconnect/restart được phép: không duplicate effect, không chạy sai revision/owner, không vượt Stop/revoke.
+4. Kết quả được kiểm bằng oracle đúng tầng; technical acceptance và independent user outcome khác nhau.
+5. Mỗi lần xử lý để lại bằng chứng có thể tái sử dụng, giúp giảm rework/TTAR/TTPR và công vận hành; không chỉ tăng lượng log hoặc số test.
+
+| Mức đầy đủ | Điều kiện | Hiện trạng tổng hợp |
+| --- | --- | --- |
+| Kỹ thuật dùng được | Correct target, exact loaded bytes, hợp lệ epoch/route/policy, thực thi/read/write/stop/receipt đúng | Có source/focused/candidate proof; E05 chưa đủ live readiness |
+| Hiệu quả công việc thực | Một Goal natural end-to-end, no unnecessary nudge/relay, independent outcome, sau đó cohort đại diện | Hai current revision chưa có coverage/outcome đủ; không suy từ accepted RUN |
+| Sẵn sàng phát hành/vận hành | Frozen artifact, installed/reboot/multi-client/restore/retention/secret/OS proof, owner approval và destination cụ thể | Chưa đủ bằng chứng; không được dùng packaged smoke thay các gate còn lại |
+
+North Star: **giảm tổn thất kinh tế để đạt kết quả được nghiệm thu dưới sàn chất lượng, quyền, bảo mật và đúng dữ liệu cố định**. Ưu tiên theo thứ tự: quality/safety → kết quả đúng ngay từ lần đầu → thời gian đến outcome → tài nguyên/chi phí có quan sát → công người vận hành → độ đơn giản. Không tối ưu số tool call, LOC hay tên model riêng lẻ.
+
+## 3. Phân tích chỉ số và chất lượng dữ liệu
+
+### 3.1. Population và cửa sổ: không join mù
+
+E02 causal events thuộc `2026-08-22T07:01:58.223Z`–`2026-09-15T11:21:44.082Z`. Các bảng RUN/checkpoint có thể bao gồm lifecycle khởi tạo trước cửa sổ event hiện còn; không gán toàn bộ history app vào population này.
+
+E03 performance version 6 được đọc và hash xác minh lại lúc **22/09 16:58**:
+
+- SHA-256: `417c63ba0c8f57486eeb80cba30c8393cb09f0bbcb42bbd1b2dd0dcd5340659c`.
+- `last_finished_at=2026-09-22T06:59:48.707Z` (13:59:48 +07).
+- Run-metric timestamps quan sát được từ `2026-09-14T19:48:58.745Z` tới `2026-09-22T06:59:38.432Z`; đây **không chứng minh start time của toàn bộ cumulative counters**.
+- `recent` chỉ 100 records, từ `2026-09-15T11:16:32.954Z` tới `2026-09-22T06:59:48.707Z`.
+- Task-history timestamp mới nhất đọc được `2026-08-24T17:41:15.012Z`; task-state `2026-09-09T12:23:33.868Z`. Contextual projections có population riêng; root task-state không đại diện toàn workspace.
+
+Performance có observation ngày 22/09 nhưng canonical causal events chỉ tới 15/09. Có thể có hoạt động ngoài RUN hoặc nguồn/window khác; **không suy từ đó rằng mọi tool call bị mất ledger**. Cần exact correlation để xác định phần nào thực sự thiếu. Tỷ lệ chỉ mô tả tập đã thấy, không phải SLO uptime hay tỷ lệ thành công toàn sản phẩm.
+
+### 3.2. Tool/error, idempotency và output
+
+| Chỉ số E03 | Giá trị | Diễn giải có thể bảo vệ | Hướng xử lý |
+| --- | ---: | --- | --- |
+| Tool calls / errors | 2,689 / 373 = **13.87%** | Tỷ lệ error envelope trong cumulative projection, không đồng nghĩa bug rate | Phân lỗi theo cause và work origin trước ưu tiên |
+| Runtime errors | 137/373 = 36.73% | Nhóm lớn nhất, gồm gate/runtime conditions | Role-aware diagnosis, source/epoch continuity và actionable next step |
+| Validation errors | 123/373 = 32.98% | Có thể gồm lỗi input/negative tests; chưa gán toàn bộ là defect | Nhóm top typed codes và input schema delta, thêm preflight hints |
+| Authority denied | 61/373 = 16.35% | Có thể là guard hoạt động đúng | Cải thiện hướng dẫn authority; không hạ guard |
+| Internal / not-found | 22/373 = 5.90%; 14/373 = 3.75% | Cần exact error/cause/source before fix | Ưu tiên internal tái hiện trong natural workload |
+| User-blocked / idempotency / unknown | 11 / 4 / 1 | Lần lượt 2.95% / 1.07% / 0.27% trên errors | Giữ typed causes; unknown cần phân loại, không đổi verdict |
+| RUN-bound calls | 1,407/2,689 = **52.36%** | Chỉ phần đó có run_metrics; unbound không tự là missing causal record | Ghi work_origin/non_problem/correlation để giải thích phần còn lại |
+| RUN-bound errors | 240/373 = 64.34% | Cửa sổ/tập khác full tool population | Không chia 240 cho 2,689 để tạo task error KPI |
+| Required idempotency key | 152/152 = **100%** trong policy epoch | Key presence đạt; không chứng minh exactly-once effect | Giữ; nghiệm thu lost-ACK/duplicate-delivery bằng journal |
+| Eligible key presence | 559/1,021 = 54.75% | Includes optional cases, không phải compliance failure | Chỉ mở rộng automatic key khi semantics/idempotency proof cho phép |
+| Deduplicated calls | 2 | Quan sát loại call lặp, không phải toàn bộ duplicate-effect metric | Tách call dedup và side-effect replay safety |
+| Response / model-visible bytes | 145,894,909 / 5,227,254 | Visible chiếm **3.58%** response; hiệu ứng chiếu/output bound | Không quy ra token tiết kiệm/tiền hoặc chứng minh không mất evidence |
+| Tail/pagination evidence | 7 samples; 0 truncated/offered/reads/stale trong bộ counter này | Mẫu ít, chưa stress overflow/follow-up | Kiểm boundary đúng case; không thêm pagination framework vì số 0 |
+
+Runtime + validation + authority-denied là 321/373 = **86.06% error envelopes**. Đây là căn cứ ưu tiên **làm rõ precondition/role/source/authority và taxonomy**, không phải quyền bỏ validation/authority để giảm tỷ lệ lỗi.
+
+### 3.3. Timing: đã thấy gì, chưa đo được gì
+
+| Population | Chỉ số | Giá trị | Caveat |
+| --- | --- | ---: | --- |
+| Cumulative E03 | `local_execution_ms` | 9,094,340 ≈ 2.53 giờ | Tổng cộng tool durations, có thể overlap; không phải elapsed task time |
+| Cumulative E03 | `estimated_wait_ms` | 26,070,284 ≈ 7.24 giờ | Inter-tool gaps; gồm user/thinking/approval/idle; không tự là thời gian lãng phí |
+| Bounded tail n=100 | Duration nearest-rank p50/p95 | 890 / 13,203 ms | Chỉ tail, không phải toàn kỳ hay latency SLO |
+| Bounded tail n=100 | Wait-before p50/p95 | 7,766 / 30,266 ms | Không gọi đây là provider latency |
+| Phase sample n=123 | total/workspace/localization/materialization sums | 464,050 / 51,049 / 164,497 / 1,399 ms | Các phase không phải partition exhaustive; không ép cộng bằng total |
+
+Tail gồm task_control 47, exec_command 23, workspace_context 18, agent_workflow 9, workspace_preheat 3; tail errors 15/100. Tool mix này khác một natural coding population, nên không dùng nó để kết luận người dùng viết feature mất trung bình bao lâu.
+
+`estimated_wait_ms / (estimated_wait_ms + local_execution_ms) ≈ 74.14%` chỉ là tỷ trọng của **hai bộ đếm cộng dồn**, không phải “74% thời gian có thể tiết kiệm”. Chưa có phase join/censoring/operator-observation đủ để tính TTAR/TTPR hoặc avoidable wait cho hai current Problem.
+
+Metric schema cần ghi temporality, start/end và reset epoch. Cumulative sum, delta và histogram có semantics khác; percentile cần population/histogram/distribution thích hợp. Không lấy mean/tổng suy ra p95. Nguồn phương pháp: [OpenTelemetry Metrics Data Model](https://opentelemetry.io/docs/specs/otel/metrics/data-model/).
+
+### 3.4. Cache, localization và route
+
+| Surface | Đã đo | Nhận định | Quyết định |
+| --- | --- | --- | --- |
+| E03 proof cache | 117 eligible, 0 hit, 117 miss; cold 104 (88.89%), fingerprint changed 13 (11.11%) | Chưa có proof reuse trong window này; đa số miss là cold | Đầu tiên kiểm repeated-proof opportunity và 13 invalidations; không cache unsafe |
+| E02 proofs | 942 = 813 passed + 129 failed; cache hit 5/miss 937 | Tỷ lệ pass 86.31%, hit 0.53% trên proof rows lịch sử | Không mâu thuẫn với 0/117 E03 vì khác window/eligibility; không gọi pass rate là outcome rate |
+| Localization E03 | 55 samples; 262 attempted queries; handled 0; fallback 262; available samples 0 | Không có semantic success evidence trong tập này | Một provider-bound canary, record reason/lang/workspace/fingerprint; không bật LSP đại trà trước availability proof |
+| Route E02 | 613 selections: deterministic→deterministic 585; auto→deterministic 9; sol_xhigh→sol_xhigh 15; luna 2; mini 2 | 9/9 auto fail-closed đúng; mỗi selection không phải unique task/paid inference | Giữ auto deterministic; không chọn winner từ n=2/15 không paired |
+| Execution mode E03 | 1,407 mode records; 1,378 mcp_only, 22 auto, 7 deep_single_lane | Mode denominator khác route-resolved 894 records | Không nhập execution mode và model route thành cùng KPI |
+
+Cache miss do input fingerprint thay đổi có thể hoàn toàn đúng. Chỉ sửa fingerprint nếu discriminator chứng minh thành phần không phải input causal đang làm invalidation (ví dụ telemetry volatile lọt vào source identity). Không tăng hit rate bằng bỏ source/toolchain/oracle/authority inputs. Semantic fallback phải giữ hoạt động đúng khi provider unavailable; tối ưu này không được chặn technical canary không cần LSP.
+
+### 3.5. Tri thức, coverage và xác nhận kết quả
+
+| E02 object/event | Số lượng | Ý nghĩa và giới hạn |
+| --- | ---: | --- |
+| Problem threads / revisions | 42 / 49 | 30 provisional, 7 open, 3 confirmed, 2 blocked; không lấy 30 provisional làm hoàn tất |
+| Problem events | 304 = 286 EXACT + 18 UNLINKED | Exact-link 94.08%; event coverage, không phải criterion/outcome coverage |
+| Accepted checkpoints | 270 | Chỉ technical checkpoints trong snapshot |
+| Handoff capsules | 3, đều active | Ít capsule không chứng minh đủ context; active record không phải live worker |
+| Knowledge checkpoints / ACK | 3 / 67 | 40 CURRENT, **27 MISSING = 40.30%** ACK records; không phải 40% task thất bại |
+| Knowledge read observed | 21 events | 16 revision 0, 5 revision 1; phải phân biệt chưa có checkpoint với lỗi không đọc |
+| Coordination messages | 22 pending | Durable queue trạng thái; chưa xác nhận delivery/liveness hiện tại |
+| Quality outcome events | 272 | 270 (**99.26%**) là `accepted_proof_auto_v1`; 2 nguồn review/repeat khác, không phải 272 independent user outcomes |
+| Explicit user outcome receipts | 3 | Controller-reported explicit user receipts ở Problem khác; không chứng minh external business oracle, không thuộc hai current revision |
+| Continuity telemetry | 384 | 254 report_gate + 87 accepted_checkpoint + 42 continuation_failure + 1 manual_nudge |
+| Provenance natural trong continuity | 3/384 = 0.78% | 2 report-gate + 1 accepted-checkpoint; 381 legacy_unknown; không phải 3 Goal success |
+| Current target grants | goal_continuations=0; goal observations=0 | Không có sample trong snapshot để chứng minh source grant đã chạy tự nhiên |
+
+Không có dedicated table mang tên lesson/solution-plan/framing/P4 trong inventory được đọc; các signals tương ứng nằm trong events/derived modules. Không được từ đó khẳng định “app không có tri thức”, cũng không mô tả các report như một knowledge authority database mới.
+
+**Acceptance-throughput của hai Problem không phải completion-rate:** 44/63=69.84% và 16/39=41.03% RUN accepted chỉ phản ánh status mix trong lịch sử đã liên kết. Active/aborted/replanned không độc lập, không random, có missing tail, nên không so hai tỷ lệ để kết luận Problem nào dễ hơn hoặc model nào tốt hơn.
+
+### 3.6. P4/P5: nhiều recommendation, chưa có hiệu quả được chứng minh
+
+P4/event-derived:
+
+- `oracle_preflight`: 207 events; strong_oracle true 4, false 203; verification none 151 (72.95%), tests 52, build 3, all 1.
+- Classification hiện có: NOT_RUN 96, VERIFICATION_PASSED 22, ENVIRONMENT_UNAVAILABLE 2; **87 record thiếu field classification**. Thiếu field không tính là PASS/FAIL.
+- `solution_shadow_recommended`: 207; toàn bộ shadow_only, automatic_policy_activation=false, production_behavior_changed=false; recommendation khai oracle_strength strong 199, moderate 8; root-cause confidence high 191, medium 16.
+
+Sự khác biệt **4 preflight-strong so với 199 recommendation-strong** là tín hiệu cần đối chiếu definitions và exact run/wave/time. Hai field không mặc nhiên cùng semantics: một là preflight observation, một là structured recommendation. Chưa đủ kết luận 195 recommendation sai; cũng không dùng confidence cao tự khai để coi oracle đã mạnh. Packet cần join exact scope và so recommendation-before-write với observed proof/outcome, giữ unknown và không sửa label lịch sử.
+
+P5: 6 epoch đều P5-A0 shadow A/A, 5 closed và 1 hard-stopped với `post_open_source_scope_drift`; enrollment/assignment/protocol-start/workflow-binding/assignment-outcome đều **0**. Vì denominator assigned=0, treatment effect, arm quality, SRM và causal ROI đều **UNESTIMABLE**, không phải hiệu quả 0% hay thí nghiệm PASS. Giữ hard-stop evidence; không reopen epoch cũ hoặc điền synthetic samples.
+
+### 3.7. Tiền, token và economics
+
+Ledger chỉ có **7 usage_event**: 6 interrupted và 1 completed. Các token fields có mặt 7/7 trong nhóm này; provider_cost/reported_cost đều **0/7 có giá trị**, derived_cost/pricing_revision **1/7**, provider_ms/queue_ms **0/7**. Performance projection không có provider-billing counter.
+
+Do đó:
+
+- Có một mẫu nhỏ provider token telemetry, chưa có coverage toàn task/RUN/Problem; không dùng 7/7 để gọi usage coverage app 100%.
+- Một cost tính từ pricing table không phải invoice/provider bill. Không đưa ra tiền tiết kiệm hoặc ROI của cache/route/continuation.
+- CAR tiền tệ, TTPR đến confirmed outcome của hai Problem, provider latency và manual operator time giữ UNKNOWN; không biến thiếu cost thành miễn phí.
+- Bổ sung correlation/coverage và sources trước; pricing version chỉ cần khi thực sự tính derived cost, phải tách provider-reported/derived/scenario.
+
+### 3.8. Ưu tiên suy ra từ dữ liệu
+
+1. X0 history continuity + outcome/coverage là ưu tiên cao nhất: nhiều accepted proof không bù được exact lineage thiếu.
+2. Hoàn thiện actionable setup/runtime/authority errors và source/epoch alignment: nhóm này chiếm phần lớn error envelopes, nhưng phải phân biệt refusal đúng với defect.
+3. Chốt một oracle natural mạnh và zero-nudge measurement: không tăng recommendation volume khi feedback độc lập còn ít.
+4. Knowledge-currentness và bounded case provenance: xử lý 27 MISSING ACK bằng nguyên nhân exact, không bulk auto-ACK.
+5. Sau baseline usable: kiểm 13 cache invalidations và 262 semantic fallbacks bằng case có mục tiêu; không xây tầng mới từ raw counts.
+6. Usage/P4/P5 chỉ promote khi đủ assigned population, source/runtime ổn định và independent outcome; tiếp tục shadow-only trong thời gian đó.
+
+## 4. Dữ liệu tri thức: app đang có gì và còn thiếu gì?
+
+### 4.1. Không đánh đồng lưu trữ với tri thức đã kiểm chứng
+
+| Lớp dữ liệu | Thành phần hiện có | Giá trị | Ranh giới cần giữ |
+| --- | --- | --- | --- |
+| Lịch sử causal | PRL + orchestration ledger, acceptance/file receipts, effect journals | Truy ngược failure→attempt→proof→acceptance | Report rời/mtime không tự bù event thiếu |
+| Current state | task-state/context, runtime snapshot, performance | Vận hành/UI và phát hiện drift | Phải có source/window/age; không thay lịch sử |
+| Continuity memory | `controller_continuity.py`, knowledge ACK, handoff capsule | Controller tiếp nhận trạng thái có fingerprint và delta | ACK knowledge không phải accept code/outcome |
+| Resolution Capsule | `problem_lineage.py::problem_handoff_for_run` | Exact Problem/Revision, contract, remaining criteria, events và frame shadow | Derived/advisory; không cấp mutation/closure authority |
+| Phân tích | `problem_resolution_journey.py`, economics/P4/P5/rework reports | Chuyển fact sang chẩn đoán có denominator/missingness | Observation không chứng minh nhân quả |
+| Case calibration | Golden HR 7 trường hợp, EGRI research | Phát hiện sai frame, oracle sai tầng, stale runtime, recurrence | Historical labels không phải current natural outcomes |
+
+Resolution Capsule đã có giới hạn payload: outer handoff 8 KiB, embedded contract 4 KiB; nếu quá lớn phải trả omission reason/fingerprint và yêu cầu đọc exact revision, không cắt âm thầm. Frame shadow có `authority_side_effects=false`, `automatic_mutation_gate=false`. Nên **giữ** thiết kế bounded này, không đổi thành kho transcript vô hạn.
+
+Golden HR calibration trong repository có 7 case, nhưng tài liệu tự ghi **không case nào đạt TRUSTED_RESOLUTION**, independent outcome còn unobserved/unconfirmed. GHR-03 cho thấy nghiệm thu kỹ thuật không cứu được oracle sai nghĩa dữ liệu; GHR-04 minh họa source đúng nhưng runtime stale. Đây là bài học để thiết kế phép thử, không phải tỷ lệ thất bại hay hiệu quả của app hiện tại. Không truy cập/sửa dự án HR trong công việc này.
+
+### 4.2. Khoảng hở tri thức ưu tiên
+
+1. **Provenance trước retrieval:** một case có nội dung đúng nhưng checkpoint không có trong canonical phải hiện `UNVERIFIED_PROVENANCE`, không được xếp như lời giải đã accepted.
+2. **Outcome trước “best practice”:** accepted-proof-derived quality phải tách independent user/business confirmation; không tạo vòng tự xác nhận.
+3. **Applicability trước reuse:** exact workspace/task class/role, source/contract/runtime envelope, oracle strength và failure mode; case không tương thích chỉ là counterexample/advisory.
+4. **Giữ phản chứng:** failed attempts, REPLAN, reopened outcomes và lỗi báo cáo phải đi cùng case; không chỉ distill success summary.
+5. **Tiến bộ phải đo được:** ghi case/evidence nào làm thay đổi quyết định, discriminator nào loại hypothesis, thời gian đọc và outcome. Retrieval hit không tự chứng minh hữu ích.
+6. **Privacy:** chỉ lưu facts, decision labels, hashes, bounded summaries và references được cho phép; không raw credential, transcript, PII hoặc private reasoning.
+
+### 4.3. Thiết kế cải tiến nhỏ nhất
+
+Không tạo vector database/knowledge graph/universal memory mới ở giai đoạn này. Tận dụng các projection/readers hiện có và thêm **bản chiếu case có truy nguyên** khi một natural case thực sự cần:
+
+```text
+User contract → exact Problem Revision → bounded frame/discriminator
+→ RUN/WAVE/effect/proof → controller acceptance → independent outcome/reopen
+→ derived case + applicability + counterevidence → bounded reuse (tối đa 3 case)
+```
+
+Trường tối thiểu đề xuất: problem/revision, symptom, typed failure, proven cause hoặc missingness, relevant source/runtime fingerprint, attempted interventions kể cả thất bại, exact proof/checkpoint refs, independent outcome authority/time, applicability/exclusions, closure falsifier, freshness status, reuse decision/result. Đây là **schema đề xuất để map vào structures đang có**, không phải API/table mới được cấp quyền.
+
+Bước đầu chỉ distill hai incident của tài liệu này và một natural product case có thật. Nếu chưa đủ outcome, lưu rõ `PROVISIONAL/UNKNOWN`, không gán “solved”. Sau 5–10 case mới quyết định có thực sự cần index rộng hơn; nếu retrieval không thay đổi quyết định hoặc làm tăng overhead thì giảm/bỏ.
+
+## 5. Đánh giá các hướng giải quyết
+
+| Hướng | Lợi ích | Chi phí/rủi ro | Quyết định đề xuất |
+| --- | --- | --- | --- |
+| A. Quay lại hoàn thiện direct legacy như đường sản phẩm chính | Ít thay đổi so với contract boot ban đầu; local Tunnel dễ đối chiếu | Xung đột hướng shared-account central; duy trì hai ingress/UX; không giải quyết authority/outcome/ledger gap | Chỉ dùng nếu owner chủ động giữ direct như target được hỗ trợ; không tự đổi role hiện tại |
+| B. Hội tụ central account/workspace trên một local runtime + continuation hiện có | Tận dụng source/candidate gần đây, giảm thiết lập lặp; phù hợp account→binding→node | Cần remote exact package, approval/policy/route, role-aware boot oracle; phụ thuộc vận hành Ubuntu | **Khuyến nghị có điều kiện:** chốt contract/revision mapping và gate, không nới guard |
+| C. Viết Goal Engine/scheduler/memory hoặc model gateway mới | Có vẻ linh hoạt/hấp dẫn về roadmap | Tăng state/authority/chi phí khi current natural outcome còn thiếu; khó phân biệt lỗi cũ/mới | **DEFER**; chỉ mở khi có yêu cầu chưa được current bounded driver đáp ứng và oracle rõ |
+| D. Tối ưu model/cache trước để giảm giá/tool calls | Có thể giảm chi phí một số leaf | Thiếu paired evidence và provider usage; dễ tối ưu sai denominator, gây latent defect | Chỉ sửa deterministic defect đã chứng minh; chưa promote routing/treatment |
+
+Đây là lựa chọn kỹ thuật dựa trên độ phù hợp hiện có, không phải benchmark hoặc phép tính ROI. Không chấm điểm trọng số số học khi dữ liệu chưa bảo vệ được các trọng số.
+
+### 5.1. Ranh giới kiến trúc đích
+
+**Xung đột mã nghiệm thu đã xác minh:** `SHARED_ACCOUNT_WORKSPACE_STATUS.md` tại checkpoint Wave 12 dùng T14 cho “model gateway, nếu bật”; `TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md` mục 7 dùng T14 cho “upgrade/rollback/restore”. T01–T16 của hai bảng cũng không cùng mapping. Trong tài liệu này, mọi mã T tham chiếu **TWAC §7 = ma trận mục 7 của TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md** (T01 same-account, T14 restore, T16 E2E/soak). Đây là namespace tham chiếu cho kế hoạch, không phán quyết authority cho các receipt cũ. X1 phải chốt matrix ID/version/fingerprint trước thực thi, mapping theo nghĩa từng case; không được bỏ restore vì thấy T14 ở bảng khác là N/A. Không rewrite các checkpoint chronology cũ.
+
+```text
+Client/account → central principal + binding/task pin → queue/receipt
+                                                     ↓ exact node/target
+                      Windows installed node → Recovery Host → Coding MCP
+                                                     ↓
+       explicit Goal grant → existing driver → App Server proposal lane
+                                 ↓
+                  MCP sole writer + proof + effect journal
+                                 ↓
+                   ACCEPTING → authorized controller
+                                 ↓
+                   independent outcome / truthful reopen
+```
+
+Central Control Plane DB và Windows canonical orchestration ledger có trách nhiệm khác nhau. Phải liên kết action/attempt/task/Problem qua references, không merge hai DB hoặc coi receipt delivery của central là acceptance kỹ thuật/Goal outcome. MCP tool relay không tự là model API. App Server proposal lane hiện có là lựa chọn mặc định của v1; chỉ đánh giá provider gateway riêng khi sản phẩm thật sự cần và có quyền sử dụng/chi phí cụ thể.
+
+## 6. Điều kiện chung trước khi triển khai
+
+### X0 — Đối soát provenance và freshness (ưu tiên P0)
+
+**Owner:** controller + người giữ ledger/delivery; trước mọi closure hoặc activation dựa trên ba checkpoint thiếu.
+
+1. Chụp lại canonical bằng Backup API; ghi HEAD, worktree relevant hashes, max seq/hash, schema, path/host và timestamp. Kiểm mỗi DB lịch sử trên bản sao/immutable; không mở migration writer.
+2. Lập manifest ba missing RUN, checkpoint, report path/hash, event range, expected chain parents; tìm đúng receipt/ledger snapshot trong Git delivery history, backup và host có thẩm quyền. Không dùng “file mới hơn” làm tiêu chuẩn chọn.
+3. Phân biệt bản thiếu tail với divergent histories: kiểm event IDs, hashes, parents, RUN/WAVE/problem binding và file attestations. Tìm nguyên nhân bằng đường delivery/restore/copy cụ thể; chưa có evidence thì ghi UNKNOWN.
+4. Nếu tìm được lineage đầy đủ: chuẩn bị phục hồi/reconcile theo cơ chế canonical được hỗ trợ, dry-run trên bản cô lập, review và quyền riêng trước mutation. Nếu cơ chế hiện tại không hỗ trợ trường hợp này, mở bounded implementation packet sau khi contract được chốt; không ghép row SQLite thủ công.
+5. Nếu không tìm được: giữ report như historical-unverified; không dựng acceptance giả. Owner quyết định proof mới được phép với attempt mới, ghi rõ original missingness. Không kill host chỉ để tăng số đếm.
+6. Đối soát 16 active/expired lease theo exact ID; chỉ terminalize qua supported lifecycle preflight/authority. Không bulk cleanup, không biến expired lease thành quyền takeover, không chạm P5 anchors không liên quan.
+
+**Exit X0:** mỗi missing reference có kết luận `VERIFIED_LINEAGE`, `ISOLATED_DIVERGENCE` hoặc `UNRECOVERED_HISTORY_GAP` cùng owner/next action; canonical integrity/chain được kiểm, không claim completeness giả. Những gate phụ thuộc proof chưa hồi phục phải còn mở. Một báo cáo gap hoàn chỉnh không tự đóng C10/BG11/BG13.
+
+### X1 — Freeze contract, execution role và target
+
+1. Read-back cả hai exact capsule/fingerprint; đọc criteria ở mục 8–9, đối chiếu no-manual-nudge dependencies, không mở Problem trùng hoặc chọn newest.
+2. Với boot: giữ C01–C12 nếu semantics vẫn đáp ứng; nếu central làm thay đổi meaningful criterion (ví dụ per-device direct Tunnel), lập explicit revision/CAS + mapping carry-forward/reprove/not-applicable có approval. Không tự đặt N/A cho criterion cũ.
+3. Với continuation: xác nhận contract thực sự là 4 criterion gốc + BG01–BG14. Không dùng riêng BG list như Problem mới và không carry provisional từ revision 1.
+4. Freeze supported target: installed Windows central executor, central origin/service có owner, exact node/workspace binding, controller view, candidate manifest/hash, rollback artifact. Development UI vẫn là development; muốn thêm central-dev support phải là packet riêng.
+5. Tách bốn quyền: read/binding; execution scope; model/continuation budget; lifecycle/deploy. Đăng ký Problem không tự cấp bất kỳ quyền nào còn thiếu.
+
+**Exit X1:** target/role/criteria/oracle matrix không mâu thuẫn, acceptance owner và runtime authority rõ; không còn dùng PID/hash từ report ngày 15/09 như target sống.
+
+### X2 — Measurement contract và evidence writer
+
+- Dùng canonical writer hiện có cho events/receipts, reader/projection chỉ đọc. Mọi material wave có operator checkpoint, typed failure, exact source/proof identity, outcome hoặc explicit missingness.
+- Thêm source-window/execution-origin/metric-schema vào **projection đang có nếu thiếu**, không một event store cạnh tranh. Ghi runtime/source/projection disagreement thành diagnostic; không tự reconcile từ UI.
+- Trong phép thử autonomy, reader phải không dispatch. Không dùng `run_continuation.observe/start/resume/reconcile` từ controller trong cửa sổ đo rồi gọi kết quả là tự chạy.
+- Ngân sách pilot dùng contract hiện tại tối đa 900s/12 decisions/3 patches; no-progress 2, driver lease 60s. Con số 60 phút/4 episodes/32 turns/8 patches trong kế hoạch cũ là đề xuất, **không phải quyền hoặc giới hạn đã được implementation hiện tại hỗ trợ**.
+
+**Exit X2:** định nghĩa mẫu số, bắt đầu/kết thúc, synthetic/natural, abort/retry, censoring và privacy được review; data invalid thì dừng claim chứ không điều chỉnh số liệu.
+
+## 7. Kế hoạch kỹ thuật Problem boot/recovery
+
+Các mã A0–A5 là work packet của tài liệu này, không phải runtime states hay Problem mới.
+
+### A0 — Sửa semantic stop refusal (P1)
+
+**Scope dự kiến:** `electron/services/recoveryBootstrap.js`, hợp đồng lỗi tại `recoveryIpc.js` nếu cần, `tests/recovery-bootstrap.test.js`.
+
+- Hiện tại catch tại khoảng dòng 906–921 gom semantic refusal và transport loss; sau đó exact identity có thể dẫn tới terminate tại dòng 949. Identity xác nhận đúng đối tượng, **không thay cho quyền bỏ qua semantic refusal**.
+- Phân loại response/error theo contract thực của IPC. Auth/authority/busy/refusal phải kết thúc handoff, không terminate/spawn và không rollback bằng start khi stop chưa được chấp thuận.
+- Transport loss giữ trạng thái effect uncertain; đọc lại authenticated exact host/child state trong deadline trước khi quyết định. Không coi mất response là stop thành công, cũng không coi owner đúng là đủ quyền terminate.
+- Revalidate ở stop/terminate boundary để bắt UI/job/writer/supervision mới xuất hiện; giữ explicit refusal, không đổi thành generic retry.
+
+**Oracle:** late-busy/refused/auth-denied → terminate=0, spawn=0; transport-loss đã stop thật có đường reconcile đúng; đổi PID/start-token/descriptor/owner → không touch replacement; timeout có typed terminal receipt. Fixtures cô lập trước, không thử bằng kill live host.
+
+### A1 — Rollback giữ nguyên startup intent (P2)
+
+**Scope dự kiến:** cùng module/test với A0; một writer, làm tuần tự.
+
+- Chụp trạng thái ban đầu và intent qua nguồn authenticated đủ fresh trước stop. Giữ tri-state ON/OFF/UNKNOWN; không biến unknown thành on.
+- Compensation chỉ khôi phục đúng dịch vụ đã chạy và có khả năng bị operation này dừng, khi exact old owner còn được chứng minh. Ban đầu idle/off → không start; semantic refusal → không start.
+- Nếu không phân biệt được stop effect, giữ typed recovery-required và trình owner; không tự bật tất cả services.
+- Failed/expired receipt bất biến; compensation thành công không sửa original failure thành success.
+
+**Oracle:** initial off + later failure → start=0; initial on + proven child stop + exact owner → restore đúng; changed owner/manualStop/revoke/busy → no unsafe restore; duplicate rollback không double-start. Kiểm cả primary và recovery plane nếu operation thực sự chạm hai plane.
+
+### A2 — Oracle role-aware và không false-green
+
+**Scope dự kiến:** verifier/receipt hiện có, `scripts/packaged-recovery-smoke.js`, `scripts/dev-ui-lifecycle.js`, relevant tests; chỉ thêm một verifier nhỏ nếu chưa có nơi thích hợp.
+
+Receipt mỗi sample phải bind Problem/revision, role, source/package/contract hash, boot time + boot mode, process start token/instance, epoch và operation, endpoint/workspace generation, startup intent, before/after state, error/retry sequence và observed client result.
+
+- Direct legacy: Host/MCP/Tunnel và connector theo exact/compatible/breaking contract policy đã được duyệt.
+- Central: Host/MCP/native + hợp lệ epoch, registered target, central route freshness, local policy/authority + real-client action trên bound workspace. Không ép local Tunnel=true.
+- Cả hai: loaded revisions đúng, admission hợp lệ, fullyReady=true, không repeated manual repair; client discovery khi contract yêu cầu strict; `workspace_context` thật trả completed/workspace_accessed đúng, không tính pending handshake là workspace read.
+- Các oracle phải thất bại khi chỉ PID/hash/health xanh nhưng primary task không dùng được. `CURRENT_COMPATIBLE_ACKNOWLEDGED` là continuity path được phép khi contract phù hợp, không được ghi là strict rediscovery.
+
+**Exit:** positive + discriminating negative tests, receipt version/compatibility rõ; pre receipt cũ giữ nguyên lịch sử. Không sửa pre JSON ngày 15/09 để nó trông như đã kiểm các field mới.
+
+### A3 — Frozen package và activation có kiểm soát
+
+**Phụ thuộc:** X0/X1, A0–A2 source/technical acceptance; owner cấp lifecycle/deploy target riêng.
+
+1. Review dirty source/candidate đang có, không build lại phần đã có exact proof nếu bytes còn khớp; không lấy failed EBUSY artifact làm candidate.
+2. Freeze Windows + Control Plane package manifests. Verify OS-specific archive mode/LF, resources, fuse/RunAsNode, secret store/ACL và installed identity theo đúng lane.
+3. Với central: verify exact remote package/service/schema và enrollment/credential/workspace/policy/route. `/healthz=200` chỉ là reachability. Không coi Ubuntu đã approved/deployed từ tài liệu lịch sử.
+4. Tránh vòng phụ thuộc: enrollment/workspace/policy setup không yêu cầu fullyReady; nhưng execution admission phải yêu cầu đầy đủ identity/route/policy/epoch.
+5. Khi đủ authority/census, tạo new controlled activation operation/epoch; giữ FAILED cũ và pending accepted work. Không nới UPDATE_INCOMPLETE hoặc hạ source revision guard.
+6. Postflight từng component, epoch, source/package, bound target và client action; nếu sai thì dừng theo tầng, không lặp refresh mù.
+7. Cài/enable đúng Supervisor và startup intent chỉ theo opt-in của owner, rồi xác minh manifest/task identity/readback. Supervisor alive khác primary services enabled.
+
+**Exit:** exact installed/runtime receipt, một client task thật đúng workspace; thiếu central operator/deploy/máy B thì ghi BLOCKED_EXTERNAL tương ứng, không mở admission giả.
+
+### A4 — Recovery/reboot matrix
+
+Chạy isolated faults trước, sau đó live faults/reboot **chỉ khi được phép và jobs đã quiescent**. Ma trận chi tiết kế thừa [boot closure plan](../BOOT_HOST_TRANSITION_CLOSURE_PLAN.md), không tự giảm sample.
+
+| Nhóm | Sample cần thực hiện | Oracle phân biệt |
+| --- | --- | --- |
+| Cold-start/logon | Entry point đúng target, không process cũ; Startup ON và intentional OFF phân biệt | Auto-ready đúng intent; OFF không bị tự bật |
+| Reboot M02 | 3 reboot mỗi máy vật lý theo plan; ghi Restart/power-on/Fast Startup thực tế | Boot/start token/instance mới + readiness/client task, không chỉ PID khác |
+| Host/network loss | Host-only loss, tunnel/central-route loss phù hợp role, reconnect | Không retry storm, duplicate child/epoch/effect |
+| Busy/authority | Active writer/job, manualStop, lease/identity drift, revoked credential | Refusal đúng; không mất task/secret/history |
+| Upgrade/skipped version | Same/compatible/unknown/breaking contract, stale installed bytes | Compatibility chỉ trong reviewed closure; strict discovery khi bắt buộc |
+| Hai máy/cùng account | Client B/C chọn binding của A; đồng thời chọn binding khác cho task khác | Không retarget/failover mù; read/observe/stop/handoff đúng scope |
+| Rollback/restore | Failed activation/partial effect, isolated restore drill | Giữ attempt lịch sử, unknown effect không được replay |
+
+Mỗi sample giữ cả failure/retry. VM/temp process trên máy A không thay máy B. OS đã reboot trong đời thường nhưng không có exact before/after receipt không được backfill thành sample PASS.
+
+### A5 — Natural-use và closure boot
+
+- Canonical revision 1 hiện giữ **ít nhất 48 giờ sử dụng thực**, một phiên natural hoàn tất trên mỗi máy và independent confirmation theo plan. Đây không phải 48 giờ máy idle hoặc 48 giờ kể từ lúc bắt đầu viết code.
+- Soak 24 giờ trong shared-account plan là gate khác; không tự dùng 24h thay 48h. Có thể dùng chung cửa sổ nếu đáp ứng cả hai bộ điều kiện và giữ mapping riêng.
+- Thu số unnecessary repair/refresh/login/nudge, failures/reopens, bound task success, uptime samples và gaps. Không tạo công việc giả để đủ mẫu.
+- Nối evidence tới từng C criterion bằng canonical coverage API/receipt hợp lệ; controller acceptance và outcome receipt khác authority. Thiếu sample → giữ criterion mở.
+
+## 8. Ma trận C01–C12: khoảng trống, owner và acceptance
+
+Mỗi dòng là một tiêu chí **canonical revision 1**. Cột “đã có” không phải dấu PASS: toàn bộ còn cần exact coverage/acceptance của revision đích; nếu X1 duyệt revision mới thì giữ mapping hai chiều, không ghi đè lịch sử này.
+
+| Criterion | Nghĩa cần đạt | Đã có / thiếu hiện tại | Packet + oracle đóng |
+| --- | --- | --- | --- |
+| C01 | Đúng entry point cold-start khi process cũ mất, gồm reboot thật | Historical packaged spawn/pre receipt; chưa nối checkpoint canonical, không post-reboot proof | X0, A2–A4: fresh boot/start-token/package + real bound workspace task |
+| C02 | Một epoch owner; không spawn dưới terminal READY; drain supervision trước handoff | Có idle/timeout/drain hardening; P1 late refusal còn trong source | A0/A2: late-busy, two-owner, READY/failed-epoch negative và one-operation process proof |
+| C03 | Same-SHA ACK bootstrap được khi predecessor rỗng | Compatibility/bootstrap source và tests hiện có; chưa revalidate exact integrated path của target | A2/A3: Python→Electron admission-closed attested handshake; không giả workspace read |
+| C04 | Skipped compatible releases; unknown/breaking phải discovery | Reviewed compatibility graph source hiện có | A2/A4: compatible positive + unknown/cycle/tamper negative; đúng discovery rule |
+| C05 | Discovery/census/lock/cleanup hữu hạn, typed causes, không orphan | Existing timeout/lock/identity mechanisms; chưa current installed matrix | A0–A4: forced timeout/lock contention/cleanup, bounded terminal receipt và job census |
+| C06 | Không vượt manualStop, write/job/lease, foreign identity/source drift | Guards có; A1 có nguy cơ bật dịch vụ ban đầu off | A0/A1/A4: idle-off, manual stop/revoke, live writer, PID reuse, source drift negative |
+| C07 | Host-only restart rồi loss không retry loop | Recovery source/isolated smoke đã ghi nhận; live fault chưa closure | A4: đúng loss plane theo role, bounded retries/backoff, no duplicate host/epoch/effect |
+| C08 | Session hợp lệ được giữ; missing/revoked đúng lớp | Durable session/device/credential separation; chưa installed two-machine outcome | A3–A5: không clear session vì runtime error; revoke/login/missing config phân loại đúng |
+| C09 | Hai máy đúng endpoint/workspace/tunnel, không silent mutation failover | Central binding/task-pin candidate có; contract old-direct cần X1 mapping | X1/A4/A5: hai physical/client receipts và read thật; sai target/generation bị từ chối |
+| C10 | Exact source/proof/acceptance/runtime/artifact và rollback/history | **Có gap ba canonical checkpoint/RUN** và Host drift | X0/A3/A4: complete ancestry/attestations, restore/replay negatives; missingness không tự PASS |
+| C11 | Ca thành công không cần sửa source/xóa state/refresh tay | Chưa natural window; current runtime chưa ready | A4/A5: ghi intervention/event trail, zero unnecessary repair trong sample thành công |
+| C12 | User xác nhận đúng Problem Revision, không mandatory blocker | Chưa independent current outcome; 48h/máy B còn mở | A5: canonical criterion coverage + explicit user/outcome receipt + closure falsifier |
+
+## 9. Kế hoạch durable Goal continuation và ma trận 18 tiêu chí
+
+### 9.1. Phần nên giữ và kiểm chứng, không xây lại
+
+Các cơ chế đã thấy trong source:
+
+- `goal_pursuit.py`: exact identity/revision, bounded candidate pagination, ambiguity fail-closed, criterion-gap projection; tests không cho passed proof thay accepted criterion claim.
+- `continuation_contract.py`: immutable typed READ/PATCH/READY/BLOCKED proposal, evidence hash, exact scope/check hashes và bounded consent; v3 RUN/v1 Goal episode.
+- `run_continuation.py`: parent goal record trong **cùng ledger**, one-active identity constraint, exact controller fence, child materialization, shared remaining decisions/patch attempts, atomic reservation/release, no-progress observation và revocation.
+- `continuation_driver.py`: real bridge dispatch (`continue_thread`), effect backups/journal, all-approved-checks proof, technical replan, report-gate auto resume, execution rebind, pending-effect stop/reconcile và barrier ACCEPTING.
+- `controller_continuity.py`, continuity telemetry: bounded knowledge checkpoint/ACK và provenance, không thay owner/acceptance.
+
+Parent policy hiện được xây từ bounded RUN policy; source giới hạn tổng **900 giây / 12 quyết định / 3 lần patch**, no-progress **2**. Có khả năng materialize đúng child đã bind; **không suy ra source hiện tự tạo mọi RUN kế tiếp hoặc Goal dài vô hạn**. Child RUN khác chỉ khi có lý do/authority/lineage hợp lệ; ordinary REPLAN phải giữ RUN và dùng WAVE, không tăng số RUN để né ngân sách.
+
+### B0 — Exact grant, runtime và inference lane readiness
+
+**Phụ thuộc:** X0/X1/X2 và một runtime usable của A3. B0 source inspection/negative fixtures có thể làm song song với A0/A1.
+
+1. Preflight current public schema/transport; xác minh exact endpoint/workspace/controller generation và Problem revision. Nếu central client chưa có đường attested host consent tương thích với driver hiện hữu, ghi integration gap cụ thể; không forge ChatWeb identity.
+2. Thu explicit one-shot bounded user consent qua host/path thực sự hỗ trợ, kèm allowlist write/protected paths/checks/time/decisions/patches. Không dùng một câu “toàn quyền” cũ thay receipt.
+3. Verify actual App Server lane, route requested/resolved, process/thread/turn identity, model availability và usage visibility. Ưu tiên lane hiện có; không cần gateway mới chỉ vì central đang relay tools.
+4. Chạy content-free bounded dispatch canary có quyền trước mutation; strict typed parser vẫn cuối cùng, không extract JSON từ prose hoặc bỏ fields lỗi để hợp thức proposal.
+5. Nếu không có authority tạo lượt inference tiếp theo sau client response end, dừng tại **thiếu host/provider dispatch authority**, không biến poll loop/cron/browser automation thành model turn giả.
+
+**Exit:** grant thật → một dispatch thật có receipt → result được strict-parse trên đúng runtime; chưa phải natural outcome.
+
+### B1 — Proof parent accounting và unknown-effect safety
+
+**Scope:** existing contract/ledger/driver và tests; thêm regression chỉ cho gap tái hiện được.
+
+- Hai wake đồng thời chỉ reserve/dispatch một action; duplicate ACK không debit budget lần hai; rejected pre-dispatch reservation chỉ refund qua exact no-effect proof.
+- Parent remaining budgets/expiry giữ qua child bind/reconnect/restart được phép; không tự gia hạn, không reset khi đổi RUN/WAVE/controller.
+- Crash tại trước effect, sau effect trước receipt, sau terminal trước ACK phải có verdict phân biệt. Unknown pending dispatch/effect → reconcile required, không dispatch lại để “thử xem”.
+- Không viết vào protected oracle, `.coding-tools` qua model patch, hoặc path ngoài grant. Source/worktree/proof drift trước apply → no effect.
+- No-progress phải dựa trên evidence/proof/criteria thay đổi có ý nghĩa, không dựa vào prose khác hoặc mỗi lần gọi tool đều coi là tiến bộ.
+
+**Exit:** focused negative suite + isolated process fault proof bound exact source. Existing tests là tài sản tái sử dụng, không chạy full suite nếu leaf proof đã đủ.
+
+### B2 — Tự tiếp tục sau report/reconnect và tiếp nhận đúng controller
+
+1. Phân biệt triggers: ordinary proof failure→REPLAN cùng RUN, report ACK→eligible auto resume, reconnect→reattach/revalidate, controlled restart→exact successor activation receipt. Revoke/Stop/pause/budget exhausted không phải triggers để resume.
+2. Kiểm exact environment/runtime behavior fingerprint và controller attachment ở mọi boundary; khác endpoint hoặc epoch không được dùng consent/lease cũ mù quáng.
+3. Đưa review request và outcome về cùng controller view. Ghi `request_emitted`, `delivery_observed`, `controller_acknowledged` riêng; chỉ nhìn thấy code gửi message không chứng minh người dùng đã nhận.
+4. ACCEPTING tiếp tục cần authorized accept/reject. Executor không tự accept để giảm manual interaction; approval hợp lệ được đếm riêng khỏi unnecessary nudge.
+5. Kiểm các pending coordination message bằng delivery/provenance contract hiện có, không mark-delivered bulk. Knowledge CURRENT có nghĩa nhận đúng revision, không quyền execution mới.
+
+**Exit:** actual automatic transition có consumed-event/action/turn IDs và controller delivery receipt; mọi stop boundary có typed reason và exact next action.
+
+### B3 — Autonomy canary không bị phép đo can thiệp
+
+**Thiết kế phép thử:** một task bounded có strong immutable oracle, một parent grant, một active child; fixed source/runtime/contract; technical fixture được gắn `synthetic/technical`, không natural.
+
+1. Bắt đầu một lần sau consent; ghi thời điểm host response end/worker start được quan sát. Đóng view chỉ khi thao tác đó được cấp quyền và không mất authority đã được contract bảo đảm.
+2. Trong cửa sổ, controller chỉ đọc immutable ledger hoặc proven passive projection. Cấm gọi public `observe/start/resume/reconcile` có thể dispatch/renew/apply.
+3. Yêu cầu ít nhất một chuỗi tự động có evidence thực: result→oracle fail/read-needed→typed next proposal→actual next dispatch→proof→ACCEPTING; nếu task đã xong ngay thì không ép tạo lỗi để gọi đó natural case.
+4. Kiểm Stop/revoke và unknown-effect bằng separate authorized fault samples. Legitimate user approval không bị báo là product failure.
+5. Nếu controller phải nhắc/relay để tiếp tục, giữ sample failed/intervened, ghi cause; không bỏ khỏi denominator rồi báo zero-nudge.
+
+**Exit:** canary technical autonomy PASS với thời gian/turn IDs; chưa BG10/BG14 natural resolution.
+
+### B4 — Natural Goal, independent outcome và continuation closure
+
+- Chọn một công việc **người dùng thực sự cần**, có reproduction, phạm vi, oracle độc lập và nguồn outcome rõ; không tự tạo việc sửa lỗi giả. Có thể là một defect app thật sau khi source fix được giao, nhưng người dùng/owner phải xác nhận nhu cầu và tiêu chí.
+- Chốt trước window, max budget, allowed lifecycle, exit conditions và cách phân unnecessary nudge/manual relay với legitimate approval/outcome.
+- Thu TTAR, TTPR, all attempts/aborts/replans, operator interventions và usage coverage. Outcome pending giữ right-censored, không bỏ các task chưa thành công khỏi phân tích.
+- Controller technical acceptance trước, user/outcome authority sau; không natural success từ `REPORT_ACKNOWLEDGED` hoặc `CONTROLLER_ACCEPTED` telemetry.
+- Nối exact 18 criterion evidence vào revision hiện hành; nếu scope meaningful đổi thì explicit revise, không carry acceptance tự động.
+
+**Exit:** BG10/BG14 và bốn criterion gốc có exact coverage/outcome, không mandatory blocker; nếu failed thì truthful reopen của đúng revision và plan mới từ counterevidence.
+
+### 9.2. Ma trận đủ 18 tiêu chí canonical revision 2
+
+| Criterion ID | Yêu cầu rút gọn | Source/proof nền hiện có | Gate/packet còn phải chứng minh |
+| --- | --- | --- | --- |
+| continuity.auto_resume | Tự resume qua ordinary REPLAN/report/reconnect/accepted restart, không manual continue | `continuation_driver.py` auto_resume/rebind; test report-gate/successor epoch | B2/B3/B4: actual dispatch sau boundary, không controller pump |
+| continuity.no_duplicate_effect | Retry/reconnect không lặp effect | effect journal/reservation/terminal replay | B1 + A4: fault trước/sau effect/ACK, duplicate wake, exact reconciliation |
+| continuity.terminal_stop | Chỉ dừng tại terminal/blocker/safety thật với typed cause | driver terminal/blocked/revoked/expiry branches | B1/B2: exhaustive stop mapping; không lặng im ở transport timeout |
+| telemetry.durable_events | Event durable qua restart, không transcript/private reasoning | continuity telemetry logical IDs, ledger writer | X0/X2/B1: durable restart/query-only replay, schema/privacy/dedup |
+| BG01 | Một Goal exact Problem/Revision/workspace/endpoint/controller, không pursuit/RUN trùng | goal resolver; parent identity unique; controller fence | B0/B1: duplicate grant/current-revision ambiguity, no timestamp selection |
+| BG02 | Có grant thì tiếp tục sau response end; stop/revoke vẫn dừng | worker driver + explicit consent path | B0/B3: real provider/host path sau response end, one-shot grant |
+| BG03 | Oracle phân PASS/FAIL/UNKNOWN, model text không là proof | strict parser, all-approved-checks, proof pipeline | B1/B3: malformed/stale/evidence-missing/zero-test negatives |
+| BG04 | Typed proposal được validate rồi dispatch thật, không chỉ lời nhắc copy | `continue_thread`, durable thread/turn/action cursor | B2/B3: next-turn ID + result + proof linkage, no manual relay |
+| BG05 | Parent budget durable, atomic reservation, expiry, không auto extend | shared parent remaining counters; current cap 900/12/3 | B1: concurrent child/action, restart/refund, no budget reset |
+| BG06 | Event/response/two-wake không double mutation; unknown reconcile | exact effect journal và pending-action checks | B1/B3: crash/lost ACK/conflicting terminal, stop without replay |
+| BG07 | Resume revalidate revision/source/env/quyền, không đổi máy/scope ngầm | runtime behavior hash, controller rebind/successor receipt | B0/B2/A4: wrong endpoint/new epoch/no receipt must fail-closed |
+| BG08 | No-progress/budget/oracle/authority/pause/stop/blocker không retry storm | no_progress=2; typed budget/revoke/expired branches | B1/B2: two identical evidence observations, genuine progress reset, bounded backoff |
+| BG09 | Readiness/review cùng giao diện; ACCEPTING cần controller | continuity core/ACK + accepting barrier | B2: real delivery/readback and authorized accept/reject; no self-accept |
+| BG10 | Natural case zero relay/zero unnecessary nudge, approval riêng | Chưa đủ natural sample trong snapshot | B4: predeclared uncontaminated window, intervention count và all-sample retention |
+| BG11 | Failure→replan→dispatch→proof→budget/recovery→acceptance→outcome liên kết canonical | schema/events/journey hiện có; X0 history gap còn thật | X0/X2/B4: exact links/current revision, cả failed attempt, no orphan accepted report |
+| BG12 | Dedup/privacy/natural-vs-synthetic/unknown/coverage; không ROI giả | telemetry/report schema và privacy gates | X2/B4: missingness report, origin provenance, duplicate logical ID tests |
+| BG13 | Regression + isolated process faults + exact runtime acceptance; rollback giữ ledger | Nhiều focused tests hiện có, chưa current integrated/live closure | B1/B3/A3/A4: fingerprint-bound tests + process/runtime + non-destructive rollback |
+| BG14 | Confirmed chỉ sau đúng user outcome/revision; technical pass chưa đủ | PRL provisional/confirmed guard | B4: accepted coverage + independent current outcome + absence mandatory blocker |
+
+## 10. App còn cần bổ sung hoặc xử lý phần nào?
+
+### 10.1. Bảng quyết định toàn sản phẩm
+
+| Miền | Giữ/tận dụng | Cần MODIFY/ADD có giới hạn | Proof/gate và ưu tiên |
+| --- | --- | --- | --- |
+| Canonical persistence/delivery | Ledger append-only, receipts, Backup API, retention guard | History-gap diagnostic exact references, delivery-tail/restore provenance và report freshness | X0; P0 trước closure; không store thứ hai |
+| Boot/recovery | Host, Supervisor, epoch, process identity và manualStop guards | P1/P2; role-aware oracle; installed startup intent | A0–A4; P0 safety/availability |
+| Setup/UX | Candidate “Thiết lập hệ thống”, origin/binding selection | Finish review pending/stale/revoked/dev vs packaged, exact next action; tránh wizard loops | Reuse setup candidate G2/G3 evidence; installed user flow P1 |
+| Central account/target | principal→binding→task pin, node enrollment, standing policy | Exact remote package, approval/rotation/registry/policy/route and actual two-client use | T01–T11; external authority riêng; P0 usable |
+| Jobs/effects | Structured argv, poll/stop/cursor/terminal, journal | Verify large output/child process/stop offline/ACK loss thật, no silent redelivery | T12/T13 + B1; P0 safety |
+| Goal/continuation | Parent grant, driver, App Server lane, accepting barrier | End-to-end supported host consent/delivery, autonomy after response, exact successor rebind | B0–B4; P0 product goal |
+| Tri thức/context | Derived capsule/knowledge ACK/journey | Provenance status, applicability, counterevidence, outcome-linked bounded reuse | K0/K1 below; P1 after trustworthy baseline |
+| Observability | Typed metrics/events/projection cache | Window/reset/source/denominator, unknown display, one status checkpoint per material wave | X2/K0; P0 truthful operation |
+| Oracle/quality | Immutable approved checks, PRL coverage and outcome guard | Natural strong-oracle case; reconcile declarative-vs-observed strength | B1/B4/K1; P0 outcome |
+| Cache/semantic speed | Existing proof cache and fallback search | Diagnose 13 fingerprint invalidations; one provider health canary | K2; P2 only when boundary usable |
+| Security/credential/OS | DPAPI/SecretStore, local ACL, auth/generation fence | Installed rotation/revoke, wrong principal/target, artifact no-secret, supported OS matrix | T02/T04/T10/T15; P0 before multi-client live |
+| Packaging/release | Existing builder/resource verifier/isolated smoke | Freeze exact archive/installed bytes; Windows+Linux lane compatibility; evidence manifest | R0 below; P1 delivery, separate authority |
+| Backup/restore/operations | Central recovery runbook and admission recovery mode | Isolated drill plus node-side effect reconcile, retention/ACL/capacity/alerts; owner RPO/RTO | T14/T16; production gate, không /healthz substitute |
+| Routing/EGRI/P5 | Source-gated shadow/experiment facilities | Data quality, natural cohort, A/A instrumentation before A/B | K3; DEFER automatic promotion/gateway/framework |
+
+### 10.2. K0 — Làm trạng thái và tri thức đáng tin
+
+Scope đề xuất: existing report/journey/knowledge projection, UI consumer tests; không sửa event lịch sử.
+
+- Mỗi status card hiện observed_at/age/source/window và exact target; `pending`, `unknown`, `stale`, `failed`, `ready` không bị coerce thành nhau.
+- Separate “source current”, “host current”, “MCP current”, “epoch admitted”, “route/policy ready”, “task worked”, “user outcome”. Một badge Ready không che component drift.
+- Phân 27 MISSING knowledge ACK: chưa có checkpoint, wrong generation, not delivered, unobserved user read hoặc stale/source mismatch. Chỉ acknowledge qua real supported reader/owner, không auto-advance knowledge để hạ số đỏ.
+- Nối case/report tới canonical reference, đánh dấu historical-unverified khi chain thiếu; UI không đề xuất restart từ một report stale.
+- Triển khai lỗi hướng dẫn theo deterministic typed code nơi đã có contract; ưu tiên natural runtime/validation/authority errors, không catalog toàn bộ hypothetical errors.
+
+**Acceptance:** negative tests cho stale/pending/missing telemetry, E2E đúng màn hình/target; không yêu cầu viết lại dashboard. Không đo outcome từ screenshot đẹp.
+
+### 10.3. K1 — Một natural case và bounded knowledge reuse
+
+Chọn case thật sau A3; bước trước mutation gồm: user outcome → frame hiện tại → 1–3 hypothesis → một discriminator → at most 3 historical cases có applicability → scope/oracle. Ghi structured decision labels, không private reasoning.
+
+Sau task ghi actual cause hoặc unproven, intervention, exact code/proof/acceptance, outcome/reopen và reuse helpful/neutral/harmful. Historical case chỉ giúp đặt câu hỏi; không thay runtime readback. Hoàn tất một case rồi 5–10 case với task class, risk, source window, oracle và operator burden rõ. Không dùng cohort tự chọn toàn success để tuyên bố general benefit.
+
+**Acceptance:** mỗi case có falsifier và provenance; case reuse gây sai frame phải được giữ như negative-transfer evidence. Knowledge precision/harmful-reuse được tính trên reviewed retrieval decisions, không trên tổng log.
+
+### 10.4. K2 — Tối ưu nhỏ theo tín hiệu thực
+
+1. Cache: lấy một repeated exact proof opportunity, phân cold/invalidation, kiểm relevant-input hash; đo proof_ms saved và validation quality giữ nguyên. No-op unrelated telemetry không invalidate source; changed oracle/toolchain phải invalidate. Không đặt target cache hit 80% khi workload chủ yếu cold.
+2. Semantic: đúng workspace/language/provider; đo availability, handling/fallback reason, search-to-useful-evidence latency và accuracy; giữ deterministic fallback. Zero handling hiện tại là lý do probe availability, không bằng chứng cần thay engine.
+3. Output: kiểm one bounded large-result flow và continuation correctness; 3.58% visible bytes có thể tiết kiệm output nhưng cần thấy missing evidence/truncation before optimizing further.
+
+**Acceptance:** một discriminatory repro, một fix nhỏ nếu có lỗi, exact regression và no quality regression. Không thêm abstraction/framework trước use case thứ hai.
+
+### 10.5. K3 — Economics/P5 sau dữ liệu natural
+
+- Dùng read-only reporters hiện có; freeze source/manifest/analyzer và independent oracle. Giữ P4 passive; không đổi recommendation lịch sử để khớp proof hậu nghiệm.
+- A/A xác minh assignment/funnel/dedup/ITT/source binding, không hiệu quả. Không chọn epoch closed/hard-stopped cũ để refill.
+- A/B riêng sau A/A và approval, chỉ thay một micro-policy (ví dụ bounded case packet), giữ model/route/compute/proof/risk và task strata. Pre-register quality floor, restricted TTAR/resource-overhead/cost noninferiority khi cost đủ coverage.
+- Report all-assigned, incomplete/censored, exclusions và source drift. Không suy effect từ 0 assignments, raw accepted count hoặc 5–10 calibration cases.
+- KEEP/MODIFY/REMOVE khi outcome/economics đủ; không auto-promote vào production.
+
+### 10.6. R0 — Handover/release/operations
+
+Sau technical/natural gates, owner chọn có cần release/destination nào. Run isolated package/install/reboot/rotation/restore matrix exact artifact, kiểm outstanding jobs/effects/leases, operational support scope, rollback target và retention/ACL/backup schedule. Không công bố unsupported OS/client chỉ từ source test.
+
+Trước mỗi commit/push theo repo policy: `npm run stage:coding-tools-delivery` rồi `npm run check:coding-tools-delivery`, exact staged receipt/index/ledger integrity và secret/history guards; giữ mọi `.coding-tools/**` trừ đúng hai sidecar canonical được phép. Việc lập tài liệu này không chạy staging commands hoặc cấp quyền publish.
+
+## 11. Kế hoạch điều hành, phụ thuộc và ước lượng
+
+### 11.1. Thứ tự và cách song song hóa
+
+```text
+X0 provenance + X1 contract + X2 measurement
+                  ↓
+          A0 → A1 → A2       B0/B1 source-level checks
+                  ↓                    │
+                 A3 usable baseline ←──┘
+                  ↓
+             A4 faults/reboot     B2/B3 real autonomy
+                  └──────┬──────────────┘
+                       A5 + B4 natural outcomes (mapping riêng)
+                              ↓
+                 K0/K1 → cohort → K2/K3 (evidence-gated)
+                              ↓
+                       R0 nếu có quyền release
+```
+
+K0 status truthfulness và document/metric contract có thể làm sớm khi scope không đụng A/B writer. Các packet chia sẻ `recoveryBootstrap.js` hoặc `run_continuation.py` phải tuần tự, một writer/lease. Canonical E02 không cấp current mutation authority. Workers read-only/candidate trước; controller giữ contract, trust boundary và acceptance. Không spawn mô hình nặng hơn chỉ vì task có nhiều file; model route trong repo và model chạy audit là hai fact khác nhau.
+
+### 11.2. Bảng work packet
+
+Ước lượng dưới đây là **planning range theo ngày công kỹ thuật**, không phải benchmark, cam kết SLA hoặc elapsed calendar. Không có nhân sự/phân phối lead-time đã đo; re-estimate sau X0/X1. Không cộng đơn giản các dòng chạy song song, không tính thời gian chờ owner/máy B/provider là đã hoàn tất.
+
+| Packet | Owner chức năng | Depends | Output reviewable | Ước lượng đề xuất | Điểm dừng |
+| --- | --- | --- | --- | --- | --- |
+| X0 | Evidence/delivery owner + controller | Quyền đọc nguồn lịch sử | Missing-reference/chain comparison, cause verdict, supported recovery plan | 0.5–2 ngày; có thể chờ external | Không tìm lineage hoặc cần phục hồi thật → xin đúng authority |
+| X1/X2 | Controller + product owner | Canonical readback | Contract/role mapping, grant terms, measurement manifest | 0.5–1 ngày | Meaningful contract conflict hoặc budget chưa duyệt |
+| A0/A1 | Recovery writer | X1, reproduction | Two safety fixes + discriminating regression | 1–2 ngày | Refusal/rollback semantics chưa settle |
+| A2 | Recovery/oracle owner | A0/A1 interface | Role-aware receipt/verifier + false-green negatives | 0.5–1.5 ngày | Oracle không đo được client/usefulness |
+| B0/B1 | Continuation writer | X1/X2 | Reuse map, focused gaps/fault proof | 1–2 ngày | Host consent/provider authority hoặc effect unknown |
+| A3 | Windows/Ubuntu operators + controller | Exact accepted source, X0 gate disposition | Frozen manifest, approved activation, live identity/route/task receipt | 0.5–1.5 ngày thao tác, ngoài thời gian chờ | Wrong target/epoch/remote package hoặc permission thiếu |
+| A4 | Test/operator | A3 + maintenance authority | Matrix samples before/after, all failures/retries | 1–2 ngày, phụ thuộc hai máy | Busy job, revoke, unknown effect, failed sample |
+| B2/B3 | Continuation/controller host owner | A3 + grant | Real dispatch/reconnect/review/autonomy canary | 0.5–1.5 ngày | Intervention contamination/unsafe resume |
+| A5/B4 | User + independent outcome owner | Controlled gates đạt | ≥48h use + natural Goal outcome, exact coverage | ≥48h actual-use; nhu cầu thật quyết định lịch | Thiếu natural task/approval hoặc recurrence |
+| K0/K1 | Observability/knowledge owner | X2, then natural case | Truthful status + provenance-bounded case | 1–2 ngày cho slice đầu | Không có evidence/outcome cho claim |
+| K2 | Performance owner | Stable repeatable baseline | Một cache/semantic/output decision packet | 0.5–1 ngày/defect đã định vị | Chỉ raw count, không reproduction |
+| K3/R0 | Experiment/release owner | Natural evidence + quyền riêng | Preregistered study hoặc release/ops acceptance | Lập sau sample/target, chưa ước lượng | Không đủ assignment/outcome/cost hoặc release authority |
+
+Mỗi wave cần kết thúc bằng operator checkpoint: changed/completed, Git/source/runtime identity, proof level, failure/blocker classification, remaining criteria, exact next action. Không dùng tool card/log làm final-visible report. Không tạo RUN mới chỉ vì cũ REPLAN; không tự đóng RUN khác để làm census xanh.
+
+### 11.3. Quyết định cần owner đúng thời điểm
+
+1. Target release/use path là installed central executor hay tiếp tục hỗ trợ direct legacy song song? X1 lập mapping; file này khuyến nghị central, chưa thay canonical contract.
+2. Ai giữ authority đối soát/phục hồi ledger và bản nào có lịch sử còn thiếu? Chỉ đọc không cần restore authority; mutation cần riêng.
+3. Windows artifact/Ubuntu service nào được phép install/activate/deploy, maintenance window và rollback target nào?
+4. Máy B/client account/test workspace nào được phép dùng; có quyền reboot/fault/rotation/revoke không?
+5. Task natural và outcome owner nào, ngân sách continuation thực tế bao nhiêu? Chỉ bắt đầu sau consent thật; không tự cấp paid inference.
+6. RPO/RTO/retention/SLO nào owner chấp nhận? Chưa có số đo hoặc yêu cầu để ghi 99.9%/zero-loss như cam kết hiện hữu.
+
+## 12. KPI, tiêu chuẩn nghiệm thu và phản chứng
+
+Các mục tiêu dưới đây là **đề xuất acceptance của packet**, không phải baseline app đã đạt. Ngưỡng cứng từ canonical (12/18 criteria, 48h) giữ riêng với target hiệu năng cần owner duyệt.
+
+| KPI | Định nghĩa/mẫu số | Baseline hiện có | Gate đề xuất |
+| --- | --- | --- | --- |
+| Canonical reference completeness | Exact verified refs / required refs trong closure packet | Ba historical RUN thiếu; two current coverage manifests=0 | 100% refs được dùng để claim phải verify; missing refs không được tự PASS |
+| Criterion coverage | Criterion có accepted exact evidence / 12 hoặc 18 | Chưa có accepted linking đủ; không đo bằng LOC | Đủ từng mandatory criterion, không chỉ tổng phần trăm |
+| Ready-to-first-real-action | Từ start được phép đến action đúng bound workspace | UNKNOWN | Fresh epoch/role/task receipt; timeout target chốt X2 theo thực nghiệm |
+| Recovery success | Samples phục hồi đúng intent/target, no duplicate / toàn bộ allowed samples | Chưa current installed matrix | Mọi mandatory sample A4/T matrix đạt; giữ failed/retry |
+| Duplicate effect | Irreversible/already-recorded effects bị lặp | Chưa natural fault denominator | 0 trong controlled matrix và natural window; any critical miss dừng rollout |
+| Unnecessary nudge/relay | User message chuyển tiếp/nhắc tiếp tục vì ordinary boundary trong eligible window | 1 manual_nudge history chưa đủ coverage | 0 trong BG10 sample; legitimate consent/acceptance/outcome tách riêng |
+| Stop/revoke correctness | Authorized stop tạo safe terminal/unknown verdict trong deadline | Source proof nền | Không dispatch mới sau fence; pending stop không giả stopped |
+| Budget conservation | Spent + reserved + remaining hợp lệ dưới grant cap, không reset | Parent source present, snapshot grant0 | Concurrency/restart/expiry/regrant negatives PASS |
+| TTAR | Start eligible attempt → technical accepted checkpoint, chốt scope/time convention | Chưa fresh exact comparable cohort | Report all attempts + restricted/censored; không chỉ successful runs |
+| TTPR | User Problem open/revision → confirmed outcome đúng revision | Hai current Problem OPEN | Chỉ tính outcome thật; unresolved right-censored |
+| Knowledge evidence coverage | Retrieved/cited cases có provenance + applicability + outcome label | Derived structures có; natural reuse benefit UNKNOWN | 100% cited cases có label/refs; unverified không làm authority |
+| Helpful/harmful reuse | Reviewed retrieval decisions thay đổi quyết định đúng/sai / all reviewed decisions | UNKNOWN | Theo dõi cả harmful/neutral; không gộp hit count thành helpful |
+| Knowledge ACK freshness | ACK đúng checkpoint/generation observed / expected ACKs của sample | 40 CURRENT/67 records, 27 MISSING lịch sử | Resolve cause; không đặt 100% bằng auto-ACK |
+| Cache benefit | Saved proof time trên exact safe reusable opportunities | 0/117 E03, mostly cold | Demonstrated benefit + no invalid reuse; không target arbitrary hit rate |
+| Monetary CAR | Full observed accepted-result cost / accepted-result denominator được đăng ký | Provider costs thiếu, UNKNOWN | Chỉ available khi coverage theo reporter đủ; derived cost tách billing |
+| P5 efficacy | Preregistered ITT outcome contrast, uncertainty + quality floor | Assignment0/outcome0 | A/A healthy trước A/B; chưa có efficacy claim |
+
+Phản chứng đóng ngay claim tương ứng: sai workspace/generation; effect lặp; semantic refusal bị terminate; initial-off tự bật; pending read được báo completed; stale report cấp quyền; source/package/epoch mismatch; controller intervention không ghi; natural label do fixture; user counterevidence sau technical pass. Giữ evidence, stop unsafe action, REPLAN theo cause; không “sửa số liệu” để giữ PASS.
+
+## 13. Rủi ro và chiến lược kiểm soát
+
+| Rủi ro | Mức/khả năng hiện biết | Kiểm soát và phản ứng |
+| --- | --- | --- |
+| Canonical/report divergence chưa biết nguyên nhân | Cao về acceptance; đã có evidence | X0 exact lineage; không restore/merge DB mù |
+| Source tiếp tục đổi khi build/activate | Đã quan sát Host drift/candidate rebuild history | Freeze relevant bytes, one writer, hash trước/after; invalidate đúng proof nodes |
+| Hai contract direct/central lẫn nhau | Cao về false-green | X1 mapping/revision approval; role-aware oracle |
+| Runtime deadlock/loss hoặc unsafe handoff | P1/P2 source gap đã định vị | A0/A1 negative tests trước live; no blind kill/restart |
+| Auth/binding có vẻ ready nhưng task wrong-target | Chưa live multi-client proof | Opaque binding pin, generation/writer local policy, T01–T07/T11 |
+| Goal tự chạy nhưng mất semantic review | Nguy cơ nếu bỏ ACCEPTING | Controller required; delivery receipt; acceptance !=outcome |
+| Retry storm/unknown duplicate effect | Quan trọng dù tests xanh | Durable journal, one reservation, exact reconciliation, budget/Stop fence |
+| Metrics gây quyết định sai | Window/coverage/provenance thiếu đã thấy | Metric dictionary/temporality, natural/synthetic, uncertainty, no ROI claim |
+| Knowledge tự xác nhận và khuếch đại sai frame | 270/272 auto-derived quality; historical counterexamples | Independent outcome + applicability + counterevidence; bounded advisory |
+| Windows candidate khác Ubuntu package/OS assumptions | Candidate portability work có; live chưa verify | Exact manifests, native platform lane, no /healthz-only release gate |
+| Natural-use không có người/máy B | External schedule, chưa xác định | NOT_RUN/blocker rõ, không simulation thay người dùng/máy vật lý |
+| Chi phí inference/ops ngoài scope | Usage/cost coverage yếu | Explicit grant/provider authority, caps và missing-cost label; không auto upsell route |
+
+Ưu tiên là sửa/đo rủi ro có bằng chứng. Không mở broad refactor, pentest hay tối ưu UI toàn app chỉ vì bảng có nhiều miền; mỗi implementation packet phải có symptom/criterion/oracle cụ thể.
+
+## 14. Evidence map và cách kiểm chứng lại
+
+### 14.1. Source/test/reference map
+
+| Ref | File/symbol cần dùng khi triển khai | Vì sao |
+| --- | --- | --- |
+| S01 | [recoveryBootstrap.js](../../electron/services/recoveryBootstrap.js), `bootstrapCurrentRecoveryHost`; [tests](../../tests/recovery-bootstrap.test.js) | Stop catch/terminate/rollback, exact identity, idle handoff và deadlines |
+| S02 | [runtimeOrchestrator.js](../../electron/services/runtimeOrchestrator.js), `runtimeReadiness`; [recoveryHost.js](../../electron/services/recoveryHost.js) | Role-aware readiness, source/epoch, lifecycle authority |
+| S03 | [dev-ui-lifecycle.js](../../scripts/dev-ui-lifecycle.js), `statusLifecycle`; [activationEpoch.js](../../electron/services/activationEpoch.js) | Official read-only runtime projection và durable failure |
+| S04 | [Recovery Supervisor](../../resources/recovery-supervisor/recovery-supervisor.ps1); [tests](../../tests/recovery-supervisor.test.js) | Installed manifest/task, startup intent, fail-closed liveness |
+| S05 | [continuation_contract.py](../../resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py), [run_continuation.py](../../resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py), [driver](../../resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py) | Existing parent grants/budgets/dispatch/effects; không xây lại |
+| S06 | [continuation tests](../../resources/coding-tools-mcp/tests/test_run_continuation.py), [consent HTTP tests](../../resources/coding-tools-mcp/tests/test_continuation_consent_http.py) | Parent exact/shared budget/no-progress, lost claim, persistent lane, auto-resume và consent |
+| S07 | [goal_pursuit.py](../../resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py), [goal tests](../../resources/coding-tools-mcp/tests/test_goal_pursuit.py) | Exact Goal/pagination, không chọn newest, proof không tự cover criterion |
+| S08 | [controller_continuity.py](../../resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py), [tests](../../resources/coding-tools-mcp/tests/test_controller_continuity.py) | Knowledge revision/ACK/fingerprint/delivery boundary |
+| S09 | [problem_lineage.py](../../resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py), [lineage tests](../../resources/coding-tools-mcp/tests/test_problem_lineage.py) | Exact coverage/checkpoint/outcome và bounded derived capsule |
+| S10 | [problem_resolution_journey.py](../../resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_journey.py), [accepted-result economics](../../resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py) | Read-only descriptive metrics, cost/window/missingness |
+| S11 | [egri_p5_continuity_readiness.py](../../resources/coding-tools-mcp/coding_tools_mcp/egri_p5_continuity_readiness.py), [solution_economics.py](../../resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py) | Baseline/preregistration/A-A gates; no production side effect |
+| D01 | [Boot closure plan](../BOOT_HOST_TRANSITION_CLOSURE_PLAN.md) | C01–C12/M matrix/48h và mode boundaries |
+| D02 | [Continuation closure plan](../CONTINUATION_CLOSURE_PLAN.md), [single-goal plan](../SINGLE_GOAL_BACKGROUND_CONTINUATION_PLAN.md) | Intra-goal scope, passive measurement, host consent và budgets |
+| D03 | [Shared-account plan](../TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [status](../SHARED_ACCOUNT_WORKSPACE_STATUS.md) | Central principal/binding/task-pin và T01–T16; chronology không thay current source |
+| D04 | [Setup simplification candidate](../260922_SYSTEM_SETUP_SIMPLIFICATION_PLAN.md) | Concurrent candidate/source/package proof và blockers cần reuse |
+| D05 | [Control Plane recovery runbook](../CONTROL_PLANE_RECOVERY_RUNBOOK.md), [Windows exact runbook](../WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [release checklist](../RELEASE_CHECKLIST.md) | External operations/restore/package authority boundaries |
+| H01 | [Cold-start report](../../.coding-tools/orchestration/reports/run-d01a5dce50c846fc8e13673cdfc8b3b3/run-summary.md), [pre-reboot report](../../.coding-tools/orchestration/reports/run-b194ab1e311e42efa1dd0614ca245037/run-summary.md), [pre receipt](../../.coding-tools/reboot-acceptance/c01-m02-machine-a-restart-1-pre.json) | Historical report/receipt còn trên disk, không canonical-current acceptance |
+| H02 | [Golden HR calibration](260831_CODING_WEB_GOLDEN_HR_RESOLUTION_CASES_CALIBRATION_V1.md), [EGRI implementation plan](260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_DETAILED_IMPLEMENTATION_PLAN.md) | Advisory historical lessons, không quyền hoặc natural proof mới |
+
+### 14.2. Truy vấn nền tái lập (chỉ trên snapshot)
+
+Các câu SQL dưới đây là recipe **chỉ đọc**. Mở URI `mode=ro&immutable=1` trên bản Backup API đã chụp; `PRAGMA query_only=ON`. Không copy live SQLite bằng shell hoặc chạy constructor canonical writer để report.
+
+```sql
+SELECT p.problem_id,p.current_revision,p.resolution_state,p.closed_at,
+       r.criteria_count,r.contract_fingerprint,r.criteria_fingerprint
+FROM problem_threads p
+JOIN problem_revisions r
+  ON r.problem_id=p.problem_id AND r.revision=p.current_revision
+WHERE p.problem_id IN (
+  'prl-22e670302757c9b7663170e226ed7c26',
+  'prl-e918c7d33e70c2d304d0797e11b05fcb'
+);
+
+SELECT e.problem_id,e.problem_revision,r.status,
+       COUNT(DISTINCT e.run_id) AS run_count
+FROM problem_events e JOIN runs r ON r.run_id=e.run_id
+WHERE e.relation_type='ENGINEERING_ATTEMPT_BOUND'
+  AND ((e.problem_id='prl-22e670302757c9b7663170e226ed7c26'
+        AND e.problem_revision=1)
+    OR (e.problem_id='prl-e918c7d33e70c2d304d0797e11b05fcb'
+        AND e.problem_revision=2))
+GROUP BY e.problem_id,e.problem_revision,r.status;
+
+SELECT checkpoint_id,run_id,status,created_at FROM checkpoints
+WHERE checkpoint_id IN (
+  '6fb3de41a26349f5995a6a2bd92d82f2',
+  'c8f32a66c7714204bcdd64162dc20ee1'
+);
+
+SELECT event_type,COUNT(*) FROM events
+WHERE event_type IN ('oracle_preflight','solution_shadow_recommended',
+                     'quality_outcome_recorded','usage_event','route_selected')
+GROUP BY event_type;
+```
+
+Đếm run_id từ OPEN/REVISION/feedback có thể chứa chuỗi rỗng hợp lệ: loại `run_id=''` và dùng ENGINEERING_ATTEMPT_BOUND khi cần count RUN. Kiểm tra hiện tại **không thấy nonempty dangling run_id** ở problem_events của hai Problem; không biến blank identity của event không thuộc RUN thành một data-loss finding. Ba missing report RUN ở H01 là finding khác và đã query exact IDs.
+
+Coverage kiểm bằng metadata JSON của exact linked waves/checkpoints, current revision, accepted proof/checkpoint authority; một nonempty field bất kỳ chưa đủ cho semantic coverage. Để tính richer journey/P4/P5 dùng existing read-only reporters ở `resources/coding-tools-mcp/scripts`, chốt argv/schema trước; chạy sequential heavy snapshot reports, không dựng Runtime để đọc.
+
+### 14.3. Validation đã làm và đề xuất chưa chạy
+
+Đã thực hiện trong chuỗi audit/lập tài liệu này:
+
+- Git root/branch/HEAD/status/history và relevant diff inspection; không fetch.
+- Backup-API/query-only snapshot; integrity/FK; exact Problem/current revision/capsule/count/coverage/lease/missing checkpoint queries; inventory/timing/provenance metrics đọc và tổng hợp.
+- Official Recovery IPC/status, OS process và exact Scheduled Task read trong E05; không action runtime.
+- Bốn focused Node handoff tests đã PASS trong lượt audit liền trước tại cùng HEAD và source liên quan không đổi: lost-stop-response, exact idle packaged handoff, bounded in-flight supervision wait, exact-owner rollback. Không rerun cùng test chỉ để lập Markdown. Bốn test đó **không phủ P1/P2 negatives**.
+- Đọc source và tên/assertion test continuation/consent/Goal/knowledge; **không chạy lại full Node/MCP/Cargo, không gọi provider thật** trong lượt viết tài liệu.
+- Kiểm tra Markdown, local links, đủ 12/18 criterion IDs và whitespace cho file mới trước bàn giao. Kết quả cuối được ghi ở mục 15.
+
+Các lệnh test sau là **gợi ý proof cho implementation tương lai**, chưa thực thi trong lượt tài liệu; chỉ dùng nếu packet tương ứng được giao và fingerprint đúng:
+
+```powershell
+# Recovery leaf, sau khi bổ sung regression P1/P2:
+node --test tests/recovery-bootstrap.test.js
+
+# Từ resources/coding-tools-mcp, sau thay đổi bounded continuation:
+python -m pytest tests/test_run_continuation.py tests/test_continuation_consent_http.py -q
+
+# Criterion/knowledge leaf khi có thay đổi tương ứng:
+python -m pytest tests/test_goal_pursuit.py tests/test_controller_continuity.py tests/test_problem_lineage.py -q
+```
+
+Full subsystem/real-process/package/live tests chỉ sau source settled và đúng gate; không chạy E2E/reboot/fault suite như kiểm tra tài liệu. `report`, `observe`, `status` cần xác minh semantics trước khi dùng làm passive probe; tên gọi không bảo đảm không có side effect.
+
+## 15. Kết luận và checkpoint bàn giao tài liệu
+
+**Chọn hướng B: hội tụ central execution trên runtime/continuation hiện có, kèm X0 provenance trước closure và mapping contract có quyền.** Phần phải làm ngay không phải “reboot thêm” hoặc “xây trí nhớ thông minh hơn”, mà là:
+
+1. Hoàn tất đối soát bằng chứng và chốt exact contract/target.
+2. Sửa hai invariant handoff cùng oracle.
+3. Activate đúng bytes/epoch/route/policy rồi chứng minh một task dùng được.
+4. Chứng minh background dispatch thật, review delivery, Stop/budget/idempotency.
+5. Thu natural outcome và coverage của từng Problem; sau đó mới đánh giá economics/knowledge improvements có hiệu quả hay không.
+
+Tài liệu giữ rõ hai trạng thái OPEN, ba mức đầy đủ, các source mechanisms đã có, safety gaps đã định vị, historical/candidate/live evidence, sample/denominator/missingness, quyền còn thiếu và hành động tiếp theo. Đây là kế hoạch để owner review và giao work packets; không có closure hoặc quyền triển khai được tạo bởi file này.
+
+**Checkpoint QA ngày 22/09:** đã kiểm UTF-8, tên file `260922_...md`, 16 mục cấp hai, cân bằng code fences, toàn bộ liên kết local resolve được; ma trận có đủ **12/12 + 18/18 exact criterion IDs** đọc từ canonical capsule. Các phép tính tỷ lệ chính đã kiểm lại từ raw counters; performance SHA đã đối chiếu độc lập. Scoped `git diff --no-index --check` cho file mới không có whitespace error (Git chỉ cảnh báo LF→CRLF theo môi trường). Toàn worktree có hai cảnh báo EOF đã biết ở `tasks/todo.md`/`tests/icon-source.test.js`, ngoài scope và giữ nguyên. Không chạy lại suite sản phẩm để kiểm Markdown.
+
+Git baseline vẫn là `main@77d7347`; file nghiên cứu này untracked, chưa stage/commit. Các query/test/read-only audit jobs đã hoàn tất, không có product RUN/Job mới do việc lập tài liệu. Mọi live/mutation/release gate nêu trên còn là công việc tương lai cần authority và fresh preflight. **Exact next action đề xuất cho owner:** review/chốt X1 target-role/criteria mapping và cho phép X0 đối soát nguồn lịch sử; sau đó giao A0/A1 cùng B0/B1 source-validation theo scope đã ghi, chưa reboot hoặc mở P5.
+
+## 16. Nhật ký triển khai và trạng thái các packet
+
+> Tiến độ mới nhất nằm ở mục 16.5 trở đi; blocker local source authority của lượt 16.4 đã được người dùng gỡ rõ ràng. Không giả một write lease/acceptance EOCL từ quyền local này.
+
+### 16.1. Lượt bắt đầu — 22/09/2026, 17:13–17:20 +07
+
+Người dùng đã yêu cầu triển khai từng mục và cập nhật thường xuyên vào chính file này. Cách cập nhật: sau mỗi material wave, test/failure/replan hoặc gặp authority boundary; không hứa giám sát nền sau khi lượt xử lý đã dừng và không tự tạo automation.
+
+**Scope đang thực hiện:** X0 forensic/read-only; X1 đối chiếu contract; cập nhật tài liệu. Chưa sửa source/test hoặc thực hiện lifecycle operation.
+
+Preflight:
+
+- Root `E:/DEV/Codex-web`, `main@77d73471dc896a1f1ac189b2df46529276481552`; các dirty source/evidence có sẵn được bảo toàn, không stage/reset/rebase.
+- Census mới `snapshot_at=2026-09-22T10:15:09.316Z`: physical/logical SHA vẫn đúng E02; integrity `ok`, FK `0`, `mutated_canonical_ledger=false`; 17 ordinary active RUN đều `THRESHOLD_SENSITIVE_STALE_CANDIDATE`, 6 P5 anchors, managed jobs rỗng, unbound live/stale background residue `0`.
+- Tool inventory của phiên hiện tại không expose `workspace_context`, `agent_workflow`, `task_control`; không có khả năng xin write lease/record EOCL acceptance bằng public Coding Tools path từ phiên này. Không tạo “lease” hoặc “accepted” trong JSON/SQLite để thay chức năng chưa expose.
+- Skill `sol-lean-codex` yêu cầu không mutation trên authoritative source nếu chưa có lane/write authority hợp lệ. Vì vậy A0/A1 source write đang dừng ở authority boundary, không phải vì cần chạy lại toàn bộ test hoặc chưa tìm được vị trí lỗi.
+
+### 16.2. X0: đã tìm lại historical canonical proof — không còn UNLOCATED
+
+**Kết quả mới được kiểm chứng:** blob ledger trong commit `a9fcb9974b5ca43266ec2feea1dc64c1a95d406e` chứa đủ ba RUN accepted, ba checkpoint và events cần tìm.
+
+| Identity | Giá trị |
+| --- | --- |
+| Historical Git ledger blob | `bed5b266a83e4cbc3947f5dd15854d80f58f6264` |
+| Original blob SHA-256 | `e7700489c3ecd85afcd2c21c36967741793fef73f36aad47a47da8f9887de9b6` |
+| Bytes | 97,824,768 |
+| Event tail | seq 59822, `2026-09-15T11:37:00.517Z` |
+| Integrity/FK | `ok` / 0 rows |
+| Problem boot trong bản lịch sử | OPEN@1, 66 RUN = 47 accepted + 16 aborted + 3 active |
+| Problem continuation trong bản lịch sử | OPEN@2, 39 RUN = 16 accepted + 10 aborted + 13 active |
+
+Phương pháp chỉ đọc: `git cat-file blob` lấy original bytes; SHA tính trên original blob. Để query không tạo file/WAL, SQLite `deserialize()` vào memory; chỉ hai byte header journal mode của **bản trong memory** đổi sang rollback-journal phù hợp in-memory SQLite, rồi `query_only=ON`. Không sửa Git object, canonical DB, index, WAL/SHM hay file snapshot trên đĩa. Vì đây là view trong memory, integrity kết quả được hiểu trong đúng phương pháp này; không khẳng định đã chạy restore acceptance trên hệ thống thật.
+
+| RUN | Checkpoint lịch sử | Hash chain kiểm lại theo `verify_chain` source |
+| --- | --- | --- |
+| `dcb539e0e1694bc1bb29eed2b2e07f8b` | `8d10f27638e2498cba80edf0bcbe77ce` | 32 events PASS; head `aa9ced88aedb23cd72228b8470355a048e8f863ff3e49570b934c5a682977148` |
+| `d01a5dce50c846fc8e13673cdfc8b3b3` | `6fb3de41a26349f5995a6a2bd92d82f2` | 32 events PASS; head `562bbc4b4063ea9790f0ae6b5f3d0174c273df84db579d13fbb7ca6e781f5808` |
+| `b194ab1e311e42efa1dd0614ca245037` | `c8f32a66c7714204bcdd64162dc20ee1` | 62 events PASS; head `9ecba1536c9c53a57d9f7349078e2cbf4f6f8e41e899879ca211e54099897b0b` |
+
+Hash chain là **per RUN**, không phải một chain toàn bộ events theo global seq. Một check adjacency toàn bảng ban đầu cho nhiều chỗ không khớp vì trộn các RUN; đã loại bỏ check sai abstraction này. Phép kiểm cuối tái tính SHA-256 trên canonical JSON đúng `orchestration_ledger.py::verify_chain`, theo từng RUN; không có failed sequence trong 126 events của ba RUN. Không gọi kiểm adjacency global ban đầu là corruption.
+
+So sánh snapshot hiện tại E02 với historical blob theo exact primary identity và toàn bộ column values ở sáu bảng:
+
+| Bảng | Historical / current rows | Chỉ historical | Chỉ current | Row chung bị thay đổi |
+| --- | ---: | ---: | ---: | ---: |
+| events | 25,822 / 25,694 | 128 | 0 | 0 |
+| problem_events | 307 / 304 | 3 | 0 | 0 |
+| runs | 557 / 554 | 3 | 0 | 0 |
+| waves | 892 / 888 | 4 | 0 | 0 |
+| checkpoints | 273 / 270 | 3 | 0 | 0 |
+| proofs | 947 / 942 | 5 | 0 | 0 |
+
+Kết luận chỉ áp dụng **sáu bảng đã so**. Chưa so toàn bộ DB, leases, journals, archives, schema/migration compatibility, hiện trạng effects và file attestations để quyết định restore. Không suy bảng lịch sử là replacement an toàn cho toàn canonical live.
+
+### 16.3. X0: đã xác lập divergence ở Git merge
+
+1. `a9fcb99` và `3f1bd8a` là hai commit sibling, cùng parent `cffd2ac`.
+2. `a9fcb99` chứa ledger blob `bed5b266…`, đủ tail tới seq 59822; `3f1bd8a` chứa `ab3ebf3f…`, tail chỉ tới 59694.
+3. Merge `000938f401b6d6605b0b94474cbc87b5171c2909` ngày 15/09 18:56:40 có parent thứ nhất `7958f5c…` và parent thứ hai `a9fcb99`. Tree của merge giữ ledger `ab3ebf3f…`, trùng parent thứ nhất, không giữ tail của parent `a9fcb99`.
+4. HEAD hiện tại chứa ledger `be178d84…` có cùng tail cũ; các later commits đổi giữa các blob chứa tail cũ. Cả hai nhánh sibling đều là ancestor của HEAD, nên lịch sử có thể truy hồi bằng exact Git object mà không rewrite history.
+
+**Proven cause ở lớp Git:** merged tree không bảo toàn phần tail canonical có trên parent `a9fcb99`. Chưa biết hành động/command/actor cụ thể đã chọn binary conflict resolution nào; không quy trách nhiệm hoặc kết luận thao tác thủ công/automation nào khi chưa có log.
+
+`scripts/stage-coding-tools-delivery.py::verify_index` hiện kiểm receipt↔staged blob, size, schema và SQLite integrity. Các kiểm tra đó không tự chứng minh event history là superset của mọi merge parent. Vì vậy một receipt mới có thể nhất quán với một ledger thiếu tail; việc sửa cần **guard semantic history continuity** tại delivery/merge workflow hiện có, không chỉ thêm checksum khác.
+
+Gói bổ sung X0-G (đề xuất sau khi có write authority): kiểm required RUN/event/checkpoint ancestry theo exact IDs/hashes và archive/maintenance provenance; không chỉ so max seq hoặc file size, không bác nhầm archival hợp lệ; có fixture hai sibling DB/merge chọn tail cũ phải fail, append hợp lệ pass, divergent common event hash fail, archive đầy đủ có receipt được xử lý đúng. Không thêm DB competing writer và không tự merge rows để guard xanh.
+
+### 16.4. Bảng tiến độ sau lượt đầu
+
+| Packet | Trạng thái thực tế | Proof mới / còn thiếu | Exact next action |
+| --- | --- | --- | --- |
+| X0 discovery | **LOCATED + VERIFIED_RUN_CHAINS** | Đủ ba historical RUN/checkpoint, sáu bảng so sánh, merge ancestry | Chuẩn bị supported isolated reconciliation/restore plan, kiểm các bảng/receipts/effects còn lại |
+| X0 canonical recovery | **NOT_RUN / AUTHORITY REQUIRED** | Canonical live vẫn 63 RUN boot; chưa restore/reconcile | Owner/lane recovery hợp lệ + fresh quiescence/effect gate trước mutation |
+| X0-G continuity guard | **PROPOSED** | Existing receipt guard không chứng minh merge-parent history completeness | Sau write authority: focused failing fixture rồi guard nhỏ trong existing delivery path |
+| X1 contract | **BASELINE VERIFIED / NO REVISION CHANGE** | Giữ 12 và 18 criteria; central role/matrix mapping trong kế hoạch | Không tự đổi canonical criterion hoặc grant |
+| X2 measurement | **BASELINE RECORDED** | Window/hash/census và nguồn historical đã ghi | Triển khai instrumentation chỉ khi có lane/source authority |
+| A0/A1 | **BLOCKED_AUTHORITY, SOURCE UNCHANGED** | Chưa có EOCL write lease/public control path trong phiên; lỗi source vẫn còn | Cấp lane/lease qua connector phù hợp, hoặc explicit override cho local Desktop candidate lane với EOCL acceptance riêng |
+| A2, B0–B4 | **NOT_STARTED** | Chưa dùng prose plan như proof thực thi | Theo dependencies sau source/lane gate; không provider dispatch chưa consent |
+| A3–A5, K, R0 | **NOT_RUN / DEPENDENCY GATED** | Không install/activation/reboot/natural experiment/release | Authority/target/consent riêng và prerequisite proof |
+
+**Operator checkpoint:** hoàn thành phần discovery và chứng minh nguyên nhân X0 ở Git tree; chỉ Markdown thay đổi. Main/HEAD không đổi; không tạo RUN, không active job từ các lệnh audit còn chạy. Source implementation chưa thực hiện, không giả là đã sửa P1/P2. Điểm cần người dùng quyết định để tiếp tục: cho phép lane Codex Desktop sửa candidate source/test cục bộ cho A0/A1 với local proof, giữ EOCL acceptance/activation chờ controller; hoặc cung cấp public Coding Tools path có write lease cho exact packet. Không tự cấp một trong hai phương án bằng câu ghi trong tài liệu.
+
+### 16.5. A0/A1 — local authority và RED→GREEN bước đầu, 22/09 khoảng 17:21–17:26 +07
+
+- Người dùng đã cho phép tiếp tục lane Codex Desktop để sửa source/test cục bộ, giữ EOCL acceptance và activation riêng. Không xin lại cùng quyền, không tạo giả RUN/lease/receipt.
+- Thêm regression trước sửa: bốn semantic-refusal cases và năm off/unknown/partial/manual-stop/epoch-change rollback cases đều FAIL trên code cũ; Node báo 11 fail gồm hai parent tests và chín subtests. Refusal đi tới terminate; các rollback cases gọi start=1 thay vì 0.
+- Sửa local candidate `recoveryBootstrap.js`: chỉ xử lý các mã transport-loss cụ thể; semantic/unknown refusal giữ error gốc và không đánh dấu stop có effect để tự rollback. Mất response cần authenticated forced snapshot chứng minh runtime/native/Tunnel đã dừng, không busy/manual-stop và đúng workspace; thiếu proof trả `RECOVERY_BOOTSTRAP_STOP_UNCONFIRMED`, không terminate/spawn.
+- Sửa `recoveryIpc.js` đánh dấu `recoveryResponseReceived=true` trên lỗi response, để semantic handler dùng code giống OS (ví dụ ECONNRESET) không bị hiểu nhầm là socket error. Không thay public MCP surface hoặc quyền IPC.
+- Compensation chỉ khi fresh pre-stop snapshot chứng minh runtime đã chạy đủ theo role; sau failure phải exact old descriptor/PID/start-token, snapshot stopped, cùng role/workspace/epoch và không manual-stop. Ban đầu idle/off/unknown/partial không tự start. Failed receipt giữ nguyên.
+- Lượt focused bootstrap sau sửa đầu tiên: **34/34 PASS**. Tiếp tục bổ sung transport-unconfirmed negatives và real-loopback IPC response-provenance assertion; chưa dùng kết quả này như final integrated proof.
+- Không restore ledger, không kill/restart/install/package/deploy; mọi process/IPC trong tests là fixture tạm, không runtime sản phẩm. Next: chạy affected bootstrap + Recovery Host tests, review diff/adjacent identity guards rồi ghi final local checkpoint.
+
+### 16.6. A0/A1 — checkpoint local source proof, 22/09 khoảng 17:30 +07
+
+**Đã hoàn thành gói source/test A0/A1 trong lane Desktop được người dùng cấp; không claim EOCL accepted hoặc runtime fixed.**
+
+Files thuộc packet:
+
+| File | SHA-256 final local bytes |
+| --- | --- |
+| `electron/services/recoveryBootstrap.js` | `d3c2b63ccf67ebc8f89cf5a0cdea7a2dac6b850ef8a53d56f4869152a1e52e0f` |
+| `electron/services/recoveryIpc.js` | `b418f619c4a2c65f05734865f4ecb4ff42de33ae087a9557c026cc2f8f7df897` |
+| `tests/recovery-bootstrap.test.js` | `a5f48d4049fbb6b01d9a79f2f706bf30a868af5a37b15efa996008402fce3490` |
+| `tests/recovery-host.test.js` | `7f85e734ce7fc13a83bfc86dd4ec5a8760529e7b4138a504acfaf5ff113e367f` |
+
+**Validation thực tế:**
+
+1. RED trước patch: chín discriminating subcases của P1/P2 fail như 16.5; không che failure này.
+2. Bootstrap sau patch đầu: 34/34 PASS.
+3. Sau bổ sung transport-unconfirmed và central rollback/IPC provenance: `node --test tests/recovery-bootstrap.test.js tests/recovery-host.test.js` **82/82 PASS**, exit 0, khoảng 19.16s. Có real-loopback IPC assertion cho semantic handler trả code ECONNRESET nhưng `recoveryResponseReceived=true`; đây là isolated test server, không primary runtime.
+4. Review liền kề siết `recovering` phải **explicit false**; missing/true không cho compensation. Bổ sung hai negative subcases và chạy lại **chỉ affected bootstrap file**: **41/41 PASS**, exit 0, khoảng 9.40s. Không cộng hai lượt thành 123 tests độc lập hoặc gọi 82/82 là rerun trên final bootstrap hash; IPC source/test không đổi sau lượt 82.
+5. Diff review + scoped `git diff --check` PASS; chỉ cảnh báo LF→CRLF theo Git môi trường. Existing changed-descriptor negative vẫn kiểm hai descriptor reads với baseline running, không vô hiệu hóa đường rollback để làm test xanh.
+
+**Hành vi đã chứng minh trong local tests:**
+
+- Semantic refusal (generic/busy/authority/OS-like code) giữ nguyên error, zero terminate/spawn/start; receipt failed giữ code gốc.
+- Transport loss chỉ tiếp tục khi forced authenticated runtime snapshot chứng minh primary/native/Tunnel đã dừng đúng workspace; running/unknown/native-alive trả STOP_UNCONFIRMED với zero lifecycle effect tiếp theo.
+- Initial off/unknown/partial, manual-stop xuất hiện, epoch changed, recovery active/unknown: không auto start.
+- Runtime trước đó đầy đủ running được compensation khi exact owner còn nguyên và fresh stopped snapshot cùng role/workspace/epoch; central mode không đòi local direct Tunnel phải được bật để nhận biết baseline running.
+- Existing idle-packaged handoff, bounded snapshot waits, trusted-source checks, changed-owner/PID identity, immutable failed receipts và activation guards vẫn qua regression.
+
+**Giới hạn/điều chỉnh có chủ đích:** rollback API `runtime.start` khởi động cả runtime, không restore từng service theo mask. Vì vậy partial hoặc unknown baseline **không auto compensate**, giữ failure để operator/controller reconcile; không thêm API restore tổng quát trong packet này. Snapshot là observation, không phải durable idle lease; chưa chứng minh toàn bộ concurrent lifecycle/installed reboot matrix hoặc source–runtime activation. A2/A3 vẫn phải xử lý oracle/end-to-end và exact loaded identity trước khi claim boot/recovery closure. Chưa đổi revision contract, cấp continuation consent, gọi paid provider hoặc sửa các guard acceptance khác.
+
+**Trạng thái packet mới nhất:**
+
+| Packet | Trạng thái | Còn thiếu / next action |
+| --- | --- | --- |
+| X0 discovery | LOCATED + VERIFIED_RUN_CHAINS | Canonical recovery và X0-G guard chưa thực hiện |
+| A0 | LOCAL_SOURCE_PROVED | Exact EOCL acceptance và loaded-runtime/package proof riêng |
+| A1 | LOCAL_SOURCE_PROVED trong scope trên | Full lifecycle race/installed matrix chưa được phép suy từ test fixtures |
+| A2 | NEXT — chưa bắt đầu | Role-aware end-to-end receipt/verifier và false-green negative cases |
+| A3–A5 / B / K / R | Chưa thay đổi trạng thái | Theo dependencies/quyền riêng trong kế hoạch |
+
+**Operator-visible checkpoint:** đã sửa bốn source/test files và cập nhật file Markdown này; `main@77d7347` không đổi, không staged/unmerged, giữ toàn bộ dirty work khác. Tests đã terminal, không còn test process từ packet được quan sát đang chạy. Không tạo/cấp giả RUN/lease/EOCL checkpoint; không restore ledger, restart/kill/reboot, package/install, commit/push/release/deploy. **Exact next action:** review/adopt exact A0/A1 bytes qua controller khi public path sẵn sàng; bước source kế tiếp là A2, không activation mù và không coi hai Problem OPEN đã đóng.
+
+### 16.7. A2 — offline consistency oracle, 22/09 khoảng 17:33–17:40 +07
+
+**Đã triển khai phần oracle source của A2**, không sửa nghĩa của packaged smoke hiện có và không chạy smoke executable/installer. Scope mới đúng hai file:
+
+| File | SHA-256 final bytes |
+| --- | --- |
+| [scripts/verify-boot-acceptance.js](../../scripts/verify-boot-acceptance.js) | `b094d3220bb31d2fb704424d7d12aeabdcba76350246aa898e6b11d2e0a4253e` |
+| [tests/boot-acceptance.test.js](../../tests/boot-acceptance.test.js) | `fb265f896fa60ed079b4e8a50fbfe3d922ab525d3369a3b4709f2ab55369ee2f` |
+
+#### Contract và ranh giới authority
+
+Verifier chỉ đọc hai JSON packet normalized schema v2: expected manifest do owner freeze và observed receipt do reader/collector cung cấp. Nó không tự thu bằng chứng, không gọi IPC/network/connector, không khởi tạo canonical writer và không cấp quyền lifecycle. Những normalized fields mới dưới đây **không phải public MCP response schema**; adapter ở bước tiếp phải map từ actual authenticated response, không yêu cầu server giả các field đó.
+
+Verdict chỉ gồm `INVALID_INPUT`, `NOT_PROVEN`, `EVIDENCE_CONSISTENT`. Luôn có:
+
+```json
+{
+  "authority_granted": false,
+  "live_accepted": false,
+  "receipt_authenticity_verified": false
+}
+```
+
+Ngay cả JSON tự viết với các boolean true cũng **không thành live proof**: consistency check không xác thực provenance/chữ ký/receipt authority. Controller phải đối chiếu original authenticated reader/client evidence và exact criterion coverage. Không đưa fixture test vào `.coding-tools` như receipt live.
+
+#### Các gate đã implement
+
+- Exact problem ID/revision/criteria fingerprint; expected role và connector policy phải explicit.
+- Before→after boot ordering, boot mode, host packaged PID/instance/start-token mới, host-start sau boot, cùng activation epoch; PID được tái sử dụng không tự fail nếu instance/start-token mới có bằng chứng.
+- Package/executable/Supervisor-script SHA, Supervisor healthy/fresh/installed trỏ đúng host PID, startup intent enabled. Intent OFF trả chưa chứng minh **auto-start acceptance**, không bị đổi thành ON và không được diễn giải bản thân OFF là product defect.
+- Host/MCP running revision = disk revision = expected manifest, no update pending; READY/open epoch/operation và primary/native/components/fullyReady true.
+- Client read phải ok/completed/workspace_accessed, đúng device/endpoint/workspace generation/process/server/epoch/contract, có request ID và nằm sau boot. Pending handshake không thay actual workspace read.
+- Direct role cần Tunnel ready và connector proof strict hoặc exact/reviewed-compatible theo explicit expected policy; compatible không được coi strict rediscovery.
+- Central role không đòi local Tunnel. Cần localReady/centralConnected/authorityReady, fresh route, policy chưa hết hạn, đúng principal/binding/device/endpoint/workspace generation, post-boot client discovery.
+- Observations không ở tương lai; after/client/Supervisor/route/discovery phải đạt freshness window **30 giây của verifier v2**, không thay đổi token TTL hay runtime connector policy. Timestamp milliseconds được normalized từ nguồn thật; historical receipt cũ không được cập nhật timestamp để pass CLI.
+- Attempt history có nội dung, final succeeded operation khớp activation, manual repair count=0 cho sample đang chứng minh không cần repair. Verifier không tự xác minh tính đầy đủ của history do collector cung cấp; giữ authority gate riêng.
+- CLI chỉ nhận regular JSON file tối đa 256 KiB mỗi input; bounded read không đọc vô hạn nếu file lớn lên sau stat; reject symlink theo preflight/OS support, luôn đóng fd. Không echo path/payload/parser excerpts; output chứa hash exact input và failure codes.
+
+#### Sử dụng ở giai đoạn có actual observations
+
+Lệnh dưới đây là **cú pháp**, chưa chạy trên receipt live:
+
+```powershell
+node scripts/verify-boot-acceptance.js <expected-manifest.json> <observed-receipt-v2.json>
+```
+
+Exit 0 = evidence internally consistent, **không đồng nghĩa LIVE_ACCEPTED**; exit 1 = thiếu/mismatch proof; exit 2 = input không hợp lệ. Không thêm `--force`/bypass hoặc chức năng sửa receipt.
+
+Các nhóm field normalized bắt buộc để collector implement tiếp:
+
+| Input | Nội dung |
+| --- | --- |
+| expected | schema_version=2; problem_id/revision/criteria_fingerprint; execution_role; device/endpoint/workspace/generation; package/executable/Supervisor-script SHA; revisions.recovery_host/coding_mcp; contract SHA; startup_intent; connector_policy; central principal/binding hoặc reviewed_ack_sha256 cho compatibility |
+| receipt root | schema_version=2; exact Problem fields; before; after; client; attempts; manual_repair_count |
+| before | boot_time_ms, observed_at_ms, host.instance_id/process_start_token |
+| after | boot_time/mode/observed_at; target + role + package/startup; host identity/start/epoch/executable SHA; Supervisor identity/script/host pointer; revisions; runtime; central_route nếu central |
+| runtime | Existing readiness concepts + process/server identity + toolContract + activationEpoch; direct connector proof hoặc central readiness, không lấy từ cached client schema |
+| client | Original-request correlation, actual successful workspace read và exact target/runtime/contract; central principal/binding/discovery observation nếu central |
+
+Schema fixture đầy đủ nằm trong `fixture()` của test file và chỉ có ý nghĩa **synthetic unit input**. Collector phải giữ original receipts/content-free references riêng để controller verify, không copy fixture làm sample thực.
+
+#### RED→GREEN, QA và trạng thái
+
+1. First oracle + negatives: 34/34 PASS.
+2. Review phát hiện bộ kiểm đầu chưa ràng buộc host-start, host epoch, Supervisor target/script và final attempt. Thêm negatives trước correction: sáu subtests + parent FAIL, trong đó parent cũng kiểm expired central policy. Đây là lỗi **candidate oracle mới**, không khẳng định runtime sản phẩm đã gây các false-green này.
+3. Bổ sung các gate đó: 43/43 PASS cùng packaged-smoke unit tests.
+4. Bổ sung fresh-but-pre-reboot discovery và bounded CLI input tests. Final `node --test tests/boot-acceptance.test.js tests/packaged-recovery-smoke.test.js`: **45/45 PASS**, exit 0, khoảng 0.37s. Bộ packaged smoke unit test không launch packaged app.
+5. Scoped whitespace check hai file mới đạt; các A0/A1 source và existing smoke script không bị sửa trong A2. Không cần rerun suite A0/A1 trên cùng relevant bytes.
+
+| Gate | Trạng thái sau lượt này |
+| --- | --- |
+| A2 offline oracle + false-green unit regression | **LOCAL_SOURCE_PROVED** |
+| A2 reader/collector mapping từ official runtime + actual client evidence | **NOT_IMPLEMENTED / NEXT** |
+| A2 provenance và real post-reboot receipt | **NOT_RUN**, cần actual observations và controller verification |
+| A3 controlled activation / A4 reboot / closure | Chưa mở; không chuyển source proof thành quyền thao tác |
+
+**Checkpoint:** chỉ thêm verifier/test và cập nhật Markdown trong lượt này; `main@77d7347`, không stage/commit, giữ dirty work khác và A0/A1 candidate. Test jobs đã terminal. Không cập nhật receipt ngày 15/09, không ghi canonical DB/EOCL acceptance, không collector probe/live client call, restart/reboot/install/deploy/push. **Exact next action:** nối adapter chỉ đọc vào các authenticated readers hiện có và xác minh origin/correlation của client receipt; chỉ sau đó thu một sample thật khi A3/A4 được phép. A2 toàn phần chưa được đánh dấu hoàn tất.
+
+### 16.8. A2 — official IPC reader và live observation, 22/09 khoảng 17:43–17:48 +07
+
+Lượt trước được phân loại **PROGRESS** vì đã thêm oracle source/test thực; mục tiêu không thu hẹp thành hoàn thành oracle. Lượt này tiếp tục local Desktop lane, bảo toàn các concurrent files mới ở `deploy/prepare-control-plane-activation.py` và `control-plane/tests/test_activation_config.py`; không đưa chúng vào packet A2 hoặc nhận proof của tác vụ khác làm proof của lượt này.
+
+Files mới:
+
+| File | SHA-256 |
+| --- | --- |
+| [collect-boot-runtime-observation.js](../../scripts/collect-boot-runtime-observation.js) | `dc722ec666e4b87d2468505025cdd9d0d46f4f6dba0f6ef53ef8ace5667e56c9` |
+| [boot-runtime-observation.test.js](../../tests/boot-runtime-observation.test.js) | `5299273f04e8733e916a072303f8177c8e44e56ff332be5444fcdc21bdf30113` |
+
+Adapter dùng `RecoveryIpcClient` hiện có; bắt buộc exact workspace absolute, descriptor PID/instance/start-token. Chỉ gọi `recovery.status`, `runtime.lightweight_snapshot`, `runtime.identity_observation`, đều kèm expected identity; kiểm descriptor sau đọc, host/epoch agreement và đúng workspace. Không dựng raw HTTP, không gửi discovery hoặc workspace_context giả.
+
+Projection chỉ whitelist fields content-free; không xuất token/descriptor/raw settings/path/exception message. Missing boolean giữ null, không đổi false/true ngầm. Timestamp host/cache/identity giữ nguyên từ nguồn, `collected_at_ms` là clock riêng; timestamp thiếu/future/cache quá 30s trả `STALE_OR_INCOMPLETE`, không “refresh” observation bằng giờ collector. `OBSERVED` chỉ nghĩa đọc được snapshot, **không có nghĩa READY hoặc accepted**.
+
+Validation: `node --test tests/boot-runtime-observation.test.js tests/boot-acceptance.test.js` **49/49 PASS**. Bao gồm stale timestamp không được làm mới, unknown không thành false, wrong workspace dừng trước identity query, descriptor/epoch replacement không trộn snapshot, secret redaction và chỉ có ba read actions đúng identity. Không chạy lại toàn bộ bootstrap suite vì relevant A0/A1 bytes không đổi.
+
+Đã chạy thật, chỉ đọc:
+
+```powershell
+node scripts/collect-boot-runtime-observation.js --workspace E:\DEV\Codex-web
+```
+
+Observation `collected_at_ms=1790073953799` (22/09 17:45:53.799 +07), runtime source timestamp `1790073952265`, identity source `1790073953798`:
+
+- `status=OBSERVED`, workspace match; Host PID 14300, instance `f5ed03009310a9e4a25d80a7b20301bb`, **development**.
+- Host running `80f71aa1…`, disk `961519d4…`, update_pending=true; MCP running=disk `396e1692…`, update_pending=false.
+- MCP/native true, Tunnel false; role central_executor; localReady/componentsReady/centralConnected/authorityReady/fullyReady đều false.
+- Epoch `activation-mucbq2r3-51dffc08603d42b6c30e1413ec68862f`, projection UPDATE_INCOMPLETE, admission đóng; `identity_current=false`.
+- Process `wo7dJSwX_m-JDV1j`, server `ta0GlVny6oNE9w_w`; identity/runtime contract cùng `bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0`.
+- Connector CHANGED_NEEDS_DISCOVERY; client=null; authority_granted/live_accepted=false. Không export raw credentials hoặc endpoint URL.
+
+**Còn thiếu, không tự điền từ expected manifest:** actual client workspace read/discovery provenance; boot before/after; package/executable/Supervisor hashes; central binding/policy receipt; startup/attempt history. Output reader schema v1 là partial observation, **không** giả thành reboot receipt v2 hoàn chỉnh. Chưa nối tự động collector với verifier để PASS bằng cách lấy expected values làm observed values. Fresh current-process client proof vẫn cần real client có authority; source có thể tiếp tục hoàn thiện passive evidence correlation, nhưng không đóng live gate khi thiếu nó.
+
+### 16.9. B1 — focused continuation safety proof, 22/09 khoảng 17:46–17:48 +07
+
+Không viết lại parent grant/driver đã có. Đọc package AGENTS và test fixture isolation trước khi chạy:
+
+```powershell
+# cwd: E:\DEV\Codex-web\resources\coding-tools-mcp
+python -B -m pytest tests/test_run_continuation.py -q -k 'goal_episode or restart_with_pending_dispatch or patch_budget_is_atomic or execution_rebind or lost_bridge_ownership'
+```
+
+Kết quả **11 passed, 39 deselected in 20.27s**, exit 0. Tập chọn có exact goal/controller-fenced contract, materialized child, parent revoke/shared budget/no-progress, matching child binding, atomic patch exhaustion, lost bridge ownership, pending dispatch sau restart và cross-endpoint/successor-epoch rebind. Tests dùng temp ledgers/mocks; không provider dispatch/real grant và không sửa canonical workspace ledger.
+
+Fingerprint source kiểm chứng:
+
+| Input | SHA-256 |
+| --- | --- |
+| continuation_contract.py | `d932257853817b16c8683641d3e99341d1c3fecad60d3c3cfc69f068f5ea92da` |
+| run_continuation.py | `dbcbaef2173ff7ef1430f352d5faa93268bb568f471e7e8a43c0d0055e2bca54` |
+| continuation_driver.py | `f8016eff3c82d4c4251fbbee400e926df49ad2432cf3af1e03f59561e168d780` |
+| test_run_continuation.py | `d594fd6e01ea86f18122b95bdbbdd2b6f89854c91b392c5e7b8c90f90f4926bb` |
+
+B1 ở mức **FOCUSED_SOURCE_PROOF cho tập nêu trên**, chưa toàn bộ process fault matrix, source acceptance, actual background inference hoặc BG10/BG14 natural outcome. Không coi 11 tests như bao phủ đủ 18 criterion.
+
+**Completion audit cuối lượt:** X0 historical proof tìm được nhưng canonical recovery chưa chạy; A0/A1 local proved chưa loaded; A2 oracle/IPC reader proved nhưng client/reboot/package/provenance chưa đầy đủ; B1 focused green, B2/B3/B4 live còn mở; K/experiment/release còn gate. Do đó mục tiêu **ACTIVE, chưa COMPLETE**. Blocker chưa qua ba goal turns liên tiếp và vẫn còn source/evidence work an toàn, không đánh dấu BLOCKED.
+
+**Checkpoint:** chỉ thêm reader/test và cập nhật Markdown; HEAD main@77d7347, không stage/commit hoặc source conflict. Node/Python test handles đều exit 0 và đã terminal. Không restore DB, acceptance giả, runtime restart, reboot, package/install/deploy/push hoặc paid inference. Next: tiếp tục exact client-receipt correlation/normalization và các B1 effect-journal guards còn lại; duy trì missing-evidence gate trước A3/A4 và actual natural Goal.
+
+### 16.10. A2 client-contact evidence + B1 journal proof — 22/09 khoảng 17:50–17:56 +07
+
+Lượt trước là PROGRESS; phiên hiện tại vẫn không expose public Coding Tools `workspace_context`/`task_control`/`agent_workflow`. Không dùng raw HTTP hoặc attestation tự dựng để tạo actual client receipt. Thay vào đó hoàn thiện source path để **lời gọi thật sau activation** tự mang evidence đúng tầng.
+
+**Thay đổi:** `runtime_activity.py::_record_successful_rpc_contact` bổ sung `workspace_read` content-free vào existing attested contact receipt. Chỉ ghi khi response structured `workspace_context` completed=true/workspace_accessed=true, activation admission mở, exact process/server/epoch/workspace/endpoint/generation khớp; transport vẫn phải qua existing attested ChatWeb guard trong `_record_client_contact`. Request ID arbitrary text được hash thành `rpc-<sha256>`; không lưu raw path/entries/source/request text. Không tạo table/DB/writer mới và không đổi tám public tools.
+
+`connector_client_contact()` chỉ expose phần read khi contact còn current; epoch đổi thì read không còn current. Receipt vẫn là observation trong process, không phải durable acceptance hoặc bằng chứng client đã nhận response. Không biến `workspace_read` thành discovery; existing discovery semantics giữ riêng. Later contact không có completed read trong cùng record slot không được re-date read cũ. Slots của execution-context khác vẫn riêng; downstream reader phải chọn/correlate đúng target/request, không tự lấy latest rồi cấp quyền.
+
+**Proof:**
+
+- `python -B -m pytest tests/test_stateless_http_2026.py -q -k 'completed_workspace_read or unattested_workspace_response or tools_call_records_current_contact or activation_pending_tool_error'`: **4 passed, 34 deselected, 7.73s**, final exit 0. Bao gồm actual isolated HTTP call với fixture attestation, content-free request correlation, epoch invalidation, pending/false completed, endpoint process/server/epoch/workspace mismatch, untrusted caller và no fabricated discovery.
+- Một lượt intermediate 1 failed/3 passed do negative fixture tạo contact dưới execution-context khác trong khi slot cũ vẫn còn; đã sửa fixture để kiểm từng negative sample độc lập, không thay product guard để test xanh. Không gọi lỗi fixture này là runtime data loss.
+- `python -B -m pytest tests/test_run_continuation.py -q -k 'reserved_action_release or effect_journal_is_written or effect_observation_is_idempotent or effect_backups or patch_context_drift or controller_reconciliation_terminalizes'`: **8 passed, 42 deselected, 10.47s**. Kiểm refund chỉ trước dispatch/no effect, immutable pre-effect journal, conflicting terminal rejection, backup/reobserve, drift không ghi effect và classified reconciliation. Không đổi continuation source; không có real provider/live canonical mutation.
+- `check_module_size.py` **FAIL pre-existing**: controller_continuity 1612, coordination 1836, run_continuation 2452, workflow_tools 1640 lines; từng file có đúng số dòng đó ở HEAD trước packet. Module thay đổi runtime_activity 618→662 lines, trong budget 1600. Không tăng allowlist hoặc refactor bốn module ngoài scope. Repository-wide size gate chưa PASS.
+- Scoped diff whitespace PASS, không staged/unmerged. SHA runtime_activity.py `b11e3c32549f407faf78765d70bd92829dcddf1e8da84045f18b34b3e954b424`; test_stateless_http_2026.py `c6621e3868ea9dfc9bb236e718758b354d565d71972060b654ab75d5713bab22`.
+
+**Còn thiếu:** expose sanitized completed-contact qua official Recovery identity observation/collector và map target/request tới oracle; nguồn central OAuth/binding khác attested ChatWeb direct cần contract riêng, không giả central discovery từ local contact. Chưa activated source MCP mới, chưa real-client receipt, chưa reboot/installed/natural sample, chưa X0 canonical recovery hoặc EOCL acceptance. Một local HTTP fixture không đóng C09/C12/BG10/BG14.
+
+**Operator checkpoint:** thay đổi đúng runtime_activity.py + focused test + Markdown trong lượt này; main@77d7347, giữ dirty work khác. Test sessions đều terminal; không restart/kill/install/deploy/restore/commit/push hoặc paid inference. Mục tiêu ACTIVE, chưa complete và chưa ở impasse: next là nối read-only Host/collector projection có exact target filtering; sau đó mới đánh giá live receipt gate và authority vận hành cần bổ sung.
+
+### 16.11. A2 Host→collector completed-contact projection — 22/09 khoảng 17:57–17:59 +07
+
+Previous turn=PROGRESS; đã kiểm lại HEAD/status và cuối file trước khi sửa. Không suy từ số token/ý định rằng có process đang chạy. Goal vẫn active và các test của lượt trước đã terminal.
+
+`recoveryHost.js::buildMcpIdentityObservation` nay expose `workspace_read` bằng whitelist content-free, chỉ khi MCP identity/epoch/admission current, contact attested và current, completed read đúng process/server/epoch/contract, target IDs/generation hợp lệ, request hash đúng format, timestamp không future/quá 30s. Không đưa raw health/contact extras hoặc credential/path lên IPC. Missing/untrusted/stale/malformed trả null; observation vẫn không cấp authority.
+
+`collectBootRuntimeObservation` nhận optional `expectedClient` từ caller của API JavaScript, bắt buộc exact device/endpoint/workspace/generation/request hash trước khi đưa read vào `client`. Không chọn latest contact làm target mặc định. `delivery_confirmed=false` luôn giữ vì server observation không chứng minh client nhận response. CLI hiện chỉ đọc runtime, chưa nhận correlation packet, do đó CLI mặc định vẫn client=null; không giả đây là full collector end-to-end. Central principal/binding và discovery provenance vẫn có gate riêng, không suy từ direct ChatWeb contact.
+
+Validation:
+
+- `node --test tests/boot-runtime-observation.test.js tests/boot-acceptance.test.js`: **50/50 PASS** (0.36s), gồm Host sanitizer→collector API fixture, omitted/wrong request correlation, invalid generation/epoch/completion/stale/attestation, redaction và no delivery claim.
+- `node --test --test-name-pattern='identity observation|read-only context|central bridge admission' tests/recovery-host.test.js`: **3/3 PASS** (0.26s) ở affected consumers. Không launch runtime sản phẩm.
+- Scoped whitespace checks PASS (chỉ cảnh báo LF→CRLF). Không rerun unchanged Python tests từ 16.10.
+
+Exact local SHA-256:
+
+| File | Hash |
+| --- | --- |
+| electron/services/recoveryHost.js | `3d8f6d9f7d0e5403962acdfdfc87081c38d0252f3fba2269d621ecac322ad585` |
+| scripts/collect-boot-runtime-observation.js | `b11d781cde1f56ffc4699a392dba9b5e0d9600dd3990a1d11070091f132ee889` |
+| tests/boot-runtime-observation.test.js | `c725bcbefba3b32100b95353b96cb04fb58eb585b61a9adc61036a94bd3dacf6` |
+
+**Outcome audit:** A2 source pipeline từ MCP attested contact→Host whitelist→collector exact filter có focused proof, chưa loaded/life-cycle proof. Không có current client call thật trong phiên (public Coding Tools connector chưa expose), không before/after reboot, source acceptance/activation, central binding receipt hoặc natural 48h. X0 vẫn chưa restore. Không đóng hai Problem hoặc đánh dấu goal complete.
+
+**Checkpoint/next:** thay đổi ba file trên và Markdown; main@77d7347, bảo toàn WIP khác, test handles terminal. Không restart/reboot/install/deploy/restore/commit/push/paid dispatch. Tiếp theo hoàn thiện explicit correlation input/operator receipt path và đối chiếu lại scopes cần owner cấp trước A3; tránh tiếp tục thêm synthetic tests chỉ để tăng tổng PASS khi blocker còn là actual client và operational authority.

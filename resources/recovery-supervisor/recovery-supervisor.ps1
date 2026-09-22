@@ -206,12 +206,17 @@ function Get-ControlPlaneAgentSpec($M) {
     $eligiblePolicies+=1
   }
   if($eligiblePolicies -lt 1){
-    if($candidateStates -contains 'workspace_registry_unavailable'){return [pscustomobject]@{eligible=$false;state='workspace_registry_unavailable';pid=$null}}
-    if($candidateStates -contains 'workspace_registration_not_current'){return [pscustomobject]@{eligible=$false;state='workspace_registration_not_current';pid=$null}}
-    if($candidateStates -contains 'policy_config_mismatch'){return [pscustomobject]@{eligible=$false;state='policy_config_mismatch';pid=$null}}
-    return [pscustomobject]@{eligible=$false;state='standing_policy_unavailable';pid=$null}
+    # Heartbeat eligibility is deliberately independent from effect-lane
+    # authority.  The connected agent sends one authenticated heartbeat first
+    # and each file/patch/document/exec lane fails closed on its own policy
+    # admission.  Starting in this mode never grants write or exec access.
+    $reason='standing_policy_unavailable'
+    if($candidateStates -contains 'workspace_registry_unavailable'){$reason='workspace_registry_unavailable'}
+    elseif($candidateStates -contains 'workspace_registration_not_current'){$reason='workspace_registration_not_current'}
+    elseif($candidateStates -contains 'policy_config_mismatch'){$reason='policy_config_mismatch'}
+    return [pscustomobject]@{eligible=$true;heartbeat_only=$true;capability_state=$reason;state='heartbeat_only';pid=$null;python_path=$python;agent_path=$agent;config_path=$configPath;workspace_registry_path=$workspaceRegistryPath}
   }
-  [pscustomobject]@{eligible=$true;state='eligible';pid=$null;python_path=$python;agent_path=$agent;config_path=$configPath;workspace_registry_path=$workspaceRegistryPath}
+  [pscustomobject]@{eligible=$true;heartbeat_only=$false;capability_state='standing_policy_ready';state='eligible';pid=$null;python_path=$python;agent_path=$agent;config_path=$configPath;workspace_registry_path=$workspaceRegistryPath}
 }
 function Start-ControlPlaneReadOnlyAgent($M,$Spec) {
   $args=@('-I',[string]$Spec.agent_path,'run-connected-agent','--config',[string]$Spec.config_path,'--workspace-registry',[string]$Spec.workspace_registry_path,'--project-root',[string]$M.app_root,'--node',[string]$M.executable,'--runtime-mode','packaged')|ForEach-Object{Quote-Fixed ([string]$_)}
@@ -221,8 +226,8 @@ function Start-ControlPlaneReadOnlyAgent($M,$Spec) {
 }
 function Invoke-ControlPlaneReadOnlyAgent($M,$State) {
   $spec=Get-ControlPlaneAgentSpec $M;if(-not$spec.eligible){$State.control_plane_agent_state=[string]$spec.state;$State.control_plane_agent_pid=$null;$State.control_plane_agent_last_error_code=$null;return $State}
-  $existingPid=0;try{$existingPid=[int](Get-OptionalProperty $State 'control_plane_agent_pid' 0)}catch{};if(Test-ProcessAlive $existingPid){$State.control_plane_agent_state='running';$State.control_plane_agent_last_error_code=$null;return $State}
-  try{$State.control_plane_agent_pid=Start-ControlPlaneReadOnlyAgent $M $spec;$State.control_plane_agent_state='started';$State.control_plane_agent_last_error_code=$null;$State.control_plane_agent_last_started_at=[DateTimeOffset]::UtcNow.ToString('o')}catch{$State.control_plane_agent_pid=$null;$State.control_plane_agent_state='spawn_failed';$State.control_plane_agent_last_error_code='CONTROL_PLANE_AGENT_START_FAILED'}
+  $heartbeatOnly=([bool](Get-OptionalProperty $spec 'heartbeat_only' $false));$existingPid=0;try{$existingPid=[int](Get-OptionalProperty $State 'control_plane_agent_pid' 0)}catch{};if(Test-ProcessAlive $existingPid){$State.control_plane_agent_state=if($heartbeatOnly){'running_heartbeat_only'}else{'running'};$State.control_plane_agent_last_error_code=$null;return $State}
+  try{$State.control_plane_agent_pid=Start-ControlPlaneReadOnlyAgent $M $spec;$State.control_plane_agent_state=if($heartbeatOnly){'started_heartbeat_only'}else{'started'};$State.control_plane_agent_last_error_code=$null;$State.control_plane_agent_last_started_at=[DateTimeOffset]::UtcNow.ToString('o')}catch{$State.control_plane_agent_pid=$null;$State.control_plane_agent_state='spawn_failed';$State.control_plane_agent_last_error_code='CONTROL_PLANE_AGENT_START_FAILED'}
   $State
 }
 function New-State($M,[string]$StatePath){$old=$null;try{$old=Read-BoundedJson $StatePath $MaxJsonBytes}catch{};[ordered]@{version=1;supervisor_pid=$PID;supervisor_started_at=[DateTimeOffset]::UtcNow.ToString('o');state='starting';last_check_at=$null;last_healthy_at=(Get-OptionalProperty $old 'last_healthy_at' $null);last_host_pid=(Get-OptionalProperty $old 'last_host_pid' $null);last_host_instance_id=(Get-OptionalProperty $old 'last_host_instance_id' $null);consecutive_failures=[int](Get-OptionalProperty $old 'consecutive_failures' 0);restart_attempts=@((Get-OptionalProperty $old 'restart_attempts' $null));next_attempt_after=(Get-OptionalProperty $old 'next_attempt_after' $null);suppressed_until=(Get-OptionalProperty $old 'suppressed_until' $null);last_error_code=$null;last_error_message=$null;last_spawned_pid=$null;deferred_activation_worker_v1=$true;last_deferred_operation_id=(Get-OptionalProperty $old 'last_deferred_operation_id' $null);last_deferred_worker_pid=(Get-OptionalProperty $old 'last_deferred_worker_pid' $null);last_deferred_started_at=(Get-OptionalProperty $old 'last_deferred_started_at' $null);last_deferred_error_code=$null;last_deferred_error_message=$null;control_plane_agent_v1=$true;control_plane_agent_state=(Get-OptionalProperty $old 'control_plane_agent_state' 'not_checked');control_plane_agent_pid=(Get-OptionalProperty $old 'control_plane_agent_pid' $null);control_plane_agent_last_started_at=(Get-OptionalProperty $old 'control_plane_agent_last_started_at' $null);control_plane_agent_last_error_code=$null;manifest_sha256=Get-Sha256File (Get-ManifestPath);task_name=$TaskName}}

@@ -419,7 +419,8 @@ test('Recovery IPC is loopback-only, authenticated, bounded, and allowlisted', a
     log: { warn() {} },
     handlers: {
       'recovery.ping': async () => ({ ready: true }),
-      'runtime.restart': async () => { mutations += 1; return { restarted: true }; }
+      'runtime.restart': async () => { mutations += 1; return { restarted: true }; },
+      'runtime.stop': async () => { throw Object.assign(new Error('semantic refusal'), { code: 'ECONNRESET' }); }
     }
   });
   t.after(() => server.stop());
@@ -430,6 +431,7 @@ test('Recovery IPC is loopback-only, authenticated, bounded, and allowlisted', a
   assert.equal(mutations, 1);
   assert.equal(await unauthorizedCall(descriptor), 401);
   await assert.rejects(client.call('shell.run', ['whoami']), { code: 'ACTION_NOT_ALLOWED' });
+  await assert.rejects(client.stop(), { code: 'ECONNRESET', recoveryResponseReceived: true });
   assert.equal(descriptor.host, '127.0.0.1');
   assert.equal(descriptor.owner, 'recovery-host');
   assert.equal(descriptor.device_id, deviceIdentity.device_id);

@@ -291,11 +291,11 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(projection["state"], "active")
         self.assertEqual(projection["dispatchable_target_count"], 1)
+        self.assertEqual(projection["targets"][0]["workspace_id"], "workspace-http-authority-0001")
+        self.assertEqual(projection["targets"][0]["workspace_generation"], "generation-http-authority-0001")
         serialized = json.dumps(projection)
         self.assertNotIn("owner_id", serialized)
         self.assertNotIn("binding_id", serialized)
-        self.assertNotIn("workspace_id", serialized)
-        self.assertNotIn("generation-http-authority-0001", serialized)
         self.assertNotIn("path", serialized)
 
         status, forbidden = self._post(

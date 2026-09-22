@@ -389,6 +389,25 @@ The verifier rejects a changed, missing, extra, symlinked, or malformed release
 file before any service action. It is an artifact-integrity check only; it does
 not prove that the selected release is loaded by systemd or authorize activation.
 
+Before changing `current`, bind the selected manifest identity to both
+operator-owned configuration files with the release-local helper. Run the
+read-only check first, then repeat without `--check-only` after reviewing the
+content-free receipt:
+
+```bash
+python3 <release-dir>/deploy/prepare-control-plane-activation.py \
+  --release-dir <release-dir> \
+  --env-file ~/.config/codex-control-plane/control-plane.env \
+  --drop-in ~/.config/systemd/user/codex-control-plane.service.d/10-immutable-release.conf \
+  --check-only
+```
+
+The helper updates only the declared source revision and expected package
+fingerprint. It preserves unrelated settings, never prints credentials, and
+does not change `current`, reload systemd, restart the service, alter admission
+or touch SQLite. If the second file cannot be replaced, it restores the first
+file and returns a failure instead of leaving the two identity sources split.
+
 Neither artifact contains the SQLite database, operator token, node credential,
 session, backup, or real environment file. Creating it does not change the
 `current` release symlink, systemd units, service, admission, or a Windows node.
@@ -491,7 +510,7 @@ named local admission lane must independently pass its policy, strict-runtime
 and actor gates before a completed receipt can be observed. Mutation remains
 blocked until a local adapter can pass the local authority gate. A grant alone
 is never a file, process, local-policy, or task-approval authority.
-Schema migrations are additive, source-versioned (current `user_version=10`),
+Schema migrations are additive, source-versioned (current `user_version=24`),
 and applied atomically by the store. `ControlPlaneStore.backup_to()` creates a
 verified, non-overwriting SQLite Backup API snapshot when an operator calls it
 explicitly. It is not an automatic startup backup and does not execute a
@@ -700,13 +719,16 @@ a possible local effect; an interrupted prepared bridge entry remains an
 
 ### Long-lived same-user connected agent
 
-After the packaged node has a reviewed enrollment and local workspace
-capabilities, the named `run-connected-agent` entrypoint is managed by the
-existing **same-user Recovery Supervisor** in a newly installed candidate. The
-Supervisor verifies the packaged Python and agent hashes from its manifest,
-then starts it when the private node configuration and workspace registry are
-valid. An older supervisor manifest has no agent fields and remains
-`manifest_legacy`; it never guesses an agent path or starts one.
+After the packaged node has a node configuration, the named
+`run-connected-agent` entrypoint is managed by the existing **same-user Recovery
+Supervisor** in a newly installed candidate. The Supervisor verifies the
+packaged Python and agent hashes from its manifest, then starts the agent as
+soon as the credential-bearing node configuration is valid. This keeps an
+authenticated heartbeat independent from effect authority: when the workspace
+registry or standing file/patch/exec policy is absent, the agent runs in
+heartbeat-only mode and every capability lane remains disabled by its own
+fail-closed admission check. An older supervisor manifest has no agent fields
+and remains `manifest_legacy`; it never guesses an agent path or starts one.
 
 Every iteration sends an authenticated runtime heartbeat first, even when no
 read-only policy exists. It then revalidates each installed standing policy

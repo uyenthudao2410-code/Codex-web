@@ -4,39 +4,6 @@
   const api = window.mcpAssistant;
   if (!api) return;
 
-  // The manager Overview embeds token-dashboard.html in a same-origin iframe.
-  // The parent already owns the Control Center snapshot/orchestration poll, so
-  // starting this full controller again in the child doubles those IPC reads.
-  // In embedded mode, bridge the parent's observed pulse into this document
-  // and send refresh intent back to the parent. If same-origin access is not
-  // available, fail safe to the existing standalone polling path below.
-  function installEmbeddedOverviewBridge() {
-    const search = String(window.location?.search || '');
-    const embedded = /(?:^|[?&])embedded=1(?:&|$)/.test(search);
-    if (!embedded || !window.parent || window.parent === window) return false;
-    try {
-      const parentDocument = window.parent.document;
-      if (!parentDocument?.addEventListener || !parentDocument?.dispatchEvent) return false;
-      const relayPulse = (event) => {
-        document.dispatchEvent(new CustomEvent('coding-tools:overview-pulse', { detail: event?.detail }));
-      };
-      const relayRefresh = () => {
-        const ParentCustomEvent = window.parent.CustomEvent || CustomEvent;
-        parentDocument.dispatchEvent(new ParentCustomEvent('coding-tools:overview-refresh-request'));
-      };
-      parentDocument.addEventListener('coding-tools:overview-pulse', relayPulse);
-      document.addEventListener('coding-tools:overview-refresh-request', relayRefresh);
-      window.addEventListener?.('unload', () => {
-        parentDocument.removeEventListener?.('coding-tools:overview-pulse', relayPulse);
-      }, { once: true });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  if (installEmbeddedOverviewBridge()) return;
-
   const ROUTER_KEYS = ['chatweb', 'desktop', 'opencode', 'fast', 'hub', 'deepseek', 'terra', 'writer', 'sol'];
   const COMPUTE_KEYS = ['fast', 'deepseek', 'terra', 'sol'];
   const STATE_RANK = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };

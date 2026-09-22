@@ -71,6 +71,18 @@ test('authority status parser accepts target state but rejects identifiers or pa
   );
 });
 
+test('authority status parser preserves opaque workspace identity when supplied', () => {
+  const parsed = parseAuthorityStatusResult(JSON.stringify(status({
+    targets: [{
+      ...status().targets[0],
+      workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
+      workspace_generation: 'generation_abcdef0123456789abcdef0123456789'
+    }]
+  })), identity.device_id);
+  assert.equal(parsed.targets[0].workspace_id, 'workspace_0123456789abcdef0123456789abcdef');
+  assert.equal(parsed.targets[0].workspace_generation, 'generation_abcdef0123456789abcdef0123456789');
+});
+
 test('authority status service invokes the packaged node agent without credentials or path arguments', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-authority-status-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

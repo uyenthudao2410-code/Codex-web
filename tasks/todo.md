@@ -156,3 +156,41 @@
   - [x] 15.5. Tinh chỉnh ghi chú sidebar footer trong `token-dashboard.html` phản ánh đúng vai trò giao diện chính <!-- id: ui-consolidate-1-5 -->
   - [x] 15.6. Chạy bộ kiểm thử tự động (`token-dashboard.test.js`, `dashboard-analytics.test.js`, `control-center-manager.test.js`, `npm test`) <!-- id: ui-consolidate-1-6 -->
   - [x] 15.7. Tổng kết và bàn giao kết quả trực quan cho người dùng <!-- id: ui-consolidate-1-7 -->
+
+---
+
+## Giai đoạn 10: Thiết Lập `docs/ICON.png` Làm Icon Đại Diện Dự Án Toàn Diện
+
+- [x] 16. Thiết lập và tạo bộ icon chuẩn đa độ phân giải từ `docs/ICON.png` <!-- id: icon-setup-1 -->
+  - [x] 16.1. Kiểm tra thông số kỹ thuật ảnh nguồn `docs/ICON.png` (kích thước 1254x1254 RGBA) <!-- id: icon-setup-1-1 -->
+  - [x] 16.2. Cập nhật `scripts/generate-icon.js` sử dụng `docs/ICON.png` làm nguồn chính sinh `app-icon.png` (512x512) và `app-icon.ico` (7 sizes: 16, 24, 32, 48, 64, 128, 256) <!-- id: icon-setup-1-2 -->
+  - [x] 16.3. Sinh lại `electron/app-icon.png` và `electron/app-icon.ico` với thuật toán resampling LANCZOS chất lượng cao <!-- id: icon-setup-1-3 -->
+  - [x] 16.4. Tích hợp icon đại diện vào giao diện chính `renderer/token-dashboard.html` (brand mark sidebar) và `<link rel="icon">` <!-- id: icon-setup-1-4 -->
+  - [x] 16.5. Bổ sung `<link rel="icon">` vào `renderer/index.html`, `login.html`, `panel.html` <!-- id: icon-setup-1-5 -->
+  - [x] 16.6. Chạy kiểm thử tự động `tests/icon-source.test.js` và kiểm tra cấu hình đóng gói `package.json` <!-- id: icon-setup-1-6 -->
+  - [x] 16.7. Nghiệm thu, ghi lại bài học và báo cáo người dùng <!-- id: icon-setup-1-7 -->
+
+---
+
+## Review & Nghiệm Thu Giai Đoạn 10 (Icon Đại Diện Dự Án Hoàn Tất)
+
+1. **Kết quả đạt được**:
+   - **Nguồn ảnh chuẩn**: Tiếp nhận [`docs/ICON.png`](file:///e:/DEV/Codex-web/docs/ICON.png) (1254x1254 RGBA, 882 KB).
+   - **Icon Desktop & Packaging**:
+     - `electron/app-icon.png`: Kích thước 512x512 PNG, tối ưu dung lượng, sắc nét cho BrowserWindow và Taskbar / System Tray.
+     - `electron/app-icon.ico`: Đầy đủ 7 tầng độ phân giải chuẩn Windows (`16x16`, `24x24`, `32x32`, `48x48`, `64x64`, `128x128`, `256x256`), định dạng PNG-in-ICO tương thích 100% với Windows Explorer, Desktop Shortcut, Start Menu và NSIS Installer / Uninstaller.
+     - `renderer/app-icon.png`: Bản sao trực tiếp phục vụ web renderer.
+   - **Build Automation**:
+     - Tạo `scripts/build-icon-from-source.py` sử dụng Pillow với bộ lọc `LANCZOS` chất lượng cao.
+     - Cập nhật `scripts/generate-icon.js` để lệnh `npm run icon:build` ưu tiên tự động xử lý từ `docs/ICON.png`.
+   - **Giao diện Người dùng (UI Branding)**:
+     - `renderer/token-dashboard.html`: Thay thế biểu tượng vector cũ bằng hình ảnh đại diện thương hiệu của dự án trên sidebar (`.brand-mark .brand-logo-img`), tích hợp hiệu ứng hover bóng đổ ánh xanh hiện đại.
+     - Đồng bộ thẻ `<link rel="icon" type="image/png" href="app-icon.png">` trên toàn bộ các trang HTML (`token-dashboard.html`, `index.html`, `panel.html`, `login.html`, `browser.html`).
+   - **Kiểm thử tự động**:
+     - Cập nhật `tests/icon-source.test.js` kiểm tra kích thước, chữ ký PNG và tầng ICO.
+     - Toàn bộ 3 tests trong `tests/icon-source.test.js` PASS (100%).
+     - Toàn bộ 50 tests UI (`token-dashboard`, `dashboard-analytics`, `control-center-manager`) PASS (100%).
+     - `check-source-root-clean` & `check-sensitive-tracked` PASS.
+     - `check:coding-tools-history` PASS (4870 files).
+
+

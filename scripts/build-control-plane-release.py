@@ -44,8 +44,17 @@ DEPLOY_FILES = (
     "control-plane-backup.sh",
     "control-plane-healthcheck.sh",
     "control-plane-verify-release.py",
+    "prepare-control-plane-activation.py",
     "control-plane.env.example",
     "control-plane-mcp-tunnel.env.example",
+)
+EXECUTABLE_DEPLOY_FILES = frozenset(
+    {
+        "deploy/control-plane-launcher.sh",
+        "deploy/control-plane-mcp-tunnel-launcher.sh",
+        "deploy/control-plane-backup.sh",
+        "deploy/control-plane-healthcheck.sh",
+    }
 )
 CONTROL_PLANE_RUNTIME_SUFFIXES = frozenset({".py", ".cjs", ".cmd"})
 REQUIRED_RELEASE_FILES = frozenset(
@@ -66,6 +75,7 @@ REQUIRED_RELEASE_FILES = frozenset(
         "deploy/control-plane-backup.sh",
         "deploy/control-plane-healthcheck.sh",
         "deploy/control-plane-verify-release.py",
+        "deploy/prepare-control-plane-activation.py",
         "deploy/control-plane.env.example",
         "deploy/control-plane-mcp-tunnel.env.example",
         "DEPLOYMENT.md",
@@ -107,11 +117,15 @@ def _copy_tree(source: Path, destination: Path, *, allowed_suffixes: frozenset[s
         shutil.copy2(path, target)
 
 
-def _copy_file(source: Path, destination: Path) -> None:
+def _copy_file(source: Path, destination: Path, *, normalize_crlf: bool = False) -> None:
     if source.is_symlink() or not source.is_file():
         raise ReleaseBuildError(f"required release input is missing or unsafe: {source}")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, destination)
+    if not normalize_crlf:
+        shutil.copy2(source, destination)
+        return
+    destination.write_bytes(source.read_bytes().replace(b"\r\n", b"\n"))
+    shutil.copystat(source, destination)
 
 
 def _git_text(source_root: Path, *args: str) -> str:
@@ -207,6 +221,21 @@ def _component_digest(records: Iterable[dict[str, Any]], prefix: str) -> str:
     return digest.hexdigest()
 
 
+def _archive_mode_filter(info: tarfile.TarInfo) -> tarfile.TarInfo:
+    """Preserve POSIX launcher permissions when the source is built on Windows.
+
+    NTFS does not expose Unix executable bits, so ``tarfile.add`` would
+    otherwise serialize the four shell launchers as mode 0644.  The archive
+    is the deployment artifact consumed on Ubuntu; set the mode on the tar
+    member explicitly rather than relying on the build host filesystem.
+    """
+
+    relative = info.name.split("/", 1)[1] if "/" in info.name else ""
+    if relative in EXECUTABLE_DEPLOY_FILES:
+        info.mode = 0o755
+    return info
+
+
 def _deployment_guide(release_name: str) -> str:
     return f"""# Control-plane release deployment
 
@@ -230,7 +259,12 @@ credential, session, backup, or private environment file.
    its own owner-private regular file, and store the OpenAI Runtime API Key as
    a file reference in the protected tunnel-client profile.
 3. Run `python3 deploy/control-plane-verify-release.py --release-dir <release>`
-   and compare its content-free receipt to this manifest. Install the six
+   and compare its content-free receipt to this manifest. Before switching
+   `current`, prepare the two protected release identity files together with
+   `python3 deploy/prepare-control-plane-activation.py --release-dir <release>
+   --env-file <control-plane.env> --drop-in <10-immutable-release.conf>
+   --check-only`, then repeat without `--check-only` after reviewing the
+   receipt. This helper does not restart anything. Install the six
    unit/timer examples from `deploy/` as user units. They only
    execute `~/.local/lib/codex-control-plane/current/deploy/...`; `current` must
    be an operator-controlled symlink to exactly one verified release directory.
@@ -296,7 +330,11 @@ def build_release(
         for relative in CONTROL_PLANE_FILES:
             _copy_file(source_root / "control-plane" / relative, staging_release / "control-plane" / relative)
         for relative in DEPLOY_FILES:
-            _copy_file(source_root / "deploy" / relative, staging_release / "deploy" / relative)
+            _copy_file(
+                source_root / "deploy" / relative,
+                staging_release / "deploy" / relative,
+                normalize_crlf=relative.lower().endswith(".sh"),
+            )
         (staging_release / "DEPLOYMENT.md").write_text(_deployment_guide(release_name), encoding="utf-8")
 
         records = _manifest_files(staging_release)
@@ -324,7 +362,7 @@ def build_release(
             json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8"
         )
         with tarfile.open(temporary_archive, "w:gz", compresslevel=9) as archive:
-            archive.add(staging_release, arcname=release_name, recursive=True)
+            archive.add(staging_release, arcname=release_name, recursive=True, filter=_archive_mode_filter)
         os.replace(staging_release, final_release)
         os.replace(temporary_archive, final_archive)
     finally:

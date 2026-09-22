@@ -422,7 +422,10 @@ class RecoveryIpcClient {
           catch { reject(Object.assign(new Error('Recovery Host returned invalid JSON.'), { code: 'RECOVERY_RESPONSE_INVALID' })); return; }
           if (response.statusCode !== 200 || payload?.ok !== true) {
             reject(Object.assign(new Error(String(payload?.error?.message || `Recovery Host request failed (HTTP ${response.statusCode}).`)), {
-              code: String(payload?.error?.code || 'RECOVERY_REQUEST_FAILED')
+              code: String(payload?.error?.code || 'RECOVERY_REQUEST_FAILED'),
+              // Preserve response provenance even if a handler uses an OS-like
+              // code. A semantic refusal must not become transport-loss authority.
+              recoveryResponseReceived: true
             }));
             return;
           }

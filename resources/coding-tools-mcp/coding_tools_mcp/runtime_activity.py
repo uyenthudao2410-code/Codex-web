@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -267,7 +270,37 @@ class RuntimeActivityMixin:
             # bound receipt below and must never satisfy the legacy live-contact
             # compatibility path as a side effect.
             return
-        self._record_client_contact(identity, method="tools/call")
+        workspace_read = None
+        params = request.get("params") if isinstance(request.get("params"), dict) else {}
+        if str(params.get("name") or "") == "workspace_context" and isinstance(structured, dict):
+            endpoint = structured.get("endpoint") if isinstance(structured.get("endpoint"), dict) else {}
+            activation = structured.get("activation") if isinstance(structured.get("activation"), dict) else {}
+            epoch = str(getattr(self, "activation_epoch_id", None) or "")
+            generation = endpoint.get("workspace_generation")
+            workspace_id = structured.get("workspace_id")
+            endpoint_id = endpoint.get("endpoint_id")
+            safe_id = lambda value: isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.:@-]{1,256}", value) is not None
+            if (
+                structured.get("completed") is True and structured.get("workspace_accessed") is True
+                and activation.get("admission_open") is True and safe_id(epoch)
+                and activation.get("activation_epoch_id") == epoch and endpoint.get("activation_epoch_id") == epoch
+                and endpoint.get("process_instance_id") == self.process_instance_id
+                and endpoint.get("server_instance_id") == self.server_instance_id
+                and safe_id(workspace_id) and endpoint.get("workspace_id") == workspace_id and safe_id(endpoint_id)
+                and isinstance(generation, int) and not isinstance(generation, bool) and generation > 0
+                and isinstance(request.get("id"), (str, int)) and not isinstance(request.get("id"), bool)
+            ):
+                # Correlate the RPC id without persisting arbitrary caller text.
+                request_hash = hashlib.sha256(json.dumps(request["id"], ensure_ascii=True).encode("utf-8")).hexdigest()
+                device_id = str(os.environ.get(f"{ENV_PREFIX}_DEVICE_ID", "") or "").strip().lower()
+                workspace_read = {
+                    "schema_version": 1, "kind": "workspace_read_completed", "tool": "workspace_context",
+                    "request_id": f"rpc-{request_hash}", "workspace_id": workspace_id,
+                    "workspace_generation": generation, "endpoint_id": endpoint_id,
+                    "device_id": device_id if safe_id(device_id) else None,
+                    "completed": True, "workspace_accessed": True,
+                }
+        self._record_client_contact(identity, method="tools/call", workspace_read=workspace_read)
 
     def _record_activation_bootstrap_rpc_contact(
         self,
@@ -426,7 +459,7 @@ class RuntimeActivityMixin:
             "snapshot_busy": False,
         }
 
-    def _record_client_contact(self, identity: dict[str, Any], *, method: str) -> None:
+    def _record_client_contact(self, identity: dict[str, Any], *, method: str, workspace_read: dict[str, Any] | None = None) -> None:
         if str(method or "").strip() != "tools/call":
             return
         client_id = str(identity.get("client_id") or "").strip()
@@ -454,6 +487,14 @@ class RuntimeActivityMixin:
             "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or "") or None,
             "observed_at": datetime.now(timezone.utc).isoformat(),
         }
+        if workspace_read is not None:
+            receipt["workspace_read"] = {**workspace_read,
+                "contract_sha256": receipt["contract_sha256"],
+                "process_instance_id": receipt["process_instance_id"],
+                "server_instance_id": receipt["server_instance_id"],
+                "activation_epoch_id": receipt["activation_epoch_id"],
+                "observed_at": receipt["observed_at"],
+            }
         with self.tool_contact_lock:
             self.tool_contact_receipts[self._hub_client_record_id(identity)] = receipt
 
@@ -500,6 +541,9 @@ class RuntimeActivityMixin:
         return {
             "observed": latest is not None,
             "current_contract_contact": current,
+            # This is the latest attested contact only; a later non-workspace
+            # call clears the read projection rather than re-dating old proof.
+            "workspace_read": dict(latest["workspace_read"]) if current and isinstance(latest.get("workspace_read"), dict) else None,
             "method": str((latest or {}).get("method") or "") or None,
             "contract_sha256": str((latest or {}).get("contract_sha256") or "") or None,
             "observed_at": str((latest or {}).get("observed_at") or "") or None,

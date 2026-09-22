@@ -72,3 +72,49 @@ body[data-theme="dark"] .busy-overlay{background:rgba(20,20,20,.72)!important}
 .authority-status-card .soft-badge[data-state="waiting"],.authority-status-card .soft-badge[data-state="warning"]{color:#a36b16;border-color:color-mix(in srgb,#a36b16 35%,var(--border-strong));background:color-mix(in srgb,#a36b16 9%,var(--surface))}
 .authority-target-list{display:grid;gap:6px;margin:9px 0}.authority-target-row{display:grid;gap:2px;padding:8px;border-radius:8px;background:var(--surface);border:1px solid var(--border)}.authority-target-row b{font-size:10px}.authority-target-row small{color:var(--muted);font-size:9px}
 @media (max-width:760px){.setup-progress,.settings-groups{grid-template-columns:1fr}.setup-card-actions{align-items:flex-start;flex-direction:column}.setup-card-actions .primary-button{width:100%}}
+
+/* One setup shell, with the existing forms kept as sections under it. */
+body[data-setup-view]:not([data-setup-view=""]) .page.active{max-width:1100px;margin-inline:auto}
+body[data-setup-view]:not([data-setup-view=""]) .page.active:not([data-page-view="system"])>.section-header{display:none}
+.setup-navigation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 10px}
+.setup-section-link{display:grid;gap:5px;min-width:0;padding:13px 16px;text-align:left;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s,background .15s}
+.setup-section-link b{font-size:12px}.setup-section-link small{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setup-section-link:hover{border-color:var(--blue)}
+.setup-section-link.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 6%,var(--surface))}
+.setup-support{margin:0 0 16px;color:var(--muted);font-size:12px}
+.setup-support summary,.setup-technical summary{padding:10px 0;cursor:pointer;font-weight:600}
+.setup-support[open] .settings-advanced-links{margin-top:6px}
+.central-setup{font-size:13px;line-height:1.65}
+.central-setup p{font-size:12px;line-height:1.65;color:var(--muted)}
+.central-setup .field{margin-bottom:7px}.central-setup .input-action{align-items:stretch}
+.central-setup .input-action input{min-width:0;flex:1}.central-setup .input-action button{white-space:normal}
+.setup-field-help{margin:8px 0 18px}
+.setup-mode-notice,.setup-next-step{padding:16px 18px;margin:0 0 18px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.setup-mode-notice{border-left:3px solid #b87916}.setup-mode-notice b{font-size:13px}
+.setup-mode-notice p,.setup-next-step p{margin:7px 0 0}
+.setup-next-step h3{margin:7px 0 0;font-size:16px;color:var(--text)}
+.setup-next-step button{margin-top:12px}
+.central-setup .authority-status-card{padding:16px 18px;margin-top:16px}
+.central-setup .authority-status-card h3{font-size:14px}.central-setup .authority-status-card p{font-size:12px}
+.central-setup .authority-target-row b{font-size:12px}.central-setup .authority-target-row small{font-size:11px}
+.setup-technical{margin-top:18px;padding-top:6px;border-top:1px solid var(--border);font-size:12px}
+.setup-technical pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:var(--muted)}
+.setup-server-admin{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.setup-server-admin h3{margin:0;font-size:14px}
+.setup-server-admin p{margin:8px 0;font-size:12px;line-height:1.65;color:var(--muted)}
+.setup-section-link:focus-visible,.setup-support summary:focus-visible,.setup-technical summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+body[data-execution-role="central-executor"] .deploy-grid{grid-template-columns:minmax(0,1fr);margin-top:0}
+body[data-execution-role="central-executor"] [data-direct-only][hidden]{display:none!important}
+@media(max-width:760px){
+  .setup-navigation{grid-template-columns:1fr}.setup-card-head{flex-wrap:wrap}
+  .central-setup .input-action{flex-direction:column;gap:8px}.central-setup .input-action button{min-height:40px}
+  body[data-setup-view]:not([data-setup-view=""]) .topbar{flex-wrap:wrap;height:auto!important;flex-basis:auto!important}
+  body[data-setup-view]:not([data-setup-view=""]) .top-actions{flex-wrap:wrap}
+}
+@media(max-width:600px){
+  body[data-setup-view]:not([data-setup-view=""]) .app-shell{grid-template-columns:minmax(0,1fr)!important}
+  body[data-setup-view]:not([data-setup-view=""]) .sidebar{display:none}
+  body[data-setup-view]:not([data-setup-view=""]) .content-viewport{padding:16px 12px!important}
+  .setup-card{padding:16px}.setup-step small{white-space:normal}.setup-card-actions p{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.setup-section-link{transition:none}}

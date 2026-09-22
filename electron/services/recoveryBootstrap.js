@@ -766,6 +766,29 @@ async function defaultTerminateProcess(identity, options = {}) {
   return terminateExactProcessTree(identity, options);
 }
 
+async function observeHandoffRuntime(client, descriptorOptions, timeoutMs) {
+  if (typeof client.call !== 'function') return null;
+  try {
+    const value = await client.call('runtime.snapshot', [{ force: true, reason: 'bootstrap_handoff' }], {
+      ...descriptorOptions, timeout: Math.min(5_000, Math.max(100, Number(timeoutMs) || 5_000))
+    });
+    const state = value?.status;
+    const role = value?.settings?.executionRole;
+    const workspace = text(value?.settings?.workspace);
+    if (!state || !workspace || !['direct_legacy', 'central_executor'].includes(role)
+      || state.busy !== false || state.recovering !== false || state.manuallyStopped !== false
+      || typeof state.runtimeRunning !== 'boolean' || typeof state.tunnelRunning !== 'boolean'
+      || typeof value?.device?.coding?.native_alive !== 'boolean') return null;
+    return {
+      role, workspace,
+      epoch: text(state.activationEpoch?.activation_epoch_id),
+      running: state.runtimeRunning && value.device.coding.native_alive
+        && state.tunnelRunning === (role === 'direct_legacy'),
+      stopped: !state.runtimeRunning && !state.tunnelRunning && !value.device.coding.native_alive
+    };
+  } catch { return null; } // Unknown never authorizes compensation or termination.
+}
+
 /**
  * Retire an authenticated stale host and spawn the current checkout.  The
  * function never sends `code.activate_update` to the stale process.  The new
@@ -892,6 +915,7 @@ async function bootstrapCurrentRecoveryHost({
   writeBootstrapResult(paths, { operation_id: envelope.operation_id, state: 'pending' });
   const descriptorOptions = descriptorRequestOptions(descriptor);
   let childStopMayHaveOccurred = false;
+  let beforeStop = null;
   try {
     // Ask the authenticated host to stop only its children first.  Transport
     // response loss is not proof that the stop did not happen; the exact
@@ -903,7 +927,9 @@ async function bootstrapCurrentRecoveryHost({
     if (idlePackagedHandoff) {
       idlePackagedHandoff = await proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs, sleep });
     }
-    childStopMayHaveOccurred = true;
+    if (!idlePackagedHandoff && typeof client.start === 'function') {
+      beforeStop = await observeHandoffRuntime(client, descriptorOptions, timeoutMs);
+    }
     try {
       await client.stop(
         { manual: false },
@@ -912,8 +938,20 @@ async function bootstrapCurrentRecoveryHost({
           timeout: Math.min(15_000, Math.max(1_000, Number(timeoutMs) || 15_000))
         }
       );
+      childStopMayHaveOccurred = true;
     }
     catch (error) {
+      if (error?.recoveryResponseReceived === true
+        || !['ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT', 'RECOVERY_REQUEST_TIMEOUT', 'RECOVERY_HOST_UNAVAILABLE'].includes(error?.code)) {
+        throw error;
+      }
+      const reconciled = await observeHandoffRuntime(client, descriptorOptions, timeoutMs);
+      if (!reconciled?.stopped || !sameWorkspace(reconciled.workspace, paths.appRoot())) {
+        throw bootstrapError('RECOVERY_BOOTSTRAP_STOP_UNCONFIRMED',
+          'Stop response was lost and the runtime is not provably stopped; handoff requires reconciliation.',
+          { cause_code: error?.code || '' });
+      }
+      childStopMayHaveOccurred = true;
       log?.warn?.('Stale Recovery Host stop response was unavailable; reconciling exact process identity before handoff.', {
         operationId: envelope.operation_id,
         code: error?.code || ''
@@ -1021,7 +1059,8 @@ async function bootstrapCurrentRecoveryHost({
     // runtime only when both the authenticated descriptor and OS start-token
     // still prove the exact old owner.  This compensation cannot touch a
     // replacement/recycled PID and never changes the terminal failure receipt.
-    if (childStopMayHaveOccurred && typeof client.start === 'function') {
+    if (childStopMayHaveOccurred && beforeStop?.running && beforeStop.epoch
+      && sameWorkspace(beforeStop.workspace, paths.appRoot()) && typeof client.start === 'function') {
       try {
         const currentDescriptor = readDescriptor(paths);
         const descriptorStillExact = Number(currentDescriptor?.owner_pid || 0) === ownerPid
@@ -1031,6 +1070,13 @@ async function bootstrapCurrentRecoveryHost({
         if (descriptorStillExact) {
           const observed = await processIdentityObserver(ownerPid);
           if (observed?.state === 'live' && sameProcessIdentity(ownerIdentity, observed)) {
+            const afterStop = await observeHandoffRuntime(client, descriptorOptions, timeoutMs);
+            if (!afterStop?.stopped || afterStop.role !== beforeStop.role
+              || afterStop.epoch !== beforeStop.epoch
+              || !sameWorkspace(afterStop.workspace, beforeStop.workspace)) throw bootstrapError(
+              'RECOVERY_BOOTSTRAP_ROLLBACK_UNCONFIRMED',
+              'Runtime intent changed or is unknown; automatic rollback must not start services.'
+            );
             await client.start(
               { reason: 'bootstrap_handoff_rollback' },
               {

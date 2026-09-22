@@ -124,7 +124,7 @@ test('Electron UI revision owns its real-renderer performance collector and load
     true
   );
   assert.equal(componentOwnsPath('electron_ui', 'electron/services/uiPerformanceMetrics.js'), true);
-  assert.equal(componentOwnsPath('electron_ui', 'renderer/token-dashboard.html'), true);
+  assert.equal(componentOwnsPath('electron_ui', 'renderer/index.html'), true);
   assert.equal(componentOwnsPath('electron_ui', 'renderer/dashboard.js'), true);
   assert.equal(componentOwnsPath('electron_ui', 'renderer/fonts/PlusJakartaSans-latin.woff2'), true);
   assert.equal(componentOwnsPath('electron_ui', 'renderer/not-a-runtime-resource.txt'), false);
@@ -139,7 +139,7 @@ test('Electron UI revision changes when loaded token dashboard document or font 
     fs.writeFileSync(target, `${relative}\n`);
   }
   const rendererRoot = path.join(appRoot, 'renderer');
-  const dashboard = path.join(rendererRoot, 'token-dashboard.html');
+  const dashboard = path.join(rendererRoot, 'index.html');
   const font = path.join(rendererRoot, 'fonts', 'fixture.woff2');
   fs.mkdirSync(path.dirname(font), { recursive: true });
   fs.writeFileSync(dashboard, '<link rel="stylesheet" href="fonts.css">\n');

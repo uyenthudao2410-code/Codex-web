@@ -1,0 +1,94 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: Execution Hub · Control Center
+    - button "×" [ref=e4] [cursor=pointer]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - generic [ref=e25]:
+        - strong [ref=e26]: Codex Hub
+        - generic [ref=e27]: Control Center
+      - navigation "Điều hướng chính" [ref=e28]:
+        - button "CC Command Center" [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: CC
+          - generic [ref=e31]: Command Center
+        - button "TP Tasks & Proof" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33]: TP
+          - generic [ref=e34]: Tasks & Proof
+        - button "DV Máy này" [ref=e35] [cursor=pointer]:
+          - generic [ref=e36]: DV
+          - generic [ref=e37]: Máy này
+        - button "ST Thiết lập hệ thống" [active] [ref=e38] [cursor=pointer]:
+          - generic [ref=e39]: ST
+          - generic [ref=e40]: Thiết lập hệ thống
+      - generic [ref=e41]:
+        - generic [ref=e42]: Dịch vụ chưa chạy
+        - paragraph [ref=e45]: Chưa chọn thư mục làm việc
+        - generic [ref=e46]:
+          - generic [ref=e47]: MCP OFF
+          - generic [ref=e48]: Tunnel OFF
+      - generic [ref=e49]:
+        - button "Coding Tools MCP · 1.0.7" [ref=e50] [cursor=pointer]
+        - generic [ref=e51]: Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - heading "Thiết lập hệ thống" [level=1] [ref=e138]
+        - generic [ref=e56]:
+          - button "Thiết bị hiện tại local · unknown · Git n/a" [ref=e57] [cursor=pointer]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: Thiết bị hiện tại
+              - generic [ref=e61]: local · unknown · Git n/a
+          - button "◐" [ref=e62] [cursor=pointer]
+          - button "Kiểm tra lại" [ref=e63] [cursor=pointer]
+          - button "Khởi động nhanh" [ref=e64] [cursor=pointer]
+      - generic [ref=e65]:
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - text: THIẾT LẬP HỆ THỐNG
+              - heading "Kết nối một lần, tiếp tục từ đây" [level=2] [ref=e142]
+              - paragraph [ref=e143]: Ubuntu điều phối chung. Máy Windows giữ thư mục và thực thi trong quyền bạn cho phép.
+            - button "Kiểm tra thiết lập" [ref=e144] [cursor=pointer]
+          - article [ref=e145]:
+            - generic [ref=e146]:
+              - generic [ref=e147]:
+                - text: THIẾT LẬP TIẾP TỤC ĐƯỢC
+                - heading "Chưa chọn thư mục làm việc" [level=3] [ref=e148]
+                - paragraph [ref=e149]: Bạn có thể đóng cửa sổ; dữ liệu đã lưu sẽ xuất hiện lại khi mở Cài đặt.
+              - generic [ref=e150]: ĐANG CHỜ
+            - list "Tiến độ thiết lập" [ref=e151]:
+              - 'listitem "Kết nối máy chủ: Cần cấu hình kết nối" [ref=e152]':
+                - generic [ref=e153]: "1"
+                - generic [ref=e154]:
+                  - generic [ref=e155]: Kết nối máy chủ
+                  - generic [ref=e156]: Cần cấu hình kết nối
+              - 'listitem "Thư mục & quyền: Chưa chọn thư mục" [ref=e157]':
+                - generic [ref=e158]: "2"
+                - generic [ref=e159]:
+                  - generic [ref=e160]: Thư mục & quyền
+                  - generic [ref=e161]: Chưa chọn thư mục
+              - 'listitem "Kiểm tra kết nối: Chờ Tunnel phản hồi" [ref=e162]':
+                - generic [ref=e163]: "3"
+                - generic [ref=e164]:
+                  - generic [ref=e165]: Kiểm tra kết nối
+                  - generic [ref=e166]: Chờ Tunnel phản hồi
+              - 'listitem "Kiểm tra: Chưa có receipt sẵn sàng" [ref=e167]':
+                - generic [ref=e168]: "4"
+                - generic [ref=e169]:
+                  - generic [ref=e170]: Kiểm tra
+                  - generic [ref=e171]: Chưa có receipt sẵn sàng
+            - generic [ref=e172]:
+              - paragraph [ref=e173]: Chọn một thư mục trước khi cấp quyền.
+              - button "Chọn thư mục" [ref=e174] [cursor=pointer]
+          - navigation "Các phần thiết lập hệ thống" [ref=e175]:
+            - button "1. Máy chủ & tài khoản Cần cấu hình kết nối" [ref=e176] [cursor=pointer]:
+              - generic [ref=e177]: 1. Máy chủ & tài khoản
+              - generic [ref=e178]: Cần cấu hình kết nối
+            - button "2. Thư mục & quyền Chưa chọn thư mục" [ref=e179] [cursor=pointer]:
+              - generic [ref=e180]: 2. Thư mục & quyền
+              - generic [ref=e181]: Chưa chọn thư mục
+            - button "Tùy chọn ứng dụng Giao diện & chạy nền" [ref=e182] [cursor=pointer]:
+              - generic [ref=e183]: Tùy chọn ứng dụng
+              - generic [ref=e184]: Giao diện & chạy nền
+          - group [ref=e185]:
+            - generic "Hỗ trợ & nâng cao" [ref=e186] [cursor=pointer]
+        - text: ○ ○ ○ ○ ○
