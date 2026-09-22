@@ -825,10 +825,11 @@ def _authority_status_projection(response: Any, *, config: dict[str, Any]) -> di
             "dispatch_state", "dispatch_blockers",
         }
         target_enriched_expected = target_legacy_expected | {"workspace_id", "workspace_generation"}
-        if not isinstance(target, dict) or set(target) not in {target_legacy_expected, target_enriched_expected}:
+        target_keys = set(target) if isinstance(target, dict) else None
+        if target_keys not in (target_legacy_expected, target_enriched_expected):
             raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
         target_node = target.get("node_display_name")
-        enriched_identity = set(target) == target_enriched_expected
+        enriched_identity = target_keys == target_enriched_expected
         target_workspace_id = str(target.get("workspace_id") or "").strip().lower() if enriched_identity else None
         target_workspace_generation = str(target.get("workspace_generation") or "").strip().lower() if enriched_identity else None
         target_workspace = target.get("workspace_display_name")
