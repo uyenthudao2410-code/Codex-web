@@ -1523,3 +1523,16 @@ Cardinality unresolved: **157** process/server instance IDs, **121** `run_id` bu
 **Validation:** `python -B -m unittest -v tests/test_ledger_recovery_rehearsal.py tests/test_ledger_recovery_candidate_audit.py` — **8 tests PASS, 11.320s**; `python -B -m py_compile scripts/audit-ledger-recovery-candidate.py` — PASS. Đây là proof verifier/rehearsal/clone, chưa phải runtime activation, client strict discovery, reboot, natural-use hay outcome proof.
 
 **Next action exact:** stage snapshot mới theo `npm run stage:coding-tools-delivery`, chạy `npm run check:coding-tools-delivery`, review diff và commit trực tiếp trên `main`; sau đó chỉ thử `git push origin main` một lần. Nếu vẫn gặp `GH001`, dừng ở external delivery blocker và chờ owner chọn history/artifact strategy; không tự filter/LFS/force-push.
+
+### 16.27. Push trực tiếp `main` bị chặn lại bởi generated executable — 22/09 khoảng 20:20–20:27 +07
+
+Đã thực hiện đúng một lần `git push origin main` sau khi `stage:coding-tools-delivery` và `check:coding-tools-delivery` cùng PASS (`4876 files`, ledger blob tại snapshot `e01b447d…`, `user_version=12`). Kết quả pre-receive:
+
+- Remote `origin/main` **không đổi**, vẫn `044dd96178faacc92a049a528eb05baa60b8816a`.
+- Local `main` ở `d8efaeb1126a27498f55f8a384a82b75e008e27e`, ahead `24`, behind `0`.
+- GitHub cảnh báo canonical `.coding-tools/orchestration/ledger.sqlite3` khoảng `92.99 MB` vượt khuyến nghị `50 MB` nhưng chưa vượt hard limit `100 MB`.
+- GitHub từ chối đúng ba generated executable lịch sử: `output/packaged-candidate-final/win-unpacked/Coding Tools MCP.exe`, `output/packaged-candidate-revalidated-20260922-135500/win-unpacked/Coding Tools MCP.exe`, và `output/packaged-candidate-revalidated-20260922-140500/win-unpacked/Coding Tools MCP.exe` (khoảng `215 MB` mỗi file), với `GH001`.
+
+Đây là **external delivery blocker**, không phải lỗi verifier/test hay canonical recovery. Không được coi push thành công, không được tự `filter-repo`, `git lfs migrate`, reset/rebase hoặc `push --force-with-lease`. Owner cần chọn rõ một đường history/artifact: loại generated `output/**/win-unpacked` khỏi lịch sử local chưa publish và giữ manifest/hash ngoài Git; chuyển đúng executable sang LFS sau khi xác nhận quota/policy; hoặc chỉ định artifact/release channel khác. Mọi history mutation phải có bundle backup mới, dry-run path allowlist, kiểm tra `.coding-tools` retention và force-with-lease theo remote guard.
+
+Sau push, runtime tiếp tục tạo dirty evidence (`ledger.sqlite3`, `task-context-workspaces.json`, `performance.json`); hash live ledger đã là `e8cd1aa2dac11f2fca0a4b71a1e32d6b37ed49e4499b867c9d17ffa0d428866b`, không dùng hash này để thay receipt delivery snapshot đã commit. Hai Problem vẫn OPEN; candidate recovery vẫn quarantine, `activation_eligible=false`, và không có canonical switch.
