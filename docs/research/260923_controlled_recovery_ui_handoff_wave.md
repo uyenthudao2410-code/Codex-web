@@ -1515,3 +1515,84 @@ MCP/Tunnel/UI aggregate chưa có proof end-to-end.
   activation window mới với packaged/source identity exact và deadline đủ dài;
   sau đó mới chạy một refresh mới, đọc `READY`/`admission_open`, rồi mới xin
   current-process `tools/list`/`server/discover`. Hai Problem vẫn `OPEN`.
+
+## 15.11. Route heartbeat bounded và readback READY sau activation — 23/09/2026
+
+Recheck live sau section 15.10 cho thấy epoch `activation-mud6y13k-10d3877ba21943bffbd3a5edcc06d471` vẫn tồn tại nhưng route evidence đã quá TTL 60 giây. `runtime.snapshot` chỉ rõ:
+
+```text
+Recovery Host PID/instance = 41648 / 296aa20eea59f9b3c13e54940070a6b1
+Recovery Host revision     = 94ea711860aba7b21527b9b081744a8e5b6d8dc519b6de6ebf8f53425f00eb00
+MCP running == disk        = a49891f8e6bff0bfb2d49284ff85d8cd73946508f59ff0a7b8ebd8ed0339dfe5
+central_status_reason      = CENTRAL_ROUTE_EVIDENCE_STALE
+central_connected          = false
+authority_ready            = false
+fully_ready                = false
+activation state/admission = READY / false
+```
+
+Đây không phải source/package drift mới và cũng không phải SQLite failure: MCP/native vẫn sống, running/disk revision khớp, nhưng route evidence one-shot đã hết hạn. Theo đúng boundary hiện hành, không gọi lại `dev:refresh`, không mở admission bằng tay và không bật Tunnel chỉ để đổi trạng thái.
+
+Đã chạy **một** `runtime-heartbeat` bounded, read-only đối với ledger và không cấp write/exec authority. Kết quả trực tiếp của heartbeat là:
+
+```json
+{"readiness":"degraded","reason":"mcp_revision_unproven","runtime_identity":"unreported","runtime_state":"CURRENT","fully_ready":"false","policy_state":"enabled","route_evidence":"fresh"}
+```
+
+`degraded/unreported` ở thời điểm heartbeat là đúng: node agent chưa được phép tự biến một runtime chưa chứng minh identity thành ready. Sau khoảng 8 giây để Recovery Host supervision đọc route evidence mới, `npm run dev:status`, `full-clean-activation --status` và authenticated readback đã hội tụ:
+
+```text
+epoch state/admission      = READY / true
+Recovery Host current      = true; full_clean_capability_available=true
+mcpRunning/nativeAlive     = true / true
+componentsReady/fullyReady = true / true
+runtime_update_incomplete  = false
+centralConnected/authority = true / true
+tunnelRequired/running     = false / false
+connector state             = CHANGED_NEEDS_DISCOVERY
+connectorRediscovered      = false
+connectorRefreshRequired   = true
+contract SHA-256            = bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0
+```
+
+`central_executor` không yêu cầu Windows Tunnel; `tunnelRunning=false` là bằng chứng đúng thiết kế, không phải lỗi cần sửa. UI development cũng đang `CURRENT` với PID `16916`, UI running/disk revision khớp `1c252e835ef58a9862aeee4c0585416cdea4ec3122caf640c627f149ff20e73a`.
+
+### Giới hạn proof sau heartbeat
+
+`collect-boot-runtime-observation.js --workspace E:\DEV\Codex-web` trả `status=OBSERVED`, nhưng vẫn giữ:
+
+```text
+authority_granted = false
+live_accepted     = false
+client            = null
+missing           = REAL_CLIENT_WORKSPACE_READ,
+                    CLIENT_DELIVERY_CONFIRMATION,
+                    CLIENT_DISCOVERY_PROVENANCE,
+                    BOOT_BEFORE_AFTER,
+                    PACKAGE_EXECUTABLE_SUPERVISOR_HASHES,
+                    CENTRAL_BINDING_POLICY_RECEIPT,
+                    ATTEMPT_HISTORY_STARTUP_INTENT
+```
+
+Điều này chứng minh local Recovery Host/route/readiness, không chứng minh connector ChatWeb đã nhận MCP. Phiên Codex hiện tại không expose Coding Tools MCP namespace; `list_mcp_resources` và `list_mcp_resource_templates` đều trả rỗng. Do đó chưa thể thực hiện current-process `tools/list`/`server/discover` một cách hợp lệ và không được thay bằng local HTTP probe, `runtime-heartbeat`, persisted compatibility flag hoặc ACK thủ công.
+
+### Đánh giá phần app còn phải bổ sung hoặc hoàn tất
+
+| Ưu tiên | Phần cần xử lý | Bằng chứng hiện có | Điều kiện hoàn tất bắt buộc |
+| --- | --- | --- | --- |
+| P0 | Strict connector discovery | Contract SHA hiện tại, local runtime READY; chưa có discovery receipt | ChatWeb connector thật gọi `tools/list` hoặc `server/discover`, trả đúng 8 tool public, receipt bind PID/process instance, MCP server instance, epoch và contract SHA |
+| P0 | Real workspace bootstrap | `client=null`, `workspace_context` chưa được quan sát | Một request thật trên `E:\DEV\Codex-web` có `completed=true`, `workspace_accessed=true`, request/workspace generation và server/process identity khớp |
+| P1 | Route heartbeat lifecycle | Heartbeat one-shot làm readiness READY chỉ trong TTL; sau đó lại stale | Thiết kế logon-scoped/interactive heartbeat có expiry/fail-closed rõ ràng, không cấp authority ngầm; có focused test và receipt fresh sau idle/reconnect |
+| P1 | Handoff P1/P2 | Guard source đã có; chưa có live reinstall proof | Reinstall/handoff trên đúng packaged bundle, chứng minh semantic stop refusal không terminate và rollback giữ nguyên service-off ban đầu |
+| P1 | Reboot oracle | Receipt cũ chỉ kiểm boot/PID/hash | Oracle mới phải kiểm supervisor, packaged host, MCP/native/Tunnel theo role, revision/epoch, connector freshness, `fullyReady`, và real `workspace_context` |
+| P2 | Evidence continuity | Ledger hiện integrity/FK tốt; một số generated report lịch sử chưa nối lại được vào snapshot hiện tại | Supported export/receipt linking bind exact RUN/WAVE/checkpoint; không insert/reconcile trực tiếp vào SQLite |
+| P2 | Natural outcome | Independent outcome `3/49`, natural evidence=false | Mỗi Problem có natural-use thật, outcome oracle độc lập, 48 giờ chỉ tính khi canonical capsule còn yêu cầu và có bằng chứng thực |
+| P2 | Policy/knowledge loop | P4 `COLLECTING`, 20 raw patch-repaired nhưng 0 causal-solution repaired, 29 unknown | Hoàn thiện typed repair/lesson linkage, missingness và P4/P5 gate; không auto-promote routing/policy từ shadow data |
+| P3 | Release/remote boundary | Runtime local proof có, package/production chưa claim | Exact package/installer/deployment identity, strict discovery và release gate riêng; không suy từ `fully_ready` hay Git push |
+
+### Checkpoint điều hành
+
+- **Đã hoàn thành:** route evidence được làm mới một lần có kiểm soát; activation epoch hiện `READY/admission_open=true`; local MCP/native/central route đã hội tụ và byte identity được đọc lại; không sửa ledger và không tạo ACK/outcome giả.
+- **Trạng thái mạnh nhất hiện tại:** `RUNTIME_RECOVERY_VERIFIED + CENTRAL_ROUTE_READY + PRODUCT_ACCEPTANCE_OPEN`.
+- **Blocker thật:** current ChatWeb connector discovery và real `workspace_context`; sau đó mới có thể mở reboot/logon/Machine B, fault injection, natural-use và closure.
+- **Exact next action:** giữ epoch hiện tại, dùng connector được hỗ trợ để lấy một discovery receipt bind exact identity; nếu connector không xuất hiện trong phiên vận hành, ghi `WAITING_FOR_SUPPORTED_CONNECTOR` và dừng, không retry refresh/ACK.

@@ -3012,3 +3012,88 @@ Sau commit/push `2e505d41`, Recovery Host đã current theo source hash `94ea…
 Điều này xác nhận blocker hiện tại là activation deadline/epoch continuity và downstream MCP/Tunnel/UI readiness, không phải lỗi integrity của `ledger.sqlite3`. Không retry cùng epoch, không mở admission bằng tay và không dùng `READY` lịch sử. `HEAD == origin/main == 2e505d41`; runtime ledger drift vẫn là evidence ngoài snapshot, còn `dist-recovery-6d2b0dec/` chỉ là build output untracked chưa phát hành.
 
 **Checkpoint:** controlled ledger recovery vẫn ở tầng evidence continuity đã apply trước đó; runtime activation chưa usable. Bước kế tiếp cần một activation window mới được owner duyệt với exact packaged/source identity, sau đó strict connector discovery và `workspace_context`; hai Problem vẫn `OPEN`, không được suy closure từ expiry/readiness cũ.
+
+### 16.60. Route freshness được khôi phục, nhưng product gate vẫn chưa đóng — 23/09/2026
+
+Recheck sau section 16.59 phân biệt rõ hai trạng thái trước và sau route
+heartbeat. Epoch `activation-mud6y13k-10d3877ba21943bffbd3a5edcc06d471` không bị
+refresh lại; chỉ có một heartbeat bounded để làm mới local route evidence đã
+hết TTL. Trước heartbeat, readback authenticated ghi
+`CENTRAL_ROUTE_EVIDENCE_STALE`, `central_connected=false`,
+`authority_ready=false`, `fully_ready=false`, `admission_open=false`. Sau khi
+Recovery Host supervision đọc evidence mới, cùng epoch chuyển về:
+
+```text
+READY / admission_open=true
+MCP running == disk = a49891f8e6bff0bfb2d49284ff85d8cd73946508f59ff0a7b8ebd8ed0339dfe5
+Recovery Host revision = 94ea711860aba7b21527b9b081744a8e5b6d8dc519b6de6ebf8f53425f00eb00
+components_ready=true, fully_ready=true, runtime_update_incomplete=false
+central_connected=true, authority_ready=true
+execution_role=central_executor, tunnel_required=false, tunnel_running=false
+connector_state=CHANGED_NEEDS_DISCOVERY, connector_rediscovered=false
+```
+
+Đây là controlled recovery/readiness proof, không phải strict client proof.
+Heartbeat trả `readiness=degraded`, `reason=mcp_revision_unproven`,
+`runtime_identity=unreported` ở thời điểm gửi; chỉ readback sau đó mới chứng
+minh được runtime identity/revision. Điều này xác nhận app đang fail-closed
+đúng hướng, nhưng cũng bộc lộ một thiếu hụt vận hành: route heartbeat hiện là
+one-shot, nên sau 60 giây không có heartbeat tiếp theo thì local admission lại
+đóng dù MCP vẫn sống.
+
+#### Đánh giá toàn diện lại theo mục tiêu app
+
+| Lớp mục tiêu | Hiện trạng đã chứng minh | Phần cần bổ sung/xử lý | Tiêu chí chọn hướng |
+| --- | --- | --- | --- |
+| Runtime local | Recovery Host, MCP/native, revision continuity và central route đạt sau heartbeat | Heartbeat logon/interactive có TTL, backoff, fail-closed và telemetry không cấp quyền ngầm | Chỉ thêm scheduler khi có thiết kế logged-out/interactive rõ; không biến heartbeat thành executor |
+| Connector contract | Contract SHA `bc44c044…`, runtime READY | Current ChatWeb `tools/list`/`server/discover` và receipt bind process/epoch/SHA | Không dùng local HTTP, compatibility flag hay ACK thay discovery |
+| Workspace usability | Workspace target đã match trong authenticated read; `client=null` | Một `workspace_context` thật với `completed=true`, `workspace_accessed=true`, request/workspace generation và server identity | Đây là gate tối thiểu trước mọi claim “app dùng được” |
+| Recovery/handoff safety | P1 handoff guard đã có ở source | Reinstall packaged proof, stop-refusal và rollback-original-off live evidence | Giữ semantic refusal tách khỏi transport failure; không terminate theo heuristic |
+| Reboot/boot acceptance | Pre-reboot receipt lịch sử chỉ bind Supervisor/host/hash | Oracle post-boot mở rộng tới MCP/Tunnel theo role, epoch, connector, workspace read | Không gọi reboot trước strict discovery và exact source/package receipt |
+| Problem closure | Hai PRL vẫn `OPEN`; rev 1 có 12 C, rev 2 có 18 C | Criterion disposition exact, closure authority đúng revision, natural outcome độc lập | Không gộp RUN/confirmation giữa `prl-22e…` và `prl-e918…` |
+| Knowledge/effectiveness | Exact binding `193/211`; structural `34/34`; independent outcome `3/49`; P4 `COLLECTING` | Typed lesson/repair linkage, causal-solution proof, unknown classification, P5 gate | Không auto-promote policy/routing từ shadow hoặc raw patch count |
+| Release/production | `main` local/remote đồng bộ; local runtime proof | Package/installer/deployment identity, strict discovery, release and production receipts | Git push không đồng nghĩa package/release/production |
+
+#### Chỉ số và cách ra quyết định
+
+Các số liệu hiện có tiếp tục được dùng như chỉ số chẩn đoán, không phải điểm
+thành công tổng hợp:
+
+- Exact revision binding `193/211 = 91.4692%` cho thấy còn event/proof chưa bind
+  exact, nên ưu tiên evidence linking trước khi tăng workload.
+- Structural criterion-to-proof `34/34` và receipt-bound confirmation `3/3` chỉ
+  nói rằng cầu nối dữ liệu tồn tại ở mẫu nhỏ; không chứng minh outcome.
+- Independent outcome `3/49 = 6.1224%`, natural evidence=false: đây là khoảng
+  thiếu lớn nhất nếu mục tiêu là giải quyết Problem theo kết quả người dùng.
+- P4 có `100` shadow task (`98` terminal), `20` raw patch-repaired nhưng `0`
+  causal-solution repaired và `29` unknown; không được dùng raw repair count để
+  tuyên bố app đã học hoặc tự tối ưu.
+- Hai Problem vẫn phải đọc riêng: `prl-22e…` rev1 `66 = 47/16/3`,
+  `prl-e918…` rev2 `39 = 16/10/13`, cả hai `OPEN`, chưa có technical acceptance
+  và typed natural closure.
+
+#### Lựa chọn hướng triển khai
+
+1. **Giữ packaged/runtime bundle hiện tại làm baseline**: epoch đang READY và
+   revision continuity đã được chứng minh; không đổi bundle trong lúc lấy
+   discovery, tránh tạo thêm `UPDATE_INCOMPLETE`.
+2. **Giải quyết strict discovery trước**: đây là gate có giá trị phân biệt cao
+   nhất giữa runtime “sống” và app “được ChatWeb sử dụng”. Nếu connector không
+   được expose, terminalize là `WAITING_FOR_SUPPORTED_CONNECTOR`, không bypass.
+3. **Sau discovery, làm một `workspace_context` thật** rồi mới mở reboot/logon,
+   Machine B, fault injection và natural-use. Mỗi lớp phải có receipt riêng.
+4. **Bổ sung heartbeat lifecycle sau khi có proof connector**: thiết kế refresh
+   bounded, expiry và recovery khi logged-out; không cấp write/exec authority từ
+   route evidence, không bật Tunnel cho `central_executor`.
+5. **Cuối cùng mới đóng Problem** bằng exact criterion disposition, independent
+   outcome và closure authority đúng revision. Nếu thiếu một lớp, giữ `OPEN` và
+   ghi missingness thay vì suy đoán.
+
+**Checkpoint:** controlled recovery đã khôi phục local route/readiness nhưng chưa
+khôi phục product acceptance. Không có lần ledger recovery thứ hai, không chỉnh
+byte `ledger.sqlite3`, không gọi connector ACK và không tạo natural outcome giả.
+Git vẫn chạy trực tiếp trên `main`; runtime evidence drift và
+`dist-recovery-6d2b0dec/` untracked được giữ nguyên theo chính sách, không đưa
+vào commit release. Exact next action là strict discovery bằng connector được
+hỗ trợ; nếu không có connector, dừng ở `WAITING_FOR_SUPPORTED_CONNECTOR` và cập
+nhật báo cáo, không retry refresh.
