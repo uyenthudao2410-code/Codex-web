@@ -440,3 +440,132 @@ chỉ thực hiện **một** controlled full-clean recovery mới nếu preflig
 strict connector discovery và một `workspace_context` thật trên
 `E:\DEV\Codex-web`. Nếu một điều kiện fail, giữ `BLOCKED` và ghi receipt; không
 kill process theo tên, không sửa descriptor/route evidence, không chỉnh ledger.
+
+## 11. Postflight sau epoch READY và concurrent development owner — 2026-09-23 02:14 +07
+
+### 11.1 Readback ngay sau packaged recovery
+
+Đã gọi lại `RecoveryIpcClient` chính thức, có ràng buộc
+`owner_pid/instance_id/process_start_token` và kiểm tra descriptor trước/sau
+đọc. Bản đọc đầu tiên lúc `2026-09-22T19:11:44.249Z` vẫn nhìn thấy descriptor
+packaged của epoch trước:
+
+```text
+Recovery Host PID/instance: 51596 / 07fbc4a9bb4f0125b9437b53298f54d5
+runtime_mode: packaged
+activation_epoch_id: activation-mud1ltj0-dbb496722a2f89bdc3bd67d11bdce579
+epoch/state: READY / READY, admission_open=true
+ready_commit_digest: 9f62d74db3b2252af458b932ded265e0777569ccf45e7e61bc6f96cdcf0376
+```
+
+Tuy nhiên readback process-level không còn đủ để gọi runtime live: `identityObservation()`
+trả `identity_current=false`, không có current MCP process/server identity và
+không có `workspace_read`. Ngay sau đó `lightweight_snapshot()` trả
+`snapshotSource=recovery_host_supervision_unavailable`, `telemetryAvailable=false`,
+`signalStale=true`, `updateIncomplete=true`; `health.inspect()` trả
+`healthy=false`, MCP `Chưa khởi động`, central reason `LOCAL_EXECUTOR_NOT_READY`.
+Vì vậy epoch `READY` cũ chỉ là durable proof của thời điểm trước, không được
+re-use như live acceptance.
+
+### 11.2 Concurrent owner đã làm thay đổi runtime
+
+Process audit read-only cho thấy một lifecycle owner khác bắt đầu đúng trong
+window hậu kiểm:
+
+```text
+PID 51104  npm start
+PID 2296   node scripts/dev-ui-lifecycle.js start
+PID 29980  Electron --recovery-host --replace-recovery-host=...
+runtime_mode hiện tại: development
+```
+
+Log runtime ghi nhận lúc `2026-09-22T19:11:38Z–19:12:09Z` các bước stop
+Coding Tools MCP, tạo epoch `activation-mud1wb9n-29d19ff6ea2be6cd41ee7c718e2aa041`
+với operation `full-clean-refresh-mud1w05k-233e50c07a154cdcf048baf1`, rồi
+khởi động development host/MCP. Packaged host `51596`, packaged UI `52212` và
+Recovery MCP `52676` không còn sống sau handoff; Supervisor PID `53176` vẫn
+đang chạy và status file trỏ tới development host `29980`. Đây là conflict
+ownership, không phải lý do để kill theo tên/process tree; process này được giữ
+nguyên trong wave hiện tại.
+
+### 11.3 Epoch mới fail-closed đúng guard
+
+Epoch development mới đã ghi:
+
+```text
+state/admission: FAILED / CLOSED
+error: UPDATE_INCOMPLETE
+reason: A live component identity changed before MCP admission.
+central_status_reason: CENTRAL_ROUTE_EVIDENCE_STALE
+central_connected: false
+authority_ready: false
+central_route_verified: false
+```
+
+Final census trung gian có `pass=true` và các predicate local như workspace,
+device, revisions, process identity, UI, recovery plane đều đúng; nhưng bước
+revalidation cuối phát hiện central route stale và live identity đã đổi, nên
+không mở admission. Đây là hành vi fail-closed đúng thiết kế, không phải lỗi
+để hạ guard hoặc ghi đè `activation-epoch.json`.
+
+### 11.4 Canonical ledger census sau biến động runtime
+
+Đã chạy lại reporter chính thức query-only lúc
+`2026-09-22T19:14:38.258Z`:
+
+```text
+content_free=true
+mutated_canonical_ledger=false
+integrity_check=ok
+foreign_key_check_rows=0
+schema_version=12
+projection.classification=CONTEXTUAL_PROJECTIONS
+context_count=1079
+projection_drift=false
+ordinary_active_runs=17
+P5_EXPERIMENT_ANCHOR=6
+THRESHOLD_SENSITIVE_STALE_CANDIDATE=17
+stale_background_operation_residues=0
+unbound_live_resource_residues=0
+unexplained_active_runs=0
+```
+
+Snapshot mới có physical SHA-256
+`2c496d38caff846eec69866bbc94680aa25597a29c0acfc50d5a7f4e721b14da` và logical SHA-256
+`d61e251cb03f18383b36dcee7bb226e3ce5bb779312e4241b0fc05fd8bf19c8d`.
+Hash thay đổi giữa các snapshot là biến động runtime/evidence; census đồng thời
+khẳng định `mutated_canonical_ledger=false`, integrity/FK vẫn PASS. Không có
+căn cứ gọi đây là corruption, không VACUUM/truncate/insert hoặc sửa trực tiếp
+SQLite.
+
+### 11.5 Connector và workspace proof vẫn chưa đạt
+
+Vì runtime hiện tại đã fail và không có action/admission receipt từ ChatWeb
+client, không thực hiện `runtime.control_plane_read_only_workspace_context`.
+Schema local yêu cầu policy/owner/device/endpoint/workspace/generation,
+`context_id`, `binding_id`, `action_id`, `attempt_id`, expiry và facade contract
+đúng policy; tự tạo các ID này sẽ là fabrication, nên không dùng. Không có
+strict current-process `tools/list`/`server/discover`, không có connector ACK
+mới và không có một `workspace_context` thật trên `E:\DEV\Codex-web`.
+
+### 11.6 Checkpoint và hành động kế tiếp
+
+Wave hậu kiểm này được phân loại **BLOCKED — concurrent lifecycle owner + stale
+central route**, với các kết luận tách biệt:
+
+- **Đã chứng minh:** source fix READY proof; packaged installer/smoke; epoch
+  packaged trước đó READY; ledger hiện tại integrity/FK/census PASS; không có
+  mutation ledger bất thường.
+- **Chưa chứng minh:** packaged runtime đang sống sau concurrent handoff;
+  strict connector discovery; `workspace_context` thật; reboot/logon,
+  Machine B, fault injection, natural-use và independent outcome.
+- **Không thực hiện:** không kill process, không chỉnh descriptor/route
+  evidence, không retry restart mù, không sửa SQLite.
+
+Exact next action cần một lifecycle window không có `npm start`/dev owner đang
+giữ data root: xác định owner của PID `51104` và cho phép dừng/hoàn tất đúng
+process đó (hoặc chờ nó terminalize), sau đó đọc lại supervisor/descriptor và
+chạy **một** controlled activation từ packaged installer. Nếu central route còn
+stale, dừng ở `BLOCKED_EXTERNAL_DISCOVERY` và xử lý heartbeat/discovery trước;
+không coi local `fullyReady` hay epoch cũ là product closure. Hai Problem vẫn
+OPEN, tách revision và không được gộp trạng thái.
