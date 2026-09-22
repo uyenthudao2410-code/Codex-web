@@ -2946,3 +2946,27 @@ resources packaged và truyền `--runtime-mode` đúng mode. Trước khi dùng
 development auto-resume chính thức phải chạy focused test, reinstall proof và
 recheck identity; acceptance khuyến nghị tiếp tục freeze trên một packaged
 bundle đồng nhất.
+
+### 16.56. Post-delivery checkpoint — commit/push main và helper handoff còn mở — 23/09/2026
+
+Đã commit/push wave đã kiểm chứng trên `main`:
+
+```text
+5c831fc93069fec6a1328ca1114d62838875c566
+fix: align recovery supervisor runtime modes
+origin/main == HEAD
+```
+
+Các guard delivery, history, secrets, staged-ledger index và toàn bộ test
+đã PASS; commit không bao gồm packaged installer output ngoài Git. Sau push,
+working tree nhận thêm helper `Stop-ControlPlaneAgentForReplacement` cùng
+call-site trong Supervisor để dừng connected-agent cũ chỉ sau khi xác minh
+manifest mode/path/hash, lock owner, executable path và command line. Nhánh này
+được giữ unstaged vì chưa có live reinstall proof và không được tự gộp vào commit
+đã push. Ledger drift sau snapshot cũng giữ nguyên ngoài staged commit theo
+nguyên tắc không chỉnh byte canonical.
+
+Vì vậy thứ tự tiếp tục là: review/accept helper và thêm live reinstall proof;
+stage một snapshot mới nếu quyết định commit; sau đó mới xin current ChatWeb
+strict discovery, `workspace_context`, reboot/logon/Machine B, fault injection,
+natural-use và independent outcome. Hai Problem vẫn tách revision và `OPEN`.

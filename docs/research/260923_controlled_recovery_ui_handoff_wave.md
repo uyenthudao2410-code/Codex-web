@@ -1225,3 +1225,59 @@ NEXT ACTION:
   .coding-tools evidence tree with a fresh delivery snapshot, run all history/
   secret/index guards, then commit and push this evidence wave on main.
 ```
+
+## 15.7. Post-delivery checkpoint và handoff-agent safety — 23/09/2026
+
+Wave delivery đã hoàn tất trực tiếp trên `main`:
+
+```text
+commit=5c831fc93069fec6a1328ca1114d62838875c566
+message=fix: align recovery supervisor runtime modes
+origin/main=5c831fc93069fec6a1328ca1114d62838875c566
+```
+
+Commit đã bao gồm wave report và kế hoạch tổng thể (phần post-delivery này là
+follow-up), `RECOVERY_HOST.md`, patch mode-aware Supervisor/manifest/argv, test fixture development và toàn bộ
+snapshot `.coding-tools` được stage qua Backup API. Các guard cuối wave đều
+PASS: focused Supervisor `17/17`, lifecycle `71/71`, toàn bộ `npm test`
+`1025/1025`, `check:coding-tools-delivery`, `check:coding-tools-history`,
+`check:repository-secrets`, `--verify-index` và `git diff --cached --check`.
+
+Sau khi push, một phần bổ sung tiếp tục xuất hiện trong working tree và được
+giữ lại ngoài commit để không ghi đè thay đổi đồng thời: Supervisor có helper
+`Stop-ControlPlaneAgentForReplacement` và call-site trong `Install-Supervisor`.
+Ý định của helper là đọc đúng `data_root`, state PID và lock owner, xác minh
+process path cùng command line là `node_agent.py run-connected-agent`, chỉ dừng
+đúng agent cũ khi mode/path/hash thay đổi, rồi mới cài Supervisor mới. Nếu
+identity không chứng minh được, helper fail-closed; không kill theo tên và
+không thay PID tái sử dụng. Focused test hiện tại đã kiểm tra parser/helper
+presence, `Get-CimInstance` identity gate và các runtime-mode assertions; chưa
+có live install/reinstall proof cho nhánh này.
+
+Working tree sau push vẫn có ba loại trạng thái cần phân biệt:
+
+```text
+M  .coding-tools/orchestration/ledger.sqlite3
+ M resources/recovery-supervisor/recovery-supervisor.ps1
+?? dist-recovery-6d2b0dec/
+```
+
+Ledger `M` là runtime drift sau snapshot đã commit, không được chép đè hoặc
+reconcile thủ công. Helper Supervisor là thay đổi chưa commit vì xuất hiện sau
+delivery snapshot và cần owner/acceptance riêng. `dist-recovery-6d2b0dec/` là
+untracked packaged build output, không phải canonical evidence, chưa đưa vào
+Git để tránh phát hành nhầm binary; việc dọn artifact cần một quyết định riêng.
+
+Trạng thái kết thúc wave không đổi:
+
+```text
+SOURCE_FIX_PRESENT
+PACKAGED_RUNTIME_RECOVERY_VERIFIED
+RUNTIME_CURRENT_READY (snapshot-bound)
+STRICT_CONNECTOR_DISCOVERY_OPEN
+PRODUCT_ACCEPTANCE_OPEN
+BOTH_PROBLEMS_OPEN
+```
+
+Không dùng commit/push này để tuyên bố `LIVE_ACCEPTED`, natural outcome,
+reboot matrix, Machine B, fault injection hay đóng `prl-22e...`/`prl-e918...`.
