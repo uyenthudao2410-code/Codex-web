@@ -2328,7 +2328,7 @@ là tạo receipt v2 mới từ một activation/reboot được phép, bind đ�
 client và chạy oracle này; nếu thiếu một trường thì kết quả phải là `NOT_PROVEN`,
 không thay bằng `/healthz`, PID hoặc accepted RUN.
 
-### 16.45. Deployment Ubuntu schema-25 và quarantine action lịch sử — 22/09/2026 sau 22:45 +07
+### 16.46. Deployment Ubuntu schema-25 và quarantine action lịch sử — 22/09/2026 sau 22:45 +07
 
 Wave này đã thực hiện bằng SSH target-bound tới `svhome@100.116.112.22`, giữ
 admission đóng ở `recovery`. Control-plane package đã được build/verify từ
