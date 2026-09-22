@@ -1785,3 +1785,54 @@ connector được hỗ trợ xuất hiện, bind discovery vào PID/process ins
 server instance/activation epoch/contract SHA, rồi gọi real `workspace_context`
 trên `E:\\DEV\\Codex-web`. Nếu không có connector, dừng ở
 `WAITING_FOR_SUPPORTED_CONNECTOR`; hai Problem tiếp tục `OPEN`.
+
+## 15.16. Controlled full-clean activation sau khi freeze epoch — 23/09/2026
+
+Đã chạy đúng lifecycle command `npm run dev:refresh` một lần sau khi Recovery
+Host đã được thay bằng Supervisor đúng argv contract. Guard đã hoàn tất full
+handoff và không có kill/spawn thủ công:
+
+```text
+epoch       = activation-mud9uu5m-8fbccc1580217bcc2104000d8f77e0ce
+operation   = full-clean-refresh-mud9uiqm-2aedc95e177f56320ff05012
+host        = fcf3bed2359aadc93046dc3b1a12ccdf
+ui          = 568b52ff5f1b5e646cee786870fea3f4
+mcp_pid     = 48220
+activation  = READY / admission=open
+fully_ready = true
+mcp         = ready
+tunnel      = not-required (central_executor)
+connector   = pending / CHANGED_NEEDS_DISCOVERY
+focused lifecycle/oracle suite = 148 passed, 0 failed
+```
+
+Sau activation, running/disk revision đã khớp:
+
+```text
+Recovery Host = 4158c76… / 4158c76…
+Coding MCP   = a49891f… / a49891f…
+MCP/native   = true / true
+central route/authority = true / true
+update_incomplete = false
+connector_rediscovered = false
+connector_refresh_required = true
+```
+
+Đây là proof cho runtime continuity và `fully_ready`, không phải proof
+connector/client. `collect-boot-runtime-observation` vẫn không có `client` và
+giữ `authority_granted=false`, `live_accepted=false` do thiếu real client
+workspace read và discovery provenance. Phiên Codex không có Coding Tools MCP
+namespace; hai resource discovery calls đều rỗng. Do đó không ACK thủ công,
+không dùng local probe/health/heartbeat thay `tools/list` hoặc `server/discover`.
+
+Ledger ngay sau activation vẫn `integrity=ok`, FK `0`, projection drift/residue
+`false/0/0`; physical SHA `252d9e5bf9c9492c8bcecca2ea6d9e55531480416000987ed7f377d6bcf02e4`,
+logical SHA `5826f4eb01e3939889ca5169a2f5f9300fda4b5adb5f35f008bfb29bbc55ffad`.
+Hai Problem giữ nguyên `OPEN` với `66` và `39` RUN theo đúng revision.
+
+**Operator checkpoint:** `LIVE_CONTROLLED_ACTIVATION` và
+`FULL_RUNTIME_READY` đã đạt; `STRICT_REDISCOVERED`, real `workspace_context`,
+reboot/Machine B/fault/natural-use và independent outcome chưa đạt. Exact next
+action vẫn là connector được hỗ trợ thực hiện discovery và workspace read; nếu
+connector không xuất hiện, giữ `WAITING_FOR_SUPPORTED_CONNECTOR` thay vì lặp
+refresh.

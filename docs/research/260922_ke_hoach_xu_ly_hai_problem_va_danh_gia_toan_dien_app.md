@@ -3311,3 +3311,77 @@ heartbeat, persisted compatibility flag, ACK thủ công hoặc
   `workspace_context` thật trên workspace này. Nếu connector vẫn không xuất
   hiện, terminalize wave ở `WAITING_FOR_SUPPORTED_CONNECTOR`, không retry
   refresh.
+
+### 16.65. Controlled full-clean activation đạt, connector/client gate còn mở — 23/09/2026
+
+Theo quyền recovery đã cấp, đã chạy một lần `npm run dev:refresh` qua lifecycle
+guard chính thức. Không kill/spawn thủ công và không hạ revision guard. Lệnh
+đã hoàn tất thành công:
+
+```text
+epoch       = activation-mud9uu5m-8fbccc1580217bcc2104000d8f77e0ce
+operation   = full-clean-refresh-mud9uiqm-2aedc95e177f56320ff05012
+host        = fcf3bed2359aadc93046dc3b1a12ccdf
+ui          = 568b52ff5f1b5e646cee786870fea3f4
+mcp_pid     = 48220
+activation  = READY
+admission   = open
+fully_ready = true
+mcp         = ready
+tunnel      = not-required (central_executor)
+connector   = pending / CHANGED_NEEDS_DISCOVERY
+focused lifecycle/oracle suite = 148 passed, 0 failed
+```
+
+Readback sau activation xác nhận:
+
+```text
+Supervisor PID             = 50720, healthy
+Recovery Host PID          = 17480
+Recovery Host revision     = running 4158c76… / disk 4158c76…
+Coding MCP revision        = running a49891f… / disk a49891f…
+MCP/native                 = true / true
+centralConnected/authority = true / true
+fullyReady                 = true
+runtime_update_incomplete  = false
+connector_rediscovered     = false
+connector_refresh_required = true
+```
+
+Đây là tiến triển thật ở lớp `source/package/epoch/runtime continuity`: blocker
+`running revision != disk revision` đã được xử lý bởi full-clean activation có
+kiểm soát. Tuy nhiên `fully_ready=true` không được nâng thành strict client
+acceptance. `collect-boot-runtime-observation` sau activation trả
+`STALE_OR_INCOMPLETE` vì không có `client` và vẫn thiếu
+`REAL_CLIENT_WORKSPACE_READ`, `CLIENT_DISCOVERY_PROVENANCE` và
+`CLIENT_DELIVERY_CONFIRMATION`; đó là thiếu bằng chứng client, không phải
+MCP/native đã chết.
+
+Phiên hiện tại không expose Coding Tools MCP connector; `list_mcp_resources` và
+`list_mcp_resource_templates` đều rỗng. Không có receipt hiện-process nào từ
+`tools/list`/`server/discover` với `identity_source=attested_transport`, nên
+không gọi `acknowledge_connector_contract`, không giả lập ChatWeb và không tự
+gọi local HTTP probe thay strict discovery.
+
+Ledger census ngay sau activation vẫn không mutate canonical bytes:
+
+```text
+snapshot_at       = 2026-09-22T22:56:26.383Z
+physical_sha256   = 252d9e5bf9c9492c8bcecca2ea6d9e55531480416000987ed7f377d6bcf02e4b
+logical_sha256    = 5826f4eb01e3939889ca5169a2f5f9300fda4b5adb5f35f008bfb29bbc55ffad
+schema/integrity/FK = 12 / ok / 0
+ordinary_active   = 17; p5_epochs = 6
+projection_drift  = false; stale/unbound residues = 0 / 0
+```
+
+Exact Problem counts không đổi: `prl-22e…` rev1 là `47/16/3 = 66 RUN`,
+`prl-e918…` rev2 là `16/10/13 = 39 RUN`; cả hai vẫn `OPEN`.
+
+**Checkpoint điều hành:** full-clean activation đã đạt
+`LIVE_CONTROLLED_ACTIVATION + SOURCE_PACKAGE_EPOCH_CONTINUITY + FULL_RUNTIME_READY`.
+Chưa đạt `STRICT_REDISCOVERED`, `REAL_WORKSPACE_CONTEXT`, reboot acceptance,
+natural-use hoặc independent outcome. Exact next action là lấy connector được
+hỗ trợ gọi `tools/list`/`server/discover`, bind PID/process/server/epoch/contract
+SHA, rồi gọi `workspace_context` thật. Khi connector không xuất hiện, giữ
+`WAITING_FOR_SUPPORTED_CONNECTOR` và hai Problem `OPEN`; không retry full-clean
+activation chỉ để thay thế missing client evidence.
