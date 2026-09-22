@@ -1428,6 +1428,6 @@ Ref: abab565e471530541f67095c23d7ff7b8d722eb3 refs/heads/main
 git bundle verify: OK
 ```
 
-Bundle đầu tiên vẫn được giữ làm checkpoint lịch sử tại `a23c45d`; bundle `current` mới là backup cần dùng nếu owner cho phép migration từ HEAD hiện tại.
+Bundle đầu tiên vẫn được giữ làm checkpoint lịch sử tại `a23c45d`; bundle `current` là snapshot chính xác tại thời điểm HEAD `abab565`. Vì các checkpoint tiếp theo có thể làm HEAD tiến thêm, phải recapture hoặc tạo bundle mới ngay trước history migration; không dùng tên `current` như một tuyên bố freshness vô thời hạn.
 
 **Trạng thái:** backup đã có, nhưng chưa có lệnh `git filter-repo`, `git lfs migrate`, `git update-ref`, `git reset`, `git rebase`, `git push --force-with-lease` hoặc canonical recovery switch. Tiếp theo vẫn cần owner xác nhận phương án và target history; sau đó mới chạy dry-run trên bản sao kiểm soát, đối chiếu `.coding-tools` retention, và publish.
