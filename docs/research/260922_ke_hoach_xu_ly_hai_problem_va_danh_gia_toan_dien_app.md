@@ -2,9 +2,9 @@
 
 Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-web`.
 
-Trạng thái tài liệu: **A0/A1 + A2 ORACLE/IPC READER LOCAL PROOF; B1 FOCUSED PROOF — đã đọc runtime thật nhưng chưa có client/reboot receipt, EOCL acceptance/live activation hoặc đóng Problem**.
+Trạng thái tài liệu: **BLOCKED — chờ quyền recovery/operational gates; A0/A1/A2/X0-G có local proof, B1 focused proof; chưa hoàn tất hai Problem**.
 
-> **Cập nhật mới nhất 22/09 khoảng 17:59 +07:** đã nối sanitized completed contact qua official Host identity projection tới collector với exact target/request filter; 50 oracle/collector + 3 affected Host tests PASS. Xem **16.11**. Mục tiêu toàn bộ vẫn ACTIVE; không đổi source proof thành natural/activation closure. Các mục 1–15 giữ baseline nghiên cứu lịch sử.
+> **Cập nhật mới nhất 22/09 khoảng 18:19 +07:** blocked audit lần thứ ba, authority gate chưa được gỡ; xem **16.16**. Full-state recovery audit ở 16.14 xác nhận không copy đè historical DB. X0-G ở 16.13; HEAD `5aae18e`, chưa restore/activation; không đổi local proof thành live/outcome closure.
 
 ## 0. Kết luận điều hành
 
@@ -1112,3 +1112,137 @@ Exact local SHA-256:
 **Outcome audit:** A2 source pipeline từ MCP attested contact→Host whitelist→collector exact filter có focused proof, chưa loaded/life-cycle proof. Không có current client call thật trong phiên (public Coding Tools connector chưa expose), không before/after reboot, source acceptance/activation, central binding receipt hoặc natural 48h. X0 vẫn chưa restore. Không đóng hai Problem hoặc đánh dấu goal complete.
 
 **Checkpoint/next:** thay đổi ba file trên và Markdown; main@77d7347, bảo toàn WIP khác, test handles terminal. Không restart/reboot/install/deploy/restore/commit/push/paid dispatch. Tiếp theo hoàn thiện explicit correlation input/operator receipt path và đối chiếu lại scopes cần owner cấp trước A3; tránh tiếp tục thêm synthetic tests chỉ để tăng tổng PASS khi blocker còn là actual client và operational authority.
+
+### 16.12. A2 explicit CLI correlation — 22/09 khoảng 18:00–18:01 +07
+
+Previous turn=PROGRESS. HEAD main@77d7347 và relevant worktree được kiểm lại; không thay các concurrent Control Plane/deploy files.
+
+Collector CLI đã nối tới expectedClient API của 16.11. Chấp nhận một bộ non-secret target IDs + generation + request hash đầy đủ, không nhận partial/duplicate/unknown flags, generation fractional/overflow, hoặc arbitrary raw request text. Validation diễn ra **trước IPC**. Nếu có correlation request mà client=null, exit 1 kể cả runtime `OBSERVED`; không dùng runtime-read success thay client proof.
+
+```powershell
+# Cú pháp vận hành, chưa chạy với client evidence thật:
+node scripts/collect-boot-runtime-observation.js --workspace E:\DEV\Codex-web `
+  --device-id <device-id> --endpoint-id <endpoint-id> --workspace-id <workspace-id> `
+  --workspace-generation <positive-integer> --request-hash <64-lowercase-hex>
+```
+
+Hash là phần digest của `rpc-<sha256>` do source contact ghi cho JSON-RPC request ID của **đúng request được theo dõi**; không tự lấy latest receipt/request từ health rồi gọi đó là independent client correlation. Caller/operator cần nguồn request correlation từ client/transport được phép. Các ID không phải bearer token; tuyệt đối không truyền credential hoặc header qua flags. Không có mode force/auto-discovery/retry/read-mutating trong collector.
+
+CLI chỉ `--workspace` vẫn hỗ trợ read-only runtime diagnosis, không client claim. Invalid args trả exit 2 với code bounded, không echo dữ liệu; matched partial observation không tự thành schema-v2 reboot packet hoặc controller acceptance.
+
+**Validation:** `node --test tests/boot-runtime-observation.test.js tests/boot-acceptance.test.js` **51/51 PASS**, khoảng 0.49s, final exit 0. Test mới chứng minh all-or-nothing validation, duplicate/unknown flags, unsafe numeric generation, no IPC on invalid input, missing client returns nonzero. Scoped whitespace PASS; chỉ LF→CRLF warning.
+
+Final SHA-256: collector `d6c2094d124a448127155ee4486889bc627c33b5608f9f3eb505a8924864c334`; test `8bfc42cefa3b2e9b3f66e31191a0648f107d640689b33ab73fd504d3f10fae82`.
+
+**Authority/next-gate audit:** local source/test quyền đã được cấp; chưa có quyền cụ thể để restore live canonical, install frozen Windows artifact, restart/activation với exact target, sửa/deploy Ubuntu service hoặc reboot hai máy. Public Coding Tools client và natural user outcome không thể giả bằng loopback fixture. Vì vậy A3/A4/B3/B4 còn gate, không tự nâng quyền từ goal “hoàn thiện”. Vẫn có source work hữu ích ở X0-G delivery-history regression/guard cần làm trước delivery; không để active goal chỉ lặp runtime poll hoặc đếm test xanh. Next safe packet là X0-G kiểm tra history continuity dựa trên failure đã chứng minh ở merge, giữ supported archival semantics và không sửa ledger.
+
+**Checkpoint:** chỉ collector/test/Markdown đổi trong lượt, no staged/unmerged, tests terminal; không EOCL acceptance giả, lifecycle/DB mutation, commit/push/deploy/paid inference. Mục tiêu ACTIVE, chưa complete; full criteria/matrix/live/natural requirements được giữ nguyên.
+
+### 16.13. X0-G — semantic delivery-history guard, 22/09 khoảng 18:03–18:10 +07
+
+**Concurrent Git advance:** đầu lượt HEAD=`5aae18eddb8dae52bc852cbf35ab71e9e58b95fc`, commit `Update execution workflows and delivery evidence` lúc 18:02:07 +07, parent `77d7347`. Luồng khác đã commit candidate trước; lượt này không commit/push/rewrite. Chỉ Markdown dirty trước khi X0-G bắt đầu. Proof trước giữ fingerprint riêng, không tự coi đã rerun trên HEAD mới.
+
+**Implement:** [ledger-delivery-history.py](../../scripts/ledger-delivery-history.py) đọc Git index/blobs và query SQLite trong memory. `stage-coding-tools-delivery.py::verify_index` gọi semantic retention check sau receipt/hash/size/schema/integrity checks; existing stage_delivery đã gọi verify_index, nên guard nằm trên delivery path hiện hữu. Không repair/merge DB hoặc staging riêng để guard PASS.
+
+Semantics:
+
+- Baselines mặc định: HEAD, mọi MERGE_HEAD khi merge đang diễn ra, các parent khi HEAD là merge commit; de-duplicate refs.
+- Candidate là **Git index**, không live working bytes. Canonical + archives có trong indexed manifest được kiểm integrity, exact SHA/size, safe shard filename và manifest run IDs có mặt. Unlisted archive không tự bù history.
+- `events`/`problem_events`: giữ identity và toàn bộ row values; mất/sửa immutable event đều fail. `runs`/`waves`/`checkpoints`/`proofs`: giữ identity, cho phép projection state tiến triển. Không dùng max seq/file size/accepted count thay exact identity.
+- Whole-run archival có manifest/hash/retained evidence hợp lệ được chấp nhận; missing shard hoặc wrong hash/run manifest fail. Optional path không tồn tại khác lỗi đọc existing Git blob.
+- Git snapshots deserialize trong memory, normalize journal-header bytes chỉ trong memory; không thay Git blob/canonical/WAL/SHM/index. Đây không phải tool restore.
+- Giới hạn: không scan toàn ancestry, không chứng minh mọi bảng/state hoặc authority signature. Schema migration sửa immutable event cần review/handling riêng; không force bypass. PASS không tự là restore/closure acceptance.
+
+CLI audit chỉ đọc:
+
+```powershell
+python -B scripts/stage-coding-tools-delivery.py --verify-history
+python -B scripts/stage-coding-tools-delivery.py --verify-history --baseline a9fcb9974b5ca43266ec2feea1dc64c1a95d406e
+```
+
+`--baseline` chỉ dùng cùng `--verify-history`. Default guard ngăn regression so HEAD/merge boundary; history thiếu từ lâu phải dùng explicit baseline. Không dùng default PASS để nói X0 cũ đã phục hồi.
+
+**Proof:**
+
+1. `python -B -m unittest discover -s tests -p test_stage_coding_tools_delivery.py`: final **7 tests OK, 24.80s**, exit 0. Repositories tạm kiểm consistent snapshot/live drift, corrupt ledger, unrelated unstaged evidence, deleted/rewritten event, dropped merge-parent tail và valid archival rồi manifest hash bị sửa.
+2. Intermediate failures phân loại/sửa: SQLite context manager chưa close gây Windows cleanup lock; fixture thiếu actual `run-python.js`; snapshot header khác closed-WAL file làm temp checkout dirty. Sửa fixture bằng explicit close/commit, copy launcher, align **chỉ temp repository** với chính committed blob trước branch switch. Không bypass production guard.
+3. Audit explicit baseline trên **index dự án thật**, không stage: exit 1 expected, `LEDGER_HISTORY_NOT_PRESERVED baseline=a9fcb9974b5ca43266ec2feea1dc64c1a95d406e table=events missing=128 changed=0`. Khớp finding X0, không phải recovery PASS.
+4. Không chạy `npm run stage:coding-tools-delivery` hoặc `check:coding-tools-delivery` ở repo chính vì chúng có staging side effects. Index không staged changes, no unmerged, scoped whitespace PASS (LF→CRLF warning).
+
+Final SHA-256:
+
+| File | Hash |
+| --- | --- |
+| scripts/ledger-delivery-history.py | `795306245defda0a0e80764772e7cc4201aa9abfad5d4a9f5ac1fb8da68b340b` |
+| scripts/stage-coding-tools-delivery.py | `c7a232159839fea64ffb65b825f51dbfb17f4f386b6aaa2184df6900f464946d` |
+| tests/test_stage_coding_tools_delivery.py | `8ee5afc9869c92bee1cc72a836ebfa69990eab680946cc8a5bc7e80460eadef7` |
+
+**Checkpoint/completion audit:** X0-G local source/proof đạt trong scope; X0 canonical recovery vẫn NOT_RUN, real guard vẫn xác nhận gap. A0/A1/A2/B1 có các lớp proof đã ghi, chưa loaded/client/reboot/natural closure. Main@5aae18e; chỉ guard/stage-script/test/Markdown thay đổi lượt này, test handles terminal. Không production restore/restart/reboot/install/deploy/commit/push/paid inference. Goal ACTIVE, chưa complete. Next safe action: isolated recovery applicability audit cho toàn state trước recovery proposal có authority; không copy đè live canonical từ historical blob chỉ vì sáu bảng là superset.
+
+### 16.14. X0 full-state applicability audit — 22/09 khoảng 18:13–18:15 +07
+
+Previous turn=PROGRESS (guard đã implement và bắt actual gap). Lượt này chỉ compare read-only để chọn recovery đúng nghĩa, không thay goal bằng thêm tests.
+
+**Phương pháp:** nguồn current đọc URI mode=ro rồi SQLite Backup API vào memory; historical Git blob `bed5b266…` normalize journal header chỉ trong memory như 16.2. Cả hai query_only, integrity ok/FK0. So schema và rows của **36 user tables**, dùng primary key từng bảng (fallback full row nếu không có PK); không in JSON payload/raw source/credentials. Schema 36 bảng giống nhau, không table mới/mất. 19 bảng giống toàn bộ rows; 17 bảng có khác biệt. Phép so không bao gồm internal SQLite bookkeeping như sqlite_sequence, không phải restore dry-run/permission.
+
+| Table | Chỉ historical | Chỉ current | Common rows khác values |
+| --- | ---: | ---: | ---: |
+| background_operations | 6 | 0 | 0 |
+| checkpoints | 3 | 0 | 0 |
+| continuity_telemetry | 12 | 0 | 0 |
+| controller_goal_attachments | 0 | 0 | 1 |
+| controller_knowledge_acks | 1 | 0 | 0 |
+| controller_leases | 3 | 0 | 3 |
+| controller_reattach_receipts | 1 | 0 | 0 |
+| events | 128 | 0 | 0 |
+| hub_clients | 3 | 0 | 4 |
+| idempotency_records | 18 | 0 | 0 |
+| managed_process_jobs | 7 | 0 | 0 |
+| problem_events | 3 | 0 | 0 |
+| problem_threads | 0 | 0 | 1 |
+| proofs | 5 | 0 | 0 |
+| runs | 3 | 0 | 0 |
+| waves | 4 | 0 | 0 |
+| write_fences | 0 | 0 | 1 |
+
+**Finding quyết định recovery:** historical causal tables là superset nhưng **toàn DB không phải replacement an toàn**:
+
+- Controller attachment generation historical=29/current=28, owner/endpoint/reattach khác; ba controller leases có fencing_token/lease/owner/expiry khác.
+- Write-fence historical token=1681/current=1677, RUN/WAVE/lease khác. Không tự resurrect authority từ token lớn hơn hoặc timestamp cũ.
+- Problem-thread latest event projection historical=320/current=317 phải đi cùng event lineage được xác minh, không chỉnh counters riêng.
+- Hai common hub-client rows có current observations ngày **22/09** mới hơn historical ngày 09/09 hoặc 13/09. Copy đè toàn DB sẽ đánh mất observed state mới, dù không có current-only primary key.
+- Historical-only background_operations: 5 completed + **1 running**; managed jobs: 7 exited; idempotency: 15 completed + **1 unknown + 1 failed + 1 in_progress**. Đây là trạng thái lưu lịch sử, **không phải proof process đang sống**. Không replay các effect từ missing/in_progress/unknown record hoặc coi missing ở current là permission execute lại.
+- Các bảng continuation grants/effects, P5 epochs/assignments/outcomes và nhiều domain khác giống nhau trong audit; không được hiểu là chúng đã đạt natural outcome.
+
+Census current mới `snapshot_at=2026-09-22T11:14:29.096Z` vẫn physical/logical hashes E02, integrity ok/FK0, canonical_mutated=false; 17 stale candidates, 6 P5 anchors, managed jobs rỗng, unbound live/stale background residue0. Census này không thay việc classify historical-only effects trước recovery.
+
+**Quyết định:** loại phương án `git show historical ledger > live ledger` hoặc copy đè/INSERT thủ công. Existing archive/query/compact tools được kiểm tra không phải divergence-recovery importer; không dùng compact/post-restart smoke để giả restore. Recovery cần packet được duyệt với:
+
+1. Exact source baseline/current SHA + effect inventory trước mutation, quiesce qua supported runtime khi có quyền.
+2. Chọn cơ chế supported restore/reconciliation/import preserves original IDs/hash-chain/acceptance provenance; không tạo acceptance mới từ report text. Nếu cần triển khai importer, thiết kế domain contract và dry-run trước; không generic arbitrary-SQL escape hatch.
+3. Giữ newer observed hub state, xác định authority/lease/reattach/fence post-recovery qua runtime-owned rules; không nhận historical owner là current owner.
+4. Giữ unknown/in_progress effects và terminal evidence; exact reconciliation trước bất kỳ replay nào, không sửa thành completed cho đẹp.
+5. Diễn tập isolated, all-table consistency + append-after-recovery + duplicate-effect/authority negatives; freeze receipt/artifact/fingerprint, owner review trước actual canonical switch.
+6. Backup/rollback có bảo toàn evidence sau switch; không downgrade đè mất event mới. Sau đó fresh runtime/client readback và canonical coverage, không chỉ integrity check.
+
+**Completion/authority checkpoint:** audit này thay đổi lựa chọn next action nên là PROGRESS, không phải no-progress poll. Chưa có actual recovery authority hoặc supported applied reconciliation; A3 live activation/reboot/central rollout cũng vẫn chưa được cấp target-specific authority. Lượt này chỉ Markdown cập nhật, main@5aae18e, các source X0-G còn dirty như lượt trước; census/query handles terminal. Kiểm tra cuối 18:16 thấy `.coding-tools/delivery-snapshot.json` được staged bởi hoạt động concurrent (6 dòng diff); lượt này không chạy stage và không unstage/ghi đè receipt đó. Không unmerged. Không restore/SQL mutation/runtime restart/install/deploy/commit/push/paid inference. Goal ACTIVE, không COMPLETE/BLOCKED trong lượt có progress. Cần owner cấp phạm vi cho recovery có kiểm soát trên exact canonical `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3` (backup + isolated rehearsal trước, actual switch chỉ sau review) và quyết định operational target trước khi tiến sang live gates. Không mặc định yêu cầu “hoàn thiện” cho phép bỏ các chốt này.
+
+### 16.15. Authority gate revalidation — 22/09 khoảng 18:18 +07
+
+Lượt 16.14 là PROGRESS vì full-state audit thay đổi quyết định recovery. Lượt hiện tại **NO PROGRESS đối với implementation/outcome**, không phải verified wait: không có job handle đang chạy để chờ; cập nhật báo cáo không được tính như đã xử lý thêm criterion.
+
+Đã kiểm HEAD/status và available tool inventory: HEAD vẫn 5aae18e, public Coding Tools workspace_context/agent_workflow/task_control vẫn không expose; chưa có user response cấp quyền cho recovery được hỏi ở lượt trước. Internal automatic goal continuation không phải consent mới. Không rerun tests đã có exact proof, không thử synthetic canary thay client thật, không gọi repeated runtime poll vì không có expectation external state đã đổi.
+
+Hoạt động concurrent đã staged delivery receipt, Markdown và ba files X0-G. Lượt này không stage/unstage hoặc commit các files đó. Bản cập nhật 16.15 chỉ sửa working-copy Markdown sau staged snapshot; khi delivery thật cần owner recapture/review, không âm thầm ghi đè index. No unmerged.
+
+Các gate ngăn hoàn tất giữ nguyên: recovery/applicability approval và live canonical reconciliation; exact source acceptance + target-specific activation/installed/reboot/central operations; real client correlation/discovery; actual bounded continuation consent/provider authority; hai máy và independent natural outcome/window. Không có phép kiểm local nào thay thế những điều kiện này. Đây là lần revalidation thứ hai của authority boundary nêu ở 16.14; goal còn ACTIVE cho tới blocked audit threshold, không claim COMPLETE. Next action cần user: duyệt scope recovery backup/isolated rehearsal cho exact ledger, giữ actual canonical switch chờ review; sau đó chốt operational target/quyền riêng cho live gates.
+
+### 16.16. Blocked audit terminal checkpoint — 22/09 khoảng 18:19 +07
+
+Lượt trước=NO PROGRESS. Recheck hiện tại HEAD/status/tool inventory không đổi authority: chưa có câu trả lời cho scope recovery, public Coding Tools control path vẫn không expose. Không có live job handle để chờ; repeated goal prompt không tạo consent. Cùng boundary đã ghi ở 16.14, 16.15 và nay 16.16; đạt ba consecutive goal-turn observations. Dừng vòng automatic continuation bằng status **BLOCKED**, không COMPLETE hoặc PAUSED.
+
+Đã làm và có proof: A0/A1 safety fixes; A2 offline oracle + attested contact/Host/collector/exact CLI correlation; B1 các nhóm source guards; X0 historical chain + all-table audit; X0-G delivery continuity guard. Chưa được chứng minh: applied canonical recovery, exact loaded package/runtime acceptance, client/central/reboot/two-machine samples, actual bounded background inference và independent natural outcome/48h. Không có authority để tự thay các missing gates bằng local fixtures hoặc broad operational action.
+
+**Điều kiện gỡ blocker trước mắt:** người dùng chấp thuận triển khai gói recovery cho `E:\DEV\Codex-web\.coding-tools\orchestration\ledger.sqlite3`, giới hạn backup và isolated rehearsal trước; actual canonical switch chỉ sau review riêng. Tiếp đó cần target-specific activation/installed/central/reboot scope và real-client/consent/outcome actors. Chấp thuận local source trước đây không được mở rộng ngầm sang live DB/lifecycle.
+
+Git cuối main@5aae18e; receipt/X0-G/report được staged bởi hoạt động concurrent, working-copy Markdown có cập nhật mới chưa staged. Không unstage/reset/overwrite index; delivery owner phải review/recapture khi commit. Lượt này chỉ checkpoint Markdown, không test rerun/source mutation/restore/restart/reboot/install/deploy/commit/push/paid inference; các query terminal. Toàn bộ remaining objective được giữ nguyên để resume, không hạ Definition of Done.

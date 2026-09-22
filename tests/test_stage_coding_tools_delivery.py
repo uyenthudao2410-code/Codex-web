@@ -5,6 +5,9 @@ import sqlite3
 import subprocess
 import tempfile
 import unittest
+import hashlib
+import json
+from contextlib import closing
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +26,9 @@ class CodingToolsDeliveryStageTests(unittest.TestCase):
         self.run_cmd("git", "config", "user.name", "Test User")
         (self.root / "scripts").mkdir(parents=True)
         shutil.copy2(SOURCE_STAGE_SCRIPT, self.root / "scripts" / SOURCE_STAGE_SCRIPT.name)
+        shutil.copy2(REPO_ROOT / 'scripts' / 'ledger-delivery-history.py', self.root / 'scripts' / 'ledger-delivery-history.py')
         shutil.copy2(SOURCE_GUARD_SCRIPT, self.root / "scripts" / SOURCE_GUARD_SCRIPT.name)
+        shutil.copy2(REPO_ROOT / 'scripts' / 'run-python.js', self.root / 'scripts' / 'run-python.js')
         (self.root / ".gitignore").write_text(
             ".coding-tools/orchestration/ledger.sqlite3-shm\n"
             ".coding-tools/orchestration/ledger.sqlite3-wal\n",
@@ -46,13 +51,16 @@ class CodingToolsDeliveryStageTests(unittest.TestCase):
         self.temp.cleanup()
 
     def run_cmd(self, *args: str, check: bool = True) -> subprocess.CompletedProcess:
-        return subprocess.run(
+        result = subprocess.run(
             args,
             cwd=self.root,
-            check=check,
+            check=False,
             capture_output=True,
             text=True,
         )
+        if check and result.returncode:
+            raise RuntimeError(f'fixture command failed: {args}\n{result.stdout}\n{result.stderr}')
+        return result
 
     def open_writer(self) -> sqlite3.Connection:
         writer = sqlite3.connect(self.root / LEDGER_REL, timeout=10.0)
@@ -144,6 +152,67 @@ class CodingToolsDeliveryStageTests(unittest.TestCase):
         )
         result = self.run_cmd("python", "scripts/stage-coding-tools-delivery.py", "--verify-index", check=False)
         self.assertNotEqual(result.returncode, 0)
+
+    def test_fresh_checksum_cannot_hide_deleted_or_changed_history(self) -> None:
+        for sql in ["DELETE FROM events", "UPDATE events SET value='rewritten'"]:
+            with self.subTest(sql=sql):
+                with closing(self.open_writer()) as writer:
+                    writer.execute(sql)
+                    writer.commit()
+                result = self.run_cmd('python', 'scripts/stage-coding-tools-delivery.py', check=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('LEDGER_HISTORY_NOT_PRESERVED', result.stderr)
+                with closing(self.open_writer()) as writer:
+                    writer.execute('DELETE FROM events')
+                    writer.execute("INSERT INTO events(seq,value) VALUES(1,'initial')")
+                    writer.commit()
+
+    def test_pending_merge_cannot_drop_other_parent_tail(self) -> None:
+        base = self.run_cmd('git', 'rev-parse', 'HEAD').stdout.strip()
+        with closing(self.open_writer()) as writer:
+            writer.execute("INSERT INTO events(value) VALUES('other-parent-event')")
+            writer.commit()
+        self.run_cmd('python', 'scripts/stage-coding-tools-delivery.py')
+        self.run_cmd('git', 'commit', '-qm', 'other parent')
+        other = self.run_cmd('git', 'rev-parse', 'HEAD').stdout.strip()
+        # The snapshot has a different SQLite header from the closed WAL writer.
+        # Align only this disposable fixture with its own committed blob.
+        committed = subprocess.run(['git', 'show', f'HEAD:{LEDGER_REL}'], cwd=self.root,
+                                   check=True, capture_output=True).stdout
+        (self.root / LEDGER_REL).write_bytes(committed)
+        self.run_cmd('git', 'checkout', '-q', '-b', 'candidate', base)
+        # Simulate a merge resolution retaining only the first parent's DB.
+        (self.root / '.git' / 'MERGE_HEAD').write_text(other + '\n', encoding='ascii')
+        result = self.run_cmd('python', 'scripts/stage-coding-tools-delivery.py', check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('LEDGER_HISTORY_NOT_PRESERVED', result.stderr)
+
+    def test_archived_history_counts_only_with_valid_staged_manifest(self) -> None:
+        archive_dir = self.root / '.coding-tools/orchestration/archives'
+        archive_dir.mkdir()
+        with closing(self.open_writer()) as writer:
+            writer.execute('CREATE TABLE runs(run_id TEXT PRIMARY KEY)')
+            writer.execute("INSERT INTO runs VALUES('run-one')")
+            writer.commit()
+        self.run_cmd('python', 'scripts/stage-coding-tools-delivery.py')
+        self.run_cmd('git', 'commit', '-qm', 'run baseline')
+        raw = subprocess.run(['git', 'show', f'HEAD:{LEDGER_REL}'], cwd=self.root,
+                             check=True, capture_output=True).stdout
+        (archive_dir / 'shard.sqlite3').write_bytes(raw)
+        entry = {'file': 'shard.sqlite3', 'sha256': hashlib.sha256(raw).hexdigest(),
+                 'size_bytes': len(raw), 'run_ids': ['run-one'], 'run_count': 1}
+        manifest = archive_dir / 'manifest.json'
+        manifest.write_text(json.dumps({'schema_version': 1, 'archives': [entry]}))
+        with closing(self.open_writer()) as writer:
+            writer.execute('DELETE FROM events')
+            writer.execute('DELETE FROM runs')
+            writer.commit()
+        self.assertIn('PASS', self.run_cmd('python', 'scripts/stage-coding-tools-delivery.py').stdout)
+        entry['sha256'] = '0' * 64
+        manifest.write_text(json.dumps({'schema_version': 1, 'archives': [entry]}))
+        result = self.run_cmd('python', 'scripts/stage-coding-tools-delivery.py', check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('LEDGER_HISTORY_ARCHIVE_HASH_MISMATCH', result.stderr)
 
 
 if __name__ == "__main__":
