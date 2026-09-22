@@ -21,6 +21,16 @@ const CREDENTIAL_ROTATION_STATES = new Set(['idle', 'candidate_persisted', 'prep
 const WORKSPACE_ID_PATTERN = /^workspace_[a-f0-9]{32}$/;
 const WORKSPACE_GENERATION_PATTERN = /^generation_[a-f0-9]{32}$/;
 const WORKSPACE_CAPABILITY_KEYS = Object.freeze(['read', 'write', 'exec']);
+const AUTHORITY_STATUS_STATES = new Set([
+  'pending_operator_approval', 'no_binding', 'active', 'binding_revoked',
+  'workspace_missing', 'workspace_retired', 'blocked', 'revoked', 'unknown'
+]);
+const AUTHORITY_BINDING_STATES = new Set(['active', 'revoked']);
+const AUTHORITY_WORKSPACE_STATES = new Set(['active', 'missing', 'retired']);
+const AUTHORITY_PRESENCE_STATES = new Set(['online', 'offline', 'unknown']);
+const AUTHORITY_READINESS_STATES = new Set(['ready', 'degraded', 'blocked', 'unknown']);
+const AUTHORITY_POLICY_STATES = new Set(['unobserved', 'enabled', 'expired_or_disabled', 'unavailable', 'unknown']);
+const AUTHORITY_DISPATCH_STATES = new Set(['dispatchable', 'binding_revoked', 'node_revoked', 'workspace_missing', 'workspace_retired']);
 const SAFE_ENVIRONMENT_NAMES = new Set([
   'PATH', 'SystemRoot', 'WINDIR', 'ComSpec', 'APPDATA', 'LOCALAPPDATA',
   'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'TEMP', 'TMP', 'LANG', 'LC_ALL',
@@ -176,6 +186,83 @@ function parseEnrollmentStatusResult(stdout, expectedDeviceId) {
     enrollment_id: payload.enrollment_id === null ? null : String(payload.enrollment_id),
     state: payload.state,
     credential_generation: payload.credential_generation,
+    fresh: payload.fresh,
+    observed_at_ms: payload.observed_at_ms,
+    error_code: payload.error_code
+  });
+}
+
+function parseAuthorityStatusResult(stdout, expectedDeviceId) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status không trả về đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status trả về receipt không hợp lệ.'); }
+  const expectedKeys = 'device_id,dispatchable_target_count,error_code,fresh,node_display_name,observed_at_ms,state,target_count,targets,workspace_count';
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== expectedKeys
+    || String(payload.device_id || '').toLowerCase() !== String(expectedDeviceId || '').toLowerCase()
+    || typeof payload.fresh !== 'boolean'
+    || !AUTHORITY_STATUS_STATES.has(String(payload.state || '').toLowerCase())
+    || (payload.node_display_name !== null && (typeof payload.node_display_name !== 'string' || !payload.node_display_name || payload.node_display_name.length > 120))
+    || !Number.isSafeInteger(payload.workspace_count) || payload.workspace_count < 0
+    || !Number.isSafeInteger(payload.target_count) || payload.target_count < 0
+    || !Number.isSafeInteger(payload.dispatchable_target_count) || payload.dispatchable_target_count < 0
+    || !Array.isArray(payload.targets) || payload.targets.length !== payload.target_count || payload.targets.length > 64
+    || (payload.observed_at_ms !== null && (!Number.isSafeInteger(payload.observed_at_ms) || payload.observed_at_ms <= 0))
+    || (payload.error_code !== null && !/^[A-Z0-9_]{3,96}$/.test(String(payload.error_code)))) {
+    throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status không đúng target hoặc trạng thái.');
+  }
+  const targets = payload.targets.map((target) => {
+    const targetKeys = 'binding_state,capabilities,dispatch_blockers,dispatch_state,node_display_name,policy_state,presence_state,readiness,workspace_display_name,workspace_state';
+    if (!target || typeof target !== 'object' || Array.isArray(target)
+      || Object.keys(target).sort().join(',') !== targetKeys
+      || typeof target.node_display_name !== 'string' || !target.node_display_name || target.node_display_name.length > 120
+      || typeof target.workspace_display_name !== 'string' || !target.workspace_display_name || target.workspace_display_name.length > 120
+      || !AUTHORITY_BINDING_STATES.has(String(target.binding_state || '').toLowerCase())
+      || !AUTHORITY_WORKSPACE_STATES.has(String(target.workspace_state || '').toLowerCase())
+      || !AUTHORITY_PRESENCE_STATES.has(String(target.presence_state || '').toLowerCase())
+      || !AUTHORITY_READINESS_STATES.has(String(target.readiness || '').toLowerCase())
+      || !AUTHORITY_POLICY_STATES.has(String(target.policy_state || '').toLowerCase())
+      || !AUTHORITY_DISPATCH_STATES.has(String(target.dispatch_state || '').toLowerCase())
+      || !Array.isArray(target.dispatch_blockers)
+      || target.dispatch_blockers.some((item) => !AUTHORITY_DISPATCH_STATES.has(String(item || '').toLowerCase()))) {
+      throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status có target không hợp lệ.');
+    }
+    let capabilities;
+    try { capabilities = normalizeWorkspaceCapabilities(target.capabilities); }
+    catch { throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status có capability không hợp lệ.'); }
+    return Object.freeze({
+      node_display_name: target.node_display_name,
+      workspace_display_name: target.workspace_display_name,
+      capabilities,
+      binding_state: String(target.binding_state).toLowerCase(),
+      workspace_state: String(target.workspace_state).toLowerCase(),
+      presence_state: String(target.presence_state).toLowerCase(),
+      readiness: String(target.readiness).toLowerCase(),
+      policy_state: String(target.policy_state).toLowerCase(),
+      dispatch_state: String(target.dispatch_state).toLowerCase(),
+      dispatch_blockers: Object.freeze(target.dispatch_blockers.map((item) => String(item).toLowerCase()))
+    });
+  });
+  const dispatchable = targets.filter((target) => target.dispatch_state === 'dispatchable').length;
+  if (dispatchable !== payload.dispatchable_target_count) {
+    throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_OUTPUT_INVALID', 'Node authority status đếm target không nhất quán.');
+  }
+  return Object.freeze({
+    device_id: String(payload.device_id).toLowerCase(),
+    state: String(payload.state).toLowerCase(),
+    node_display_name: payload.node_display_name,
+    workspace_count: payload.workspace_count,
+    target_count: payload.target_count,
+    dispatchable_target_count: payload.dispatchable_target_count,
+    targets: Object.freeze(targets),
     fresh: payload.fresh,
     observed_at_ms: payload.observed_at_ms,
     error_code: payload.error_code
@@ -524,6 +611,42 @@ class ControlPlaneEnrollmentService {
     return parseCredentialRotationResult(result?.stdout, identity.device_id);
   }
 
+  async reconcileAuthorityStatus({ deviceIdentity } = {}) {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_PACKAGED_REQUIRED', 'Kiểm tra liên kết tài khoản chỉ chạy từ candidate packaged đã được xác minh.');
+    }
+    const identity = normalizeDeviceIdentity(deviceIdentity);
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    const config = this.paths.controlPlaneNodeConfigFile();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_AUTHORITY_STATUS_RUNTIME_MISSING', `${label} đóng gói cho kiểm tra liên kết tài khoản không sẵn sàng.`);
+      }
+    }
+    let result;
+    try {
+      result = await this.runner(python, [
+        '-I', agent, 'reconcile-authority-status',
+        '--config', config,
+        '--device-id', identity.device_id,
+        '--project-root', this.paths.appRoot(),
+        '--node', this.paths.executablePath(),
+        '--runtime-mode', 'packaged'
+      ], {
+        cwd: this.paths.appRoot(),
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: ENROLLMENT_TIMEOUT_MS
+      });
+    } catch (error) {
+      const code = String(error?.code || 'CONTROL_PLANE_AUTHORITY_STATUS_FAILED');
+      throw enrollmentError(code, 'Không thể kiểm tra liên kết tài khoản và target với Ubuntu.');
+    }
+    return parseAuthorityStatusResult(result?.stdout, identity.device_id);
+  }
+
   async installReadOnlyPolicyAssignment({ workspaceId, workspaceGeneration, replaceExisting = false } = {}) {
     if (this.paths.runtimeMode() !== 'packaged') {
       throw enrollmentError('CONTROL_PLANE_POLICY_PACKAGED_REQUIRED', 'Policy read-only chỉ cài từ candidate packaged đã được xác minh.');
@@ -748,6 +871,7 @@ module.exports = {
   safeEnrollmentEnvironment,
   parseEnrollmentResult,
   parseEnrollmentStatusResult,
+  parseAuthorityStatusResult,
   parseCredentialRotationResult,
   parseReadOnlyPolicyInstallResult,
   parseWorkspaceRegistrationResult,

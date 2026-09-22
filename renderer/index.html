@@ -43,9 +43,9 @@
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
         <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Thiết bị</span></button>
-        <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Connections</span></button>
-        <button class="nav-item" data-page="workspace"><span class="nav-icon">WS</span><span>Workspace</span></button>
-        <button class="nav-item" data-page="system"><span class="nav-icon">SY</span><span>System</span></button>
+        <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Kết nối</span></button>
+        <button class="nav-item" data-page="workspace"><span class="nav-icon">WS</span><span>Thư mục</span></button>
+        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
       </nav>
 
       <div class="sidebar-runtime">
@@ -249,15 +249,32 @@
         </section>
 
         <section class="page" data-page-view="system">
-          <div class="section-header"><div><span class="section-kicker">SYSTEM & DIAGNOSTICS</span><h2>System</h2><p>Advanced build, repair, logs, onboarding and configuration stay available here without competing with the everyday operator workflow.</p></div></div>
-          <div class="system-launch-grid">
-            <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Health & Repair</b><small>Inspect environment readiness and run bounded safe repairs.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build Verification</b><small>Run project tests/build and inspect verified artifacts.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Operational Logs</b><small>Review redacted local runtime, MCP and Tunnel diagnostics.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="settings"><span class="system-launch-icon">ST</span><span><b>Settings</b><small>Theme, startup behavior, security maintenance and local preferences.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="guide"><span class="system-launch-icon">GD</span><span><b>Connection Guide</b><small>OpenAI Tunnel and ChatGPT connector onboarding steps.</small></span><i>›</i></button>
+          <div class="section-header"><div><span class="section-kicker">CÀI ĐẶT</span><h2>Cài đặt máy này</h2><p>Một nơi để kết nối máy, chọn thư mục, liên kết tài khoản và xử lý vấn đề. Chi tiết kỹ thuật chỉ mở khi cần.</p></div></div>
+
+          <article class="setup-card panel" id="setupSummary" aria-labelledby="setupSummaryTitle">
+            <div class="setup-card-head"><div><span class="section-kicker">THIẾT LẬP TIẾP TỤC ĐƯỢC</span><h3 id="setupSummaryTitle">Đang đọc trạng thái thiết lập…</h3><p id="setupSummaryText">Cấu hình đã lưu sẽ được giữ lại khi đóng và mở lại ứng dụng.</p></div><span id="setupSummaryBadge" class="soft-badge neutral">Đang kiểm tra</span></div>
+            <div class="setup-progress" role="list" aria-label="Tiến độ thiết lập">
+              <div class="setup-step" id="setupStepConnection" role="listitem"><i>1</i><span><b>Kết nối máy chủ</b><small>Máy này và Ubuntu</small></span></div>
+              <div class="setup-step" id="setupStepFolder" role="listitem"><i>2</i><span><b>Thư mục & quyền</b><small>Phạm vi làm việc</small></span></div>
+              <div class="setup-step" id="setupStepAccount" role="listitem"><i>3</i><span><b>Quyền truy cập</b><small>Route và policy</small></span></div>
+              <div class="setup-step" id="setupStepVerify" role="listitem"><i>4</i><span><b>Kiểm tra</b><small>Sẵn sàng nhận việc</small></span></div>
+            </div>
+            <div class="setup-card-actions"><p id="setupNextDetail">Chưa có trạng thái mới.</p><button class="primary-button" id="setupPrimaryAction" type="button">Kiểm tra lại</button></div>
+          </article>
+
+          <div class="settings-groups" aria-label="Nhóm cài đặt">
+            <button class="settings-group-card" data-nav="deploy"><span class="settings-group-icon">↔</span><span><b>Kết nối</b><small>Ubuntu, máy này, pairing và liên kết tài khoản.</small><em id="settingsConnectionSummary">Đang kiểm tra</em></span><i>›</i></button>
+            <button class="settings-group-card" data-nav="workspace"><span class="settings-group-icon">▱</span><span><b>Thư mục & quyền</b><small>Đường dẫn local, quyền đọc/ghi/chạy và workspace đã chọn.</small><em id="settingsWorkspaceSummary">Đang kiểm tra</em></span><i>›</i></button>
+            <button class="settings-group-card" data-nav="settings"><span class="settings-group-icon">◐</span><span><b>Ứng dụng</b><small>Giao diện, mở cùng Windows và chạy nền.</small><em id="settingsAppSummary">Mở tùy chọn ứng dụng</em></span><i>›</i></button>
+            <button class="settings-group-card" data-nav="health"><span class="settings-group-icon">?</span><span><b>Hỗ trợ & nâng cao</b><small>Kiểm tra, nhật ký, build và tùy chọn kỹ thuật.</small><em>Chỉ mở khi cần xử lý</em></span><i>›</i></button>
           </div>
-          <div class="system-note"><b>Operational principle:</b> Command Center shows current truth; System contains setup and diagnostics. Advanced pages remain unchanged so existing workflows and IDs continue to work.</div>
+
+          <div class="system-launch-grid settings-advanced-links">
+            <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Kiểm tra & sửa chữa</b><small>Quan sát trạng thái và chỉ sửa khi bạn bấm rõ ràng.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Nhật ký hỗ trợ</b><small>Xem chẩn đoán cục bộ đã che dữ liệu nhạy cảm.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build & xác minh</b><small>Dành cho người quản trị hoặc người phát triển.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="guide"><span class="system-launch-icon">GD</span><span><b>Hướng dẫn kết nối cũ</b><small>Chỉ dùng cho direct legacy; Ubuntu không cần Tunnel tại Windows.</small></span><i>›</i></button>
+          </div>
         </section>
 
         <section class="page" data-page-view="deploy">
@@ -272,6 +289,12 @@
                 <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
                 <label class="field"><span>Địa chỉ HTTPS của Ubuntu Control Plane</span><div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://ubuntu-host.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu pairing</button></div><small id="controlPlaneEnrollmentStatus">Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI.</small></label>
                 <div id="controlPlaneCredentialRotation" class="setting-row" hidden><span><b>Credential máy</b><small id="controlPlaneCredentialRotationStatus">Chỉ đổi sau khi Ubuntu đã duyệt máy; raw credential không hiển thị trong UI.</small></span><button id="rotateControlPlaneCredential" class="secondary-button" type="button">Đổi credential</button></div>
+                <div id="controlPlaneAuthorityStatusCard" class="authority-status-card" hidden>
+                  <div class="panel-title"><div><h3>Liên kết tài khoản & target</h3><p>Enrollment chỉ xác minh máy. Card này đọc binding/target mà Ubuntu đã cấp cho máy, không tạo quyền mới.</p></div><span id="controlPlaneAuthorityStatusBadge" class="soft-badge neutral">Chưa kiểm tra</span></div>
+                  <p id="controlPlaneAuthorityStatusText">Kiểm tra này chỉ đọc trạng thái Ubuntu; không tạo binding hoặc cấp quyền.</p>
+                  <div id="controlPlaneAuthorityTargets" class="authority-target-list" aria-live="polite"><span class="task-muted">Chưa kiểm tra target.</span></div>
+                  <button id="refreshControlPlaneAuthorityStatus" class="secondary-button" type="button">Kiểm tra liên kết</button>
+                </div>
                 <div class="notice"><b>Quyền task sẽ đến từ liên kết tài khoản</b><p>Không dán <code>ctx_…</code>, Operator Token hoặc bearer vào Windows. Sau khi OAuth được liên kết, account sẽ chọn target được cấp và Ubuntu tạo binding nội bộ. Quyền file/Git/build/test/process vẫn chạy trên máy này theo capability local mà chủ máy cấu hình khi bind.</p></div>
               </div>
               <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
@@ -319,18 +342,25 @@
           </article>
 
           <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
-            <b>Đăng ký root cục bộ với Ubuntu</b>
-            <p>Root này được chọn riêng cho registry, không đổi workspace chính của ứng dụng hoặc task đã bind. Node chỉ gửi định danh opaque, generation, tên hiển thị và capability đã chọn; đường dẫn local giữ lại tại Windows.</p>
-            <div class="input-action"><button id="chooseControlPlaneWorkspace" type="button">Chọn thư mục cục bộ để đăng ký</button><small id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục cục bộ để đăng ký.</small></div>
-            <fieldset class="capability-picker">
-              <legend>Capability local cho workspace này</legend>
-              <label><input id="controlPlaneCapabilityRead" type="checkbox" checked disabled><span><b>Đọc</b><small>Bắt buộc để inventory và đọc kết quả.</small></span></label>
-              <label><input id="controlPlaneCapabilityWrite" type="checkbox"><span><b>Ghi</b><small>Cho phép runtime local sửa file theo policy máy.</small></span></label>
-              <label><input id="controlPlaneCapabilityExec" type="checkbox"><span><b>Chạy</b><small>Cho phép runtime local chạy lệnh/process theo policy máy.</small></span></label>
+            <b>Thêm thư mục để làm việc</b>
+            <p>Chọn một thư mục local và mức quyền dễ hiểu. Đường dẫn chỉ được giữ trên máy này; Ubuntu nhận inventory ẩn danh và vẫn phải duyệt target riêng trước khi có task.</p>
+            <div class="input-action"><button id="chooseControlPlaneWorkspace" type="button">Chọn thư mục</button><span class="input-action-meta"><small id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</small><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span></div>
+            <fieldset class="capability-picker" aria-describedby="controlPlaneCapabilitySummary">
+              <legend>Mức quyền cho thư mục này</legend>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read" checked><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code"><span><b>Làm việc với mã nguồn</b><small>Đọc, sửa file và chạy công cụ trong policy đã được cấp.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="custom"><span><b>Tùy chỉnh</b><small>Chọn từng quyền trong phần nâng cao.</small></span></label>
+              <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small>
+              <details id="centralWorkspaceCustomCapabilities" class="capability-custom">
+                <summary>Chọn từng quyền</summary>
+                <label><input id="controlPlaneCapabilityRead" type="checkbox" checked disabled><span><b>Đọc</b><small>Bắt buộc để inventory và đọc kết quả.</small></span></label>
+                <label><input id="controlPlaneCapabilityWrite" type="checkbox"><span><b>Ghi</b><small>Cho phép runtime local sửa file theo policy máy.</small></span></label>
+                <label><input id="controlPlaneCapabilityExec" type="checkbox"><span><b>Chạy</b><small>Cho phép runtime local chạy process theo policy máy.</small></span></label>
+              </details>
             </fieldset>
-            <div class="input-action"><button id="registerControlPlaneWorkspace" type="button">Đăng ký capability với Ubuntu</button><small id="controlPlaneWorkspaceRegistrationStatus">Chọn root và capability; đăng ký không tự tạo binding hay vượt quyền hệ điều hành.</small></div>
-            <div class="input-action"><button id="refreshControlPlaneWorkspaces" type="button">Tải workspace đã đăng ký</button><small>Build compatibility cũ có thể còn nút “Đồng bộ policy read-only”; đó không phải thủ tục cấp quyền hằng ngày của workspace trusted. Không nhập context ID; Ubuntu chỉ nhận ID/generation, đường dẫn không rời Windows.</small></div>
-            <p class="task-muted">Muốn đổi capability của root đã đăng ký, chọn lại đúng thư mục local rồi bấm “Thay capability” ở inventory. Thao tác này có xác nhận riêng, không ghi đè generation cũ và yêu cầu bind lại ID mới.</p>
+            <div class="input-action"><button id="registerControlPlaneWorkspace" type="button">Thêm thư mục này</button><small id="controlPlaneWorkspaceRegistrationStatus">Đăng ký chỉ ghi nhận phạm vi local; chưa tạo liên kết tài khoản hoặc quyền chạy.</small></div>
+            <div class="input-action"><button id="refreshControlPlaneWorkspaces" type="button">Xem thư mục đã thêm</button><small>Không cần nhập context ID, JSON hoặc token. Ubuntu chỉ nhận định danh opaque; đường dẫn không rời Windows.</small></div>
+            <p class="task-muted">Đổi mức quyền hoặc thu hồi thư mục nằm trong “Quản lý nâng cao” của từng mục. Generation cũ không bị ghi đè âm thầm và target cần được liên kết lại sau thay đổi.</p>
             <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
           </article>
 
@@ -415,8 +445,8 @@
         <section class="page" data-page-view="settings">
           <div class="section-header"><div><span class="section-kicker">CẤU HÌNH TÙY CHỌN</span><h2>Cài đặt ứng dụng</h2><p>Điều khiển giao diện, hành vi khởi động và quản lý chứng thư.</p></div></div>
           <div class="two-column">
-            <article class="panel settings-list"><div class="panel-title"><h3>Giao diện & Hành vi vận hành</h3></div><label class="setting-row"><span><b>Chủ đề giao diện</b><small>Trung tâm quản lý mặc định sử dụng phong cách sáng hài hòa hơn với giao diện chat chính.</small></span><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select></label><div class="setting-row"><span><b>Chế độ công cụ thông minh</b><small>Cố định sử dụng 8 công cụ tổng hợp đã rút gọn, công cụ cũ chỉ giữ tương thích ẩn.</small></span><span class="security-chip">Tự động</span></div><label class="setting-row"><span><b>Tự khởi động Coding Tools MCP cùng Windows</b><small>Tự động khởi động ứng dụng sau khi đăng nhập Windows.</small></span><input id="startWithWindowsToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>Tự động khởi động dịch vụ khi mở ứng dụng</b><small>Tự động khởi động MCP và Tunnel khi đã cấu hình đầy đủ.</small></span><input id="autoStartToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>Duy trì dịch vụ chạy ngầm khi đóng cửa sổ</b><small>Đóng giao diện chính chỉ ẩn xuống khay hệ thống, không dừng MCP và Tunnel.</small></span><input id="keepRunningToggle" class="toggle" type="checkbox" checked></label><label class="setting-row"><span><b>Khoảng thời gian báo cáo chủ động nhiệm vụ dài</b><small>Khi vượt quá thời gian này mà chưa hoàn thành, công cụ sẽ trả lại quyền cho ChatGPT để báo cáo tiến độ trước.</small></span><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select></label></article>
-            <article class="panel settings-list"><div class="panel-title"><h3>Bảo mật & Bảo trì</h3></div><div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div><div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div><div class="setting-row"><span><b>Dữ liệu đăng nhập ChatGPT</b><small>Xóa Cookie, bộ nhớ đệm và trạng thái đăng nhập của trang web tích hợp.</small></span><button class="danger-button" id="clearChatSession">Xóa và đăng nhập lại</button></div><div class="setting-row"><span><b>Thu thập dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div></article>
+            <article class="panel settings-list"><div class="panel-title"><h3>Ứng dụng</h3><span class="settings-save-hint" id="settingsPreferenceHint" role="status" aria-live="polite">Mỗi thay đổi được lưu riêng.</span></div><label class="setting-row"><span><b>Chủ đề giao diện</b><small>Chọn sáng hoặc tối. Không thay đổi quyền hay kết nối.</small></span><span class="setting-control"><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select><small class="setting-save-state" data-setting-state="theme">Đã lưu</small></span></label><div class="setting-row"><span><b>Chế độ công cụ</b><small>Luôn dùng smart-v3 gồm 8 công cụ; không cần cấu hình thêm.</small></span><span class="security-chip">smart-v3</span></div><label class="setting-row"><span><b>Mở sau khi đăng nhập Windows</b><small>Chỉ áp dụng cho bản cài đặt; bản development không ghi startup.</small></span><span class="setting-control"><input id="startWithWindowsToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="startWithWindows">Đã lưu</small></span></label><label class="setting-row"><span><b>Tự chuẩn bị kết nối khi mở ứng dụng</b><small>Không cấp thêm quyền; chỉ khởi động phần đã được cấu hình.</small></span><span class="setting-control"><input id="autoStartToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="autoStartServices">Đã lưu</small></span></label><label class="setting-row"><span><b>Tiếp tục chạy khi đóng cửa sổ</b><small>Đóng cửa sổ chỉ ẩn ứng dụng; không hứa chạy khi Windows đăng xuất.</small></span><span class="setting-control"><input id="keepRunningToggle" class="toggle" type="checkbox" checked><small class="setting-save-state" data-setting-state="keepRunningOnClose">Đã lưu</small></span></label><label class="setting-row"><span><b>Báo tiến độ nhiệm vụ dài sau</b><small>Chỉ điều chỉnh thời điểm báo tiến độ cho ChatGPT, không đổi quyền thực thi.</small></span><span class="setting-control"><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select><small class="setting-save-state" data-setting-state="progressReportSeconds">Đã lưu</small></span></label></article>
+            <article class="panel settings-list"><div class="panel-title"><h3>Bảo mật & hỗ trợ</h3></div><div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div><div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div><div class="setting-row"><span><b>Dữ liệu đăng nhập ChatGPT</b><small>Xóa Cookie, bộ nhớ đệm và trạng thái đăng nhập của trang web tích hợp.</small></span><button class="danger-button" id="clearChatSession">Xóa và đăng nhập lại</button></div><div class="setting-row"><span><b>Dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div></article>
           </div>
           <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
         </section>

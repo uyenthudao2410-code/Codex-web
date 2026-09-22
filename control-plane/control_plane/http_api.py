@@ -1636,6 +1636,21 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 )
                 self._json(HTTPStatus.OK, result)
                 return
+            node_authority_status_match = re.fullmatch(r"/v1/nodes/([^/]+)/authority-status", self.path)
+            if node_authority_status_match:
+                # This is deliberately node-authenticated rather than an
+                # operator/account inventory route.  The response is a
+                # path-free projection for the Windows Settings screen and
+                # never exposes owner/OAuth IDs, credentials or task data.
+                if body:
+                    raise ValidationError("node authority status payload is invalid.")
+                device_id = node_authority_status_match.group(1)
+                result = self.server.store.node_authority_status(
+                    device_id=device_id,
+                    node_secret=self._auth("Node"),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/heartbeat", self.path)
             if node_match:
                 device_id = node_match.group(1)

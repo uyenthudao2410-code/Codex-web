@@ -57,6 +57,7 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(html, /id="centralExecutorWorkspaceRegistration"/);
   assert.match(html, /id="chooseControlPlaneWorkspace"/);
   assert.match(html, /id="controlPlaneWorkspaceCandidate"/);
+  assert.match(html, /id="controlPlaneWorkspaceDevice"/);
   assert.match(html, /id="controlPlaneCapabilityRead"/);
   assert.match(html, /id="controlPlaneCapabilityWrite"/);
   assert.match(html, /id="controlPlaneCapabilityExec"/);
@@ -106,8 +107,9 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.doesNotMatch(picker, /settings\.workspace\s*=/);
   assert.match(registration, /state\.centralWorkspaceCandidate/);
   assert.match(registration, /api\.registerControlPlaneWorkspace\(\{ workspacePath, capabilities \}\)/);
-  assert.match(registration, /write: state\.centralWorkspaceCapabilities\.write === true/);
-  assert.match(registration, /exec: state\.centralWorkspaceCapabilities\.exec === true/);
+  assert.match(registration, /centralWorkspaceCapabilitiesFromUi\(\)/);
+  assert.match(app, /write: \$\('#controlPlaneCapabilityWrite'\)\?\.checked === true/);
+  assert.match(app, /exec: \$\('#controlPlaneCapabilityExec'\)\?\.checked === true/);
   assert.doesNotMatch(registration, /(?:api\.)?switchWorkspace\s*\(|settings\.workspace\s*=|state\.selectedWorkspace/);
   assert.match(app, /api\.listControlPlaneWorkspaces\(\)/);
   assert.match(app, /api\.retireControlPlaneWorkspace\(\{/);

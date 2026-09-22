@@ -137,6 +137,18 @@ NODE_ROTATION_STATES = frozenset({
 ENROLLMENT_STATES = frozenset({
     "unconfigured", "request_sent", "pending_operator_approval", "approved", "revoked", "unknown",
 })
+AUTHORITY_STATUS_STATES = frozenset({
+    "pending_operator_approval", "no_binding", "active", "binding_revoked",
+    "workspace_missing", "workspace_retired", "blocked", "revoked", "unknown",
+})
+AUTHORITY_BINDING_STATES = frozenset({"active", "revoked"})
+AUTHORITY_WORKSPACE_STATES = frozenset({"active", "missing", "retired"})
+AUTHORITY_PRESENCE_STATES = frozenset({"online", "offline", "unknown"})
+AUTHORITY_READINESS_STATES = frozenset({"ready", "degraded", "blocked", "unknown"})
+AUTHORITY_POLICY_STATES = frozenset({"unobserved", "enabled", "expired_or_disabled", "unavailable", "unknown"})
+AUTHORITY_DISPATCH_STATES = frozenset({
+    "dispatchable", "binding_revoked", "node_revoked", "workspace_missing", "workspace_retired",
+})
 MAX_HTTP_RESPONSE_BYTES = 256 * 1024
 POLICY_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$")
 WORKSPACE_REGISTRY_SCHEMA_VERSION = 1
@@ -758,6 +770,127 @@ def _enrollment_local_status(config: dict[str, Any], *, fresh: bool, error_code:
         "fresh": bool(fresh),
         "observed_at_ms": config.get("enrollment_observed_at_ms"),
         "error_code": error_code or config.get("enrollment_last_error"),
+    }
+
+
+def _authority_status_projection(response: Any, *, config: dict[str, Any]) -> dict[str, Any]:
+    """Validate the credential-free node authority projection.
+
+    The exact-key checks are intentional: a future server change must not
+    accidentally make an owner/OAuth identifier or local path visible in the
+    Windows settings surface.
+    """
+
+    expected = {
+        "device_id", "state", "node_display_name", "workspace_count", "target_count",
+        "dispatchable_target_count", "targets", "observed_at_ms",
+    }
+    if not isinstance(response, dict) or set(response) != expected:
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    device_id = str(response.get("device_id") or "").strip().lower()
+    if device_id != str(config.get("device_id") or "").strip().lower():
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_TARGET_MISMATCH")
+    state = str(response.get("state") or "").strip().lower()
+    if state not in AUTHORITY_STATUS_STATES - {"unknown"}:
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    for field in ("workspace_count", "target_count", "dispatchable_target_count"):
+        value = response.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    observed_at_ms = response.get("observed_at_ms")
+    if not isinstance(observed_at_ms, int) or isinstance(observed_at_ms, bool) or observed_at_ms <= 0:
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    display_name = response.get("node_display_name")
+    if display_name is not None and (
+        not isinstance(display_name, str) or not 1 <= len(display_name) <= 120
+        or any(ord(character) < 32 for character in display_name)
+    ):
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    targets = response.get("targets")
+    if not isinstance(targets, list) or len(targets) > 64 or len(targets) != response["target_count"]:
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    normalized_targets: list[dict[str, Any]] = []
+    for target in targets:
+        target_expected = {
+            "node_display_name", "workspace_display_name", "capabilities", "binding_state",
+            "workspace_state", "presence_state", "readiness", "policy_state",
+            "dispatch_state", "dispatch_blockers",
+        }
+        if not isinstance(target, dict) or set(target) != target_expected:
+            raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+        target_node = target.get("node_display_name")
+        target_workspace = target.get("workspace_display_name")
+        if (
+            not isinstance(target_node, str) or not 1 <= len(target_node) <= 120
+            or not isinstance(target_workspace, str) or not 1 <= len(target_workspace) <= 120
+            or any(ord(character) < 32 for character in target_node + target_workspace)
+        ):
+            raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+        capabilities = target.get("capabilities")
+        if (
+            not isinstance(capabilities, dict)
+            or set(capabilities) != {"read", "write", "exec"}
+            or any(not isinstance(capabilities[name], bool) for name in ("read", "write", "exec"))
+        ):
+            raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+        states = (
+            ("binding_state", AUTHORITY_BINDING_STATES),
+            ("workspace_state", AUTHORITY_WORKSPACE_STATES),
+            ("presence_state", AUTHORITY_PRESENCE_STATES),
+            ("readiness", AUTHORITY_READINESS_STATES),
+            ("policy_state", AUTHORITY_POLICY_STATES),
+            ("dispatch_state", AUTHORITY_DISPATCH_STATES),
+        )
+        for field, allowed in states:
+            if str(target.get(field) or "").strip().lower() not in allowed:
+                raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+        blockers = target.get("dispatch_blockers")
+        if (
+            not isinstance(blockers, list)
+            or any(not isinstance(item, str) or item not in AUTHORITY_DISPATCH_STATES for item in blockers)
+            or len(blockers) != len(set(blockers))
+        ):
+            raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+        normalized_targets.append({
+            "node_display_name": target_node,
+            "workspace_display_name": target_workspace,
+            "capabilities": {name: capabilities[name] for name in ("read", "write", "exec")},
+            "binding_state": str(target["binding_state"]).lower(),
+            "workspace_state": str(target["workspace_state"]).lower(),
+            "presence_state": str(target["presence_state"]).lower(),
+            "readiness": str(target["readiness"]).lower(),
+            "policy_state": str(target["policy_state"]).lower(),
+            "dispatch_state": str(target["dispatch_state"]).lower(),
+            "dispatch_blockers": list(blockers),
+        })
+    if response["dispatchable_target_count"] != sum(
+        1 for target in normalized_targets if target["dispatch_state"] == "dispatchable"
+    ):
+        raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_INVALID")
+    return {
+        "device_id": device_id,
+        "state": state,
+        "node_display_name": display_name,
+        "workspace_count": response["workspace_count"],
+        "target_count": response["target_count"],
+        "dispatchable_target_count": response["dispatchable_target_count"],
+        "targets": normalized_targets,
+        "observed_at_ms": observed_at_ms,
+    }
+
+
+def _authority_local_status(config: dict[str, Any], *, fresh: bool, error_code: str | None = None) -> dict[str, Any]:
+    return {
+        "device_id": str(config.get("device_id") or "").strip().lower(),
+        "state": "unknown",
+        "node_display_name": None,
+        "workspace_count": 0,
+        "target_count": 0,
+        "dispatchable_target_count": 0,
+        "targets": [],
+        "fresh": bool(fresh),
+        "observed_at_ms": None,
+        "error_code": error_code,
     }
 
 
@@ -4669,6 +4802,51 @@ def reconcile_enrollment(args: argparse.Namespace) -> int:
     output["credential_generation"] = projection["credential_generation"]
     output["observed_at_ms"] = projection["observed_at_ms"]
     output["error_code"] = None
+    print(json.dumps(output, separators=(",", ":")))
+    return 0
+
+
+def reconcile_authority_status(args: argparse.Namespace) -> int:
+    """Read the account/binding projection for Settings without granting authority."""
+
+    config_path = Path(args.config).expanduser().resolve()
+    if not config_path.exists():
+        output = _authority_local_status(
+            {"device_id": str(args.device_id or "")},
+            fresh=False,
+            error_code="CONTROL_PLANE_NODE_CONFIG_MISSING",
+        )
+        print(json.dumps(output, separators=(",", ":")))
+        return 0
+    config = _config(config_path)
+    try:
+        server_url = _enrollment_server_origin(config.get("server_url"))
+        device_id = str(config.get("device_id") or "").strip()
+        endpoint_id = str(config.get("endpoint_id") or "").strip()
+        node_secret = str(config.get("node_secret") or "")
+        if (
+            POLICY_IDENTIFIER_PATTERN.fullmatch(device_id) is None
+            or device_id != str(args.device_id or "").strip()
+            or POLICY_IDENTIFIER_PATTERN.fullmatch(endpoint_id) is None
+            or len(node_secret) < 16
+        ):
+            raise RuntimeError("CONTROL_PLANE_AUTHORITY_STATUS_CONFIG_INVALID")
+        response = _request(
+            server_url,
+            f"/v1/nodes/{device_id}/authority-status",
+            {},
+            f"Node {node_secret}",
+        )
+        projection = _authority_status_projection(response, config=config)
+    except RuntimeError as error:
+        code = _safe_error_code(str(error), "CONTROL_PLANE_AUTHORITY_STATUS_FAILED")
+        print(json.dumps(_authority_local_status(config, fresh=False, error_code=code), separators=(",", ":")))
+        return 0
+    output = {
+        **projection,
+        "fresh": True,
+        "error_code": None,
+    }
     print(json.dumps(output, separators=(",", ":")))
     return 0
 
@@ -8831,6 +9009,12 @@ def main(argv: list[str] | None = None) -> int:
     reconcile.add_argument("--project-root", default="")
     reconcile.add_argument("--node", default="node")
     reconcile.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    authority_status = subcommands.add_parser("reconcile-authority-status")
+    authority_status.add_argument("--config", required=True)
+    authority_status.add_argument("--device-id", required=True)
+    authority_status.add_argument("--project-root", default="")
+    authority_status.add_argument("--node", default="node")
+    authority_status.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     rotate = subcommands.add_parser("rotate-credential")
     rotate.add_argument("--config", required=True)
     rotate.add_argument("--project-root", default="")
@@ -9174,6 +9358,7 @@ def main(argv: list[str] | None = None) -> int:
         return {
             "request-enrollment": request_enrollment,
             "reconcile-enrollment": reconcile_enrollment,
+            "reconcile-authority-status": reconcile_authority_status,
             "rotate-credential": rotate_node_credential,
             "register-workspace": register_workspace,
             "list-workspaces": list_workspaces,

@@ -44,3 +44,31 @@ body[data-theme="dark"] .nav-item.active{color:#fff!important;background:#303030
 body[data-theme="dark"] .busy-overlay{background:rgba(20,20,20,.72)!important}
 .boot-screen{display:none!important}
 @media (max-width:900px){.app-shell{grid-template-columns:176px minmax(0,1fr)!important}.connection-visual{display:none!important}}
+
+/* Simplified setup surface: the ordinary path stays short while legacy
+   diagnostics and direct-mode forms remain reachable from the advanced cards. */
+.setup-card{margin-bottom:14px;padding:18px 20px;background:var(--surface)!important;border:1px solid var(--border)!important}
+.setup-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.setup-card-head h3{margin:4px 0 4px;color:var(--text);font-size:17px}
+.setup-card-head p{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
+.setup-card .soft-badge.positive{color:var(--green);border-color:color-mix(in srgb,var(--green) 35%,var(--border-strong));background:color-mix(in srgb,var(--green) 10%,var(--surface-2))}
+.setup-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:17px}
+.setup-step{display:flex;align-items:center;gap:8px;min-width:0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--muted)}
+.setup-step i{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;font-style:normal;font-size:10px;font-weight:800;background:var(--border);color:var(--muted)}
+.setup-step span{display:grid;min-width:0;gap:2px}.setup-step b{font-size:10px;color:var(--text)}.setup-step small{overflow:hidden;font-size:9px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}
+.setup-step.done{border-color:color-mix(in srgb,#2d9a67 35%,var(--border));background:color-mix(in srgb,#2d9a67 8%,var(--surface))}.setup-step.done i{background:#2d9a67;color:#fff}.setup-step.done small{color:#2d9a67}
+.setup-step.current{border-color:color-mix(in srgb,#356ae6 35%,var(--border));background:color-mix(in srgb,#356ae6 7%,var(--surface))}.setup-step.current i{background:#356ae6;color:#fff}.setup-step.current small{color:#356ae6}
+.setup-step.blocked{opacity:.72}
+.setup-card-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.setup-card-actions p{margin:0;color:var(--muted);font-size:10.5px;line-height:1.45}.setup-card-actions .primary-button{min-width:142px}
+.settings-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.settings-group-card{display:flex;align-items:center;gap:11px;min-width:0;padding:14px;text-align:left;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);cursor:pointer;transition:border-color .15s,transform .15s}
+.settings-group-card:hover{border-color:var(--border-strong);transform:translateY(-1px)}.settings-group-card>span:nth-child(2){display:grid;min-width:0;gap:3px}.settings-group-card b{font-size:12px}.settings-group-card small,.settings-group-card em{font-size:10px;line-height:1.4;color:var(--muted);font-style:normal}.settings-group-card em{color:var(--muted-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.settings-group-card>i{margin-left:auto;color:var(--muted-2);font-size:19px;font-style:normal}.settings-group-icon{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:9px;background:var(--surface-2);color:var(--blue);font-weight:800}
+.settings-advanced-links{margin-top:0}.settings-save-hint{font-size:10px;color:var(--muted);font-weight:500}.setting-control{display:grid;justify-items:end;gap:3px}.setting-save-state{min-height:12px;color:var(--muted);font-size:9px}.setting-save-state[data-state="saving"]{color:#a36b16}.setting-save-state[data-state="saved"]{color:#2d9a67}.setting-save-state[data-state="error"]{color:#b84955}
+.authority-status-card{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2)}
+.authority-status-card .panel-title{margin-bottom:8px}.authority-status-card h3{margin:0 0 3px;font-size:12px}.authority-status-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.5}
+.authority-status-card .soft-badge[data-state="connected"]{color:var(--green);border-color:color-mix(in srgb,var(--green) 35%,var(--border-strong));background:color-mix(in srgb,var(--green) 10%,var(--surface))}
+.authority-status-card .soft-badge[data-state="error"]{color:#b84955;border-color:color-mix(in srgb,#b84955 35%,var(--border-strong));background:color-mix(in srgb,#b84955 9%,var(--surface))}
+.authority-status-card .soft-badge[data-state="waiting"],.authority-status-card .soft-badge[data-state="warning"]{color:#a36b16;border-color:color-mix(in srgb,#a36b16 35%,var(--border-strong));background:color-mix(in srgb,#a36b16 9%,var(--surface))}
+.authority-target-list{display:grid;gap:6px;margin:9px 0}.authority-target-row{display:grid;gap:2px;padding:8px;border-radius:8px;background:var(--surface);border:1px solid var(--border)}.authority-target-row b{font-size:10px}.authority-target-row small{color:var(--muted);font-size:9px}
+@media (max-width:760px){.setup-progress,.settings-groups{grid-template-columns:1fr}.setup-card-actions{align-items:flex-start;flex-direction:column}.setup-card-actions .primary-button{width:100%}}

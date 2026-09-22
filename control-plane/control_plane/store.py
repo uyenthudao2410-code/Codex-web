@@ -1864,6 +1864,116 @@ class ControlPlaneStore:
                 "observed_at_ms": now,
             }
 
+    def node_authority_status(self, *, device_id: str, node_secret: str) -> dict[str, Any]:
+        """Return a path-free account/binding projection for one node.
+
+        Enrollment proves only that Ubuntu accepted the machine identity.  A
+        Windows Settings screen also needs to distinguish that state from an
+        account target that was actually bound to a registered workspace.  The
+        node authenticates with its existing credential and receives only
+        display labels, lifecycle states and capability/presence summaries.
+        Owner IDs, OAuth subjects, binding/workspace IDs, paths, credentials
+        and task/context records never cross this boundary.
+        """
+
+        device_id = _text(device_id, "device_id")
+        node_secret = str(node_secret or "")
+        credential_hash = _digest({"node_secret": node_secret})
+        with self._connection() as connection:
+            node = connection.execute(
+                "SELECT device_id, owner_id, display_name, credential_hash, credential_generation, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            request = connection.execute(
+                "SELECT enrollment_id, device_id, credential_hash, requested_at_ms, approved_at_ms FROM enrollment_requests WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            authenticated = False
+            if node is not None:
+                if node["revoked_at_ms"] is not None:
+                    authenticated = hmac.compare_digest(str(node["credential_hash"]), credential_hash)
+                else:
+                    try:
+                        authenticated = self._authenticated_node_with_rotation(
+                            connection,
+                            device_id=device_id,
+                            node_secret=node_secret,
+                        )[0] is not None
+                    except (NotFoundError, PermissionError):
+                        authenticated = False
+            elif request is not None:
+                authenticated = hmac.compare_digest(str(request["credential_hash"]), credential_hash)
+            if not authenticated:
+                raise PermissionError("node authentication failed.")
+
+            now = self.clock()
+            if node is None:
+                return {
+                    "device_id": device_id,
+                    "state": "pending_operator_approval",
+                    "node_display_name": None,
+                    "workspace_count": 0,
+                    "target_count": 0,
+                    "dispatchable_target_count": 0,
+                    "targets": [],
+                    "observed_at_ms": now,
+                }
+
+            # ``list_account_targets`` already contains the tested lifecycle
+            # calculation. Reuse it internally, then redact it to the node
+            # projection instead of duplicating authority rules here.
+            owner_id = str(node["owner_id"])
+            targets = [
+                target for target in self.list_account_targets(owner_id=owner_id)
+                if target.get("device_id") == device_id
+            ]
+            with self._connection() as workspace_connection:
+                workspace_count_row = workspace_connection.execute(
+                    "SELECT COUNT(*) AS count FROM node_workspaces WHERE device_id = ? AND retired_at_ms IS NULL",
+                    (device_id,),
+                ).fetchone()
+            workspace_count = int(workspace_count_row["count"] if workspace_count_row is not None else 0)
+            safe_targets = [
+                {
+                    "node_display_name": target["node_display_name"],
+                    "workspace_display_name": target["workspace_display_name"],
+                    "capabilities": target["capabilities"],
+                    "binding_state": target["binding_state"],
+                    "workspace_state": target["workspace_state"],
+                    "presence_state": target["presence_state"],
+                    "readiness": target["readiness"],
+                    "policy_state": target["policy_state"],
+                    "dispatch_state": target["dispatch_state"],
+                    "dispatch_blockers": target["dispatch_blockers"],
+                }
+                for target in targets
+            ]
+            dispatchable = sum(1 for target in safe_targets if target["dispatch_state"] == "dispatchable")
+            if node["revoked_at_ms"] is not None:
+                state = "revoked"
+            elif not safe_targets:
+                state = "no_binding"
+            elif dispatchable:
+                state = "active"
+            elif all(target["binding_state"] == "revoked" for target in safe_targets):
+                state = "binding_revoked"
+            elif any(target["workspace_state"] == "missing" for target in safe_targets):
+                state = "workspace_missing"
+            elif any(target["workspace_state"] == "retired" for target in safe_targets):
+                state = "workspace_retired"
+            else:
+                state = "blocked"
+            return {
+                "device_id": device_id,
+                "state": state,
+                "node_display_name": node["display_name"],
+                "workspace_count": workspace_count,
+                "target_count": len(safe_targets),
+                "dispatchable_target_count": dispatchable,
+                "targets": safe_targets,
+                "observed_at_ms": now,
+            }
+
     def enrollment_request(self, *, enrollment_id: str) -> dict[str, Any]:
         enrollment_id = _text(enrollment_id, "enrollment_id")
         with self._connection() as connection:

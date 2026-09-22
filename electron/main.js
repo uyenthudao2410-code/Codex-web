@@ -978,10 +978,15 @@ function registerIpc() {
         code: 'CONTROL_PLANE_ENROLLMENT_ROLE_REQUIRED'
       });
     }
-    return controlPlaneEnrollment.request({
+    const receipt = await controlPlaneEnrollment.request({
       serverUrl,
       deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
     });
+    // Keep the non-secret origin so the resumable setup screen can restore
+    // the same target after a reload.  node-agent remains the authority for
+    // enrollment state and all credentials.
+    settings.save({ controlPlaneServerUrl: receipt.server_origin });
+    return receipt;
   }));
   secureHandle('control-plane:enrollment-status', (event) => invokeSafely(async () => {
     // Reconcile the durable node enrollment after UI reload/restart.  The
@@ -993,6 +998,20 @@ function registerIpc() {
       });
     }
     return controlPlaneEnrollment.reconcileEnrollment({
+      deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
+    });
+  }));
+  secureHandle('control-plane:authority-status', (event) => invokeSafely(async () => {
+    // Enrollment approval is not account/binding authority. This read-only
+    // projection lets Settings show the distinction without exposing owner,
+    // OAuth, path or credential material to the renderer.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Kiểm tra liên kết tài khoản chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_AUTHORITY_STATUS_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.reconcileAuthorityStatus({
       deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
     });
   }));
@@ -1297,7 +1316,7 @@ function registerIpc() {
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
     // Recovery settings stay explicitly operator-controlled and separate from the primary runtime failure domain.
-    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
+    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'controlPlaneServerUrl', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
     const clean = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => allowed.includes(key)));
     const saved = settings.save(clean);
     if (Object.hasOwn(clean, 'startWithWindows')) {

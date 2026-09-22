@@ -1451,6 +1451,51 @@ class ControlPlaneStoreTests(unittest.TestCase):
         revoked = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
         self.assertEqual(revoked["state"], "revoked")
 
+    def test_node_authority_status_is_path_free_and_distinguishes_binding_lifecycle(self) -> None:
+        pending_secret = "authority-pending-secret-0001"
+        pending_hash = hashlib.sha256(
+            json.dumps({"node_secret": pending_secret}, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        request = self.store.request_enrollment(
+            device_id="device-authority-pending-0001",
+            endpoint_id="endpoint-authority-pending-0001",
+            display_name="Pending authority node",
+            credential_hash=pending_hash,
+        )
+        pending = self.store.node_authority_status(
+            device_id="device-authority-pending-0001",
+            node_secret=pending_secret,
+        )
+        self.assertEqual(pending["state"], "pending_operator_approval")
+        self.assertEqual(pending["targets"], [])
+        self.assertNotIn("owner_id", json.dumps(pending))
+        self.assertNotIn("workspace_id", json.dumps(pending))
+        self.assertEqual(request["device_id"], "device-authority-pending-0001")
+
+        target = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+            display_name="Canary workspace",
+        )
+        active = self.store.node_authority_status(device_id="device-alpha", node_secret=self.node_secret)
+        self.assertEqual(active["state"], "active")
+        self.assertEqual(active["target_count"], 1)
+        self.assertEqual(active["dispatchable_target_count"], 1)
+        self.assertEqual(active["targets"][0]["workspace_display_name"], "Canary workspace")
+        self.assertNotIn(target["binding_id"], json.dumps(active))
+        self.assertNotIn("workspace-alpha", json.dumps(active))
+        self.assertNotIn("generation-1", json.dumps(active))
+
+        self.store.revoke_binding(owner_id="owner_default", binding_id=target["binding_id"])
+        revoked = self.store.node_authority_status(device_id="device-alpha", node_secret=self.node_secret)
+        self.assertEqual(revoked["state"], "binding_revoked")
+        self.assertEqual(revoked["targets"][0]["binding_state"], "revoked")
+
+        with self.assertRaises(PermissionError):
+            self.store.node_authority_status(device_id="device-alpha", node_secret="wrong-authority-secret")
+
     def test_node_enrollment_persists_one_https_target_and_requires_explicit_replacement(self) -> None:
         config_path = Path(self.tempdir.name) / "node.json"
         calls: list[tuple[str, str, dict]] = []

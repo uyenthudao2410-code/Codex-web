@@ -141,6 +141,7 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   regenerateMcpToken: () => ipcRenderer.invoke('secrets:mcp-token-regenerate'),
   requestControlPlaneEnrollment: (serverUrl) => ipcRenderer.invoke('control-plane:enroll', serverUrl),
   reconcileControlPlaneEnrollment: () => ipcRenderer.invoke('control-plane:enrollment-status'),
+  reconcileControlPlaneAuthorityStatus: () => ipcRenderer.invoke('control-plane:authority-status'),
   rotateControlPlaneCredential: (request) => ipcRenderer.invoke('control-plane:rotate-credential', request),
   registerControlPlaneWorkspace: (request) => ipcRenderer.invoke('control-plane:register-workspace', request),
   replaceControlPlaneWorkspace: (request) => ipcRenderer.invoke('control-plane:replace-workspace', request),

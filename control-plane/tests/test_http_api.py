@@ -262,6 +262,57 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(revoked["state"], "revoked")
 
+    def test_node_authority_status_is_node_authenticated_and_path_free(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-http-authority-0001",
+            endpoint_id="endpoint-http-authority-0001",
+            display_name="HTTP authority node",
+        )
+        registration = self.server.store.register_node_workspace(
+            device_id=node["device_id"],
+            workspace_id="workspace-http-authority-0001",
+            workspace_generation="generation-http-authority-0001",
+            display_name="HTTP authority workspace",
+            capabilities={"read": True, "write": False, "exec": False},
+        )
+        self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id=registration["workspace_id"],
+            workspace_generation=registration["workspace_generation"],
+            display_name=registration["display_name"],
+        )
+        status, projection = self._post(
+            f"/v1/nodes/{node['device_id']}/authority-status",
+            {},
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(projection["state"], "active")
+        self.assertEqual(projection["dispatchable_target_count"], 1)
+        serialized = json.dumps(projection)
+        self.assertNotIn("owner_id", serialized)
+        self.assertNotIn("binding_id", serialized)
+        self.assertNotIn("workspace_id", serialized)
+        self.assertNotIn("generation-http-authority-0001", serialized)
+        self.assertNotIn("path", serialized)
+
+        status, forbidden = self._post(
+            f"/v1/nodes/{node['device_id']}/authority-status",
+            {},
+            "Node wrong-authority-secret-0001",
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        status, invalid = self._post(
+            f"/v1/nodes/{node['device_id']}/authority-status",
+            {"unexpected": True},
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(invalid["error"]["code"], "VALIDATION_ERROR")
+
     def test_node_workspace_retirement_requires_node_auth_and_closes_exact_context(self) -> None:
         node = self.server.store.enroll_node(
             owner_id="owner_default",

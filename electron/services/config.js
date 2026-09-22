@@ -20,6 +20,9 @@ const DEFAULTS = Object.freeze({
   recoveryHealthPort: 18083,
   recoveryTunnelId: '',
   recoveryTunnelProfile: 'recovery',
+  // Stored only to restore the operator's last Ubuntu origin in the form;
+  // enrollment credentials and authority remain owned by node-agent.
+  controlPlaneServerUrl: '',
   startWithWindows: false,
   autoStartServices: false,
   keepRunningOnClose: true,
@@ -111,6 +114,7 @@ function normalize(input = {}) {
   merged.tunnelId = String(merged.tunnelId || '').trim();
   merged.recoveryTunnelId = String(merged.recoveryTunnelId || '').trim();
   merged.recoveryTunnelProfile = 'recovery';
+  merged.controlPlaneServerUrl = String(merged.controlPlaneServerUrl || '').trim();
   if (sourceVersion < 5 && merged.theme === 'dark') merged.theme = 'light';
   merged.theme = merged.theme === 'dark' ? 'dark' : 'light';
   merged.progressReportSeconds = [60, 90, 120, 180].includes(Number(merged.progressReportSeconds))
@@ -179,6 +183,13 @@ function validateRuntimeSettings(settings) {
     try { parsed = new URL(settings.proxyUrl); } catch { throw new Error('Địa chỉ proxy không phải là URL hợp lệ.'); }
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Địa chỉ proxy chỉ hỗ trợ http:// hoặc https://.');
     if (parsed.username || parsed.password) throw new Error('Vui lòng không lưu tên người dùng hoặc mật khẩu trong địa chỉ proxy.');
+  }
+  if (settings.controlPlaneServerUrl) {
+    let parsed;
+    try { parsed = new URL(settings.controlPlaneServerUrl); } catch { throw new Error('Địa chỉ Ubuntu Control Plane không phải là URL hợp lệ.'); }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+      throw new Error('Địa chỉ Ubuntu Control Plane phải là HTTPS origin, không có path hoặc credential.');
+    }
   }
 }
 
