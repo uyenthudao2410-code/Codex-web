@@ -2397,3 +2397,9 @@ Windows primary MCP/Tunnel/connector và Problem closure vẫn `OPEN/NOT_RUN`.
 được quarantine minh bạch chứ chưa được coi là đã thực thi. Exact next action
 là hoàn thiện packaged Windows activation/strict discovery theo owner-authorized
 packet; chỉ sau node-side proof và independent outcome mới cân nhắc mở admission.
+
+**Provenance note:** commit `0e562f0b` của concurrent delivery wave xuất hiện
+trên `main` trong lúc controller này đang chạy source/oracle work; controller này
+không tự gọi SSH/deploy/quarantine trong wave đó. Các trạng thái remote ở trên đã
+được kiểm tra độc lập bằng GET `/healthz` read-only sau khi commit xuất hiện;
+không coi mệnh đề “đã deploy” là bằng chứng Windows runtime hoặc Problem closure.
