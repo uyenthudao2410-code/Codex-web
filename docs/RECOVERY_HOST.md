@@ -106,6 +106,16 @@ installer fail-closed; installer không dùng kill theo tên hay thay một PID 
 phải `stopping`, `uninstalled` hay `duplicate_supervisor`. Trạng thái `Ready` hay
 `Running` của Task Scheduler chỉ là tín hiệu phụ, không thay cho heartbeat này.
 
+Connected-agent binding cũng theo đúng mode của manifest, không được trộn host
+development với tài nguyên packaged. Ở `packaged`, Supervisor dùng
+`app_root\resources\resources\native-python\python.exe` và
+`app_root\resources\resources\control-plane\node_agent.py`; ở
+`development`, nó dùng `app_root\resources\native-python\python.exe` và
+`app_root\control-plane\control_plane\node_agent.py`. Manifest lưu path cùng
+SHA-256 của cả hai file, còn child agent nhận `--runtime-mode` đúng bằng mode
+đó. Sai mode, path hoặc hash làm preflight dừng fail-closed; việc chạy
+development sau handoff vì vậy phải cài lại Supervisor từ chính checkout đó.
+
 Supervisor không sở hữu Coding MCP/Tunnel. Nó chỉ chịu trách nhiệm bounded
 resurrection của Recovery Host. **Phase 3B independent Recovery MCP/Tunnel đã có
 implementation trong current worktree** và được Recovery Host supervise; Recovery

@@ -2916,3 +2916,33 @@ dùng one-shot source heartbeat như workaround dài hạn. Hướng ưu tiên l
 acceptance trên packaged bundle đồng nhất; nếu sản phẩm phải hỗ trợ development
 auto-resume thì cần mode-aware Supervisor manifest/agent, focused tests và
 reinstall proof trước reboot acceptance.
+
+### 16.55. Packaged alignment đã đạt runtime READY; các gate sản phẩm vẫn mở — 23/09/2026
+
+Wave tiếp theo đã hoàn thành controlled handoff trực tiếp trên `main` và không
+chỉnh byte canonical `ledger.sqlite3`: gọi authenticated `runtime.stop`, xác
+minh start-token, terminate đúng PID đã thoát, để Supervisor spawn packaged
+host, rồi gửi đúng một `full_clean_refresh` với `executionRole=central_executor`.
+Epoch có giai đoạn trung gian `UPDATE_INCOMPLETE/VERIFYING` và chỉ được coi là
+thành công sau readback authoritative `READY`/`admission_open=true`.
+
+Runtime postflight ghi nhận `mcpRunning=true`, `nativeAlive=true`,
+`componentsReady=true`, `fullyReady=true`, `centralConnected=true`,
+`authorityReady=true`, cùng MCP running/disk revision giống nhau và
+`update_pending=false`. `tunnelRunning=false`/`tunnel_required=false` là đúng
+với `central_executor`; không dùng Tunnel để thay thế route/connector proof.
+
+Đây chỉ là **runtime recovery proof**. Connector vẫn
+`connectorRediscovered=false`, `connectorRefreshRequired=true`,
+`CHANGED_NEEDS_DISCOVERY`; chưa có current ChatWeb `tools/list` hoặc
+`server/discover`, chưa có `workspace_context` thật trên checkout, reboot matrix,
+natural-use hay independent outcome. Hai Problem vẫn `OPEN` và không gộp rev 1
+với rev 2. Chi tiết PID/epoch/package hash và snapshot ledger có timestamp nằm
+ở Section 15 của [wave report](260923_controlled_recovery_ui_handoff_wave.md).
+
+Patch mode-aware Supervisor trong working tree là phần bổ sung để development
+host dùng đúng Python/agent của development manifest, còn packaged host dùng
+resources packaged và truyền `--runtime-mode` đúng mode. Trước khi dùng nó cho
+development auto-resume chính thức phải chạy focused test, reinstall proof và
+recheck identity; acceptance khuyến nghị tiếp tục freeze trên một packaged
+bundle đồng nhất.

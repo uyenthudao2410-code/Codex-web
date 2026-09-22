@@ -1011,3 +1011,217 @@ PRODUCT_ACCEPTANCE_OPEN
 Không gọi `LIVE_ACCEPTED`, không gọi `PROBLEM_CLOSED`, không coi
 `fullyReady=true` là strict connector discovery và không gộp trạng thái rev 1
 với rev 2.
+
+## 15. Packaged alignment sau controlled recovery — runtime hiện tại READY, acceptance vẫn mở — 23/09/2026
+
+### 15.1. Phạm vi và preflight bất biến
+
+Wave này tiếp tục trên đúng checkout `main`, không tạo worktree và không ghi
+trực tiếp vào canonical `ledger.sqlite3`. Trước khi hạ host, một census
+query-only/Backup API đã xác minh:
+
+```text
+integrity_check=ok
+foreign_key_check_rows=0
+mutated_canonical_ledger=false
+canonical_writer_instantiated=false
+runtime_instantiated=false
+ordinary_active_runs=17
+projection_drift=false
+context_count=1079
+P5 epochs=6
+stale_background_operation_residues=0
+unbound_live_resource_residues=0
+unexplained_active_runs=0
+```
+
+Snapshot ledger sau khi runtime hội tụ (được gắn thời điểm, không dùng như
+current-live claim ngoài cửa sổ này):
+
+```text
+snapshot_at=2026-09-22T20:30:10.699Z UTC
+size=97,742,848 bytes
+schema_version=12
+physical_sha256=c29f5c2bde1045c6a25b65872bd8646979217b8a9f8d478bb6983d2834e09d29
+logical_sha256=b7bc5bdb7e7fe208b66d544903dc33ec06c9ddbea0d9640eb7042465f5c8aa4a
+integrity_check=ok
+foreign_key_check_rows=0
+mutated_canonical_ledger=false
+```
+
+Các hash/size này là evidence snapshot của wave. Ledger và các projection
+`.coding-tools` có thể tiếp tục drift sau thời điểm snapshot; không được
+reconcile, truncate, VACUUM, insert hoặc chỉnh byte để làm hash ổn định.
+
+### 15.2. Handoff được xác thực và một lần refresh có kiểm soát
+
+Development Recovery Host trước handoff có identity:
+
+```text
+PID=52256
+instance_id=61b8b8f8e636c3304e79d1f5d6dad5a2
+runtime_mode=development
+installation_id=2628d627fb21b539eef81c4bf57ce0107d362532edd516a475500fef9359a1a6
+process_start_token=134345807766169590
+```
+
+Đã gọi đúng authenticated IPC `runtime.stop({ manual: false })`. Sau khi đọc
+lại descriptor và xác minh start-token, chỉ PID `52256` được chuyển qua
+`terminateExactProcessTree()`; kết quả `state=already_exited`,
+`exit_state=exited`, `verified_start_token=true`. Không dùng `taskkill` theo
+tên và không kill nhầm process khác.
+
+Supervisor sau đó tự spawn packaged Recovery Host PID `11816`. Chỉ một request
+refresh được gửi qua đường chính thức:
+
+```text
+runtime.restart({
+  reason: "operator_packaged_runtime_alignment",
+  refresh: true,
+  mode: "full_clean_refresh",
+  executionRole: "central_executor",
+  componentProfile: "central_executor_v1",
+  allowAcceptancePending: false
+})
+```
+
+Response ban đầu là `state=HANDOFF`, với:
+
+```text
+operation_id=full-clean-mud4ar4v-94707fc5d3be30ef24785f4d
+activation_epoch_id=activation-mud4ayw2-005f6a3498d3d4a6e82de0a36d0051c2
+```
+
+Trong lúc handoff, epoch đã đi qua `UPDATE_INCOMPLETE/VERIFYING` với
+`admission_open=false`. Đây là trạng thái trung gian được giữ fail-closed;
+không retry mù, không acknowledge acceptance pending và không suy ra failure
+cuối cùng từ snapshot trung gian.
+
+### 15.3. Postflight runtime và package identity
+
+Readback authenticated sau khi các component/route/identity postflight hoàn tất:
+
+```text
+Recovery Host PID=40048
+runtime_mode=packaged
+instance_id=1bf6bb38f4626c12a23c267bee371da0
+installation_id=ac60479cbef9e20f6b4c2e246a16a2f20141863dc417d28ef32c7a01ed1ae001
+
+activation_epoch_id=activation-mud4ayw2-005f6a3498d3d4a6e82de0a36d0051c2
+operation_id=full-clean-mud4ar4v-94707fc5d3be30ef24785f4d
+state=READY
+admission_open=true
+update_incomplete=false
+
+mcpRunning=true
+nativeAlive=true
+componentsReady=true
+fullyReady=true
+executionRole=central_executor
+tunnelRunning=false
+tunnel_required=false
+centralConnected=true
+authorityReady=true
+identity_current=true
+```
+
+MCP continuity của cùng epoch:
+
+```text
+running_revision=a49891f8e6bff0bfb2d49284ff85d8cd73946508f59ff0a7b8ebd8ed0339dfe5
+disk_revision=a49891f8e6bff0bfb2d49284ff85d8cd73946508f59ff0a7b8ebd8ed0339dfe5
+update_pending=false
+mcp_process_instance_id=ZFuaGyMY-5GxEboc
+mcp_server_instance_id=dHWLsx0swGYNatpt
+tool_contract_sha256=bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0
+```
+
+Health readback trả `healthy=true`, `workspace=true`, `runtime=true`,
+`mcp-port=true`, `mcp=true`, `control-plane-route=true`. Supervisor cũng ở
+`state=healthy`, `last_host_pid=40048`, `control_plane_agent_state=
+running_heartbeat_only`, `restart_attempts=0`, `last_error_code=null`.
+
+Installed identity đã được ghi lại để không gộp source với package:
+
+```text
+Coding Tools MCP.exe = CF6602046D0B6412C1A162C9574E6BB123B03AF69458922D196377C4DD75B9F7
+resources/app.asar  = 46275190064B83910F967F41F76D84CD65F45C0DCEF9B96695A1DB9B8527BBD6
+packaged node_agent.py = E36C072298A907494DDEF5F18C9430099D5BB8F84BC0063ED4250F4BCC5D5AE4
+Supervisor manifest = F51709192BBD7C5B27DAD3E3D377F7442792BC459B67250F825AF072FA87991F
+```
+
+Route evidence lúc postflight có `policy_state=enabled`,
+`runtime_readiness=ready`, device `4c4b7a5b-7744-49ae-a490-78a528a00471` và
+endpoint `executor-4c4b7a5b-7744-49ae-a490-78a528a00471`. Với
+`central_executor`, `tunnelRunning=false` là đúng contract; không bật local
+Tunnel chỉ để làm xanh một gate không thuộc role này.
+
+### 15.4. Ranh giới connector, workspace và natural outcome
+
+Runtime `READY` không làm thay thế strict connector discovery. Readback vẫn là:
+
+```text
+connectorRediscovered=false
+connectorRefreshRequired=true
+connectorContractState=CHANGED_NEEDS_DISCOVERY
+workspace_read=null
+```
+
+Chưa có receipt current ChatWeb `tools/list`/`server/discover` bind với MCP
+process/server, activation epoch và contract SHA; chưa có
+`workspace_context` thật trên `E:\DEV\Codex-web` với `workspace_accessed=true`;
+chưa có delivery confirmation và independent product outcome. Vì vậy không
+gọi `acknowledgeConnectorContract()`, không tự ghi ACK, không biến một
+`fullyReady=true` thành connector-ready, và không tuyên bố reboot/natural-use
+đã đạt.
+
+### 15.5. Chỉ số Problem và lựa chọn xử lý tiếp theo
+
+Reporter empirical query-only tiếp tục tách hai Problem:
+
+| Problem/revision | RUN | accepted | aborted | active | controller coverage | natural/technical |
+|---|---:|---:|---:|---:|---:|---|
+| `prl-22e670302757c9b7663170e226ed7c26` / rev 1 | 66 | 47 | 16 | 3 | 0/66 | `typed_natural=false`, `technically_accepted=false` |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / rev 2 | 39 | 16 | 10 | 13 | 0/39 | `typed_natural=false`, `technically_accepted=false` |
+
+Toàn cục vẫn `observed_problem_revisions=3`, confirmed resolved `0`,
+independent user outcome `3/49`, missing/incomplete observation `66`,
+`n5=COLLECTING`, `n10=COLLECTING`, `causal_claim_allowed=false`. P4 còn
+`COLLECTING` với 98 representative terminal tasks nhưng 0 repaired task; P5
+đang `EPOCH_HARD_STOPPED`, chưa có `experiment_start_ready` hay automatic start.
+
+Sự lựa chọn hiện tại là giữ packaged bundle/agent/Recovery Host cùng identity,
+giữ role `central_executor` và central route đã xác thực; source `main` chỉ là
+authority build/verify. Patch mode-aware Supervisor hiện có trong working tree
+cho phép `development` dùng đúng Python/agent của source và `packaged` dùng
+đúng resources packaged, truyền `--runtime-mode` theo manifest. Patch này cần
+focused test và reinstall proof trước khi coi development auto-resume là đường
+acceptance chính thức; không trộn agent packaged với host development.
+
+### 15.6. Checkpoint wave
+
+```text
+COMPLETED:
+  controlled authenticated stop -> exact PID/start-token handoff
+  packaged Supervisor spawn -> one-shot full-clean refresh
+  runtime/epoch/route/package identity readback
+  canonical ledger integrity and Problem metrics read-only evidence
+
+CURRENT:
+  branch=main
+  HEAD=44f4897361951076e714209cd508bbcbdcb94ece
+  origin/main=44f4897361951076e714209cd508bbcbdcb94ece
+  runtime=RUNTIME_RECOVERY_VERIFIED
+  acceptance=PRODUCT_ACCEPTANCE_OPEN
+  problems=OPEN (rev 1 and rev 2 remain separate)
+
+BLOCKER / OPEN:
+  strict connector receipt, workspace_context, reboot/logon/Machine B,
+  authorized fault injection, natural-use, independent outcome,
+  criterion coverage/disposition and closure authority
+
+NEXT ACTION:
+  validate the mode-aware Supervisor patch, stage the complete volatile
+  .coding-tools evidence tree with a fresh delivery snapshot, run all history/
+  secret/index guards, then commit and push this evidence wave on main.
+```

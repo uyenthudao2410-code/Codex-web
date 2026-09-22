@@ -47,12 +47,19 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
   const appRoot = path.join(temp, 'app');
   const python = path.join(appRoot, 'resources', 'resources', 'native-python', 'python.exe');
   const agent = path.join(appRoot, 'resources', 'resources', 'control-plane', 'node_agent.py');
+  const developmentRoot = path.join(temp, 'development');
+  const developmentPython = path.join(developmentRoot, 'resources', 'native-python', 'python.exe');
+  const developmentAgent = path.join(developmentRoot, 'control-plane', 'control_plane', 'node_agent.py');
   fs.mkdirSync(path.dirname(python), { recursive: true });
   fs.mkdirSync(path.dirname(agent), { recursive: true });
+  fs.mkdirSync(path.dirname(developmentPython), { recursive: true });
+  fs.mkdirSync(path.dirname(developmentAgent), { recursive: true });
   // These fixture files are hashed only. No test branch executes an agent,
   // installs a Scheduled Task, or loads the supervisor's top-level switch.
   fs.writeFileSync(python, 'inert-python-fixture');
   fs.writeFileSync(agent, '# inert-agent-fixture');
+  fs.writeFileSync(developmentPython, 'inert-development-python-fixture');
+  fs.writeFileSync(developmentAgent, '# inert-development-agent-fixture');
   const cases = [
     ['valid', {}, {}, {}, 'file_read', 'eligible', 'current'],
     ['minimum-secret', { node_secret: 'x'.repeat(16) }, {}, {}, 'file_read', 'eligible', 'current'],
@@ -71,10 +78,14 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
     ['standing-approved-patch-only', {}, {}, {}, 'approved_patch', 'eligible', 'current'],
     ['standing-exec-only', {}, {}, {}, 'exec', 'eligible', 'current'],
     ['workspace-registry-missing', {}, {}, {}, 'file_read', 'heartbeat_only', 'missing', true],
-    ['workspace-registration-stale', {}, {}, {}, 'file_read', 'heartbeat_only', 'empty', true]
+    ['workspace-registration-stale', {}, {}, {}, 'file_read', 'heartbeat_only', 'empty', true],
+    ['development-mode', {}, {}, {}, 'file_read', 'eligible', 'current', false, 'development']
   ];
-  const fixtures = cases.map(([name, configPatch, readOnlyPatch, standingPatch, standingLane, , registryState]) => {
+  const fixtures = cases.map(([name, configPatch, readOnlyPatch, standingPatch, standingLane, , registryState, , mode = 'packaged']) => {
     const dataRoot = path.join(temp, name);
+    const manifestRoot = mode === 'development' ? developmentRoot : appRoot;
+    const manifestPython = mode === 'development' ? developmentPython : python;
+    const manifestAgent = mode === 'development' ? developmentAgent : agent;
     writeJson(path.join(dataRoot, 'control-plane-node.json'), {
       server_url: 'http://100.116.112.22:8765', device_id: 'fixture-device',
       endpoint_id: 'fixture-endpoint', node_secret: 'x'.repeat(64), ...configPatch
@@ -121,9 +132,10 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
     return {
       name,
       manifest: {
-        mode: 'packaged', app_root: appRoot, data_root: dataRoot,
-        control_plane_python_path: python, control_plane_python_sha256: hash(python),
-        control_plane_node_agent_path: agent, control_plane_node_agent_sha256: hash(agent)
+        mode, app_root: manifestRoot, data_root: dataRoot,
+        executable: process.execPath, executable_sha256: hash(process.execPath),
+        control_plane_python_path: manifestPython, control_plane_python_sha256: hash(manifestPython),
+        control_plane_node_agent_path: manifestAgent, control_plane_node_agent_sha256: hash(manifestAgent)
       }
     };
   });
@@ -147,14 +159,22 @@ $MaxJsonBytes=65536
 $parseTokens=$null;$parseErrors=$null
 $parsed=[Management.Automation.Language.Parser]::ParseFile($env:WEBCODEX_TEST_SUPERVISOR_SCRIPT,[ref]$parseTokens,[ref]$parseErrors)
 if($parseErrors.Count-ne0){throw 'Supervisor PowerShell parser rejected the source.'}
-foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Test-AbsoluteSafePath','Get-OptionalProperty','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneStandingPolicyCandidates','Get-ControlPlaneWorkspaceRegistryPath','Test-ControlPlanePropertySet','Test-ControlPlaneNodeCredential','Test-ControlPlaneWorkspaceRegistration','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Invoke-ControlPlaneReadOnlyAgent')){
+foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Test-AbsoluteSafePath','Get-OptionalProperty','Get-ManifestPath','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneStandingPolicyCandidates','Get-ControlPlaneWorkspaceRegistryPath','Get-ControlPlaneAgentPaths','Test-ControlPlanePropertySet','Test-ControlPlaneNodeCredential','Test-ControlPlaneWorkspaceRegistration','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Get-ControlPlaneAgentArguments','New-State','Invoke-ControlPlaneReadOnlyAgent')){
   $definition=$parsed.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name-eq$helperName},$true)
   if($null-eq$definition){throw 'Required pure supervisor helper missing.'}
   . ([scriptblock]::Create($definition.Extent.Text))
 }
 $inputFixture=[IO.File]::ReadAllText($env:WEBCODEX_TEST_SUPERVISOR_FIXTURE)|ConvertFrom-Json
+$TaskName='WebMCP Recovery Supervisor'
+$ManifestPath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'state-manifest.json'
+$StatePath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'state-status.json'
+[IO.File]::WriteAllText($ManifestPath,($inputFixture.fixtures[0].manifest|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText($StatePath,(@{manifest_sha256=('0'*64);control_plane_agent_pid=123;control_plane_agent_state='running';control_plane_agent_last_started_at='2026-01-01T00:00:00Z'}|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$resetState=New-State $inputFixture.fixtures[0].manifest $StatePath
+$stateIdentityReset=[pscustomobject]@{agent_pid=$resetState.control_plane_agent_pid;agent_state=$resetState.control_plane_agent_state;agent_started_at=$resetState.control_plane_agent_last_started_at}
 $results=@(foreach($fixture in $inputFixture.fixtures){$spec=Get-ControlPlaneAgentSpec $fixture.manifest;[pscustomobject]@{name=$fixture.name;eligible=$spec.eligible;state=$spec.state}})
 $originResults=@(foreach($value in $inputFixture.origins){[pscustomobject]@{value=$value;origin=(Get-ControlPlaneOrigin $value)}})
+$argumentResults=@(foreach($fixture in @($inputFixture.fixtures[0],$inputFixture.fixtures[-1])){$arguments=Get-ControlPlaneAgentArguments $fixture.manifest ([pscustomobject]@{agent_path='agent.py';config_path='config.json';workspace_registry_path='workspaces.json'});[pscustomobject]@{mode=[string]$fixture.manifest.mode;runtime_mode=[string]$arguments[12]}})
 # New-State uses an OrderedDictionary, not a JSON PSCustomObject. Retain the
 # first child PID across polls instead of launching an agent on every cycle.
 # Both process boundaries are inert mocks; no process is probed or spawned.
@@ -166,7 +186,7 @@ $fixtureState=Invoke-ControlPlaneReadOnlyAgent $inputFixture.fixtures[0].manifes
 $firstAgentState=$fixtureState.control_plane_agent_state
 $fixtureState=Invoke-ControlPlaneReadOnlyAgent $inputFixture.fixtures[0].manifest $fixtureState
 $agentCycle=[pscustomobject]@{first_state=$firstAgentState;second_state=$fixtureState.control_plane_agent_state;starts=$script:fixtureStartCount;pid=$fixtureState.control_plane_agent_pid}
-[pscustomobject]@{cases=$results;origins=$originResults;agent_cycle=$agentCycle}|ConvertTo-Json -Depth 5 -Compress
+[pscustomobject]@{cases=$results;origins=$originResults;agent_arguments=$argumentResults;agent_cycle=$agentCycle;state_identity_reset=$stateIdentityReset}|ConvertTo-Json -Depth 5 -Compress
 `;
   const result = spawnSync(process.platform === 'win32' ? 'powershell.exe' : 'pwsh', [
     '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')
@@ -185,7 +205,9 @@ $agentCycle=[pscustomobject]@{first_state=$firstAgentState;second_state=$fixture
   const observed = JSON.parse(result.stdout.trim());
   assert.deepEqual(observed.cases, cases.map(([name, , , , , state]) => ({ name, eligible: ['eligible', 'heartbeat_only'].includes(state), state })));
   assert.deepEqual(observed.origins, origins.map(([value, origin]) => ({ value, origin })));
+  assert.deepEqual(observed.agent_arguments, [{ mode: 'packaged', runtime_mode: 'packaged' }, { mode: 'development', runtime_mode: 'development' }]);
   assert.deepEqual(observed.agent_cycle, { first_state: 'started', second_state: 'running', starts: 1, pid: 123 });
+  assert.deepEqual(observed.state_identity_reset, { agent_pid: null, agent_state: 'not_checked', agent_started_at: null });
 });
 
 if (process.platform !== 'win32') test('Recovery Supervisor runtime tests require Windows', { skip: true }, () => {});
@@ -223,7 +245,7 @@ else {
     assert.equal(exhaustedAttempts,3);
     assert.deepEqual(exhaustedDelays,[7,14]);
   });
-  test('Recovery Supervisor source has a fixed fail-closed boundary', () => { const s=fs.readFileSync(script,'utf8'); const vbs=fs.readFileSync(launcher,'utf8'); const body=s.slice(s.lastIndexOf('\ntry{switch')); const install=s.match(/function Install-Supervisor\{([^\n]+)\}/)?.[1]||''; assert.match(s,/\$FailureThreshold = 4/);assert.match(s,/\$RestartLimit = 4/);assert.match(s,/\$ReplacementStopTimeoutSeconds = 15/);assert.match(s,/recovery\.ping/);assert.match(s,/LIVE_OWNER_UNRESPONSIVE/);assert.match(s,/executable identity changed; reinstall is required/);assert.match(s,/SUPERVISOR_CYCLE_FAILED/);assert.match(s,/deferred_activation_worker_v1=\$true/);assert.match(s,/control_plane_agent_v1=\$true/);assert.match(s,/Get-ControlPlaneAgentSpec/);assert.match(s,/Start-ControlPlaneReadOnlyAgent/);assert.match(s,/Test-ControlPlaneWorkspaceRegistration/);assert.match(s,/workspace_registry_unavailable/);assert.match(s,/workspace_registration_not_current/);assert.match(s,/--workspace-registry/);assert.match(s,/policy_config_mismatch/);assert.match(s,/WEBCODEX_PROCESS_ROLE'\]='control-plane-read-only-agent'/);assert.match(s,/full_clean_activation_deferred/);assert.match(s,/trusted_recovery_bootstrap/);assert.match(s,/ELECTRON_RUN_AS_NODE'\]='1'/);assert.match(s,/\[IO\.FileMode\]::CreateNew/);assert.match(s,/Set-Content -LiteralPath \$stop/);assert.match(s,/Existing Recovery Supervisor process \$oldPid did not stop/);assert.match(s,/Replacement Recovery Supervisor did not publish a fresh capability-bearing heartbeat/);assert.doesNotMatch(s,/\$pid\s*=/i);assert.ok(install.indexOf('Stop-InstalledSupervisorForReplacement')<install.indexOf('Copy-Item -LiteralPath $src'));assert.match(install,/control_plane_node_agent_sha256/);assert.match(install,/native-python\\python\.exe/);assert.match(s,/RepetitionInterval \(New-TimeSpan -Minutes 1\)/);assert.match(s,/MultipleInstances IgnoreNew/);assert.match(s,/WindowsPowerShell\\v1\.0\\powershell\.exe/);assert.match(s,/New-ScheduledTaskAction -Execute \$powershell -Argument \$taskArgs/);assert.match(s,/\$taskArgs="-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File /);assert.match(vbs,/shell\.Run\(command, 0, True\)/i);assert.match(vbs,/-NonInteractive -WindowStyle Hidden /i);assert.doesNotMatch(vbs,/WScript\.Arguments|ShellExecute/i);assert.doesNotMatch(body,/\b(?:Assert-Manifest|Test-AbsoluteSafePath|Test-PathEqual|Get-Sha256File|Get-Sha256Text)\(/); });
+  test('Recovery Supervisor source has a fixed fail-closed boundary', () => { const s=fs.readFileSync(script,'utf8'); const vbs=fs.readFileSync(launcher,'utf8'); const body=s.slice(s.lastIndexOf('\ntry{switch')); const install=s.match(/function Install-Supervisor\{([^\n]+)\}/)?.[1]||''; assert.match(s,/\$FailureThreshold = 4/);assert.match(s,/\$RestartLimit = 4/);assert.match(s,/\$ReplacementStopTimeoutSeconds = 15/);assert.match(s,/recovery\.ping/);assert.match(s,/LIVE_OWNER_UNRESPONSIVE/);assert.match(s,/executable identity changed; reinstall is required/);assert.match(s,/SUPERVISOR_CYCLE_FAILED/);assert.match(s,/deferred_activation_worker_v1=\$true/);assert.match(s,/control_plane_agent_v1=\$true/);assert.match(s,/Get-ControlPlaneAgentSpec/);assert.match(s,/Start-ControlPlaneReadOnlyAgent/);assert.match(s,/Test-ControlPlaneWorkspaceRegistration/);assert.match(s,/workspace_registry_unavailable/);assert.match(s,/workspace_registration_not_current/);assert.match(s,/--workspace-registry/);assert.match(s,/policy_config_mismatch/);assert.match(s,/WEBCODEX_PROCESS_ROLE'\]='control-plane-read-only-agent'/);assert.match(s,/full_clean_activation_deferred/);assert.match(s,/trusted_recovery_bootstrap/);assert.match(s,/ELECTRON_RUN_AS_NODE'\]='1'/);assert.match(s,/\[IO\.FileMode\]::CreateNew/);assert.match(s,/Set-Content -LiteralPath \$stop/);assert.match(s,/Existing Recovery Supervisor process \$oldPid did not stop/);assert.match(s,/Replacement Recovery Supervisor did not publish a fresh capability-bearing heartbeat/);assert.doesNotMatch(s,/\$pid\s*=/i);assert.ok(install.indexOf('Stop-InstalledSupervisorForReplacement')<install.indexOf('Copy-Item -LiteralPath $src'));assert.match(install,/control_plane_node_agent_sha256/);assert.match(s,/native-python\\python\.exe/);assert.match(s,/Get-ControlPlaneAgentArguments/);assert.match(s,/--runtime-mode/);assert.match(s,/RepetitionInterval \(New-TimeSpan -Minutes 1\)/);assert.match(s,/MultipleInstances IgnoreNew/);assert.match(s,/WindowsPowerShell\\v1\.0\\powershell\.exe/);assert.match(s,/New-ScheduledTaskAction -Execute \$powershell -Argument \$taskArgs/);assert.match(s,/\$taskArgs="-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File /);assert.match(vbs,/shell\.Run\(command, 0, True\)/i);assert.match(vbs,/-NonInteractive -WindowStyle Hidden /i);assert.doesNotMatch(vbs,/WScript\.Arguments|ShellExecute/i);assert.doesNotMatch(body,/\b(?:Assert-Manifest|Test-AbsoluteSafePath|Test-PathEqual|Get-Sha256File|Get-Sha256Text)\(/); });
   test('Recovery Supervisor connected-agent preflight does not depend on pilot read-only TTL', () => {
     const s = fs.readFileSync(script, 'utf8');
     assert.match(s, /Get-ControlPlaneStandingPolicyCandidates/);
