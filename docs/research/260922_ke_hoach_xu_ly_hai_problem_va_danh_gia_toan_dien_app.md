@@ -1370,3 +1370,16 @@ Lệnh `git push origin HEAD:main` đã chạy nhưng server từ chối ở pre
 3. Giữ `main` local như hiện tại và phát hành binary qua artifact store/release channel được chỉ định; chỉ push source/evidence history sau khi path contract được chốt.
 
 **Next action an toàn:** chờ owner xác nhận chính xác phương án history/artifact. Khi được cấp, tạo backup ref/receipt trước rewrite, dry-run lọc đúng các path nêu trên, kiểm tra `.coding-tools` retention, chạy lại `stage:coding-tools-delivery` + `check:coding-tools-delivery`, rồi chỉ force-with-lease nếu remote vẫn đúng `044dd961…`. Cho tới lúc đó không gọi lần push này là thành công và không coi hai Problem đã đóng.
+
+### 16.21. Đối soát kích thước lịch sử và khả năng LFS — 22/09 khoảng 19:30 +07
+
+Đã kiểm read-only toàn bộ objects trong `origin/main..HEAD` bằng `git rev-list --objects` + `git cat-file --batch-check`:
+
+- Có đúng **3 blob** lớn hơn giới hạn GitHub 100 MB; cả ba đều là ba executable đã được remote nêu ở 16.20.
+- Không có blob khác vượt 100 MB trong 9 commit local chưa publish.
+- `git lfs version`: **3.6.1** đã cài, nhưng `.gitattributes` hiện chỉ có `* text=auto`, chưa track executable/package nào bằng LFS.
+- `git ls-files output` hiện có **1031 path**; `output/` vốn bị `.gitignore`, nhưng các path này đã bị track trong commit `5aae18e` và các commit kế tiếp.
+
+Đây là bằng chứng đủ để khoanh phạm vi migration, không phải quyền tự thực hiện migration. Không sửa `.gitattributes`, không chạy `git lfs migrate`, không reset/rebase/force-push và không xóa các output vật lý. Canonical ledger, `.coding-tools` retention và local `main` không đổi trong probe này.
+
+**Kết luận cập nhật:** nếu owner chọn loại generated output khỏi lịch sử, dry-run có thể giới hạn chính xác ở `output/**` (giữ artifact ngoài Git, giữ manifest/hash trong docs). Nếu owner chọn LFS, migration tối thiểu phải bao phủ ba executable và kiểm quota/remote policy trước khi rewrite. Cả hai đều là history mutation; vẫn chờ xác nhận phương án và target `main`.
