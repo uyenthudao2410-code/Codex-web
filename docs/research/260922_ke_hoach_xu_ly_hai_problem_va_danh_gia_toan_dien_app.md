@@ -1933,3 +1933,130 @@ byte mismatches against git show HEAD = 0
 - Section 16.38 ghi fingerprint `8fc` từ một `git archive` export trên Windows; phép export đó giữ CRLF, nên không phải canonical Git-blob proof. Section 16.39 này là correction có authority cao hơn vì kiểm trực tiếp `git show` và staging output.
 
 **Operator checkpoint:** đã loại bỏ một nguồn fingerprint churn có thể làm package/revision continuity sai lệch giữa Windows và Ubuntu. Chưa deploy/restart, chưa đổi admission và chưa mở canary. Exact next action nếu được cấp deployment authority là dùng builder canonical này để tạo release từ HEAD, verify manifest, deploy package đã chọn và đọc lại `/healthz`; nếu chưa có authority, giữ remote `recovery` và các Problem OPEN.
+
+### 16.40. Recovery ledger đã nối lại canonical lineage; kiểm tra live mới nhất — 22/09/2026 lúc 22:16 +07
+
+Wave này tiếp tục theo đúng quyền recovery có kiểm soát đã được cấp cho
+`.coding-tools/orchestration/ledger.sqlite3`. Không mở một writer mới, không sửa
+SQLite bằng câu lệnh thủ công, không replay effect và không thay đổi admission.
+Các truy vấn canonical được mở `mode=ro`; kết quả dưới đây là snapshot mới, không
+dùng lại số liệu của các report cũ.
+
+**Canonical ledger sau recovery:**
+
+```text
+physical file SHA-256 = 07d76b2fd37e3872f278b4835ea29b49cb39b751642df0f247fcb4113f837663
+PRAGMA user_version   = 12
+PRAGMA integrity_check = ok
+foreign_key_check      = 0
+runs                   = 557
+waves                  = 892
+checkpoints            = 273
+proofs                 = 947
+events                 = 25,822
+problem_events         = 307
+continuity_telemetry   = 396
+controller_knowledge_acks = 68
+```
+
+Ba RUN từng có report/receipt nhưng vắng trong snapshot canonical trước đó đã
+được nối lại với đầy đủ identity và checkpoint:
+
+| RUN | trạng thái | checkpoint | Problem binding |
+|---|---|---|---|
+| `dcb539e0e1694bc1bb29eed2b2e07f8b` | `accepted` | `8d10f27638e2498cba80edf0bcbe77ce` | `prl-22e…` rev1 |
+| `d01a5dce50c846fc8e13673cdfc8b3b3` | `accepted` | `6fb3de41a26349f5995a6a2bd92d82f2` | `prl-22e…` rev1 |
+| `b194ab1e311e42efa1dd0614ca245037` | `accepted` | `c8f32a66c7714204bcdd64162dc20ee1` | `prl-22e…` rev1 |
+
+Denominator hiện tại đã đối chiếu lại theo `ENGINEERING_ATTEMPT_BOUND` và bảng
+`runs`, không tính các event có `run_id=''`:
+
+| Problem/revision | accepted | aborted | active | tổng RUN hợp lệ | coverage manifest | outcome claim | resolution |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `prl-22e670302757c9b7663170e226ed7c26` / 1 | 47 | 16 | 3 | 66 | 0 | 0 | 0 |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / 2 | 16 | 10 | 13 | 39 | 0 | 0 | 0 |
+
+`active` ở đây là trạng thái durable chưa terminal; lifecycle census không có
+live-owned RUN hay resource residue tương ứng. Vì vậy recovery đã sửa tính liên
+tục của evidence, nhưng **không** làm Problem nào thành `CLOSED`, không tạo
+criterion PASS và không tạo natural outcome.
+
+**Live Windows readback (authenticated Recovery IPC, read-only):**
+
+Observation lúc `2026-09-22T15:16:21.185Z` (`22:16:21 +07`) khớp workspace
+`E:\\DEV\\Codex-web`, Recovery Host PID `42556`, instance
+`3d2a072b655e55995ff15ad2db94dda`, packaged revision
+`baf32237ab3bbf38ca80f3b696575c5922f6a73ac60c0353e90630ea651749ce`:
+
+```text
+mcpRunning=false
+nativeAlive=false
+tunnelRunning=false
+componentsReady=false
+fullyReady=false
+updateIncomplete=true
+centralConnected=true
+authorityReady=true
+connectorContractState=UNAVAILABLE
+connectorRediscovered=false
+connectorRefreshRequired=false
+live_accepted=false
+authority_granted=false
+```
+
+Supervisor process `47772` vẫn báo `healthy`, packaged Recovery Host `42556` còn
+sống và Recovery MCP `38200` còn sống; nhưng đó chỉ chứng minh recovery plane
+resident. Nó không chứng minh primary MCP/Tunnel hay client connector usable.
+`node scripts/dev-ui-lifecycle.js status` vẫn trả
+`state=MISSING`, `installation=mismatch`, `connector_state=UNAVAILABLE`.
+Envelope activation đang ghi `state=READY/admission_state=OPEN`, trong khi live
+runtime readback ghi `UPDATE_INCOMPLETE` và mọi primary component là `false`;
+theo fail-closed phải dùng nhánh runtime thực tế chặt hơn, không dùng outer
+envelope để gọi `fullyReady`.
+
+**Ubuntu readback cùng thời kỳ:**
+
+```text
+HTTP /healthz = 200
+declared_source_revision = 02e2a6b5dfa8d138be403b64617c2a3e6f3489aa
+package_source_sha256 = sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2
+admission_mode = recovery
+unresolved_action_count = 11
+unquarantined_unresolved_action_count = 1
+```
+
+Remote service đang sống, nhưng chưa exact-current với `main@cbe7de18` và
+`/healthz=200` không phải execution/admission proof. Không deploy, restart,
+reconcile action hoặc mở admission trong wave này.
+
+**Source proof bổ sung:**
+
+- `python -m pytest -q control-plane/tests/test_store.py control-plane/tests/test_http_api.py`
+  đạt `129 passed, 50 subtests passed` trên source hiện tại.
+- Selector focused cho disposition mới (`-k 'unobserved_dispatch or
+  historical_unobserved or no_receipt'`) đạt `3 passed, 129 deselected`.
+- Đây là proof source/store/HTTP của predicate và route mới trên fixture test; nó
+  chưa phải migration proof trên database Ubuntu schema 24, chưa phải operator
+  invocation, deployment/restart, strict Windows discovery hay natural outcome.
+- `control-plane/control_plane/store.py` và `http_api.py` vẫn là dirty concurrent
+  source lane. Chưa stage, commit hoặc nhận ownership thay lane đó; cần bổ sung
+  migration review và package identity readback trước khi release schema 25.
+
+**Operator checkpoint:**
+
+- **Đã hoàn thành:** controlled ledger recovery; canonical lineage của ba RUN đã
+  được kiểm tra lại; live Windows/remote readback mới đã được ghi; focused store
+  và HTTP suite đã xanh.
+- **Trạng thái:** Git `main@cbe7de18`; `.coding-tools` live ledger dirty do
+  evidence runtime; source `store.py`/`http_api.py` dirty concurrent; hai Problem
+  vẫn `OPEN`.
+- **Blocker:** primary MCP/Tunnel/connector chưa usable; remote package metadata
+  còn lag; action `dispatch_unconfirmed` chưa có receipt/reconciliation; schema-25
+  chưa có focused acceptance; natural outcome và criterion coverage vẫn thiếu.
+- **Exact next action:** quiesce/snapshot bằng `npm run stage:coding-tools-delivery`,
+  chạy delivery/history guards, commit trực tiếp trên `main` chỉ phần report và
+  evidence được sở hữu; sau đó review/test lane schema-25. Chỉ khi có deployment
+  authority mới build/deploy canonical package, đọc lại revision + fingerprint,
+  giữ `admission=recovery` cho tới khi unresolved action được xử lý bằng evidence
+  thật. Tiếp theo mới tạo activation epoch mới để chứng minh strict discovery,
+  real `workspace_context`, fault/reattach, reboot/logon và natural-use.
