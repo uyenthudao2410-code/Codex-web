@@ -1402,3 +1402,20 @@ Ran 1 test ... OK
 Tôi không sửa, stage, revert hoặc gộp nội dung source/test của commit này. Commit có cập nhật `delivery-snapshot.json`; tiến trình concurrent đã chạy delivery verification trước đó, nhưng lane hiện tại chưa claim full repository/release acceptance từ một focused test. `origin/main` vẫn chưa đổi vì push trước đó đã bị `GH001`; commit này cũng chưa được publish.
 
 **Current-state note:** sau commit này local `main` đã tiến thêm một commit so với snapshot 16.21. Trước mọi delivery/rewrite tiếp theo phải recapture HEAD/divergence và kiểm tra lại các file ngoài scope; không staging `control-plane/control_plane/node_agent.py` hoặc test khác nếu chưa có owner packet tương ứng.
+
+### 16.23. Backup bundle trước history migration — 22/09 khoảng 19:34 +07
+
+Để chuẩn bị cho lựa chọn publish nhưng chưa thực hiện rewrite, đã tạo một Git bundle ngoài repository:
+
+```text
+Path: E:\Caches\Temp\codex-web-main-before-history-migration-20260922.bundle
+Size: 159,829,396 bytes
+SHA-256: 192cf5810e901d4a451cfd1b6f1412b64957a7dea860f30a502c693e594788f9
+Ref: a23c45dd06e49fc48a494df2963eab7c0884263a refs/heads/main
+Prerequisites: 77d73471dc896a1f1ac189b2df46529276481552, 044dd96178faacc92a049a528eb05baa60b8816a
+git bundle verify: OK
+```
+
+Bundle này chứa phần lịch sử local `origin/main..HEAD`, đủ để khôi phục ref hiện tại sau một migration có kiểm soát; nó không phải worktree và không làm thay đổi `main`, `origin/main`, canonical ledger hoặc artifact vật lý. Trước migration hiện có **1031 tracked path dưới `output/`**, nhưng chỉ **3 blob >100 MB**; dry-run được phép giới hạn vào generated output nếu owner chọn phương án loại khỏi lịch sử.
+
+**Trạng thái:** backup đã có, nhưng chưa có lệnh `git filter-repo`, `git lfs migrate`, `git update-ref`, `git reset`, `git rebase`, `git push --force-with-lease` hoặc canonical recovery switch. Tiếp theo vẫn cần owner xác nhận phương án và target history; sau đó mới chạy dry-run trên bản sao kiểm soát, đối chiếu `.coding-tools` retention, và publish.
