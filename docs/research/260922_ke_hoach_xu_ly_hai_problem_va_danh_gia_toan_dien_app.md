@@ -3385,3 +3385,48 @@ hỗ trợ gọi `tools/list`/`server/discover`, bind PID/process/server/epoch/c
 SHA, rồi gọi `workspace_context` thật. Khi connector không xuất hiện, giữ
 `WAITING_FOR_SUPPORTED_CONNECTOR` và hai Problem `OPEN`; không retry full-clean
 activation chỉ để thay thế missing client evidence.
+
+### 16.66. Readiness recapture sau khi dọn build artifact — 23/09/2026
+
+Để loại một nguyên nhân làm bẩn source baseline, đã xác nhận process đang chạy
+không dùng `dist-recovery-6d2b0dec/`, sau đó di chuyển đúng thư mục build
+untracked này ra `E:\Caches\Temp\codex-web-dist-recovery-6d2b0dec`. Đây là thao
+tác có thể khôi phục; không xóa ledger, không sửa `.gitignore`, không dừng
+runtime và không thay đổi canonical evidence.
+
+Read-only P4/P5 recapture sau thao tác:
+
+```text
+HEAD/upstream                 = 5d7c40a2… / 5d7c40a2…
+source_worktree_clean         = true
+runtime_evidence_dirty_only   = true
+p5_baseline_ready             = true
+p4_state                      = COLLECTING
+p4_empirically_complete       = false
+representative_shadow_tasks   = 100
+representative_repaired_tasks = 20
+causal_solution_repair_tasks  = 0
+causal_solution_unknown_tasks = 29
+p5_epoch_lifecycle            = EPOCH_HARD_STOPPED
+p5_experiment_start_ready     = false
+```
+
+Empirical readiness vẫn chưa đủ để suy ra hiệu quả sản phẩm:
+
+```text
+independent_user_outcome = 3 / 49 = 0.061224
+prl-e918… rev2           = technically_accepted=false, typed_natural=false
+natural_cohort           = COLLECTING
+```
+
+Blocker dữ liệu hiện hành là `p4_predictive_validation_incomplete`, thiếu năm
+natural cross-session rows, thiếu independent outcome coverage và chưa có P5
+epoch active/paused hợp lệ. `causal_solution_repair_tasks=0` cùng `29` unknown
+không cho phép tự động mở treatment hoặc auto-promote routing/policy. Đây là
+readiness evidence mới, không phải closure của `prl-22e…` hay `prl-e918…`.
+
+**Checkpoint điều hành:** cleanup đã đưa source baseline về trạng thái sạch
+theo policy và làm `p5_baseline_ready=true`; strict connector, real
+`workspace_context`, natural outcome, P4 predictive validation và P5 treatment
+vẫn chưa đạt. Exact next action vẫn là strict discovery bằng connector được hỗ
+trợ; không mở P5 epoch chỉ từ readiness report.

@@ -1836,3 +1836,30 @@ reboot/Machine B/fault/natural-use và independent outcome chưa đạt. Exact n
 action vẫn là connector được hỗ trợ thực hiện discovery và workspace read; nếu
 connector không xuất hiện, giữ `WAITING_FOR_SUPPORTED_CONNECTOR` thay vì lặp
 refresh.
+
+## 15.17. Readiness recapture sau cleanup build artifact — 23/09/2026
+
+Build output untracked `E:\DEV\Codex-web\dist-recovery-6d2b0dec` không được
+process hiện tại sử dụng; đã di chuyển nguyên thư mục sang
+`E:\Caches\Temp\codex-web-dist-recovery-6d2b0dec` để giữ khả năng khôi phục và
+loại rác khỏi checkout. Không đụng canonical ledger hoặc runtime process.
+
+P4/P5 reporter ở chế độ read-only sau cleanup xác nhận:
+
+```text
+source_worktree_clean       = true
+runtime_evidence_dirty_only = true
+p5_baseline_ready           = true
+p4                         = COLLECTING / empirically_complete=false
+shadow/repaired/causal     = 100 / 20 / 0
+causal_unknown             = 29
+p5_epoch                   = EPOCH_HARD_STOPPED
+```
+
+Natural cohort vẫn chưa đủ: independent outcome `3/49`, còn `prl-e918…` rev2
+`technically_accepted=false`, `typed_natural=false`. Đây chỉ là readiness
+evidence; không được mở treatment, ACK connector hoặc đóng Problem.
+
+**Operator checkpoint:** source baseline đã sạch theo policy, nhưng strict
+connector, real `workspace_context`, reboot/natural-use và P4/P5 acceptance
+vẫn mở. Tiếp tục bằng supported connector discovery, không lặp refresh mù.
