@@ -1829,3 +1829,34 @@ Truy vấn exact revision sau apply cho kết quả không đổi về authority
 - **Trạng thái hiện tại:** hai Problem vẫn `OPEN`; recovery plane resident; primary MCP process-level census có nhưng tunnel/connector chưa usable; Git chưa có commit mới sau 02e2a6b5.
 - **Phân loại blocker:** không còn là thiếu chứng minh Supervisor spawn; blocker hiện tại là `UPDATE_INCOMPLETE`/connector discovery, authority cho live activation, process-level fault proof và natural outcome. Đây là blocker evidence/authority, không phải test failure.
 - **Exact next action:** chạy `npm run stage:coding-tools-delivery` rồi `npm run check:coding-tools-delivery`, review index/delivery receipt, commit trực tiếp trên `main` và push `main` nếu guard PASS. Sau delivery chỉ tiếp tục bằng một activation epoch mới có receipt exact; không dùng epoch outer `READY/OPEN`, không reboot và không đóng Problem trước khi có strict discovery + workspace outcome.
+
+### 16.36. Ubuntu đã nạp revision hiện hành từ Git bằng release LF sạch — 22/09/2026 lúc 21:41 +07
+
+Sau checkpoint 16.35, đã triển khai lại control plane từ đúng `origin/main`/`HEAD=02e2a6b5dfa8d138be403b64617c2a3e6f3489aa`. Build trực tiếp từ Windows working tree bị loại trước activation vì CRLF làm fingerprint khác; release chính thức được build từ detached worktree sạch của đúng commit để giữ byte LF ổn định.
+
+**Artifact và preflight:**
+
+- Release archive SHA-256: `07ded62a44b79a9e7c2bc84198ac7ebd5aa58ba96b59851e2c1b304564a58eb8`.
+- Remote manifest verification: `34` files, schema `24`, source revision `02e2a6b5...`, package fingerprint `sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2`.
+- Bản CRLF fingerprint `sha256:3e13c165...` không được cài; không có artifact không xác định nào được trỏ vào `current`.
+- Backup ngay trước activation: snapshot SHA-256 `9c51f92589602811fb0a64a331153b28dd849adf7ef31c381c9b39292029502b`, schema `24`, SQLite integrity `ok`, FK `0`, admission `recovery`.
+- Protected env/drop-in đã được prepare atomic; cả revision và expected package fingerprint cùng khớp manifest.
+
+**Remote readback sau switch/restart:**
+
+```text
+current = /home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-02e2a6b5dfa8d138be403b64617c2a3e6f3489aa
+service = active, enabled
+MainPID = 991827
+NRestarts = 0
+service_instance_id = cp_3efb2ef516884f0aa1e857318bcb9735
+schema_version = 24
+declared_source_revision = 02e2a6b5dfa8d138be403b64617c2a3e6f3489aa
+package_source_sha256 = expected sha256:8fc57c65d1218444a3ff4661b3cc6c16186ed352e3ec72a74f6665f2be2ab6d2
+```
+
+`/healthz` trả HTTP `200`, `ok=true`, `sqlite_integrity=ok`; đây là bằng chứng package/service identity hiện hành đã được nạp. `control-plane-healthcheck.sh` vẫn fail-closed đúng thiết kế với `control-plane automatic backup is stale or not restorable` vì inspection backup ghi `unquarantined_unresolved_action_count=1`, không phải vì SQLite hay package hỏng.
+
+Action còn mở vẫn là `act_0f0a49c6424d42d3bc7bc49ad46e4ffa`: node `3c7378b3-ecc4-4466-9a87-25d4d53ffdcf`/`DaoChienThang` stale, `policy_state=unavailable`, `delivery_state=dispatch_unconfirmed`, có một attempt nhưng không có receipt hoặc reconciliation. Không tự ghi receipt, không đổi thành completed/cancelled, không retry và không mở admission. Current server revision đã cập nhật; blocker còn lại là node-side evidence/operator decision cho action cũ, strict Windows runtime/discovery và natural-work outcome.
+
+**Operator checkpoint:** yêu cầu “push lên để server cập nhật” hiện đã có bằng chứng mạnh hơn Git push: Ubuntu đang chạy đúng revision `02e2a6b5` từ release sạch và package fingerprint được đối chiếu độc lập. Không thực hiện deploy/restart thêm trong wave này; bước tiếp theo phải là thu thập evidence đúng node cũ hoặc giữ `recovery` theo runbook, không làm xanh healthcheck bằng cách sửa ledger trực tiếp.
