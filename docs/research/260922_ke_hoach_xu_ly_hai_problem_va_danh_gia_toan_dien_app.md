@@ -2715,3 +2715,80 @@ thực hiện chỉ khi có owner-authorized controlled packaged activation; khi
 cấp, phải dùng đúng source/package/epoch identity rồi mới kiểm tra
 `fullyReady`, connector freshness, `tools/list`/`server/discover` và một
 `workspace_context` thật.
+
+### 16.51. Packaged host đã sống lại nhưng bị chặn ở installation/source handoff — 22/09/2026 lúc 23:48 +07
+
+Một lần Supervisor tick sau khi hết suppression đã tự spawn lại packaged
+Recovery Host. Đây là tiến triển runtime thật nhưng chưa phải acceptance:
+
+```text
+host.pid = 40120
+runtime_mode = packaged
+workspace_matched = true
+authority_granted = false
+live_accepted = false
+
+recovery_host.running_revision = a577af137d5a170d46d90b68ce60fa9056e7cb7018f4ed6a96485b05b7e7da47
+recovery_host.disk_revision    = a577af137d5a170d46d90b68ce60fa9056e7cb7018f4ed6a96485b05b7e7da47
+coding_mcp.disk_revision       = a49891f8e6bff0bfb2d49284ff85d8cd73946508f59ff0a7b8ebd8ed0339dfe5
+
+mcpRunning = false
+nativeAlive = false
+tunnelRunning = false
+componentsReady = false
+fullyReady = false
+centralConnected = true
+authorityReady = true
+updateIncomplete = true
+connectorRediscovered = false
+connectorContractState = UNAVAILABLE
+activation_state = UPDATE_INCOMPLETE
+admission_open = false
+```
+
+Đối chiếu cùng thời điểm với source checkout:
+
+```text
+source recovery_host revision = 82b65672d950689b120d7f06e429be5740ab8c4562e7ce99247d66f791a88d7c
+source coding_mcp revision    = b5c7afa18c571b05b4f871b58dea13638ba42b2198e4828b523c36a8630b5c9f
+```
+
+Vì vậy packaged host hiện tại **chưa load source repair `6f507fda`**. Reader
+source mới chiếu persisted proof thành `FAILED/CLOSED +
+ACTIVATION_EPOCH_STALE_READY_PROOF`, trong khi authenticated IPC của packaged
+host cũ vẫn trả `UPDATE_INCOMPLETE`; hai kết quả không được gộp thành một
+authority state.
+
+**Installation handoff gate:**
+
+```text
+node scripts/full-clean-activation.js --preflight
+=> RECOVERY_HOST_INSTALLATION_MISMATCH
+
+node scripts/full-clean-activation.js --status
+=> RECOVERY_HOST_INSTALLATION_MISMATCH
+
+npm run dev:status
+=> DEV_UI_INSTALLATION_MISMATCH
+```
+
+Đây là kết quả đúng của identity guard: lệnh development không được phép điều
+khiển một Recovery Host packaged thuộc installation khác. Không sửa descriptor,
+không giả mạo `installation_id`, không hạ guard và không dùng raw IPC để vượt
+qua handoff. Đường hợp lệ tiếp theo phải là exact packaged-to-development
+handoff/refresh có source acceptance và process-ownership receipt, hoặc một
+gói packaged mới mang đúng revision rồi mới tạo full-clean epoch.
+
+**Ledger boundary vẫn ổn định:** census Backup API lúc
+`2026-09-22T16:48:25.302Z` vẫn có logical SHA
+`988e557c1ad10954f32e71927684e36cb527ab297942cee57fcdc771cd38964d`,
+`integrity_check=ok`, `foreign_key_check_rows=0`, 17 stale candidates, 6 P5
+anchors, không có unexplained active run, stale background residue hay
+unbound live resource; `mutated_canonical_ledger=false`.
+
+**Checkpoint:** Supervisor/Recovery Host liveness đã có bằng chứng mới, nhưng
+primary MCP/Tunnel, exact source/package continuity, connector discovery,
+`workspace_context`, reboot/logon và natural-use vẫn chưa đạt. Hai Problem vẫn
+`OPEN`. Bước tiếp theo cần owner-authorized installation handoff hoặc packaged
+delivery; không có phép hợp lệ để bypass identity guard hay tự ý restart theo
+một đường khác.
