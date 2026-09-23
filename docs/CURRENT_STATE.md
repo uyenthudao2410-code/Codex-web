@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> Checkpoint mới nhất 23-09-2026, 20:59 +07: Ubuntu live đã nạp release
+> Checkpoint mới nhất 23-09-2026, 22:19 +07: Ubuntu live đã nạp release
 > `97f26a13` với schema 28, package fingerprint
 > `sha256:a2f23a7666abaac083b49f851400b792b868f87e2fe5bd9bbc477c320048abf4`,
 > admission `recovery` và MCP auth `legacy_context_grant`; tunnel active,
@@ -10,6 +10,13 @@
 > checkout vẫn trả `RECOVERY_HOST_INSTALLATION_MISMATCH`, vì owner live là bản
 > cài khác. Không cài đè khi gate activation chưa có closure đúng HEAD. Xem
 > [checkpoint vận hành](SHARED_ACCOUNT_WORKSPACE_STATUS.md).
+
+> Commit 2119d980 also makes Windows structured remote exec fail closed before
+> spawn when no OS filesystem sandbox exists. Full MCP suite: 1163 passed,
+> 5 skipped, 258 subtests; root npm test: 1044/1044. Packaged smoke passed
+> on the candidate, but NSIS installer has resource-editing EBUSY and its
+> no-resource-edit variant is only a validation artifact; do not install it as
+> the final customer package.
 
 > Checkpoint lịch sử 23-09-2026, 20:46 +07: commit `97f26a13` có candidate
 > `private_tunnel_service` và `scoped_pilot`; local Ubuntu release schema 28

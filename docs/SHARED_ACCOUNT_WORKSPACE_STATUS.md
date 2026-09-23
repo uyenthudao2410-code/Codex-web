@@ -1,6 +1,23 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-## Checkpoint Ubuntu live — 23-09-2026, 20:59 +07
+## Checkpoint latest — 23-09-2026, 22:19 +07
+
+Code commit 2119d980 adds a Windows fail-closed gate: Control Plane
+structured exec_command now returns SANDBOX_UNAVAILABLE before process spawn
+on Windows until a filesystem sandbox is available. Tests prove no process is
+spawned; this keeps the selected-workspace boundary honest while sandbox work
+remains. resources/coding-tools-mcp full suite: 1163 passed, 5 skipped, 258
+subtests; root npm test: 1044/1044. The separate module-size checker still
+reports five over-budget modules that this change did not touch.
+
+Installer candidate from this source is at
+dist/windows-installer-2119d980-noresedit/coding-tools-mcp-setup-1.0.7.exe
+(SHA-256 1362ECFFC5C65CCBBBE1E72C37DA40B90801DCF11783EB7F1B50D038E3D9D2F5).
+Packaged smoke passes. Electron Builder's normal Windows resource editor hits
+EBUSY when editing the 225 MB executable; the tested candidate disables
+resource editing/signing, so it is a validation artifact, not the final
+installer. The installed app remains unchanged, and activation preflight still
+reports RECOVERY_HOST_INSTALLATION_MISMATCH for the development checkout.
 
 Release `97f26a13b0def2795421c454bc32e1f301aa0704` đã được chép qua SSH
 `svhome`, đối chiếu SHA-256 archive và verifier trên Ubuntu, sau đó cài vào
