@@ -38,6 +38,7 @@ async function publishHeartbeat() {
   const context = {
     runtimeHeartbeatInFlight: null,
     orchestrator: { lightweightSnapshot: async () => status },
+    decorateUiRuntimeSnapshot: (value) => value,
     lastRecoveryProgressTime: null,
     sendManager: (channel, payload) => managerMessages.push({ channel, payload }),
     chatWindow: makeWindow(chatMessages),
