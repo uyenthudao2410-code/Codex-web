@@ -181,19 +181,52 @@ class CommandHandleMigrationTests(unittest.TestCase):
                     "client_type": "electron",
                     "attestation_verified": True,
                 }
-                # ``echo`` is a shell builtin on Windows, not an executable
-                # accepted by the structured argv lane with shell=False.
-                portable_python = sys.executable
-                payload = runtime.exec_command({
-                    "cmd": portable_python,
-                    "argv": [portable_python, "-c", "print('bridge-argv-ok')"],
-                    "yield_time_ms": 1000,
-                    "max_output_bytes": 4096,
-                    "verbosity": "full",
+                if sys.platform == "win32":
+                    with self.assertRaises(Exception) as sandbox_denied:
+                        runtime.exec_command({
+                            "cmd": sys.executable,
+                            "argv": [sys.executable, "--version"],
+                            "yield_time_ms": 1000,
+                        })
+                    self.assertEqual(getattr(sandbox_denied.exception, "code", ""), "SANDBOX_UNAVAILABLE")
+                else:
+                    payload = runtime.exec_command({
+                        "cmd": sys.executable,
+                        "argv": [sys.executable, "-c", "print('bridge-argv-ok')"],
+                        "yield_time_ms": 1000,
+                        "max_output_bytes": 4096,
+                        "verbosity": "full",
+                    })
+                    self.assertEqual(payload["status"], "exited")
+                    self.assertEqual(payload["exit_code"], 0)
+                    self.assertIn("bridge-argv-ok", payload["stdout"])
+            finally:
+                runtime.close()
+
+    def test_control_plane_structured_argv_fails_closed_on_windows_without_os_sandbox(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                runtime.request_context.hub_client = {
+                    "client_id": "electron-control-plane-exec-bridge",
+                    "client_type": "electron",
+                    "attestation_verified": True,
+                }
+                with (
+                    patch("coding_tools_mcp.exec_tools.os.name", "nt"),
+                    patch("coding_tools_mcp.exec_tools.processes.spawn_process") as spawn,
+                ):
+                    with self.assertRaises(Exception) as denied:
+                        runtime.exec_command({
+                            "cmd": sys.executable,
+                            "argv": [sys.executable, "--version"],
+                            "yield_time_ms": 1000,
+                        })
+                self.assertEqual(getattr(denied.exception, "code", ""), "SANDBOX_UNAVAILABLE")
+                self.assertEqual(denied.exception.details, {
+                    "platform": "nt", "workspace_cwd_is_sandbox": False,
                 })
-                self.assertEqual(payload["status"], "exited")
-                self.assertEqual(payload["exit_code"], 0)
-                self.assertIn("bridge-argv-ok", payload["stdout"])
+                spawn.assert_not_called()
             finally:
                 runtime.close()
 

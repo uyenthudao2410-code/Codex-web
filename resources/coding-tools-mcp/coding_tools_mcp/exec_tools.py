@@ -250,6 +250,20 @@ class ExecToolsMixin:
                     "Control-plane structured argv exceeds its bounded size.",
                     category="validation",
                 )
+            if os.name == "nt":
+                # The cwd and argv-prefix checks below constrain which
+                # executable/arguments may be selected; they do not sandbox
+                # filesystem access by Windows processes or descendants.
+                # Landlock is Linux-only, and the kill-on-close Job Object is
+                # lifecycle containment rather than an access boundary. Until
+                # a Windows OS sandbox is available, fail closed before any
+                # process can run under the host user's file permissions.
+                raise ToolFailure(
+                    "SANDBOX_UNAVAILABLE",
+                    "Control-plane structured execution on Windows requires an OS filesystem sandbox.",
+                    category="security",
+                    details={"platform": os.name, "workspace_cwd_is_sandbox": False},
+                )
             if str(args.get("cmd", "")) != structured_argv[0]:
                 raise ToolFailure(
                     "INVALID_ARGUMENT",
