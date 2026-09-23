@@ -10,6 +10,7 @@ import posixpath
 import re
 import secrets
 import sys
+import threading
 import time
 import urllib.parse
 from pathlib import Path
@@ -1708,6 +1709,7 @@ class MCPHandler(ContinuationConsentHTTPMixin, HTTPHubIdentityMixin, http.server
 
 class RuntimeHTTPServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
+    request_drain_timeout_seconds = 10.0
 
     def __init__(
         self,
@@ -1717,12 +1719,67 @@ class RuntimeHTTPServer(http.server.ThreadingHTTPServer):
         runtime_factory: Any,
     ) -> None:
         super().__init__(address, handler)
+        self._request_threads_lock = threading.Lock()
+        self._request_threads: set[threading.Thread] = set()
+        self._closing = False
         self.control_runtime = control_runtime
         self.control_runtime.run_continuation_consent_http_origin = local_continuation_consent_origin(self.server_address)
         self.sessions = HTTPSessionManager(control_runtime)
 
+    def process_request(self, request: Any, client_address: Any) -> None:
+        """Track handler threads so runtime shutdown cannot race an active request.
+
+        ``ThreadingMixIn`` deliberately uses daemon request threads here.  That is
+        appropriate for a long-lived MCP process, but its default ``server_close``
+        does not wait for daemon handlers.  Closing the shared Runtime while one
+        of those handlers still owns a SQLite connection can leave a Windows
+        temporary ledger locked and can make the next request time out.  Keep the
+        daemon behaviour, while recording the exact handlers for a bounded drain.
+        """
+        with self._request_threads_lock:
+            if self._closing:
+                self.shutdown_request(request)
+                return
+            thread = threading.Thread(
+                target=self.process_request_thread,
+                args=(request, client_address),
+                daemon=self.daemon_threads,
+            )
+            self._request_threads.add(thread)
+        try:
+            thread.start()
+        except BaseException:
+            with self._request_threads_lock:
+                self._request_threads.discard(thread)
+            self.shutdown_request(request)
+            raise
+
+    def process_request_thread(self, request: Any, client_address: Any) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._request_threads_lock:
+                self._request_threads.discard(threading.current_thread())
+
+    def _drain_request_threads(self) -> bool:
+        deadline = time.monotonic() + max(0.0, float(self.request_drain_timeout_seconds))
+        current = threading.current_thread()
+        while True:
+            with self._request_threads_lock:
+                active = [thread for thread in self._request_threads if thread is not current and thread.is_alive()]
+            if not active:
+                return True
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            for thread in active:
+                thread.join(timeout=min(0.1, remaining))
+
     def server_close(self) -> None:
+        with self._request_threads_lock:
+            self._closing = True
         self.sessions.close()
+        self._drain_request_threads()
         self.control_runtime.close()
         super().server_close()
 
