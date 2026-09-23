@@ -1478,6 +1478,24 @@ test('runtime status classification distinguishes CURRENT, STALE and MISSING', (
   assert.equal(uiObservation({ electron_ui_recovery: { alive: false } }).state, 'MISSING');
 });
 
+test('dev lifecycle reads the explicit UI runtime mode instead of the Recovery Host mode', () => {
+  const observed = uiObservation({
+    electron_ui_recovery: {
+      alive: true,
+      pid: 42,
+      instance_id: 'electron-ui-instance-0001',
+      runtime_mode: 'development',
+      recovery_host_runtime_mode: 'development',
+      ui_runtime_mode: 'packaged',
+      ui_installation_id: 'a'.repeat(64)
+    },
+    electron_ui_revision: { running_revision: REVISION, disk_revision: REVISION, update_pending: false }
+  });
+  assert.equal(observed.state, 'CURRENT');
+  assert.equal(observed.runtimeMode, 'packaged');
+  assert.equal(observed.installationId, 'a'.repeat(64));
+});
+
 test('Recovery Host exposes bounded UI lifecycle identity without exposing its descriptor token', () => {
   const status = RecoveryHost.prototype.uiRecoveryStatus.call({
     activation: {
@@ -1505,8 +1523,10 @@ test('Recovery Host exposes bounded UI lifecycle identity without exposing its d
 
 test('Electron main makes duplicate start actionable and accepts only exact UI lifecycle signals', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'electron', 'main.js'), 'utf8');
-  assert.match(source, /Coding Tools MCP UI is already running\. Use "npm run dev"/);
-  assert.match(source, /app\.on\('second-instance', \(_event, commandLine\) => handleSecondInstance\(commandLine\)\)/);
+  assert.match(source, /CODING_TOOLS_MCP_UI_ALREADY_RUNNING/);
+  assert.match(source, /app\.requestSingleInstanceLock\(\{\s*runtime_mode: uiRuntimeIdentity\.mode,\s*installation_id: uiRuntimeIdentity\.installation_id\s*\}\)/s);
+  assert.match(source, /app\.on\('second-instance', \(_event, commandLine, _workingDirectory, additionalData\) => handleSecondInstance\(commandLine, additionalData\)\)/);
+  assert.match(source, /CODING_TOOLS_MCP_PACKAGED_BLOCKED_BY_EXISTING_UI/);
   assert.match(source, /request\.instanceId !== uiInstanceId/);
   assert.match(source, /void quitUi\('operator_quit'\)/);
   assert.match(source, /async function codeActivationRequest\(component, allowAcceptancePending = false\)/);

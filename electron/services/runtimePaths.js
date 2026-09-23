@@ -25,6 +25,12 @@ function configureElectronUserDataPath(app, { argv = process.argv, recoveryHostM
   return app.getPath('userData');
 }
 
+// Electron's single-instance mutex is scoped by the active user-data path.
+// The application profile itself is intentionally shared so settings and the
+// Recovery Host descriptor survive a switch between npm start and the
+// installed app, but their UI mutexes must not be shared: otherwise a stale
+// development window can swallow the packaged launch and remain on screen.
+
 function optionalArtifactId(value, name) {
   const text = String(value || '').trim();
   if (!text) return '';

@@ -1961,6 +1961,51 @@ test('explicit operator quit suppression survives Recovery Host replacement and 
   assert.equal(replacementHost.uiRecoveryStatus().state, 'healthy');
 });
 
+test('Recovery Host rejects UI registration from another installation', async (t) => {
+  const paths = fixture(t);
+  const { host, revision } = uiRecoveryFixture(t, { paths, revision: 'e'.repeat(64) });
+  const expected = paths.runtimeIdentity();
+  await assert.rejects(
+    host.handlers()['client.register_ui_revision']({
+      instance_id: 'foreign-electron-ui-0001',
+      pid: process.pid,
+      revision,
+      started_at_unix_ms: Date.now(),
+      runtime_mode: 'packaged',
+      installation_id: 'f'.repeat(64)
+    }),
+    {
+      code: 'RECOVERY_HOST_INSTALLATION_MISMATCH',
+      details: {
+        expected_installation_id: expected.installation_id,
+        observed_installation_id: 'f'.repeat(64),
+        expected_runtime_mode: expected.mode,
+        observed_runtime_mode: 'packaged'
+      }
+    }
+  );
+  assert.equal(host.activation.uiRegistration, null);
+});
+
+test('Recovery Host exposes host and UI runtime identities separately', async (t) => {
+  const paths = fixture(t);
+  const { host, revision } = uiRecoveryFixture(t, { paths, revision: 'f'.repeat(64) });
+  const identity = paths.runtimeIdentity();
+  await host.handlers()['client.register_ui_revision']({
+    instance_id: 'matching-electron-ui-0001',
+    pid: process.pid,
+    revision,
+    started_at_unix_ms: Date.now(),
+    runtime_mode: identity.mode,
+    installation_id: identity.installation_id
+  });
+  const status = host.uiRecoveryStatus();
+  assert.equal(status.recovery_host_runtime_mode, identity.mode);
+  assert.equal(status.recovery_host_installation_id, identity.installation_id);
+  assert.equal(status.ui_runtime_mode, identity.mode);
+  assert.equal(status.ui_installation_id, identity.installation_id);
+});
+
 test('UI watchdog defers to a pending controlled electron activation', async (t) => {
   let launches = 0;
   const { host, revision } = uiRecoveryFixture(t, {

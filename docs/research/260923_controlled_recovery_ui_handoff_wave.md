@@ -2598,3 +2598,210 @@ Chưa đạt `STRICT_REDISCOVERED`, `LIVE_ACCEPTED`,
 khôi phục supported connector surface, bind discovery/workspace read exact,
 rồi mới chạy reboot/fault/natural canary theo thứ tự đã nêu. Nếu surface không
 xuất hiện, giữ `WAITING_FOR_SUPPORTED_CONNECTOR` thay vì lặp full-clean.
+
+## 15.27. Packaged Recovery Host smoke sau regression sweep — 23/09/2026 11:15 +07
+
+Đã chạy `npm run test:recovery:packaged` trên `main`. Lệnh build dùng
+`dist/win-unpacked` tạm của repository, smoke dùng user-data tạm và kết thúc
+không để lại source delta hay scheduled-task mutation.
+
+Kết quả authoritative:
+
+```text
+package executable/app.asar              = true / true
+required packaged resources              = 17
+smart-v3 profile                         = smart-v3
+public tool count                        = 8
+task_context_id schemas                  = workspace_context/agent_workflow/task_control present
+user_data_isolated                       = true
+production_descriptor_stable             = true
+Recovery Host ready                      = true
+device identity present                  = true
+independent Recovery MCP alive           = true
+Supervisor healthy                       = true
+live owner fail-closed                   = true
+hash mismatch fail-closed                = true
+scheduled task mutation                  = false
+process exit                             = 0
+```
+
+Đây là proof mới cho packaged resource completeness, smart-v3 contract,
+Recovery Host cold-start/isolation và Supervisor safety. Nó **không** chứng
+minh ChatWeb/Coding Tools client đã gọi `tools/list`/`server/discover`, không
+chứng minh real `workspace_context`, reboot/logon acceptance trên máy người
+dùng, Machine B, natural Goal/Problem hoặc independent outcome.
+
+Sau smoke, source checkout vẫn không có delta; chỉ `.coding-tools/**` tiếp tục
+dirty do runtime evidence. Exact next action không thay đổi: khôi phục
+supported connector surface, bind strict discovery/workspace read, rồi mới
+chạy các acceptance/fault/natural gates; không dùng packaged local smoke để
+ACK connector hoặc đóng hai Problem.
+
+## 15.28. Recapture live sau khi source identity packet xuất hiện — 23/09/2026 11:18 +07
+
+Đây là recapture **hiện tại**, không thay thế các checkpoint lịch sử ở trên.
+`main` vẫn đứng tại `7d7012e66400150ba4fa26ea616df36daace7022`, khớp
+`origin/main`. Tuy nhiên checkout thực tế hiện có source diff chưa commit ở:
+
+```text
+electron/main.js
+electron/services/recoveryActivation.js
+electron/services/recoveryHost.js
+renderer/app.js
+tests/system-setup-console.test.js
+```
+
+Packet này cùng một chủ đề: bind UI với `runtime_mode`/`installation_id`,
+tách rõ identity của UI và Recovery Host, từ chối registration khác
+installation, và hiển thị hướng dẫn fail-closed khi packaged UI gặp Host khác
+bản cài. Nó đã đạt focused proof:
+
+```text
+node --test \
+  tests/system-setup-console.test.js \
+  tests/recovery-host.test.js \
+  tests/recovery-bootstrap.test.js \
+  tests/dev-checkout-authority.test.js \
+  tests/central-executor-handoff-ui.test.js \
+  tests/dev-ui-lifecycle.test.js
+189 passed, 0 failed
+```
+
+Đây mới là `SOURCE_PRESENT + FOCUSED_PROOF`; packet chưa được xác nhận
+ownership, chưa stage/commit/push và chưa được load vào runtime hiện tại.
+Không được xoá hoặc reset các thay đổi này để làm sạch baseline.
+
+### Live runtime và connector
+
+`npm run dev:status` tại khoảng `11:13:57 +07` trả về:
+
+```text
+state=MISSING
+host=available installation=current
+pid=35920 instance=bd451991877714002b741e85732dba01
+mode=development running_revision=none
+mcp_revision_state=current
+components_ready=true fully_ready=false
+runtime_update_incomplete=true
+connector_state=CHANGED_NEEDS_DISCOVERY
+connector_rediscovered=false connector_refresh_required=true
+connector_ack_pending=false error_code=none
+```
+
+PID `35920` không còn tồn tại khi kiểm tra OS, nên đăng ký UI đó không được
+coi là liveness. Đây là lý do hệ thống giữ fail-closed và **không** chạy
+`dev:refresh`, reboot, ACK hoặc natural canary để “lấp” receipt thiếu.
+Computer Use inventory đồng thời trả `apps=[]`, `browsers=[]` và
+`Codex auth token is unavailable`; hiện chưa có supported client surface để
+tạo `tools/list`/`server/discover` current-process hoặc một
+`workspace_context` thật có attestation.
+
+### Ledger, hai Problem và tri thức hiện có
+
+Query-only census mới nhất xác nhận:
+
+```text
+ledger schema/integrity/FK       = 12 / ok / 0
+ledger size                      = 97,742,848 bytes
+mutated_canonical_ledger         = false
+projection_drift                 = false
+ordinary_active_runs             = 17 stale candidates
+p5_epochs                        = 6
+unexplained/unbound residues     = 0 / 0
+```
+
+Canonical Problem counts vẫn là:
+
+```text
+prl-22e670302757c9b7663170e226ed7c26 rev1 = 47 accepted / 16 aborted / 3 active = 66 RUN
+prl-e918c7d33e70c2d304d0797e11b05fcb rev2 = 16 accepted / 10 aborted / 13 active = 39 RUN
+```
+
+Cả hai vẫn `OPEN`; event ledger không có `outcome_receipt_type` cho hai
+revision và chưa có coverage/closure authority. P1 semantic-stop refusal và
+P2 rollback startup-intent hiện là `SOURCE_PRESENT + FOCUSED_PROOF`, chưa có
+live packaged handoff/reboot proof.
+
+P4/P5 recapture hiện tại cho thấy:
+
+```text
+P4 state                         = COLLECTING
+representative shadow tasks     = 100
+raw repaired tasks              = 20
+causal-solution repair tasks    = 0
+causal-solution unknown tasks   = 29
+predictive targeting            = false
+source worktree clean           = false
+P5 baseline ready                = false (do source dirty)
+P5 epoch                        = EPOCH_HARD_STOPPED
+P5 experiment start             = false
+```
+
+Proof/economics projection cũng chưa đủ để quyết định tối ưu hoá: cache chỉ có
+`6/983` hit (`0.6104%`), `977` miss (517 cold, 460 input-fingerprint changed),
+và monetary/provider attribution coverage vẫn `0`; thiếu đo lường giữ là
+`unknown`, không quy về zero.
+
+### Checkpoint vận hành
+
+Đã hoàn tất trong wave này: recapture Git/runtime/ledger/connector, chạy focused
+suite `189/189`, và phân loại lại live state thành `WAITING_FOR_SUPPORTED_CONNECTOR`
+cùng `SOURCE_DIRTY_PENDING_INTEGRATION`. Chưa có restart, reboot, tunnel CRUD,
+ACK, sửa SQLite hay natural canary.
+
+Next action có thứ tự bắt buộc:
+
+1. Xác nhận ownership packet identity và chạy lại delivery/history/secret guards;
+2. Nếu packet hợp lệ, stage toàn bộ `.coding-tools` cùng receipt rồi commit/push
+   trực tiếp `main` (không dùng worktree);
+3. Tạo activation có kiểm soát để source/package/epoch đồng nhất và phục hồi UI
+   đúng installation;
+4. Chỉ khi supported connector xuất hiện mới bind strict discovery, gọi
+   `workspace_context` thật và thu receipt PID/process/server/epoch/contract SHA;
+5. Sau đó mới chạy reboot/logon, fault matrix, Machine B và natural Problem/Goal
+theo coverage C01–C12/BG01–BG14.
+
+## 15.29. Hoàn tất packet identity UI/Recovery Host và regression hiện hành — 23/09/2026 11:31 +07
+
+Packet source đã hội tụ thành một thay đổi coherent trên `main`:
+
+```text
+electron/main.js
+electron/services/recoveryActivation.js
+electron/services/recoveryHost.js
+electron/services/recoveryIpc.js
+electron/services/runtimePaths.js
+renderer/app.js
+scripts/dev-ui-lifecycle.js
+tests/dev-ui-lifecycle.test.js
+tests/recovery-host.test.js
+tests/runtime-installation-identity.test.js
+tests/system-setup-console.test.js
+```
+
+Nội dung đã chốt:
+
+- UI registration và snapshot mang `runtime_mode`/`installation_id` riêng;
+- Recovery Host từ chối UI khác installation bằng
+  `RECOVERY_HOST_INSTALLATION_MISMATCH`;
+- fallback client sau lỗi identity chỉ còn read-only, mọi RPC mutation bị
+  từ chối;
+- single-instance metadata phân biệt packaged/development và hiển thị hướng
+  dẫn đóng runtime sai, không pairing/cấp quyền từ cửa sổ sai;
+- lifecycle/renderer không còn suy ra mode của UI từ mode của Recovery Host.
+
+Regression sau khi đồng bộ test với thiết kế single-instance metadata:
+
+```text
+focused identity/recovery/lifecycle/UI suite = 197 tests
+latest isolated dev-ui-lifecycle suite      = 73 passed, 0 failed
+latest full focused run                     = 197 passed, 0 failed
+```
+
+Đây là receipt cuối của focused packet sau khi cập nhật assertion diagnostic
+theo mã lỗi mới; không còn failure hoặc stale assertion trong suite này.
+
+Packet này vẫn chỉ nâng mức lên `SOURCE_PRESENT + FOCUSED_PROOF`. Nó chưa
+chứng minh source đã được activation vào runtime đang chạy, strict connector,
+real `workspace_context`, packaged reboot/logon, Machine B, natural outcome
+hoặc closure của hai Problem.

@@ -6,15 +6,14 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint vận hành mới nhất **23-09-2026, 09:33 +07** đã xác nhận
-> package-relevant source ở `main @ e44b0a4613a780e2239027c085b54257e1df266c`
-> và Ubuntu đang chạy release exact package đó trong admission `recovery` với
-> package fingerprint khớp. `origin/main` hiện đã tiến lên các commit docs và
-> `.coding-tools` evidence `d11474af9aed8600b14d5b71ad35de610941ae0e` và
-> `cc39b03bbcd7ad0a36cf65c07e1ca621faf7d836`; `control-plane/` và `deploy/`
-> không đổi. Windows
-> runtime đã `CURRENT` về mặt kỹ thuật, nhưng connector strict discovery, real
-> `workspace_context`, admission mở và `LIVE_ACCEPTED` vẫn chưa có.
+> trước. Checkpoint Windows hiện hành là **23-09-2026, sau 11:15 +07** tại
+> `main @ 7d7012e66400150ba4fa26ea616df36daace7022`; source sạch, runtime
+> evidence `.coding-tools/**` tiếp tục được giữ theo retention policy. Ubuntu
+> control-plane vẫn chạy package release exact HEAD `e44b0a4613a780e2239027c085b54257e1df266c`
+> trong admission `recovery`; các commit sau đó không chạm `control-plane/` hay
+> `deploy/`. Windows runtime đã `CURRENT` về mặt kỹ thuật và packaged smoke
+> PASS, nhưng connector strict discovery, real `workspace_context`, admission
+> mở và `LIVE_ACCEPTED` vẫn chưa có.
 
 ## Current executive checkpoint — 23-09-2026, sau 10:50 +07
 
@@ -22,7 +21,7 @@
 đọc như live state mới hơn checkpoint này.
 
 ```text
-branch / HEAD / origin       = main / 5f71c311 / 5f71c311
+branch / HEAD / origin       = main / 7d7012e6 / 7d7012e6
 source worktree              = clean (chỉ runtime evidence .coding-tools dirty)
 npm start                    = exit 0
 UI                           = CURRENT, PID 35920, instance bd451991…
@@ -41,7 +40,9 @@ Commit `3cf53cc9` sửa false-negative trong lifecycle `runtimeReadiness()`: rol
 `central_executor` chỉ yêu cầu MCP/native cùng central route/authority, còn
 `direct_legacy` vẫn yêu cầu local Tunnel. Focused lifecycle suite đạt `72/72`;
 regression sweep sau delivery đạt `283` Node tests và `97` Python tests cùng
-`4` subtests. Đây là source/runtime proof, không phải strict client discovery.
+`4` subtests. Packaged recovery smoke sau đó cũng PASS với resource contract,
+user-data isolation, Recovery Host/MCP và Supervisor guard. Đây là
+source/runtime/packaged proof, không phải strict client discovery.
 
 Các gate hiện vẫn đóng: current-process `tools/list`/`server/discover`, real
 `workspace_context` có attested client, reboot/logon acceptance, Machine B và
@@ -50,6 +51,39 @@ promotion. Phiên desktop hiện không có supported app/browser surface để 
 receipt (`apps=[]`, `browsers=[]`, `Codex auth token is unavailable`), nên giữ
 `WAITING_FOR_SUPPORTED_CONNECTOR`; không dùng local probe, raw HTTP hoặc ACK
 thủ công thay thế.
+
+## Live recapture — 23-09-2026, 11:18 +07
+
+Checkpoint phía trên là snapshot packaged smoke; recapture hiện tại phải đọc
+thận trọng vì source checkout đã phát sinh packet identity chưa commit. Năm
+file đang dirty ngoài `.coding-tools/**` là:
+
+```text
+electron/main.js
+electron/services/recoveryActivation.js
+electron/services/recoveryHost.js
+renderer/app.js
+tests/system-setup-console.test.js
+```
+
+Packet này đã đạt focused suite `189 passed, 0 failed`, nhưng chưa được
+activation vào runtime, chưa stage/commit/push và chưa phải packaged/reboot
+acceptance. Không reset hoặc xoá các file này để làm sạch trạng thái.
+
+Live `npm run dev:status` tại khoảng `11:13:57 +07` hiện là:
+
+```text
+state=MISSING; host=available; installation=current; mode=development
+running_revision=none; mcp_revision_state=current
+components_ready=true; fully_ready=false; runtime_update_incomplete=true
+connector=CHANGED_NEEDS_DISCOVERY; rediscovered=false; refresh_required=true
+ack_pending=false; error_code=none
+```
+
+PID đăng ký cũ `35920` không còn sống. Đây là fail-closed source/activation
+drift, không phải bằng chứng rằng P1/P2 regression đã quay lại. Giữ nguyên
+`WAITING_FOR_SUPPORTED_CONNECTOR`; không `dev:refresh`, reboot, ACK hay
+natural canary khi chưa có supported client surface và receipt attested.
 
 ## Checkpoint Wave 48 — Ubuntu exact-HEAD rollout và central MCP recheck — 23-09-2026, 09:28–09:33 +07
 

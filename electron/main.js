@@ -19,7 +19,10 @@ const { readJson, writeJsonAtomic } = require('./services/jsonStore');
 const { panelInset, panelBounds } = require('./services/panelLayout');
 const runtimePathApi = require('./paths');
 const { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;
-const { createElectronRuntimePaths, configureElectronUserDataPath } = require('./services/runtimePaths');
+const {
+  createElectronRuntimePaths,
+  configureElectronUserDataPath
+} = require('./services/runtimePaths');
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const {
   ensureRecoveryHost,
@@ -44,6 +47,7 @@ let chatWindow;
 let managerWindow;
 let chatController;
 let orchestrator;
+let recoveryHostConnectionError = null;
 let forceQuit = false;
 let tray = null;
 let buildVerification;
@@ -66,6 +70,7 @@ const controlPlaneEnrollment = new ControlPlaneEnrollmentService({ paths: runtim
 const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
 const uiInstanceId = crypto.randomBytes(16).toString('hex');
 const uiStartedAtUnixMs = Date.now();
+const uiRuntimeIdentity = runtimePaths.runtimeIdentity();
 const uiRunningRevision = recoveryHostMode ? null : uiRevisionTracker.captureRunning('electron_ui');
 const uiActivationEpochId = (() => {
   const arg = process.argv.find((item) => String(item).startsWith('--activation-epoch-id='));
@@ -86,6 +91,60 @@ const uiActivationEpochId = (() => {
       : '';
   } catch { return ''; }
 })();
+
+function decorateUiRuntimeSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return snapshot;
+  const recoveryHost = snapshot.recoveryHost;
+  const hostRecovery = recoveryHost?.electron_ui_recovery;
+  const hostInstallationId = String(
+    hostRecovery?.recovery_host_installation_id
+      || recoveryHost?.installation_id
+      || ''
+  ).trim().toLowerCase() || null;
+  const hostRuntimeMode = String(
+    hostRecovery?.recovery_host_runtime_mode
+      || hostRecovery?.runtime_mode
+      || recoveryHost?.runtime_mode
+      || ''
+  ).trim().toLowerCase() || null;
+  // A runtime mode alone is not an installation identity.  Legacy Recovery
+  // Host descriptors may expose only `runtime_mode`; treating a same-mode
+  // descriptor as connected would let a different checkout (or an old
+  // packaged install) masquerade as this UI.  Keep the read model explicit
+  // and fail closed until the installation hash is present and equal.
+  const hostMatchesUi = Boolean(hostInstallationId)
+    && hostInstallationId === uiRuntimeIdentity.installation_id;
+  const hostIdentityUnverified = !hostInstallationId;
+  return {
+    ...snapshot,
+    current_ui_runtime: {
+      version: uiRuntimeIdentity.version,
+      mode: uiRuntimeIdentity.mode,
+      installation_id: uiRuntimeIdentity.installation_id,
+      instance_id: uiInstanceId,
+      pid: process.pid,
+      started_at_unix_ms: uiStartedAtUnixMs
+    },
+    recovery_host_connection: recoveryHostConnectionError
+      ? {
+        state: 'blocked',
+        code: recoveryHostConnectionError.code,
+        message: recoveryHostConnectionError.message,
+        details: recoveryHostConnectionError.details || null
+      }
+      : hostMatchesUi
+        ? { state: 'connected', code: null, message: null }
+        : {
+          state: 'identity_unverified',
+          code: hostIdentityUnverified
+            ? 'RECOVERY_HOST_IDENTITY_UNVERIFIED'
+            : 'RECOVERY_HOST_INSTALLATION_MISMATCH',
+          message: hostIdentityUnverified
+            ? 'Recovery Host installation identity is unavailable.'
+            : 'Recovery Host identity is not the current UI installation.'
+        }
+  };
+}
 const uiPerformanceMetrics = new UiPerformanceMetrics({
   filePath: path.join(app.getPath('userData'), 'ui-performance.json'),
   context: {
@@ -121,7 +180,31 @@ function devUiSecondInstanceRequest(commandLine = []) {
   return { action: match[1], instanceId: match[2] };
 }
 
-function handleSecondInstance(commandLine = []) {
+function handleSecondInstance(commandLine = [], additionalData = null) {
+  const incomingMode = String(additionalData?.runtime_mode || '').trim().toLowerCase();
+  const incomingInstallationId = String(additionalData?.installation_id || '').trim().toLowerCase();
+  if (incomingMode && incomingMode !== uiRuntimeIdentity.mode) {
+    log.warn('Một runtime UI khác installation đã bị chặn bởi single-instance lock', {
+      stage: 'ui-single-instance',
+      current_runtime_mode: uiRuntimeIdentity.mode,
+      current_installation_id: uiRuntimeIdentity.installation_id,
+      incoming_runtime_mode: incomingMode,
+      incoming_installation_id: incomingInstallationId || null
+    });
+    showChatWindow();
+    void dialog.showMessageBox({
+      type: 'warning',
+      title: 'Coding Tools MCP đang mở bằng runtime khác',
+      message: uiRuntimeIdentity.mode === 'development'
+        ? 'Bản cài đặt đã được mở nhưng cửa sổ hiện tại là bản development (npm start).'
+        : 'Một bản development (npm start) đang giữ phiên của ứng dụng.',
+      detail: uiRuntimeIdentity.mode === 'development'
+        ? 'Đóng cửa sổ development và Recovery Host của checkout hiện tại, sau đó mở lại Coding Tools MCP từ bản cài đặt. Không pairing hoặc cấp quyền từ cửa sổ này.'
+        : 'Đóng bản development đang giữ phiên rồi mở lại bản Coding Tools MCP đã cài. Không chạy song song hai installation trên cùng profile.',
+      buttons: ['Đã hiểu']
+    }).catch(() => {});
+    return;
+  }
   const request = devUiSecondInstanceRequest(commandLine);
   if (!request) {
     showChatWindow();
@@ -150,7 +233,9 @@ function existingInstanceDiagnostic(argv = process.argv) {
   if (request && request.action !== 'invalid') {
     return `DEV_UI SIGNAL_DISPATCHED action=${request.action} target_instance=${request.instanceId}`;
   }
-  return 'Coding Tools MCP UI is already running. Use "npm run dev" to inspect/activate the current checkout or "npm run dev:replace" for a verified replacement.';
+  return uiRuntimeIdentity.mode === 'packaged'
+    ? 'CODING_TOOLS_MCP_PACKAGED_BLOCKED_BY_EXISTING_UI Close the development runtime (npm start) and its Recovery Host, then reopen the installed Coding Tools MCP.'
+    : 'CODING_TOOLS_MCP_UI_ALREADY_RUNNING Use "npm run dev" to inspect/activate the current checkout or "npm run dev:replace" for a verified replacement.';
 }
 
 async function codeActivationRequest(component, allowAcceptancePending = false) {
@@ -195,6 +280,8 @@ async function registerUiRevision() {
     pid: process.pid,
     revision: uiRunningRevision,
     started_at_unix_ms: uiStartedAtUnixMs,
+    runtime_mode: uiRuntimeIdentity.mode,
+    installation_id: uiRuntimeIdentity.installation_id,
     ...(uiActivationEpochId ? { activation_epoch_id: uiActivationEpochId } : {})
   });
   if (result?.restart_required) {
@@ -911,10 +998,12 @@ function openManagerWindow() {
 }
 
 function registerIpc() {
-  secureHandle('app:snapshot', (_event, options) => invokeSafely(() => orchestrator.snapshot(options || {})));
+  secureHandle('app:snapshot', (_event, options) => invokeSafely(async () => (
+    decorateUiRuntimeSnapshot(await orchestrator.snapshot(options || {}))
+  )));
   secureHandle('app:lightweight-snapshot', (event) => invokeSafely(async () => {
     const startedAt = nodePerformance.now();
-    const snapshot = await orchestrator.lightweightSnapshot();
+    const snapshot = decorateUiRuntimeSnapshot(await orchestrator.lightweightSnapshot());
     if (isManagerIpc(event)) {
       uiPerformanceMetrics.recordMain({
         observed_at_unix_ms: Date.now(),
@@ -1396,12 +1485,15 @@ function registerIpc() {
 if (recoveryHostMode) {
   app.whenReady().then(() => startRecoveryHostApplication(app));
 } else {
-  const hasSingleInstanceLock = app.requestSingleInstanceLock();
+  const hasSingleInstanceLock = app.requestSingleInstanceLock({
+    runtime_mode: uiRuntimeIdentity.mode,
+    installation_id: uiRuntimeIdentity.installation_id
+  });
   if (!hasSingleInstanceLock) {
     process.stderr.write(`${existingInstanceDiagnostic()}\n`);
     app.quit();
   } else {
-    app.on('second-instance', (_event, commandLine) => handleSecondInstance(commandLine));
+    app.on('second-instance', (_event, commandLine, _workingDirectory, additionalData) => handleSecondInstance(commandLine, additionalData));
 
     app.whenReady().then(async () => {
     app.setLoginItemSettings({
@@ -1418,7 +1510,20 @@ if (recoveryHostMode) {
     try {
       orchestrator = await ensureRecoveryHost({ app, paths: runtimePaths, log });
     } catch (error) {
-      orchestrator = new RecoveryIpcClient({ paths: runtimePaths });
+      recoveryHostConnectionError = {
+        code: String(error?.code || 'RECOVERY_HOST_CONNECT_FAILED'),
+        message: String(error?.message || 'Recovery Host connection failed.'),
+        details: error?.details && typeof error.details === 'object' ? error.details : null
+      };
+      // A descriptor from another checkout/installation is still useful for
+      // a read-only diagnostic snapshot (so the UI can explain the mismatch),
+      // but it must never become the mutation authority for this window.  The
+      // client therefore permits status/snapshot reads while refusing every
+      // mutating RPC until the operator relaunches against the matching host.
+      orchestrator = new RecoveryIpcClient({
+        paths: runtimePaths,
+        readOnlyError: recoveryHostConnectionError
+      });
       log.error(error.message, { stage: 'recovery-host-connect', code: error?.code || '' });
     }
     buildVerification = new BuildVerificationService(log, (payload) => sendManager('build:progress', payload));
@@ -1428,6 +1533,7 @@ if (recoveryHostMode) {
     const publishRuntimeHeartbeat = () => {
       if (runtimeHeartbeatInFlight) return runtimeHeartbeatInFlight;
       const operation = orchestrator.lightweightSnapshot().then((status) => {
+        status = decorateUiRuntimeSnapshot(status);
         const progress = status?.recoveryHost?.last_progress;
         if (progress?.time && progress.time !== lastRecoveryProgressTime) {
           lastRecoveryProgressTime = progress.time;

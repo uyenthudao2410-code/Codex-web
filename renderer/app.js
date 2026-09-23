@@ -18,7 +18,8 @@ function createPreviewApi() {
     },
     status: { busy: false, runtimeRunning: true, tunnelRunning: true, fullyReady: true, localMcpUrl: 'http://127.0.0.1:18766/mcp', tunnelUiUrl: 'http://127.0.0.1:18082/ui', connectorContractState: 'UNCHANGED_ACKNOWLEDGED', connectorRefreshRequired: false, codeRevision: { codingMcp: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false } } },
     device: { scope: 'current_device_only', registry: 'local', device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', display_name: 'Máy bàn', online: true, workspace: previewSettings.workspace, coding: { mcp_running: true, native_alive: true, tunnel_running: true, tunnel_id: 'tunnel_demo', ownership: 'device_id' }, recovery: { host_running: true, mcp_running: true, tunnel_running: false, tunnel_state: 'not_configured', tunnel_id: null }, git: { available: true, branch: 'main', head: 'cf6cb6ddbf29d90515d003ce72490ffda985c37f', head_short: 'cf6cb6dd', dirty: true } },
-    recoveryHost: { state: 'healthy', device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', device_display_name: 'Máy bàn', code_revision: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false }, electron_ui_revision: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false }, electron_ui_recovery: { state: 'healthy', alive: true, pid: 42001, instance_id: 'preview-electron-ui-0001', runtime_mode: 'development' }, recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
+    current_ui_runtime: { version: 1, mode: 'development', installation_id: 'a'.repeat(64), instance_id: 'preview-electron-ui-0001', pid: 42001, started_at_unix_ms: Date.now() },
+    recoveryHost: { state: 'healthy', device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', device_display_name: 'Máy bàn', code_revision: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false }, electron_ui_revision: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false }, electron_ui_recovery: { state: 'healthy', alive: true, pid: 42001, instance_id: 'preview-electron-ui-0001', runtime_mode: 'development', recovery_host_runtime_mode: 'development', recovery_host_installation_id: 'a'.repeat(64), ui_runtime_mode: 'development', ui_installation_id: 'a'.repeat(64) }, recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
   };
   const ok = (data) => Promise.resolve({ ok: true, data });
   return {
@@ -263,14 +264,56 @@ function centralRoutePresentation(status = {}) {
 }
 
 function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null) {
-  const mode = snapshot.recoveryHost?.electron_ui_recovery?.runtime_mode;
+  const uiRecovery = snapshot.recoveryHost?.electron_ui_recovery || {};
+  const currentUiMode = String(
+    snapshot.current_ui_runtime?.mode
+      || uiRecovery.ui_runtime_mode
+      || ''
+  ).trim().toLowerCase();
+  const recoveryHostMode = String(
+    uiRecovery.recovery_host_runtime_mode
+      || uiRecovery.runtime_mode
+      || ''
+  ).trim().toLowerCase();
+  const currentUiInstallation = String(snapshot.current_ui_runtime?.installation_id || '').trim().toLowerCase();
+  const recoveryHostInstallation = String(
+    uiRecovery.recovery_host_installation_id
+      || ''
+  ).trim().toLowerCase();
+  const recoveryHostConnection = snapshot.recovery_host_connection || {};
+  const connectionMismatch = recoveryHostConnection.code === 'RECOVERY_HOST_INSTALLATION_MISMATCH';
+  const identityUnverified = currentUiMode === 'packaged' && (
+    !currentUiInstallation
+    || !recoveryHostInstallation
+    || recoveryHostConnection.state === 'identity_unverified'
+    || recoveryHostConnection.code === 'RECOVERY_HOST_IDENTITY_UNVERIFIED'
+  );
+  const installationMismatch = Boolean(
+    currentUiMode
+    && recoveryHostMode
+    && currentUiMode !== recoveryHostMode
+  ) || Boolean(
+    currentUiInstallation
+    && recoveryHostInstallation
+    && currentUiInstallation !== recoveryHostInstallation
+  ) || connectionMismatch;
   const status = snapshot?.status || {};
   const centralStatusReason = String(status.centralStatusReason || '').trim();
   const packagedRequired = [enrollment?.error_code, authority?.error_code]
     .some((code) => /PACKAGED_REQUIRED|candidate packaged/.test(String(code || '')));
   const packagedRuntimeMissing = [enrollment?.error_code, authority?.error_code]
     .some((code) => /RUNTIME_MISSING/.test(String(code || '')));
-  if (mode === 'development' || packagedRequired) return {
+  if (currentUiMode === 'packaged' && installationMismatch) return {
+    key: 'runtime-mismatch', owner: 'TRÊN WINDOWS', title: 'Recovery Host không cùng bản cài đặt',
+    detail: `Cửa sổ hiện tại là bản packaged nhưng Recovery Host đang chạy ở installation khác (${recoveryHostMode || 'chưa xác minh'}). Đóng runtime development còn giữ phiên, rồi mở lại bản Coding Tools MCP đã cài; không gửi lại pairing hoặc đăng ký workspace để né lỗi.`,
+    action: 'details', actionLabel: 'Xem chi tiết runtime'
+  };
+  if (identityUnverified) return {
+    key: 'runtime-unverified', owner: 'TRÊN WINDOWS', title: 'Chưa xác minh Recovery Host của bản cài đặt',
+    detail: 'Cửa sổ đã nhận diện là packaged nhưng chưa chứng minh được Recovery Host thuộc đúng installation. Đóng các runtime khác, mở lại bản Coding Tools MCP đã cài và kiểm tra lại trước khi pairing hoặc cấp quyền.',
+    action: 'details', actionLabel: 'Xem chi tiết runtime'
+  };
+  if (currentUiMode === 'development' || packagedRequired) return {
     key: 'development', owner: 'TRÊN WINDOWS', title: 'Cần bản cài đặt để hoàn tất kết nối',
     detail: 'Bạn đang chạy npm start. Mở bản Coding Tools MCP đã cài và được xác minh để duyệt máy, thêm thư mục và kiểm tra quyền. Bật Ubuntu hoặc bấm kiểm tra lại không gỡ giới hạn của bản dev.',
     action: 'details', actionLabel: 'Xem hướng dẫn kết nối'
@@ -280,7 +323,7 @@ function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null
     detail: 'Candidate packaged không có đủ Python hoặc node-agent để kiểm tra/enrollment. Cài lại đúng gói đã xác minh; không gửi lại yêu cầu và không duyệt máy mới để né lỗi.',
     action: 'check', actionLabel: 'Kiểm tra lại bản cài'
   };
-  if (mode !== 'packaged') return {
+  if (currentUiMode !== 'packaged') return {
     key: 'runtime-unverified', owner: 'TRÊN WINDOWS', title: 'Chưa xác minh bản chạy của máy này',
     detail: 'Không thể xác nhận cửa sổ đang dùng bản cài packaged đã được xác minh. Giữ pairing, workspace và policy ở trạng thái đóng; mở bản cài đặt đúng hoặc kiểm tra lại runtime trước khi tiếp tục.',
     action: 'details', actionLabel: 'Xem chi tiết runtime'
@@ -350,7 +393,7 @@ function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null
 }
 
 function centralSetupRuntimeBlocked(guidance = centralSetupGuidance(state.snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus)) {
-  return ['development', 'runtime-unverified', 'runtime-missing'].includes(guidance?.key);
+  return ['development', 'runtime-mismatch', 'runtime-unverified', 'runtime-missing'].includes(guidance?.key);
 }
 
 function centralSetupDevelopmentBlocked() {
@@ -363,7 +406,9 @@ function assertPackagedCentralSetup(action) {
     const guidance = centralSetupGuidance(state.snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus);
     const detail = guidance?.key === 'runtime-missing'
       ? 'Bản cài đặt đang thiếu Python hoặc node-agent đóng gói; cài lại candidate đã xác minh.'
-      : 'npm start chỉ hỗ trợ preview và chẩn đoán; hãy mở bản cài đặt packaged đã được xác minh.';
+      : guidance?.key === 'runtime-mismatch'
+        ? 'Recovery Host đang thuộc installation khác; đóng runtime development còn giữ phiên rồi mở lại đúng bản cài packaged.'
+        : 'npm start chỉ hỗ trợ preview và chẩn đoán; hãy mở bản cài đặt packaged đã được xác minh.';
     throw new Error(`${action} cần runtime packaged hợp lệ. ${detail}`);
   }
 }
@@ -379,6 +424,9 @@ function renderConnectionGuidance(snapshot) {
     if (guidance.key === 'development') {
       if (title) title.textContent = 'Bạn đang dùng bản phát triển · npm start';
       if (detail) detail.textContent = 'Bản này dùng để phát triển giao diện. Các bước xác minh máy, thư mục và quyền Ubuntu cần bản cài đặt đã được xác minh. Máy chủ đang bật không đồng nghĩa máy Windows đã được cấp quyền.';
+    } else if (guidance.key === 'runtime-mismatch') {
+      if (title) title.textContent = 'Recovery Host không cùng bản cài đặt';
+      if (detail) detail.textContent = 'Cửa sổ hiện tại là packaged nhưng Recovery Host thuộc installation khác, thường do runtime development còn giữ single-instance lock. Đóng runtime kia rồi mở lại bản Coding Tools MCP đã cài.';
     } else if (guidance.key === 'runtime-unverified') {
       if (title) title.textContent = 'Chưa xác minh bản packaged';
       if (detail) detail.textContent = 'Không thể xác nhận runtime hiện tại là bản cài đặt packaged đã được xác minh. Không gửi pairing hoặc cấp policy từ cửa sổ này; kiểm tra lại runtime trước.';
@@ -1289,6 +1337,11 @@ function renderRuntimeSourceStatus(snapshot) {
   const route = centralRoutePresentation(status);
   const recoveryHost = snapshot?.recoveryHost || {};
   const uiRecovery = recoveryHost.electron_ui_recovery || {};
+  const currentUiMode = String(snapshot?.current_ui_runtime?.mode || uiRecovery.ui_runtime_mode || '').trim() || 'unknown';
+  const recoveryHostMode = String(uiRecovery.recovery_host_runtime_mode || uiRecovery.runtime_mode || '').trim() || 'unknown';
+  const uiIdentityLabel = currentUiMode === recoveryHostMode
+    ? `UI ${currentUiMode}`
+    : `UI ${currentUiMode} · Recovery Host ${recoveryHostMode}`;
   const electron = componentSourcePresentation(recoveryHost.electron_ui_revision, {
     running: uiRecovery.alive === true,
     label: 'Electron UI'
@@ -1308,7 +1361,7 @@ function renderRuntimeSourceStatus(snapshot) {
       : { state: 'STOPPED', detail: 'Tunnel hiện chưa kết nối.' });
   const sourcePresentations = [electron, recovery, coding];
   const bindings = [
-    ['#runtimeElectronState', '#runtimeElectronMeta', electron, uiRecovery.pid ? `PID ${uiRecovery.pid} · ${uiRecovery.runtime_mode || 'unknown'} · ${electron.detail}` : electron.detail],
+    ['#runtimeElectronState', '#runtimeElectronMeta', electron, uiRecovery.pid ? `PID ${uiRecovery.pid} · ${uiIdentityLabel} · ${electron.detail}` : `${uiIdentityLabel} · ${electron.detail}`],
     ['#runtimeRecoveryState', '#runtimeRecoveryMeta', recovery, recovery.detail],
     ['#runtimeMcpSourceState', '#runtimeMcpSourceMeta', coding, coding.detail],
     ['#runtimeTunnelSourceState', '#runtimeTunnelSourceMeta', tunnel, tunnel.detail]
@@ -2307,6 +2360,8 @@ function applyHeartbeat(status) {
   });
   if (status.recoveryHost) state.snapshot.recoveryHost = status.recoveryHost;
   else delete state.snapshot.recoveryHost;
+  if (status.current_ui_runtime) state.snapshot.current_ui_runtime = status.current_ui_runtime;
+  if (status.recovery_host_connection) state.snapshot.recovery_host_connection = status.recovery_host_connection;
   if (status.device) state.snapshot.device = status.device;
   renderRecoveryTunnelSettings(state.snapshot);
   renderDevice(state.snapshot);

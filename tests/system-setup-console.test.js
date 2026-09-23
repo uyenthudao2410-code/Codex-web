@@ -165,10 +165,29 @@ function guidanceFunction() {
 test('central setup guidance keeps development, stale authority and local runtime blockers distinct', () => {
   const guidance = guidanceFunction();
   const base = {
-    recoveryHost: { electron_ui_recovery: { runtime_mode: 'packaged' } },
+    current_ui_runtime: { mode: 'packaged', installation_id: 'a'.repeat(64) },
+    recoveryHost: { electron_ui_recovery: { runtime_mode: 'packaged', recovery_host_runtime_mode: 'packaged', recovery_host_installation_id: 'a'.repeat(64) } },
     status: { centralConnected: true, authorityReady: false }
   };
-  assert.equal(guidance({ ...base, recoveryHost: { electron_ui_recovery: { runtime_mode: 'development' } } }, { state: 'approved', fresh: true }, null).key, 'development');
+  assert.equal(guidance({
+    ...base,
+    current_ui_runtime: { mode: 'development', installation_id: 'b'.repeat(64) },
+    recoveryHost: { electron_ui_recovery: { runtime_mode: 'development', recovery_host_runtime_mode: 'development', recovery_host_installation_id: 'b'.repeat(64) } }
+  }, { state: 'approved', fresh: true }, null).key, 'development');
+  assert.equal(guidance({
+    ...base,
+    recoveryHost: { electron_ui_recovery: { runtime_mode: 'development', recovery_host_runtime_mode: 'development', recovery_host_installation_id: 'b'.repeat(64) } }
+  }, { state: 'approved', fresh: true }, null).key, 'runtime-mismatch');
+  assert.equal(guidance({
+    ...base,
+    current_ui_runtime: { mode: 'packaged' },
+    recoveryHost: { electron_ui_recovery: { runtime_mode: 'packaged', recovery_host_runtime_mode: 'packaged' } },
+    recovery_host_connection: { state: 'identity_unverified', code: 'RECOVERY_HOST_IDENTITY_UNVERIFIED' }
+  }, { state: 'approved', fresh: true }, null).key, 'runtime-unverified');
+  assert.equal(guidance({
+    ...base,
+    recovery_host_connection: { state: 'blocked', code: 'RECOVERY_HOST_INSTALLATION_MISMATCH' }
+  }, { state: 'approved', fresh: true }, null).key, 'runtime-mismatch');
   assert.equal(guidance(base, { state: 'pending_operator_approval', fresh: true }, null).key, 'pending');
   assert.equal(guidance(base, { state: 'approved', fresh: true }, { state: 'active', fresh: false }).key, 'authority-stale');
   assert.equal(guidance({ ...base, status: { ...base.status, centralStatusReason: 'LOCAL_EXECUTOR_NOT_READY' } }, { state: 'approved', fresh: true }, { state: 'active', fresh: true }).key, 'local-executor');

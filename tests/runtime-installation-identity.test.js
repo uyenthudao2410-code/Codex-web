@@ -66,6 +66,22 @@ test('installation identity contains no raw checkout path', () => {
   assert.match(identity.installation_id, /^[a-f0-9]{64}$/);
 });
 
+test('a foreign Recovery Host fallback client refuses all mutating RPCs', async () => {
+  const client = new RecoveryIpcClient({
+    paths: {},
+    readOnlyError: {
+      code: 'RECOVERY_HOST_INSTALLATION_MISMATCH',
+      message: 'foreign host'
+    }
+  });
+  for (const action of ['runtime.start', 'runtime.stop', 'runtime.restart', 'client.register_ui_revision', 'runtime.control_plane_exec']) {
+    await assert.rejects(client.call(action, []), {
+      code: 'RECOVERY_HOST_INSTALLATION_MISMATCH',
+      recoveryResponseReceived: false
+    }, action);
+  }
+});
+
 test('Recovery IPC descriptor publishes installation identity and binds requests to owner identity', async (t) => {
   const paths = runtimeFixture(t);
   const instanceId = 'runtime-installation-host-0001';

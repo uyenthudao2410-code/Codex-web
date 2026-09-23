@@ -79,6 +79,21 @@ const READY_CONNECTOR_FUTURE_SKEW_MS = 5_000;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+function uiInstallationMismatchError(expectedIdentity, observedIdentity) {
+  return Object.assign(
+    new Error('Electron UI belongs to another application checkout or installation.'),
+    {
+      code: 'RECOVERY_HOST_INSTALLATION_MISMATCH',
+      details: {
+        expected_installation_id: expectedIdentity?.installation_id || null,
+        observed_installation_id: observedIdentity?.installation_id || null,
+        expected_runtime_mode: expectedIdentity?.mode || null,
+        observed_runtime_mode: observedIdentity?.mode || null
+      }
+    }
+  );
+}
+
 function isProcessAlive(pid) {
   if (!Number.isInteger(Number(pid)) || Number(pid) <= 0) return false;
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
@@ -826,6 +841,10 @@ class RecoveryHost {
   uiRecoveryStatus({ presence = null, preferCachedPresence = false } = {}) {
     const now = Date.now();
     const preference = this.activation.uiRecoveryPreferenceStatus();
+    const hostRuntimeIdentity = typeof this.paths.runtimeIdentity === 'function'
+      ? this.paths.runtimeIdentity()
+      : null;
+    const registeredUi = this.activation.uiRegistration || {};
     const observedPresence = presence && typeof presence === 'object'
       ? presence
       : this.activation.uiPresence({ preferCached: preferCachedPresence });
@@ -847,7 +866,17 @@ class RecoveryHost {
       pid: observedPresence.pid || null,
       instance_id: observedPresence.instance_id || null,
       started_at_unix_ms: Number(this.activation.uiRegistration?.started_at_unix_ms || 0) || null,
-      runtime_mode: typeof this.paths.runtimeMode === 'function' ? this.paths.runtimeMode() : null,
+      // `runtime_mode` is retained for compatibility and describes the
+      // Recovery Host. The explicit fields below keep host and UI identity
+      // separate so a packaged UI cannot be labelled as npm start merely
+      // because it is reading a development host projection.
+      runtime_mode: hostRuntimeIdentity?.mode
+        || (typeof this.paths.runtimeMode === 'function' ? this.paths.runtimeMode() : null),
+      recovery_host_runtime_mode: hostRuntimeIdentity?.mode
+        || (typeof this.paths.runtimeMode === 'function' ? this.paths.runtimeMode() : null),
+      recovery_host_installation_id: hostRuntimeIdentity?.installation_id || null,
+      ui_runtime_mode: registeredUi.runtime_mode || null,
+      ui_installation_id: registeredUi.installation_id || null,
       suppressed: preference.suppressed,
       suppression_reason: preference.reason || '',
       attempts_in_window: this.uiRecoveryAttempts.length,
@@ -2368,6 +2397,23 @@ class RecoveryHost {
       },
       'code.activation_status': async (operationId) => this.activation.status(operationId),
       'client.register_ui_revision': async (registration) => {
+        const expectedIdentity = typeof this.paths.runtimeIdentity === 'function'
+          ? this.paths.runtimeIdentity()
+          : null;
+        const suppliedMode = String(registration?.runtime_mode || '').trim().toLowerCase();
+        const suppliedInstallationId = String(registration?.installation_id || '').trim().toLowerCase();
+        if (suppliedMode || suppliedInstallationId) {
+          const observedIdentity = {
+            version: 1,
+            mode: suppliedMode,
+            installation_id: suppliedInstallationId
+          };
+          if (!expectedIdentity
+            || suppliedMode !== expectedIdentity.mode
+            || suppliedInstallationId !== expectedIdentity.installation_id) {
+            throw uiInstallationMismatchError(expectedIdentity, observedIdentity);
+          }
+        }
         const result = await this.activation.registerUi(registration);
         this.resetUiRecoveryTracking('healthy');
         return result;

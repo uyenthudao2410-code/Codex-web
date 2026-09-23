@@ -138,7 +138,11 @@ function uiObservation(status = {}) {
     pid: Number(recovery.pid || 0) || null,
     instanceId: String(recovery.instance_id || '') || null,
     startedAtUnixMs: Number(recovery.started_at_unix_ms || 0) || null,
-    runtimeMode: String(recovery.runtime_mode || '') || null,
+    // `runtime_mode` is the Recovery Host's legacy field.  Prefer the
+    // explicit UI identity so a packaged UI attached to a development host
+    // cannot be reported as an npm-start window.
+    runtimeMode: String(recovery.ui_runtime_mode || recovery.runtime_mode || '') || null,
+    installationId: String(recovery.ui_installation_id || '') || null,
     runningRevision,
     diskRevision,
     revisionState: String(revision.state || '') || null,

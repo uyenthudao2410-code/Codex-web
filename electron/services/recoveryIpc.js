@@ -378,13 +378,29 @@ function assertExpectedDescriptor(descriptor, options = {}) {
 }
 
 class RecoveryIpcClient {
-  constructor({ paths }) {
+  constructor({ paths, readOnlyError = null } = {}) {
     this.paths = paths;
+    this.readOnlyError = readOnlyError && typeof readOnlyError === 'object'
+      ? {
+        code: String(readOnlyError.code || 'RECOVERY_HOST_CONNECTION_BLOCKED').slice(0, 80),
+        message: String(readOnlyError.message || 'Recovery Host connection is read-only until the runtime identity is reconciled.').slice(0, 1000),
+        ...(readOnlyError.details && typeof readOnlyError.details === 'object'
+          ? { details: readOnlyError.details }
+          : {})
+      }
+      : null;
   }
 
   call(action, args = [], options = {}) {
     if (!RPC_ACTIONS.includes(action)) {
       return Promise.reject(Object.assign(new Error('Recovery action is not allowlisted.'), { code: 'ACTION_NOT_ALLOWED' }));
+    }
+    if (this.readOnlyError && MUTATING_ACTIONS.has(action)) {
+      return Promise.reject(Object.assign(new Error(this.readOnlyError.message), {
+        code: this.readOnlyError.code,
+        details: this.readOnlyError.details || null,
+        recoveryResponseReceived: false
+      }));
     }
     let descriptor;
     try {

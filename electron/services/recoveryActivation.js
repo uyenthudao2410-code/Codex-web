@@ -27,6 +27,8 @@ const MAX_REQUEST_TTL_MS = 60_000;
 const CLOCK_SKEW_MS = 5_000;
 const UI_RECOVERY_STATE_VERSION = 1;
 const UI_RECOVERY_EXIT_REASONS = new Set(['operator_quit', 'runtime_stop']);
+const UI_RUNTIME_MODES = new Set(['development', 'packaged']);
+const UI_INSTALLATION_ID_PATTERN = /^[a-f0-9]{64}$/;
 const SOURCE_CHECKPOINT_FIELDS = new Set(['checkpoint_id', 'run_id', 'wave_id', 'proof_fingerprint', 'git_head']);
 const SOURCE_ID_MAX_LENGTH = 256;
 const GIT_OBJECT_ID_PATTERN = /^[a-f0-9]{40,64}$/;
@@ -992,18 +994,28 @@ class RecoveryActivation {
   }
 
   async registerUi(input) {
-    const value = exactObject(input, new Set(['instance_id', 'pid', 'revision', 'started_at_unix_ms', 'activation_epoch_id']), 'UI registration');
+    const value = exactObject(input, new Set([
+      'instance_id', 'pid', 'revision', 'started_at_unix_ms', 'activation_epoch_id',
+      'runtime_mode', 'installation_id'
+    ]), 'UI registration');
+    const runtimeMode = String(value.runtime_mode || '').trim().toLowerCase() || null;
+    const installationId = String(value.installation_id || '').trim().toLowerCase() || null;
     const registration = {
       instance_id: String(value.instance_id || ''),
       pid: Number(value.pid || 0),
       revision: String(value.revision || '').toLowerCase(),
       started_at_unix_ms: Number(value.started_at_unix_ms || 0),
       activation_epoch_id: String(value.activation_epoch_id || '').trim() || null,
+      runtime_mode: runtimeMode,
+      installation_id: installationId,
       registered_at_unix_ms: this.now()
     };
     if (!INSTANCE_ID_PATTERN.test(registration.instance_id) || !Number.isSafeInteger(registration.pid) || registration.pid <= 0
       || !REVISION_PATTERN.test(registration.revision) || !Number.isSafeInteger(registration.started_at_unix_ms)
-      || registration.started_at_unix_ms > this.now() + CLOCK_SKEW_MS) {
+      || registration.started_at_unix_ms > this.now() + CLOCK_SKEW_MS
+      || (runtimeMode === null) !== (installationId === null)
+      || (runtimeMode !== null && !UI_RUNTIME_MODES.has(runtimeMode))
+      || (installationId !== null && !UI_INSTALLATION_ID_PATTERN.test(installationId))) {
       throw activationError('INVALID_UI_REGISTRATION', 'Electron UI registration is invalid.');
     }
     let observed;
