@@ -16,6 +16,41 @@
 > runtime đã `CURRENT` về mặt kỹ thuật, nhưng connector strict discovery, real
 > `workspace_context`, admission mở và `LIVE_ACCEPTED` vẫn chưa có.
 
+## Current executive checkpoint — 23-09-2026, sau 10:50 +07
+
+Đây là checkpoint hiện hành; các Wave cũ bên dưới là chronology và không được
+đọc như live state mới hơn checkpoint này.
+
+```text
+branch / HEAD / origin       = main / 5f71c311 / 5f71c311
+source worktree              = clean (chỉ runtime evidence .coding-tools dirty)
+npm start                    = exit 0
+UI                           = CURRENT, PID 35920, instance bd451991…
+MCP/native/components        = true / true / true
+fully_ready / update_incomp = true / false
+execution_role               = central_executor
+central_connected/authority  = true / true
+tunnel_running               = false (đúng execution role)
+connector                    = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered       = false
+connector_refresh_required   = true
+client / live_accepted       = null / false
+```
+
+Commit `3cf53cc9` sửa false-negative trong lifecycle `runtimeReadiness()`: role
+`central_executor` chỉ yêu cầu MCP/native cùng central route/authority, còn
+`direct_legacy` vẫn yêu cầu local Tunnel. Focused lifecycle suite đạt `72/72`;
+regression sweep sau delivery đạt `283` Node tests và `97` Python tests cùng
+`4` subtests. Đây là source/runtime proof, không phải strict client discovery.
+
+Các gate hiện vẫn đóng: current-process `tools/list`/`server/discover`, real
+`workspace_context` có attested client, reboot/logon acceptance, Machine B và
+fault matrix, natural Problem/Goal outcome, P4/P5 evidence và economics
+promotion. Phiên desktop hiện không có supported app/browser surface để tạo
+receipt (`apps=[]`, `browsers=[]`, `Codex auth token is unavailable`), nên giữ
+`WAITING_FOR_SUPPORTED_CONNECTOR`; không dùng local probe, raw HTTP hoặc ACK
+thủ công thay thế.
+
 ## Checkpoint Wave 48 — Ubuntu exact-HEAD rollout và central MCP recheck — 23-09-2026, 09:28–09:33 +07
 
 Sau khi SSH/Tailscale được xác thực lại, source authority trên Windows và

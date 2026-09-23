@@ -2524,3 +2524,77 @@ reboot hoặc Machine B action.
 mà là supported-client discovery/provenance và các acceptance/outcome gate
 được liệt kê ở §15.24. Working tree sau recapture chỉ dirty ở runtime
 evidence `.coding-tools/**`; `HEAD == origin/main == 0f41defd`.
+
+## 15.26. Regression sweep và executive-state reconciliation — 23/09/2026 11:00 +07
+
+Để tìm source gap còn có thể xử lý cục bộ thay vì lặp lại full-clean refresh,
+đã chạy regression sweep trên đúng `main`, không tạo RUN/lease, không mutate
+ledger và không restart thêm process:
+
+```text
+node --test \
+  tests/boot-acceptance.test.js \
+  tests/boot-runtime-observation.test.js \
+  tests/activation-closure.test.js \
+  tests/recovery-bootstrap.test.js \
+  tests/full-clean-activation-command.test.js \
+  tests/runtime-lifecycle.test.js \
+  tests/recovery-host.test.js
+283 passed, 0 failed
+
+python -B -m pytest \
+  tests/test_goal_pursuit.py \
+  tests/test_run_continuation.py \
+  tests/test_continuation_consent_http.py \
+  tests/test_controller_continuity.py \
+  tests/test_controller_reattach.py \
+  tests/test_continuity_telemetry.py -q
+97 passed, 4 subtests passed
+```
+
+Sweep này bao phủ lại các invariant boot/reboot oracle, role-aware central
+readiness, exact connector receipt, activation closure, Recovery Host handoff,
+semantic stop/rollback safety, durable Goal continuation, parent budget,
+unknown-effect reconciliation, idempotent dispatch journal và controller
+reattach. Không còn failure source nào trong các packet này để sửa tiếp mà
+không có bằng chứng mới.
+
+### Kiểm tra lại supported client surface
+
+Computer Use inventory read-only trong phiên hiện tại trả:
+
+```text
+apps     = []
+browsers = []
+error    = Codex auth token is unavailable
+```
+
+Vì vậy không có target UI/browser hợp lệ để tạo receipt current-process
+`tools/list`/`server/discover` và real `workspace_context`. Đây là external
+authority gap, không phải test failure. Không login, không nhập credential,
+không gọi raw HTTP, không tạo tunnel/ACK giả và không đổi connector state.
+
+### Reconciliation với tài liệu điều hành
+
+`docs/CURRENT_STATE.md` đã được thêm executive checkpoint mới, giữ nguyên các
+Wave cũ như chronology. Current source/runtime truth hiện là:
+
+```text
+HEAD == origin/main = 5f71c311
+npm start           = exit 0
+central_executor   = MCP/native/central route ready, no local Tunnel required
+connector          = CHANGED_NEEDS_DISCOVERY, rediscovered=false
+```
+
+Mức proof không đổi:
+
+```text
+SOURCE_PRESENT + FOCUSED_PROOF + CONTROLLED_PROCESS/CENTRAL_RUNTIME_READY
+```
+
+Chưa đạt `STRICT_REDISCOVERED`, `LIVE_ACCEPTED`,
+`PACKAGED_REBOOT_ACCEPTED`, `NATURAL_PROBLEM_OUTCOME` hoặc
+`ECONOMICS_POLICY`. Vì vậy hai Problem vẫn `OPEN`; exact next action vẫn là
+khôi phục supported connector surface, bind discovery/workspace read exact,
+rồi mới chạy reboot/fault/natural canary theo thứ tự đã nêu. Nếu surface không
+xuất hiện, giữ `WAITING_FOR_SUPPORTED_CONNECTOR` thay vì lặp full-clean.
