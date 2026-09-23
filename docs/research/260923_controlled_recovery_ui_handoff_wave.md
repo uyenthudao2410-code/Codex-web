@@ -2215,3 +2215,132 @@ rồi gọi một `workspace_context` thật trên `E:\\DEV\\Codex-web`. Nếu c
 không xuất hiện, terminalize ở `WAITING_FOR_SUPPORTED_CONNECTOR`; không refresh
 mù, không ACK thủ công, không bulk reconcile 17 stale candidates, không reboot,
 không mở P5 và không đóng hai Problem.
+
+## 15.23. Sửa false-negative `npm start` cho central executor — 23/09/2026 10:39 +07
+
+Wave này xử lý một lỗi source đã tái hiện được trong lifecycle CLI; không dùng
+worktree, không reset/clean, không sửa ledger trực tiếp và không coi connector
+đã được rediscover.
+
+### Reproduction và nguyên nhân đã định kiểu
+
+Trước patch, với đúng runtime hiện hành:
+
+```text
+node scripts/dev-ui-lifecycle.js start
+exit=1
+DEV_UI UI_CURRENT action=start pid=800 instance=2c0d86958358703a691880ad6873ec0b ...
+DEV_UI RUNTIME_UNAVAILABLE action=start reason=runtime_components_not_ready
+  mcp_running=true native_alive=true tunnel_running=false
+```
+
+Read-only `npm run dev:status` ngay cùng wave xác nhận:
+
+```text
+UI                         = CURRENT, PID 800, instance 2c0d86958358703a691880ad6873ec0b
+Recovery/MCP revision      = running == disk, update_pending=false
+MCP/native/components      = true / true / true
+fully_ready/update_incomp  = true / false
+execution role             = central_executor
+central connected/authority= true / true
+connector                  = CHANGED_NEEDS_DISCOVERY / rediscovered=false
+connector_refresh_required = true
+```
+
+Typed cause là `createRuntimeDependencies().runtimeReadiness()` chỉ đánh giá
+`mcpRunning && nativeAlive && tunnelRunning`. Điều kiện này đúng với
+`direct_legacy` nhưng sai với `central_executor`, nơi không có local Coding
+Tunnel theo contract. Trong khi đó `refreshRuntimeReady()` và Recovery Host
+đã có predicate role-aware; vì vậy `npm run dev:refresh` có thể ghi nhận
+`tunnel=not-required` còn `npm start` lại false-negative.
+
+### Thay đổi source và test hồi quy
+
+`scripts/dev-ui-lifecycle.js` nay dùng helper
+`runtimeReadinessFromSnapshot()`:
+
+```text
+central_executor = mcpRunning && nativeAlive && centralConnected && authorityReady
+direct_legacy    = mcpRunning && nativeAlive && tunnelRunning
+unknown role     = giữ tunnel requirement để fail-closed
+```
+
+Helper chỉ thay readiness của local/central runtime; nó không tự đặt
+`connectorRediscovered`, không bỏ qua `connector_refresh_required`, không mở
+admission và không biến `fully_ready` thành strict client acceptance.
+
+`tests/dev-ui-lifecycle.test.js` bổ sung regression chứng minh:
+
+1. central executor có `tunnelRunning=false` nhưng central route/authority
+   đầy đủ được coi là ready và `start` không trả `RUNTIME_UNAVAILABLE`;
+2. direct legacy vẫn bị từ chối khi tunnel chưa chạy;
+3. connector pending không được biến thành connector-ready bởi start.
+
+Focused proof:
+
+```text
+node --test tests/dev-ui-lifecycle.test.js
+72 passed, 0 failed
+git diff --check
+clean
+```
+
+### Live acceptance sau patch
+
+```text
+node scripts/dev-ui-lifecycle.js start
+exit=0
+DEV_UI CURRENT action=start pid=800 instance=2c0d86958358703a691880ad6873ec0b ...
+  runtime=ready mcp_running=true native_alive=true tunnel_running=false
+```
+
+`npm run dev:status` sau patch vẫn giữ đúng fail-closed boundary:
+
+```text
+state=CURRENT, components_ready=true, fully_ready=true
+runtime_update_incomplete=false
+connector_state=CHANGED_NEEDS_DISCOVERY
+connector_rediscovered=false
+connector_refresh_required=true
+```
+
+Do đó patch đã đóng đúng lỗi lifecycle false-negative cho
+`central_executor`; nó **không** đóng strict connector, real
+`workspace_context`, reboot/logon acceptance, Machine B/right endpoint,
+host-only/tunnel fault matrix, natural-use hoặc independent outcome.
+
+### Chỉ số knowledge/evaluation và Problem state không đổi
+
+Các số liệu canonical gần nhất vẫn là snapshot ở §15.22, không được đọc như
+success rate:
+
+```text
+ledger schema/integrity/FK       = 12 / ok / 0
+ordinary active runs             = 17 (stale candidates, không phải live jobs)
+P5 epochs                        = 6, EPOCH_HARD_STOPPED
+P4                              = COLLECTING, empirical_complete=false
+P4 shadow/terminal/raw/causal    = 100 / 98 / 20 / 0; unknown=29
+independent confirmations        = 3/49 = 0.061224 (coverage, không phải app success)
+```
+
+`prl-22e670302757c9b7663170e226ed7c26` rev1 vẫn `OPEN` (47 accepted / 16
+aborted / 3 active / 66 RUN) và `prl-e918c7d33e70c2d304d0797e11b05fcb`
+rev2 vẫn `OPEN` (16 / 10 / 13 = 39 RUN). Focused proof trước đó vẫn chỉ là
+source/technical proof; chưa có provider dispatch sau response, natural Goal,
+real-client discovery/workspace read hoặc independent Problem outcome.
+
+### Operator checkpoint
+
+Đã hoàn tất một source repair có typed cause và live postflight proof. Trạng
+thái mạnh nhất hiện tại là `SOURCE_PRESENT + FOCUSED_PROOF +
+CENTRAL_RUNTIME_READY`; chưa phải `STRICT_REDISCOVERED`, `LIVE_ACCEPTED`,
+`PACKAGED_REBOOT_ACCEPTED`, `NATURAL_PROBLEM_OUTCOME` hay
+`ECONOMICS_POLICY`.
+
+Exact next action là chạy delivery staging/check cho toàn bộ `.coding-tools`
+theo retention invariant, review staged scope rồi commit/push patch trực tiếp
+trên `main`. Sau delivery chỉ được tiếp tục bằng supported ChatWeb/Coding
+Tools client để lấy current-process `tools/list` hoặc `server/discover` và một
+`workspace_context` thật; nếu surface vẫn không xuất hiện, giữ
+`WAITING_FOR_SUPPORTED_CONNECTOR`, không refresh mù, không ACK thủ công,
+không reboot/Machine B, không mở P5 và không đóng hai Problem.

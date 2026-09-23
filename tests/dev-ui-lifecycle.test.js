@@ -12,6 +12,7 @@ const {
   unavailableObservation,
   createRuntimeDependencies,
   refreshLifecycle,
+  runtimeReadinessFromSnapshot,
   refreshRuntimeReady,
   classifyRefreshEpoch,
   previousRefreshIdentitiesFromRecord,
@@ -299,6 +300,42 @@ test('dev focuses an exact current UI and reports process plus revision postflig
   assert.match(fixture.lines.at(-1), /DEV_UI CURRENT action=start pid=42001/);
   assert.match(fixture.lines.at(-1), new RegExp(`running_revision=${REVISION} disk_revision=${REVISION}`));
   assert.match(fixture.lines.at(-1), /runtime=ready mcp_running=true native_alive=true tunnel_running=true/);
+});
+
+test('start postflight accepts a central executor without a local tunnel and keeps direct legacy fail-closed', async () => {
+  const centralRuntime = runtimeReadinessFromSnapshot({
+    executionRole: 'central_executor',
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false,
+    centralConnected: true,
+    authorityReady: true,
+    fullyReady: true,
+    connectorRediscovered: false,
+    connectorRefreshRequired: true
+  }, { ready: true });
+  assert.equal(centralRuntime.ready, true);
+  assert.equal(centralRuntime.executionRole, 'central_executor');
+  assert.equal(centralRuntime.tunnelRequired, false);
+  assert.equal(centralRuntime.tunnelRunning, false);
+
+  const fixture = harness(observation('CURRENT'));
+  fixture.deps.runtimeReadiness = async () => centralRuntime;
+  await runLifecycle('start', fixture.deps);
+  assert.match(fixture.lines.at(-1), /runtime=ready mcp_running=true native_alive=true tunnel_running=false/);
+  assert.equal(fixture.lines.some((line) => line.includes('RUNTIME_UNAVAILABLE')), false);
+
+  const directLegacy = runtimeReadinessFromSnapshot({
+    executionRole: 'direct_legacy',
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false,
+    centralConnected: true,
+    authorityReady: true
+  });
+  assert.equal(directLegacy.ready, false);
+  assert.equal(directLegacy.tunnelRequired, true);
+  assert.equal(directLegacy.reason, 'runtime_components_not_ready');
 });
 
 test('dev:control-center opens the manager through the exact current Electron instance', async () => {

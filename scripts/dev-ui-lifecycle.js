@@ -908,18 +908,7 @@ function createRuntimeDependencies(options = {}) {
           error_code: String(error?.code || 'RECOVERY_REQUEST_FAILED')
         };
       }
-      const mcpRunning = runtime?.mcpRunning === true;
-      const nativeAlive = runtime?.nativeAlive === true;
-      const tunnelRunning = runtime?.tunnelRunning === true;
-      return {
-        ready: mcpRunning && nativeAlive && tunnelRunning,
-        reason: mcpRunning && nativeAlive && tunnelRunning ? 'ready' : 'runtime_components_not_ready',
-        runtime,
-        recovery,
-        mcpRunning,
-        nativeAlive,
-        tunnelRunning
-      };
+      return runtimeReadinessFromSnapshot(runtime, recovery);
     },
     launch: () => spawnElectron(executable, appRoot, [], { spawnProcess, detached: true, windowsHide: false }),
     signal: (action, instanceId) => {
@@ -1071,6 +1060,40 @@ function reportCurrent(deps, observation, action, runtime) {
     `tunnel_running=${runtime.tunnelRunning === true ? 'true' : 'false'}`
   ].join(' '));
   return observation;
+}
+
+function runtimeReadinessFromSnapshot(runtime, recovery = null) {
+  const executionRole = String(
+    runtime?.executionRole
+      || runtime?.execution_role
+      || ''
+  ).trim().toLowerCase() || null;
+  const centralExecutor = executionRole === 'central_executor';
+  // A central executor deliberately has no local Coding Tunnel.  Unknown and
+  // direct_legacy roles stay fail-closed on the historical tunnel requirement.
+  const tunnelRequired = !centralExecutor;
+  const mcpRunning = runtime?.mcpRunning === true;
+  const nativeAlive = runtime?.nativeAlive === true;
+  const tunnelRunning = runtime?.tunnelRunning === true;
+  const centralConnected = runtime?.centralConnected === true;
+  const authorityReady = runtime?.authorityReady === true;
+  const ready = mcpRunning && nativeAlive
+    && (centralExecutor
+      ? centralConnected && authorityReady
+      : tunnelRunning);
+  return {
+    ready,
+    reason: ready ? 'ready' : 'runtime_components_not_ready',
+    runtime,
+    recovery,
+    executionRole,
+    tunnelRequired,
+    mcpRunning,
+    nativeAlive,
+    tunnelRunning,
+    centralConnected,
+    authorityReady
+  };
 }
 
 async function runtimePostflight(deps, initial) {
@@ -1836,6 +1859,7 @@ module.exports = {
   refreshLifecycle,
   runLifecycle,
   lifecycleError,
+  runtimeReadinessFromSnapshot,
   refreshOperationId,
   refreshRuntimeReady,
   classifyRefreshEpoch,
