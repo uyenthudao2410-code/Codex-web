@@ -7,7 +7,7 @@
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
 > trước. Checkpoint Windows hiện hành là **23-09-2026, 11:54 +07** tại
-> `main @ 7792b2a89aa44ee0ae6dc0235dcac19f96b22d17`; source/test sạch, runtime
+> `main @ d8a24432d644697c31a0a72c3b91ed2e9374ea58`; source/test sạch, runtime
 > evidence `.coding-tools/**` tiếp tục được giữ theo retention policy. Ubuntu
 > control-plane vẫn chạy package release exact HEAD `e44b0a4613a780e2239027c085b54257e1df266c`
 > trong admission `recovery`; các commit sau đó không chạm `control-plane/` hay
@@ -22,7 +22,7 @@
 đọc như live state mới hơn checkpoint này.
 
 ```text
-branch / HEAD / origin       = main / 7792b2a8 / 7792b2a8
+branch / HEAD / origin       = main / d8a24432 / d8a24432
 source worktree              = clean (chỉ runtime evidence .coding-tools dirty)
 npm start                    = last controlled run exit 0 (not recaptured after docs-only commits)
 UI                           = MISSING, no registered live PID
