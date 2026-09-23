@@ -2827,3 +2827,39 @@ Tại thời điểm ghi checkpoint, bốn file source/test liên quan còn dirt
 không được gọi là packaged/reboot acceptance. Next action là stage/commit/push
 packet này trên `main`, sau đó recapture lại HEAD và giữ nguyên các gate
 connector/reboot/natural đang đóng.
+
+## 15.31. Checkpoint sau khi đưa packet identity lên main — 23/09/2026 11:40 +07
+
+Packet mutex theo runtime mode đã được stage cùng receipt `.coding-tools`,
+commit trực tiếp trên `main` và push thành công:
+
+```text
+HEAD / origin/main = b14463b31deadd599b8e4aa65f0e56686a45a2a6
+commit             = fix: isolate UI mutex by runtime mode
+focused suite      = 198 passed, 0 failed
+delivery guard     = PASS (4877 files)
+history guard      = PASS
+repository secrets = PASS
+```
+
+Sau Git operation, chỉ còn `.coding-tools/**` dirty do canonical ledger,
+task-context projection và performance telemetry tiếp tục chạy; không còn
+source/test diff ngoài packet đã giao. Đây là trạng thái `SOURCE_PRESENT +
+FOCUSED_PROOF + DELIVERED_MAIN`, chưa nâng thành runtime activation.
+
+Live evidence gần nhất ngay trước packet vẫn là:
+
+```text
+DEV_UI state=MISSING; host=available; installation=current
+components_ready=true; fully_ready=false; runtime_update_incomplete=true
+connector=CHANGED_NEEDS_DISCOVERY; rediscovered=false; refresh_required=true
+ledger schema/integrity/FK=12/ok/0; ordinary_active_runs=17; p5_epochs=6
+projection_drift=false; unexplained/unbound residues=0/0
+```
+
+Vì Computer Use vẫn không có supported client (`apps=[]`, `browsers=[]`,
+`Codex auth token is unavailable`), các gate sau chưa được chạy và không được
+đánh dấu PASS: strict `tools/list`/`server/discover`, real `workspace_context`,
+attested receipt, packaged reboot/logon, Machine B, fault matrix, 48-hour
+natural-use cho C01–C12, provider dispatch/real continuation và natural Goal
+cho BG01–BG14, independent outcome, P4/P5 promotion hoặc economics policy.

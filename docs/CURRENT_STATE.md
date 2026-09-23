@@ -81,15 +81,15 @@ ack_pending=false; error_code=none
 ```
 
 PID đăng ký cũ `35920` không còn sống. Đây là fail-closed source/activation
-drift, không phải bằng chứng rằng P1/P2 regression đã quay lại. Sau push
-`527bc7af`, source có thêm packet mutex mode-specific chưa commit; vì vậy
-working tree hiện không sạch ở bốn file packet này. Giữ nguyên
+drift, không phải bằng chứng rằng P1/P2 regression đã quay lại. Packet mutex
+mode-specific đã được giao lên `main` tại `b14463b3`; source/test hiện khớp
+`origin/main`, chỉ `.coding-tools/**` còn dirty theo retention policy. Giữ nguyên
 `WAITING_FOR_SUPPORTED_CONNECTOR`; không `dev:refresh`, reboot, ACK hay
 natural canary khi chưa có supported client surface và receipt attested.
 
-Focused suite sau packet mutex đạt `198 passed, 0 failed`; đây vẫn chỉ là
-`SOURCE_PRESENT + FOCUSED_PROOF`. Cần commit/push packet bổ sung và recapture
-identity trước khi gọi source baseline sạch.
+Focused suite sau packet mutex đạt `198 passed, 0 failed`; mức proof hiện là
+`SOURCE_PRESENT + FOCUSED_PROOF + DELIVERED_MAIN`, chưa phải runtime/package/
+connector/natural acceptance.
 
 ## Checkpoint Wave 48 — Ubuntu exact-HEAD rollout và central MCP recheck — 23-09-2026, 09:28–09:33 +07
 
