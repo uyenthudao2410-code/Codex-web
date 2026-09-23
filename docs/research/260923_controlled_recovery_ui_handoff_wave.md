@@ -2344,3 +2344,142 @@ Tools client để lấy current-process `tools/list` hoặc `server/discover` v
 `workspace_context` thật; nếu surface vẫn không xuất hiện, giữ
 `WAITING_FOR_SUPPORTED_CONNECTOR`, không refresh mù, không ACK thủ công,
 không reboot/Machine B, không mở P5 và không đóng hai Problem.
+
+## 15.24. Delivery và recapture sau lifecycle repair — 23/09/2026 10:45 +07
+
+### Delivery đã hoàn tất trên `main`
+
+Đã chạy delivery policy sau khi source/test/docs thay đổi:
+
+```text
+npm run stage:coding-tools-delivery       = PASS
+npm run check:coding-tools-delivery       = PASS (4877 files)
+npm run check:coding-tools-history        = PASS
+npm run check:repository-secrets         = PASS
+git diff --cached --check                 = PASS
+```
+
+Đã review staged scope và commit trực tiếp, không dùng worktree:
+
+```text
+3cf53cc9  fix: respect execution role in lifecycle readiness
+b83a5851  chore: refresh runtime evidence after lifecycle fix
+HEAD/origin/main = b83a585124d4c13c288ce3ae49562e1421ed3881
+```
+
+Commit đầu chứa đúng `scripts/dev-ui-lifecycle.js`, regression
+`tests/dev-ui-lifecycle.test.js` và checkpoint research; commit thứ hai là
+snapshot runtime evidence bắt buộc (`ledger.sqlite3`, projections và
+`delivery-snapshot.json`). Push `origin main` thành công. GitHub chỉ cảnh báo
+canonical ledger `93.21 MB` vượt khuyến nghị `50 MB`; retention invariant của
+repo bắt buộc giữ ledger nên không được loại bỏ hay mở rộng ignore.
+
+Runtime ghi tiếp sau commit nên working tree có thể lại dirty ở các file
+`.coding-tools/**`; đó là evidence volatility được phép và không phải source
+drift. Không có source/untracked build artifact mới.
+
+### Read-only recapture sau push
+
+```text
+dev:status                  = CURRENT, UI PID 800, instance 2c0d8695…
+MCP revision                = running == disk, update_pending=false
+MCP/native/components      = true / true / true
+fully_ready/update_incomp  = true / false
+execution role              = central_executor
+central connected/authority= true / true
+node scripts/... start      = exit 0, runtime=ready
+                              mcp_running=true native_alive=true tunnel_running=false
+connector                   = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered     = false
+connector_refresh_required = true
+```
+
+Immutable lifecycle census mới nhất (`2026-09-23T03:45:36Z`) vẫn pass:
+
+```text
+ledger schema/integrity/FK       = 12 / ok / 0
+ledger size                     = 97,742,848 bytes
+ordinary_active_runs            = 17 (THRESHOLD_SENSITIVE_STALE_CANDIDATE)
+P5 epochs                       = 6
+unexplained/residue             = 0 / 0
+projection_drift                = false
+```
+
+PRL/C4 canary (`2026-09-23T03:47:12Z`) hiện là
+`C4_SOURCE_READY_AWAITING_NATURAL_CANARY`:
+
+```text
+criterion→proof structural      = 34/34 = 1.0
+exact revision binding          = 193/211 = 0.914692
+attested occurrence clocks      = 34/34 (mechanics only)
+authoritative confirmations     = 3/3 receipts, but only 3/49 revisions
+natural evidence                = not attested; cohort not inferred
+manual review units             = 49 identity / 34 proof attribution / 18 ambiguous
+```
+
+Resolution-economics read-only report (`DESCRIPTIVE_ONLY`) vẫn ghi:
+
+```text
+Problem Revisions               = 49
+current policy events           = 307
+exact revision-link events      = 289
+state                          = 7 OPEN / 30 PROVISIONALLY_RESOLVED /
+                                 3 RESOLVED_CONFIRMED / 2 BLOCKED
+trusted resolution              = 3; unknown/untrusted = 46
+right-censored unconfirmed      = 37
+TTOC observed                   = 0 (37 right-censored, 9 competing dispositions)
+```
+
+Các số trên là coverage/observation và missingness, không phải app success
+rate, không phải ROI, và không cấp quyền mở P5. Runtime evidence recapture vẫn
+được đọc qua immutable Backup API/query-only; không tạo canonical writer hay
+mutate ledger.
+
+### Trạng thái hai Problem và phần còn tồn tại
+
+`prl-22e670302757c9b7663170e226ed7c26` revision 1 vẫn `OPEN` với
+`47 accepted / 16 aborted / 3 active = 66 RUN`. Source/runtime repair hiện đã
+đóng false-negative `npm start` cho `central_executor`, nhưng C01–C12 vẫn
+thiếu strict connector discovery, real `workspace_context`, packaged
+cold-start/reboot/logon, startup-intent matrix, Machine B/right endpoint,
+fault matrix, natural-use và independent confirmation đúng revision.
+
+`prl-e918c7d33e70c2d304d0797e11b05fcb` revision 2 vẫn `OPEN` với
+`16 accepted / 10 aborted / 13 active = 39 RUN`. Focused continuation suites
+đã chứng minh source contracts, nhưng chưa có provider/worker dispatch thật
+sau response/reconnect, zero-manual-relay background continuation,
+unknown-effect reconciliation ở live path, controller review delivery,
+natural Goal và independent outcome.
+
+### Checkpoint kết thúc wave
+
+Đã hoàn thành và delivered một source repair có reproduction, typed cause,
+regression proof, live postflight và exact Git delivery. Mức proof mạnh nhất
+hiện tại là:
+
+```text
+SOURCE_PRESENT + FOCUSED_PROOF + CONTROLLED_PROCESS/ CENTRAL_RUNTIME_READY
+```
+
+Chưa đạt và phải giữ fail-closed:
+
+```text
+STRICT_REDISCOVERED
+LIVE_ACCEPTED
+PACKAGED_REBOOT_ACCEPTED
+NATURAL_PROBLEM_OUTCOME
+ECONOMICS_POLICY
+```
+
+Việc còn lại có thứ tự: (1) cung cấp/khôi phục supported ChatWeb/Coding
+Tools client; (2) bind current-process `tools/list` hoặc `server/discover`
+vào PID/process/server/epoch/contract SHA; (3) gọi một
+`workspace_context` thật trên `E:\\DEV\\Codex-web`; (4) chỉ sau khi strict
+discovery đạt mới chạy reboot/logon và fault matrix; (5) chạy một natural
+Goal/Problem canary có budget, controller/review authority và independent
+outcome receipt; (6) hoàn tất P4/P5 evidence rồi mới xem xét policy/closure.
+
+Nếu client surface chưa xuất hiện, trạng thái chính xác là
+`WAITING_FOR_SUPPORTED_CONNECTOR`; không refresh mù, không ACK thủ công,
+không bulk reconcile 17 stale candidates, không reboot/Machine B, không mở P5
+và không đóng hai Problem.
