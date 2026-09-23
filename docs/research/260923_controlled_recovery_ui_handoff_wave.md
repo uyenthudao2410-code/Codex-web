@@ -2033,3 +2033,39 @@ không mở mutation/scheduler và không gọi local probe/heartbeat là natura
 outcome. Exact next action vẫn là supported ChatWeb/Coding Tools client thực
 hiện discovery và workspace read qua managed-attested path; nếu surface đó
 không xuất hiện, giữ `WAITING_FOR_SUPPORTED_CONNECTOR`.
+
+## 15.20. Goal continuation focused proof recheck — 23/09/2026 09:45 +07
+
+Để tách “source còn lỗi” khỏi “thiếu live authority”, đã chạy lại các packet
+focused của Problem `prl-e918c7d33e70c2d304d0797e11b05fcb` revision 2 trên đúng
+`HEAD=d11474af9aed8600b14d5b71ad35de610941ae0e`, không khởi tạo canonical
+writer, không sửa ledger và không restart runtime:
+
+```text
+python -m pytest tests/test_goal_pursuit.py tests/test_run_continuation.py tests/test_continuation_consent_http.py -q
+70 passed, 2 subtests passed in 143.78s
+
+python -m pytest tests/test_controller_continuity.py tests/test_controller_reattach.py tests/test_continuity_telemetry.py -q
+27 passed, 2 subtests passed in 81.17s
+```
+
+Các packet này bao phủ bounded Goal candidate pagination, exact Problem/RUN
+binding, parent budget/no-progress, pending-effect reconciliation, idempotent
+dispatch journal, controller reattach/reconnect và privacy-safe continuity
+telemetry. Kết quả hiện tại không chỉ ra source regression ở các surface đó.
+
+Điều này **không** được nâng thành resolution của 18 criterion. Capsule rev2
+vẫn yêu cầu: một Goal tự nhiên được opt-in, provider/worker dispatch thật sau
+response/report/reconnect, kiểm chứng oracle độc lập, fault boundary có thể
+quan sát, review delivery có authority, zero manual relay/nudge, và
+independent outcome đúng Problem Revision. Connector đang `client=null`,
+`authority_granted=false`, `live_accepted=false`; vì vậy chưa có cách hợp lệ
+để biến fixture/mocked dispatch thành BG02/BG04/BG10/BG14 evidence.
+
+**Operator checkpoint:** focused source proof của durable continuation đạt;
+technical acceptance, live client delivery, natural Goal outcome và
+Problem-level closure vẫn mở. Next action không đổi: strict current-process
+discovery + real `workspace_context`, sau đó chỉ chạy một canary Goal có scope,
+budget, controller/review authority và outcome receipt được bind exact; nếu
+client surface chưa được hỗ trợ thì giữ fail-closed, không tạo RUN/receipt
+nhân tạo.
