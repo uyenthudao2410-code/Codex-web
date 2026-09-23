@@ -6,8 +6,8 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước. Checkpoint Windows hiện hành là **23-09-2026, 11:41 +07** tại
-> `main @ 90b3044e48be7659c4de84ae7c2a77d3d1335ede`; source/test sạch, runtime
+> trước. Checkpoint Windows hiện hành là **23-09-2026, 11:54 +07** tại
+> `main @ 7792b2a89aa44ee0ae6dc0235dcac19f96b22d17`; source/test sạch, runtime
 > evidence `.coding-tools/**` tiếp tục được giữ theo retention policy. Ubuntu
 > control-plane vẫn chạy package release exact HEAD `e44b0a4613a780e2239027c085b54257e1df266c`
 > trong admission `recovery`; các commit sau đó không chạm `control-plane/` hay
@@ -16,25 +16,42 @@
 > discovery, real `workspace_context`, admission mở và `LIVE_ACCEPTED` vẫn chưa
 > có.
 
-## Current executive checkpoint — 23-09-2026, 11:41 +07
+## Current executive checkpoint — 23-09-2026, 11:54 +07
 
 Đây là checkpoint hiện hành; các Wave cũ bên dưới là chronology và không được
 đọc như live state mới hơn checkpoint này.
 
 ```text
-branch / HEAD / origin       = main / 90b3044e / 90b3044e
+branch / HEAD / origin       = main / 7792b2a8 / 7792b2a8
 source worktree              = clean (chỉ runtime evidence .coding-tools dirty)
 npm start                    = last controlled run exit 0 (not recaptured after docs-only commits)
-UI                           = MISSING, stale registered PID 35920 not alive
-components_ready             = true
+UI                           = MISSING, no registered live PID
+components_ready             = false
 fully_ready / update_incomp = false / true
-execution_role               = central_executor (last verified role)
-tunnel_running               = false (central route does not require local Tunnel)
-connector                    = CHANGED_NEEDS_DISCOVERY
+execution_role               = not available in current stopped snapshot
+tunnel_running               = not observed (runtime stopped)
+connector                    = UNAVAILABLE
 connector_rediscovered       = false
-connector_refresh_required   = true
+connector_refresh_required   = false
 client / live_accepted       = null / false
 ```
+
+Read-only recapture at `2026-09-23 11:53:58 +07` (`npm run dev:status`) reports
+`host=available`, `installation=current`, `pid=none`,
+`runtime_snapshot_source=recovery_host_supervision_cache`,
+`runtime_snapshot_age_ms=4195`, `components_ready=false`, and
+`runtime_update_incomplete=true`. The stopped snapshot is fail-closed and is
+not evidence that P1/P2 regressed; it only means a controlled activation has
+not yet been authorized by a supported connector receipt.
+
+The immutable ledger census at `2026-09-23T04:54:24.807Z` remains query-only:
+schema `12`, integrity `ok`, foreign-key rows `0`, physical snapshot SHA
+`7c675c9518982f71d4521ecf8ac35a8ca14c42e4e5476b9fd8aa6d2ef0b68418`, logical
+SHA `6f436257385c871f09e3e922b1a3aa2e2aae055c29eb92435397187d21d992fc`,
+`mutated_canonical_ledger=false`, `projection_drift=false`,
+`ordinary_active_runs=17` (all `THRESHOLD_SENSITIVE_STALE_CANDIDATE`),
+`p5_epochs=6`, and unexplained/unbound/stale-background residues `0/0/0`.
+No SQLite writer or manual reconciliation was used.
 
 Commit `3cf53cc9` sửa false-negative trong lifecycle `runtimeReadiness()`: role
 `central_executor` chỉ yêu cầu MCP/native cùng central route/authority, còn

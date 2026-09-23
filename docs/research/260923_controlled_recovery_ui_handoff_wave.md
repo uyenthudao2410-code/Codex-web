@@ -2889,3 +2889,164 @@ chuẩn bị theo contract hiện tại; không mở epoch, không bật treatme
 cho phép auto-promotion. P4 vẫn thiếu variation của causal-solution repair,
 predictive holdout và independent natural outcomes; các con số `20 raw repaired`
 và `29 unknown` không được đổi thành hiệu quả nhân quả.
+
+## 15.33. Current status recapture và phân loại phần còn tồn tại — 23/09/2026 11:54 +07
+
+Đợt này chỉ dùng các đường đọc có sẵn: `npm run dev:status`, Computer Use
+inventory, `report_lifecycle_census.py --summary`,
+`report_p4_readiness.py`, `report_accepted_result_economics.py` và truy vấn
+SQLite `mode=ro`. Không chạy `dev:refresh`, không quarantine epoch, không ACK
+connector, không reboot, không tunnel CRUD và không ghi trực tiếp
+`.coding-tools/orchestration/ledger.sqlite3`.
+
+### 15.33.1. Git, runtime và connector hiện tại
+
+```text
+observed_at                  = 2026-09-23 11:53:58 +07
+branch / HEAD / origin       = main / 7792b2a89aa44ee0ae6dc0235dcac19f96b22d17 / same
+source/test worktree         = clean
+dirty files                  = .coding-tools runtime evidence only
+DEV_UI state                  = MISSING
+host / installation          = available / current
+registered live PID           = none
+runtime snapshot source      = recovery_host_supervision_cache
+runtime snapshot age         = 4195 ms
+components_ready             = false
+fully_ready                  = false
+runtime_update_incomplete    = true
+connector                    = UNAVAILABLE
+connector_rediscovered       = false
+connector_refresh_required   = false
+connector_ack_pending        = false
+error_code                   = none
+```
+
+Computer Use inventory ngay sau đó trả `apps=[]`, `browsers=[]` và lỗi
+`Codex auth token is unavailable`. Do đó hiện chưa có supported client surface
+để thu `tools/list`/`server/discover` current-process, client attestation, hay
+real `workspace_context`. `state=MISSING` là trạng thái fail-closed của runtime
+đã dừng; không phải bằng chứng rằng các invariant P1/P2 đã hỏng lại.
+
+### 15.33.2. Ledger và hai Problem
+
+Immutable census lúc `2026-09-23T04:54:24.807Z` ghi nhận:
+
+```text
+schema / integrity / FK              = 12 / ok / 0
+physical snapshot SHA-256            = 7c675c9518982f71d4521ecf8ac35a8ca14c42e4e5476b9fd8aa6d2ef0b68418
+logical snapshot SHA-256             = 6f436257385c871f09e3e922b1a3aa2e2aae055c29eb92435397187d21d992fc
+mutated_canonical_ledger             = false
+projection                           = CONTEXTUAL_PROJECTIONS; drift=false
+context_count                        = 1079
+ordinary_active_runs                 = 17 (all THRESHOLD_SENSITIVE_STALE_CANDIDATE)
+P5 epochs                            = 6
+unexplained / unbound / stale-bg     = 0 / 0 / 0
+```
+
+Truy vấn read-only theo đúng `problem_id`/revision xác nhận:
+
+| Problem | Revision / criteria | Run history hiện có | Trạng thái authority |
+|---|---:|---:|---|
+| `prl-22e670302757c9b7663170e226ed7c26` | rev1 / 12 | 47 accepted, 16 aborted, 3 active = 66 RUN | `OPEN`, latest event 320 |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` | rev2 / 18 | 16 accepted, 10 aborted, 13 active = 39 RUN | `OPEN`, latest event 316 |
+
+Các event của hai revision chỉ là `ENGINEERING_ATTEMPT_BOUND`/`OPEN` hoặc
+`REVISION`; `outcome_receipt_type` và `outcome_receipt_id` đều rỗng. Vì vậy
+accepted RUN là lịch sử nỗ lực, không phải criterion coverage, natural outcome
+hay quyền đóng Problem. Bảng này cũng xác nhận không được gộp rev1 12 tiêu chí
+với rev2 18 tiêu chí.
+
+Ledger hiện không có `goal_continuations` nào; `run_continuations` duy nhất
+thuộc Problem khác (`prl-6ac55390f353c5743406eb8d0a823d8e`, rev1), không phải
+`prl-e918…` rev2. `run_continuation_effects` chỉ có một patch đã applied của
+Problem khác. Đây là bằng chứng trực tiếp rằng BG01–BG14 chưa có durable Goal
+canary/outcome cho revision đang theo đuổi.
+
+### 15.33.3. Đối chiếu source gap `execution=not_implemented`
+
+Đã đọc `control-plane/control_plane/mcp_facade.py` và test tương ứng. Các
+đường `execution="not_implemented"` tại `_workspace_context` và `_call_error`
+là chủ ý của **control-plane relay**, không phải lời hứa rằng Windows Coding
+MCP đã thực thi workspace:
+
+* `_workspace_context` chỉ đọc central context/node observation và trả
+  `workspace_accessed=false`, `local_admission=unverified`; chỉ khi action có
+  completed local relay receipt mới đổi sang `completed_read_relay`.
+* `request_read_only` chỉ xếp intent vào local admission; facade không tự chạm
+  workspace, PID hay filesystem.
+* Các tool khác khi local bridge chưa có đều trả typed
+  `LOCAL_ADMISSION_BRIDGE_REQUIRED`; test `control-plane/tests/test_http_api.py`
+  giữ invariant này.
+
+Vì vậy **không mở một writer/control plane thứ hai và không thay
+`not_implemented` bằng giả lập local success**. Gap cần đóng cho hai Problem
+vẫn nằm ở Windows managed-attested connector, runtime activation/epoch
+continuity, dispatch/continuation và outcome oracle; không phải sửa facade này.
+
+### 15.33.4. P4/P5 và economics hiện tại
+
+`report_p4_readiness.py` ở cùng HEAD cho:
+
+```text
+P4 state / empirically complete       = collecting / false
+representative shadow tasks           = 100
+raw repaired tasks                    = 20
+causal-solution repair tasks         = 0
+causal-solution unknown tasks        = 29
+validated signals / predictive route  = none / false
+source worktree clean                 = true
+P5 baseline ready                     = true
+P5 epoch lifecycle / experiment start = EPOCH_HARD_STOPPED / false
+```
+
+`report_accepted_result_economics.py` cho bằng chứng cửa sổ
+01–15/09/2026: proof-cache `6/983` hit (`0.6104%`), `977` miss (517 cold,
+460 input-fingerprint-changed), 6 hit đã biết tiết kiệm `25,335 ms`; 273
+accepted runs có opportunity và chỉ 5 accepted-run hits. Provider/controller
+cost coverage vẫn `0.0%`, total monetary cost complete runs `0`, nên chi phí
+thiếu là `unknown`, không phải zero và không đủ để mở economics promotion.
+
+### 15.33.5. Phân loại mức hoàn thành và next action
+
+Mức proof hiện hành là:
+
+```text
+SOURCE_PRESENT                 = đạt
+FOCUSED_PROOF                  = đạt (identity/recovery/lifecycle/UI 198 passed; token dashboard 8 passed)
+DELIVERED_MAIN                 = đạt (HEAD = origin/main)
+PACKAGED_SMOKE                 = đạt ở snapshot lịch sử, không phải live candidate hiện tại
+CONTROLLED_ACTIVATION          = chưa có receipt current-process
+STRICT_REDISCOVERED            = chưa đạt
+REAL_WORKSPACE_CONTEXT         = chưa đạt
+PACKAGED_REBOOT / MACHINE B    = chưa đạt
+NATURAL C01-C12 OUTCOME        = chưa đạt
+DURABLE BG01-BG14 OUTCOME      = chưa đạt
+P4/P5 PROMOTION / ECONOMICS    = chưa đạt
+Problem closure authority      = chưa có; cả hai vẫn OPEN
+```
+
+Thứ tự xử lý tiếp theo vẫn phải là:
+
+1. **Chờ hoặc khôi phục supported connector surface** có thể tạo receipt thật;
+   không dùng Computer Use inventory hiện tại, raw HTTP, local health, ACK thủ
+   công hay receipt cũ để thay thế.
+2. Khi surface xuất hiện, chạy một controlled activation duy nhất trên đúng
+   installation, kiểm tra source/package/activation epoch, rồi thu
+   `tools/list`/`server/discover` bind vào PID, process instance, MCP server
+   instance, epoch và contract SHA.
+3. Gọi `workspace_context` thật trên `E:\DEV\Codex-web`; chỉ sau khi receipt
+   current-process hợp lệ mới chạy reboot/logon, startup-intent, host-only và
+   central-route/Tunnel fault matrix, Machine B.
+4. Với `prl-e918…` rev2, dùng một natural Goal có provider/worker dispatch,
+   response-end continuation, reconnect/restart, unknown-effect reconciliation,
+   parent budget và independent outcome. Không tạo RUN/canary nhân tạo để lấp
+   18 criterion.
+5. Cuối cùng lập coverage C01–C12 và BG01–BG14, natural-use theo canonical
+   plan, independent confirmation, rồi mới yêu cầu closure authority.
+
+**Operator checkpoint:** wave này đã làm thay đổi bằng chứng authoritative bằng
+recapture runtime/ledger/connector và đã cập nhật phân loại source gap; không có
+source/runtime/ledger mutation. Blocker hiện tại được phân loại
+`WAITING_FOR_SUPPORTED_CONNECTOR`, không phải `P1/P2_REGRESSION` và không phải
+`CONTROL_PLANE_IMPLEMENTATION_BUG`. Next action chính xác là phục hồi surface
+được hỗ trợ hoặc giữ fail-closed; không lặp recovery mù.
