@@ -14,6 +14,7 @@ const {
   fileContentDigest,
   loadFileReadBridgePolicy,
   normaliseFileReadResult,
+  resolveDirectRegisteredFile,
   resolveRegisteredWorkspaceRoot
 } = require('../electron/services/controlPlaneFileReadBridge');
 
@@ -162,6 +163,54 @@ test('standing file-read policy remains valid after the former TTL window', (t) 
   assert.equal(loaded.schema_version, 2);
   assert.equal(loaded.authority_mode, 'standing');
   assert.equal(loaded.expires_at_ms, null);
+});
+
+test('workspace prefix file-read policy admits exact nested files and fences unsafe paths', (t) => {
+  const item = fixture(t);
+  const scoped = policy();
+  scoped.schema_version = 3;
+  scoped.authority_mode = 'standing';
+  scoped.expires_at_ms = null;
+  delete scoped.allowed_relative_paths;
+  scoped.allowed_relative_prefixes = ['.'];
+  fs.writeFileSync(item.policyFile, JSON.stringify(scoped), 'utf8');
+  writeRegistry(item.paths, item.root);
+  const nested = path.join(item.root, 'src', 'deep');
+  fs.mkdirSync(nested, { recursive: true });
+  fs.writeFileSync(path.join(nested, 'fixture.txt'), 'safe\n', 'utf8');
+  const loaded = loadFileReadBridgePolicy(item.paths, { now: NOW });
+  assert.equal(loaded.schema_version, 3);
+  const wanted = { ...request(), path: 'src/deep/fixture.txt' };
+  assert.equal(admitFileReadBridgeRequest(loaded, wanted, { now: NOW }).path, wanted.path);
+  assert.equal(resolveDirectRegisteredFile(item.root, wanted.path), path.join(nested, 'fixture.txt'));
+  for (const denied of ['../outside.txt', 'src/.env', 'src/.git/config', '/tmp/outside.txt']) {
+    assert.throws(() => admitFileReadBridgeRequest(loaded, { ...wanted, path: denied }, { now: NOW }));
+  }
+  fs.writeFileSync(item.policyFile, JSON.stringify({
+    ...scoped, allowed_relative_paths: ['src/deep/fixture.txt']
+  }), 'utf8');
+  assert.throws(() => loadFileReadBridgePolicy(item.paths, { now: NOW }),
+    { code: 'CONTROL_PLANE_FILE_READ_POLICY_INVALID' });
+  fs.writeFileSync(item.policyFile, JSON.stringify({
+    ...scoped, allowed_relative_prefixes: ['src']
+  }), 'utf8');
+  const narrowed = loadFileReadBridgePolicy(item.paths, { now: NOW });
+  assert.equal(admitFileReadBridgeRequest(narrowed, wanted, { now: NOW }).path, wanted.path);
+  assert.throws(() => admitFileReadBridgeRequest(narrowed,
+    { ...wanted, path: 'src2/deep/fixture.txt' }, { now: NOW }),
+  { code: 'CONTROL_PLANE_FILE_READ_PATH_DENIED' });
+  const exact = { ...scoped, schema_version: 2, allowed_relative_paths: ['fixture.txt'] };
+  delete exact.allowed_relative_prefixes;
+  fs.writeFileSync(item.policyFile, JSON.stringify(exact), 'utf8');
+  assert.throws(() => admitFileReadBridgeRequest(
+    loadFileReadBridgePolicy(item.paths, { now: NOW }), wanted, { now: NOW }
+  ), { code: 'CONTROL_PLANE_FILE_READ_PATH_DENIED' });
+  const outside = path.join(path.dirname(item.root), 'outside');
+  fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, 'file.txt'), 'outside\n', 'utf8');
+  fs.symlinkSync(outside, path.join(item.root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  assert.throws(() => resolveDirectRegisteredFile(item.root, 'linked/file.txt'),
+    { code: 'CONTROL_PLANE_FILE_READ_REPARSE_DENIED' });
 });
 
 test('bounded file-read admits only the exact local owner, target, contract, path and limits', (t) => {

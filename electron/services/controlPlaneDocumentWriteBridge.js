@@ -17,10 +17,12 @@ const {
   resolveRegisteredWorkspaceRoot,
   facadeContract,
   relativePath,
+  policyAllowsPath,
   digest
 } = require('./controlPlaneApprovedPatchBridge');
 
-const POLICY_SCHEMA_VERSION = 2;
+const POLICY_SCHEMA_VERSION = 3;
+const EXACT_POLICY_SCHEMA_VERSION = 2;
 const STANDING_AUTHORITY_MODE = 'standing';
 const BRIDGE_ENVELOPE_SCHEMA_VERSION = 1;
 const BRIDGE_CLIENT_ID = 'electron-control-plane-document-bridge';
@@ -103,7 +105,8 @@ function loadDocumentWriteBridgePolicy(paths, options = {}) {
       error?.message
     );
   }
-  if (policy.schema_version !== POLICY_SCHEMA_VERSION || policy.authority_mode !== STANDING_AUTHORITY_MODE) {
+  if (![POLICY_SCHEMA_VERSION, EXACT_POLICY_SCHEMA_VERSION].includes(policy.schema_version)
+    || policy.authority_mode !== STANDING_AUTHORITY_MODE) {
     throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_POLICY_INVALID', 'document write requires standing local write authority.');
   }
   return Object.freeze({ ...policy });
@@ -198,8 +201,8 @@ function admitDocumentWriteBridgeRequest(policy, request, { now = Date.now() } =
   if (canonicalContract(candidate.facade_contract) !== canonicalContract(policy.facade_contract)) {
     throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_CONTRACT_MISMATCH', 'document write facade contract does not match local policy.');
   }
-  if (!policy.allowed_relative_paths.includes(candidate.target)
-    || (candidate.source !== null && !policy.allowed_relative_paths.includes(candidate.source))) {
+  if (!policyAllowsPath(policy, candidate.target)
+    || (candidate.source !== null && !policyAllowsPath(policy, candidate.source))) {
     throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_PATH_DENIED', 'document path is not admitted by local policy.');
   }
   return Object.freeze({
@@ -235,19 +238,26 @@ function resolveDocumentTarget(workspaceRoot, admission, { source = false } = {}
   if (!pathKey(target).startsWith(prefix)) {
     throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_PATH_DENIED', 'document path escapes workspace.');
   }
-  try {
-    const parent = fs.realpathSync.native(path.dirname(target));
-    if (!pathKey(parent).startsWith(prefix) && pathKey(parent) !== pathKey(root)) {
-      throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_REPARSE_DENIED', 'document parent escapes workspace.');
+  const parts = relative.split('/');
+  let cursor = root;
+  for (const [index, part] of parts.entries()) {
+    cursor = path.join(cursor, part);
+    const final = index === parts.length - 1;
+    let stat;
+    let real;
+    try {
+      stat = fs.lstatSync(cursor);
+      real = fs.realpathSync.native(cursor);
+    } catch (error) {
+      if (error?.code === 'ENOENT' && final && !source) return target;
+      throw bridgeError(source ? 'CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_MISSING' : 'CONTROL_PLANE_DOCUMENT_WRITE_TARGET_INVALID', 'document path is unavailable.');
     }
-    const stat = fs.lstatSync(target);
-    if (stat.isSymbolicLink() || (source && !stat.isFile())) {
+    if (stat.isSymbolicLink() || pathKey(real) !== pathKey(cursor)) {
+      throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_REPARSE_DENIED', 'document path contains a reparse point.');
+    }
+    if (final ? !stat.isFile() : !stat.isDirectory()) {
       throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_REPARSE_DENIED', 'document path is not a direct regular file.');
     }
-  } catch (error) {
-    if (error?.code === 'ENOENT' && !source) return target;
-    if (error?.code?.startsWith('CONTROL_PLANE_DOCUMENT_WRITE_')) throw error;
-    throw bridgeError(source ? 'CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_MISSING' : 'CONTROL_PLANE_DOCUMENT_WRITE_TARGET_INVALID', 'document path is unavailable.');
   }
   return target;
 }
@@ -335,6 +345,7 @@ function normaliseDocumentWriteResult(value, admission) {
 
 module.exports = {
   POLICY_SCHEMA_VERSION,
+  EXACT_POLICY_SCHEMA_VERSION,
   STANDING_AUTHORITY_MODE,
   BRIDGE_ENVELOPE_SCHEMA_VERSION,
   BRIDGE_CLIENT_ID,

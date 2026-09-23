@@ -719,12 +719,12 @@
 
           <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
             <b>Thêm thư mục để làm việc</b>
-            <p>Chọn một thư mục local và mức quyền dễ hiểu. Đường dẫn chỉ được giữ trên máy này; Ubuntu nhận inventory ẩn danh và vẫn phải duyệt target riêng trước khi có task.</p>
+            <p>Chọn một thư mục local và mức quyền. Đường dẫn chỉ được giữ trên máy này; Ubuntu nhận inventory ẩn danh. Sau khi liên kết target trên Ubuntu, bấm “Bật đọc/sửa file” ngay tại thư mục đã chọn để cài policy local. Chạy lệnh là quyền riêng, chưa được bật ở bước này.</p>
             <div class="input-action"><button id="chooseControlPlaneWorkspace" type="button">Chọn thư mục</button><span class="input-action-meta"><small id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</small><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span></div>
             <fieldset class="capability-picker" aria-describedby="controlPlaneCapabilitySummary">
               <legend>Mức quyền cho thư mục này</legend>
               <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read" checked><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
-              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code"><span><b>Làm việc với mã nguồn</b><small>Đọc, sửa file và chạy công cụ trong policy đã được cấp.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code"><span><b>Làm việc với mã nguồn</b><small>Đăng ký khả năng đọc/sửa/chạy; policy file và lệnh phải bật riêng.</small></span></label>
               <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="custom"><span><b>Tùy chỉnh</b><small>Chọn từng quyền trong phần nâng cao.</small></span></label>
               <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small>
               <details id="centralWorkspaceCustomCapabilities" class="capability-custom">
@@ -736,7 +736,7 @@
             </fieldset>
             <div class="input-action"><button id="registerControlPlaneWorkspace" type="button">Thêm thư mục này</button><small id="controlPlaneWorkspaceRegistrationStatus">Đăng ký chỉ ghi nhận phạm vi local; chưa tạo liên kết tài khoản hoặc quyền chạy.</small></div>
             <div class="input-action"><button id="refreshControlPlaneWorkspaces" type="button">Xem thư mục đã thêm</button><small>Không cần nhập context ID, JSON hoặc token. Ubuntu chỉ nhận định danh opaque; đường dẫn không rời Windows.</small></div>
-            <p class="task-muted">Đổi mức quyền hoặc thu hồi thư mục nằm trong “Quản lý nâng cao” của từng mục. Generation cũ không bị ghi đè âm thầm và target cần được liên kết lại sau thay đổi.</p>
+            <p class="task-muted">Mỗi máy chỉ giữ một policy đọc file và một policy sửa file hiện hành; bật cho thư mục khác sẽ thay thế quyền file cũ. Đổi mức quyền hoặc thu hồi thư mục nằm trong “Quản lý nâng cao”. Generation cũ không bị ghi đè âm thầm và target cần được liên kết lại sau thay đổi.</p>
             <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
           </article>
 

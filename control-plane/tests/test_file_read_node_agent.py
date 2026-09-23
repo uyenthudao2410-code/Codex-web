@@ -167,10 +167,32 @@ class FileReadNodeAgentTests(unittest.TestCase):
         )
         self.assertEqual(admitted["authority_mode"], "standing")
 
+    def test_workspace_prefix_policy_admits_exact_nested_file_and_rejects_unsafe_paths(self) -> None:
+        policy = _install_file_read_policy_values(
+            self.args(), config_path=self.config_path, config=self.config,
+            owner_id="owner-control-plane-0001", workspace_id="workspace-control-plane-0001",
+            workspace_generation="generation-control-plane-0001", expires_at_ms=None,
+            facade_contract=FACADE_CONTRACT, allowed_relative_paths=None,
+            allowed_relative_prefixes=["."], max_bytes=1024, max_lines=20,
+        )
+        self.assertEqual(policy["schema_version"], 3)
+        self.assertEqual(policy["allowed_relative_prefixes"], ["."])
+        request = _file_read_bridge_request(self.action(), self.config)
+        request["path"] = "src/deep/fixture.txt"
+        self.assertEqual(_admit_file_read_policy_request(
+            self.args(), config_path=self.config_path, config=self.config, request=request,
+        )["schema_version"], 3)
+        for unsafe in ("../outside.txt", "src/.env", "src/.git/config", "/tmp/file.txt"):
+            with self.subTest(unsafe=unsafe), self.assertRaises(RuntimeError):
+                _admit_file_read_policy_request(
+                    self.args(), config_path=self.config_path, config=self.config,
+                    request={**request, "path": unsafe},
+                )
+
     def test_standing_artifact_read_uses_the_same_local_policy_without_ttl(self) -> None:
         """Document reads stay local-policy-bound after the pilot TTL is removed."""
 
-        (self.root / "fixture.txt").write_text("standing document content\n", encoding="utf-8")
+        (self.root / "fixture.txt").write_bytes(b"standing document content\n")
         policy = _install_file_read_policy_values(
             self.args(),
             config_path=self.config_path,

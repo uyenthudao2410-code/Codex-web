@@ -1,5 +1,11 @@
 # Current Project State — Tools-Codex-web
 
+> Checkpoint mới 23-09-2026, 20:25 +07: candidate `private_tunnel_service` và
+> `scoped_pilot` đang ở source/focused proof; Ubuntu live `/healthz` vẫn schema
+> 25, `legacy_context_grant`, admission `recovery`, declared revision `749ab5c9`.
+> App Windows bản cài chưa nạp UI/policy mới; ChatGPT chưa có file/exec E2E.
+> [Bản điều hành mới](SHARED_ACCOUNT_WORKSPACE_STATUS.md) phân biệt rõ các gate.
+
 > Bản tóm tắt điều hành cô đọng: [SHARED_ACCOUNT_WORKSPACE_STATUS.md](SHARED_ACCOUNT_WORKSPACE_STATUS.md).
 > Runbook Windows exact: [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này giữ chronology chi tiết của current state; khi cần quyết định

@@ -7,6 +7,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { URL } = require('node:url');
 const { normalizeDeviceIdentity } = require('./deviceIdentity');
 const { run } = require('./commandRunner');
@@ -21,6 +22,9 @@ const CREDENTIAL_ROTATION_STATES = new Set(['idle', 'candidate_persisted', 'prep
 const WORKSPACE_ID_PATTERN = /^workspace_[a-f0-9]{32}$/;
 const WORKSPACE_GENERATION_PATTERN = /^generation_[a-f0-9]{32}$/;
 const WORKSPACE_CAPABILITY_KEYS = Object.freeze(['read', 'write', 'exec']);
+const FULL_WORKSPACE_PREFIX_SHA256 = crypto.createHash('sha256').update('["."]').digest('hex');
+const FILE_READ_LIMITS = Object.freeze({ max_bytes: 16 * 1024, max_lines: 200 });
+const PATCH_LIMITS = Object.freeze({ max_patch_bytes: 32 * 1024, max_file_bytes: 256 * 1024 });
 const AUTHORITY_STATUS_STATES = new Set([
   'pending_operator_approval', 'no_binding', 'active', 'binding_revoked',
   'workspace_missing', 'workspace_retired', 'blocked', 'revoked', 'unknown'
@@ -101,6 +105,30 @@ function workspaceDisplayName(canonicalPath) {
     throw enrollmentError('CONTROL_PLANE_WORKSPACE_DISPLAY_NAME_INVALID', 'Tên hiển thị thư mục local không hợp lệ.');
   }
   return basename;
+}
+
+function assertSelectedWorkspaceRegistration(registryFile, canonicalPath, workspaceId, workspaceGeneration) {
+  // The renderer lists path-free inventory. A row action must still prove the
+  // newly chosen local folder belongs to that exact row before invoking the
+  // path-based replacement command.
+  let registry;
+  try {
+    const raw = fs.readFileSync(registryFile);
+    if (raw.length > 64 * 1024) throw new Error('registry-too-large');
+    registry = JSON.parse(raw.toString('utf8'));
+  } catch {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_UNVERIFIED', 'Không thể xác minh thư mục đã chọn với inventory local.');
+  }
+  if (!registry || registry.schema_version !== 1 || !Array.isArray(registry.entries)
+    || registry.entries.length > 64) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_UNVERIFIED', 'Inventory workspace local không hợp lệ.');
+  }
+  const matches = registry.entries.filter((entry) => entry && typeof entry === 'object'
+    && entry.workspace_id === workspaceId && entry.workspace_generation === workspaceGeneration
+    && typeof entry.canonical_path === 'string' && path.normalize(entry.canonical_path) === path.normalize(canonicalPath));
+  if (matches.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH', 'Thư mục vừa chọn không khớp với workspace ở dòng này. Chưa đổi quyền nào.');
+  }
 }
 
 function normalizeWorkspaceCapabilities(value = undefined) {
@@ -359,6 +387,161 @@ function parseReadOnlyPolicyInstallResult(stdout) {
     runtime_mode: 'packaged',
     windows_acl_verified: false
   });
+}
+
+function parsePolicyAuthorityObservation(stdout, workspaceId, workspaceGeneration) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_OUTPUT_INVALID', 'Node authority trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_OUTPUT_INVALID', 'Node authority không trả về đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_OUTPUT_INVALID', 'Node authority trả về receipt không hợp lệ.'); }
+  const facade = payload?.facade_contract;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'binding_count,facade_contract,observed_at_ms,operation,owner_id,runtime_mode,standing_write_enabled,workspace_generation,workspace_id'
+    || payload.operation !== 'control_plane_policy_authority_observation'
+    || payload.workspace_id !== workspaceId || payload.workspace_generation !== workspaceGeneration
+    || !NODE_ID_PATTERN.test(String(payload.owner_id || ''))
+    || !Number.isSafeInteger(payload.binding_count) || payload.binding_count < 1
+    || typeof payload.standing_write_enabled !== 'boolean'
+    || !Number.isSafeInteger(payload.observed_at_ms) || payload.observed_at_ms <= 0
+    || payload.runtime_mode !== 'packaged'
+    || !facade || typeof facade !== 'object' || Array.isArray(facade)
+    || Object.keys(facade).sort().join(',') !== 'profile,schema_version,sha256'
+    || !Number.isSafeInteger(facade.schema_version) || facade.schema_version < 1
+    || !NODE_ID_PATTERN.test(String(facade.profile || ''))
+    || !SHA256_PATTERN.test(String(facade.sha256 || '').toLowerCase())) {
+    throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_OUTPUT_INVALID', 'Node authority không đúng workspace hoặc facade hiện hành.');
+  }
+  return Object.freeze({
+    owner_id: payload.owner_id,
+    workspace_id: workspaceId,
+    workspace_generation: workspaceGeneration,
+    facade_contract: Object.freeze({
+      schema_version: facade.schema_version,
+      profile: facade.profile,
+      sha256: facade.sha256.toLowerCase()
+    }),
+    binding_count: payload.binding_count,
+    standing_write_enabled: payload.standing_write_enabled,
+    observed_at_ms: payload.observed_at_ms
+  });
+}
+
+function parseStandingFilePolicyInstallResult(stdout, kind) {
+  if (!['file_read', 'approved_patch'].includes(kind)) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OUTPUT_INVALID', 'Lane file policy không hợp lệ.');
+  }
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OUTPUT_INVALID', 'Node file policy trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OUTPUT_INVALID', 'Node file policy không trả về đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OUTPUT_INVALID', 'Node file policy trả về receipt không hợp lệ.'); }
+  const read = kind === 'file_read';
+  const expectedKeys = read
+    ? 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,max_bytes,max_lines,operation,policy_sha256,runtime_mode,windows_acl_verified'
+    : 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,max_file_bytes,max_patch_bytes,operation,policy_sha256,runtime_mode,validation_profile,windows_acl_verified';
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== expectedKeys
+    || payload.operation !== (read ? 'control_plane_file_read_policy_installed' : 'control_plane_approved_patch_policy_installed')
+    || payload.enabled !== true || payload.authority_mode !== 'standing' || payload.expires_at_ms !== null
+    || payload.allowed_prefix_count !== 1 || payload.allowed_prefixes_sha256 !== FULL_WORKSPACE_PREFIX_SHA256
+    || !SHA256_PATTERN.test(String(payload.policy_sha256 || '').toLowerCase())
+    || payload.runtime_mode !== 'packaged' || payload.windows_acl_verified !== false
+    || (read && (payload.max_bytes !== FILE_READ_LIMITS.max_bytes || payload.max_lines !== FILE_READ_LIMITS.max_lines))
+    || (!read && (payload.max_patch_bytes !== PATCH_LIMITS.max_patch_bytes
+      || payload.max_file_bytes !== PATCH_LIMITS.max_file_bytes || payload.validation_profile !== 'targeted'))) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OUTPUT_INVALID', 'Node file policy receipt không xác nhận đúng phạm vi workspace đã chọn.');
+  }
+  return Object.freeze({
+    kind,
+    authority_mode: 'standing',
+    policy_sha256: payload.policy_sha256.toLowerCase(),
+    windows_acl_verified: false
+  });
+}
+
+function parseStandingFilePolicyObservation(stdout, kind) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID', 'Node file policy observation vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID', 'Node file policy không trả về đúng một observation.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID', 'Node file policy observation không hợp lệ.'); }
+  const read = kind === 'file_read';
+  if (!['file_read', 'approved_patch'].includes(kind)
+    || !payload || typeof payload !== 'object' || Array.isArray(payload)
+    || payload.operation !== (read ? 'control_plane_file_read_policy_observation' : 'control_plane_approved_patch_policy_observation')
+    || payload.runtime_mode !== 'packaged' || payload.windows_acl_verified !== false) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID', 'Node file policy observation không đúng lane.');
+  }
+  if (payload.state === 'unavailable') {
+    if (Object.keys(payload).sort().join(',') !== 'operation,reason,runtime_mode,state,windows_acl_verified'
+      || !/^[A-Z0-9_]{3,96}$/.test(String(payload.reason || ''))) {
+      throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID', 'Node file policy unavailable observation không hợp lệ.');
+    }
+    return Object.freeze({ state: 'unavailable', reason: payload.reason });
+  }
+  const expectedKeys = read
+    ? 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,max_bytes,max_lines,operation,policy_sha256,runtime_mode,state,windows_acl_verified,workspace_generation,workspace_id'
+    : 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,max_file_bytes,max_patch_bytes,operation,policy_sha256,runtime_mode,state,validation_profile,windows_acl_verified,workspace_generation,workspace_id';
+  const standing = payload.authority_mode === 'standing';
+  if ((standing && Object.keys(payload).sort().join(',') !== expectedKeys)
+    || !['enabled', 'expired_or_disabled'].includes(payload.state)
+    || !WORKSPACE_ID_PATTERN.test(String(payload.workspace_id || ''))
+    || !WORKSPACE_GENERATION_PATTERN.test(String(payload.workspace_generation || ''))
+    || !SHA256_PATTERN.test(String(payload.policy_sha256 || '').toLowerCase())) {
+    throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID', 'Node file policy observation không đúng target.');
+  }
+  const active = standing && payload.state === 'enabled' && payload.enabled === true
+    && payload.expires_at_ms === null && payload.allowed_prefix_count === 1
+    && payload.allowed_prefixes_sha256 === FULL_WORKSPACE_PREFIX_SHA256
+    && (read
+      ? payload.max_bytes === FILE_READ_LIMITS.max_bytes && payload.max_lines === FILE_READ_LIMITS.max_lines
+      : payload.max_patch_bytes === PATCH_LIMITS.max_patch_bytes
+        && payload.max_file_bytes === PATCH_LIMITS.max_file_bytes && payload.validation_profile === 'targeted');
+  return Object.freeze({
+    state: active ? 'enabled' : 'not_current_standing',
+    enabled: payload.enabled === true,
+    workspace_id: payload.workspace_id,
+    workspace_generation: payload.workspace_generation,
+    policy_sha256: payload.policy_sha256.toLowerCase()
+  });
+}
+
+function parsePatchPolicyDisableResult(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_PATCH_POLICY_DISABLE_OUTPUT_INVALID', 'Node patch policy disable vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  let payload;
+  try { if (lines.length === 1) payload = JSON.parse(lines[0]); }
+  catch { /* rejected below */ }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'enabled,operation,policy_sha256,runtime_mode,windows_acl_verified'
+    || payload.operation !== 'control_plane_approved_patch_policy_disabled'
+    || payload.enabled !== false || !SHA256_PATTERN.test(String(payload.policy_sha256 || '').toLowerCase())
+    || payload.runtime_mode !== 'packaged' || payload.windows_acl_verified !== false) {
+    throw enrollmentError('CONTROL_PLANE_PATCH_POLICY_DISABLE_OUTPUT_INVALID', 'Node chưa xác nhận đã tắt patch policy cũ.');
+  }
+  return Object.freeze({ enabled: false, policy_sha256: payload.policy_sha256.toLowerCase() });
 }
 
 function parseWorkspaceRegistrationResult(stdout) {
@@ -719,6 +902,145 @@ class ControlPlaneEnrollmentService {
     return parseReadOnlyPolicyInstallResult(result?.stdout);
   }
 
+  async installStandingWorkspaceFilePolicies({ workspaceId, workspaceGeneration, allowWrite = false, replaceExisting = false } = {}) {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_FILE_POLICY_PACKAGED_REQUIRED', 'Quyền đọc/sửa file chỉ cài từ candidate packaged đã được xác minh.');
+    }
+    const normalizedWorkspaceId = centralWorkspaceId(workspaceId);
+    const normalizedWorkspaceGeneration = centralWorkspaceGeneration(workspaceGeneration);
+    if (typeof allowWrite !== 'boolean' || typeof replaceExisting !== 'boolean') {
+      throw enrollmentError('CONTROL_PLANE_FILE_POLICY_REQUEST_INVALID', 'Lựa chọn quyền file cục bộ không hợp lệ.');
+    }
+    const workspace = (await this.listWorkspaces()).find((item) => item.workspace_id === normalizedWorkspaceId
+      && item.workspace_generation === normalizedWorkspaceGeneration);
+    if (!workspace || workspace.capabilities.read !== true || (allowWrite && workspace.capabilities.write !== true)) {
+      throw enrollmentError('CONTROL_PLANE_FILE_POLICY_WORKSPACE_NOT_CURRENT', 'Workspace local chưa được đăng ký với capability đọc/ghi tương ứng.');
+    }
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    const config = this.paths.controlPlaneNodeConfigFile();
+    const registry = this.paths.controlPlaneWorkspaceRegistryFile();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_FILE_POLICY_RUNTIME_MISSING', `${label} đóng gói cho file policy không sẵn sàng.`);
+      }
+    }
+    const shared = [
+      '--config', config,
+      '--workspace-registry', registry,
+      '--workspace-id', normalizedWorkspaceId,
+      '--workspace-generation', normalizedWorkspaceGeneration,
+    ];
+    const runtime = [
+      '--project-root', this.agentProjectRoot,
+      '--node', this.paths.executablePath(),
+      '--runtime-mode', 'packaged'
+    ];
+    const runAgent = async (operation, args) => {
+      try {
+        const result = await this.runner(python, ['-I', agent, operation, ...args], {
+          cwd: this.agentProjectRoot,
+          env: safeEnrollmentEnvironment(this.environment),
+          timeoutMs: ENROLLMENT_TIMEOUT_MS
+        });
+        return result?.stdout;
+      } catch (error) {
+        throw enrollmentError(String(error?.code || 'CONTROL_PLANE_FILE_POLICY_INSTALL_FAILED'),
+          `Không thể hoàn tất ${operation} cho workspace đã chọn.`);
+      }
+    };
+    const authority = parsePolicyAuthorityObservation(await runAgent('inspect-policy-authority', [...shared, ...runtime]),
+      normalizedWorkspaceId, normalizedWorkspaceGeneration);
+    if (allowWrite && authority.standing_write_enabled !== true) {
+      throw enrollmentError('CONTROL_PLANE_PATCH_POLICY_NOT_ADMITTED', 'Ubuntu chưa bật quyền sửa file đứng lâu dài cho connector này.');
+    }
+    const policyArgs = [
+      ...shared,
+      '--owner-id', authority.owner_id,
+      '--facade-schema-version', String(authority.facade_contract.schema_version),
+      '--facade-profile', authority.facade_contract.profile,
+      '--facade-sha256', authority.facade_contract.sha256,
+      '--allowed-relative-prefix', '.',
+      '--confirm-install',
+      ...(replaceExisting ? ['--replace'] : []),
+      ...runtime
+    ];
+    // There is one local patch policy slot per node. Retire any old write
+    // authority before switching the active file target, including when the
+    // selected workspace will be read-only. A failure stops before the new
+    // read policy is installed; it never leaves old write authority hidden.
+    const before = await this.inspectStandingWorkspaceFilePolicies();
+    if (before.approved_patch.enabled === true) {
+      parsePatchPolicyDisableResult(await runAgent('disable-approved-patch-policy', [
+        '--confirm-disable', ...runtime
+      ]));
+    }
+    const fileRead = parseStandingFilePolicyInstallResult(await runAgent('install-file-read-policy', [
+      ...policyArgs,
+      '--max-bytes', String(FILE_READ_LIMITS.max_bytes),
+      '--max-lines', String(FILE_READ_LIMITS.max_lines)
+    ]), 'file_read');
+    if (!allowWrite) return Object.freeze({ state: 'read_only', workspace_id: normalizedWorkspaceId,
+      workspace_generation: normalizedWorkspaceGeneration, file_read: fileRead, approved_patch: null });
+    try {
+      const patch = parseStandingFilePolicyInstallResult(await runAgent('install-approved-patch-policy', [
+        ...policyArgs,
+        '--max-patch-bytes', String(PATCH_LIMITS.max_patch_bytes),
+        '--max-file-bytes', String(PATCH_LIMITS.max_file_bytes)
+      ]), 'approved_patch');
+      return Object.freeze({ state: 'read_and_patch', workspace_id: normalizedWorkspaceId,
+        workspace_generation: normalizedWorkspaceGeneration, file_read: fileRead, approved_patch: patch });
+    } catch (error) {
+      // An explicit partial receipt is more truthful than hiding a successful
+      // read-policy replacement behind a generic IPC failure. The previous
+      // patch policy was already disabled above; a malformed new receipt may
+      // still leave unknown local state, so the UI must re-observe it.
+      return Object.freeze({ state: 'read_only_partial', workspace_id: normalizedWorkspaceId,
+        workspace_generation: normalizedWorkspaceGeneration, file_read: fileRead, approved_patch: null,
+        error_code: String(error?.code || 'CONTROL_PLANE_PATCH_POLICY_INSTALL_FAILED') });
+    }
+  }
+
+  async inspectStandingWorkspaceFilePolicies() {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_FILE_POLICY_PACKAGED_REQUIRED', 'Kiểm tra quyền file chỉ khả dụng từ candidate packaged.');
+    }
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_FILE_POLICY_RUNTIME_MISSING', `${label} đóng gói cho file policy không sẵn sàng.`);
+      }
+    }
+    const observe = async (kind, command) => {
+      let result;
+      try {
+        result = await this.runner(python, [
+          '-I', agent, command,
+          '--project-root', this.agentProjectRoot,
+          '--node', this.paths.executablePath(),
+          '--runtime-mode', 'packaged'
+        ], {
+          cwd: this.agentProjectRoot,
+          env: safeEnrollmentEnvironment(this.environment),
+          timeoutMs: ENROLLMENT_TIMEOUT_MS
+        });
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_FILE_POLICY_OBSERVATION_FAILED', 'Không thể kiểm tra quyền file local.');
+      }
+      return parseStandingFilePolicyObservation(result?.stdout, kind);
+    };
+    const [fileRead, approvedPatch] = await Promise.all([
+      observe('file_read', 'inspect-file-read-policy'),
+      observe('approved_patch', 'inspect-approved-patch-policy')
+    ]);
+    return Object.freeze({ file_read: fileRead, approved_patch: approvedPatch });
+  }
+
   async registerWorkspace({ workspacePath, capabilities: requestedCapabilities } = {}) {
     if (this.paths.runtimeMode() !== 'packaged') {
       throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Đăng ký workspace Ubuntu chỉ chạy từ candidate packaged đã được xác minh.');
@@ -839,11 +1161,17 @@ class ControlPlaneEnrollmentService {
     return parseWorkspaceRetirementResult(result?.stdout);
   }
 
-  async replaceWorkspace({ workspacePath, capabilities: requestedCapabilities } = {}) {
+  async replaceWorkspace({ workspacePath, workspaceId, workspaceGeneration, capabilities: requestedCapabilities } = {}) {
     if (this.paths.runtimeMode() !== 'packaged') {
       throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Thay capability workspace Ubuntu chỉ chạy từ candidate packaged đã được xác minh.');
     }
     const canonicalPath = canonicalWorkspacePath(workspacePath);
+    const normalizedWorkspaceId = centralWorkspaceId(workspaceId);
+    const normalizedWorkspaceGeneration = centralWorkspaceGeneration(workspaceGeneration);
+    assertSelectedWorkspaceRegistration(
+      this.paths.controlPlaneWorkspaceRegistryFile(), canonicalPath,
+      normalizedWorkspaceId, normalizedWorkspaceGeneration
+    );
     const displayName = workspaceDisplayName(canonicalPath);
     const capabilities = normalizeWorkspaceCapabilities(requestedCapabilities);
     const python = this.paths.portablePython();
@@ -864,6 +1192,8 @@ class ControlPlaneEnrollmentService {
         '--config', config,
         '--workspace-registry', registry,
         '--workspace-path', canonicalPath,
+        '--expected-workspace-id', normalizedWorkspaceId,
+        '--expected-workspace-generation', normalizedWorkspaceGeneration,
         '--display-name', displayName,
         '--capability-read',
         ...(capabilities.write ? ['--capability-write'] : []),
@@ -881,7 +1211,12 @@ class ControlPlaneEnrollmentService {
       const code = String(error?.code || 'CONTROL_PLANE_WORKSPACE_REPLACE_FAILED');
       throw enrollmentError(code, 'Không thể thay capability workspace local với Ubuntu.');
     }
-    return parseWorkspaceReplacementResult(result?.stdout);
+    const receipt = parseWorkspaceReplacementResult(result?.stdout);
+    if (receipt.workspace_id !== normalizedWorkspaceId
+      || receipt.old_workspace_generation !== normalizedWorkspaceGeneration) {
+      throw enrollmentError('CONTROL_PLANE_WORKSPACE_REPLACE_TARGET_MISMATCH', 'Receipt replacement không đúng workspace đã chọn; cần đối soát trước khi tiếp tục.');
+    }
+    return receipt;
   }
 }
 
@@ -901,6 +1236,9 @@ module.exports = {
   parseAuthorityStatusResult,
   parseCredentialRotationResult,
   parseReadOnlyPolicyInstallResult,
+  parsePolicyAuthorityObservation,
+  parseStandingFilePolicyInstallResult,
+  parseStandingFilePolicyObservation,
   parseWorkspaceRegistrationResult,
   parseWorkspaceListResult,
   parseWorkspaceRetirementResult,

@@ -156,6 +156,34 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(main, /CONTROL_PLANE_ENROLLMENT_ROLE_REQUIRED/);
 });
 
+test('central workspace row installs standing file policy only for its exact local generation, without claiming exec', () => {
+  const html = read('renderer/index.html');
+  const app = read('renderer/app.js');
+  const preload = read('electron/preload.js');
+  const main = read('electron/main.js');
+  const service = read('electron/services/controlPlaneEnrollment.js');
+  assert.match(html, /bấm “Bật đọc\/sửa file” ngay tại thư mục đã chọn/);
+  assert.match(html, /Chạy lệnh là quyền riêng, chưa được bật/);
+  assert.match(app, /filePolicy\.textContent = capabilities\.write === true \? 'Bật đọc\/sửa file' : 'Bật đọc file'/);
+  assert.match(app, /api\.installControlPlaneStandingFilePolicies\(\{/);
+  assert.match(app, /api\.inspectControlPlaneStandingFilePolicies\(\)/);
+  assert.match(app, /readVerified[\s\S]*writeVerified/);
+  assert.match(app, /Chưa xác minh liên kết ID/);
+  const targetMatch = app.slice(app.indexOf('function centralDispatchableTargetForLocalWorkspace'), app.indexOf('function centralWorkspaceCapabilitiesFromUi'));
+  assert.doesNotMatch(targetMatch, /return entry\.display_name ===/);
+  assert.match(app, /const workspacePath = await chooseControlPlaneWorkspace\(\)/);
+  assert.match(app, /workspaceId: workspace\.workspace_id,[\s\S]*workspaceGeneration: workspace\.workspace_generation/);
+  assert.match(preload, /installControlPlaneStandingFilePolicies:.*control-plane:install-standing-file-policies/);
+  assert.match(preload, /inspectControlPlaneStandingFilePolicies:.*control-plane:inspect-standing-file-policies/);
+  assert.match(main, /secureHandle\('control-plane:install-standing-file-policies'/);
+  assert.match(main, /secureHandle\('control-plane:inspect-standing-file-policies'/);
+  assert.match(service, /'inspect-policy-authority'/);
+  assert.match(service, /'--allowed-relative-prefix', '\.'/);
+  assert.match(service, /'--expected-workspace-id', normalizedWorkspaceId/);
+  assert.match(service, /'--expected-workspace-generation', normalizedWorkspaceGeneration/);
+  assert.doesNotMatch(service.slice(service.indexOf('async installStandingWorkspaceFilePolicies'), service.indexOf('async inspectStandingWorkspaceFilePolicies')), /install-exec-policy/);
+});
+
 test('manager Command Center exposes the truthful nine-node topology in the overview fabric', () => {
   const html = read('renderer/index.html');
   for (const suffix of ['ChatWeb', 'Desktop', 'OpenCode', 'Fast', 'Hub', 'DeepSeek', 'Terra', 'Writer', 'Sol']) {

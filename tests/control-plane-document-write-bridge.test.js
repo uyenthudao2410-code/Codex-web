@@ -14,6 +14,7 @@ const {
   digest,
   loadDocumentWriteBridgePolicy,
   normaliseDocumentWriteResult,
+  resolveDocumentTarget,
   resolveRegisteredDocumentWorkspaceRoot
 } = require('../electron/services/controlPlaneDocumentWriteBridge');
 
@@ -129,6 +130,28 @@ test('document write admits create and convert against the exact standing writab
   assert.equal(convert.operation, 'document_convert');
   assert.equal(convert.source, 'input.md');
   assert.equal(resolveRegisteredDocumentWorkspaceRoot(item.paths, policy), fs.realpathSync.native(item.root));
+});
+
+test('workspace prefix document policy admits a new exact target and rejects reparse parents', (t) => {
+  const item = fixture(t);
+  const scoped = JSON.parse(fs.readFileSync(item.policyFile, 'utf8'));
+  scoped.schema_version = 3;
+  delete scoped.allowed_relative_paths;
+  scoped.allowed_relative_prefixes = ['.'];
+  fs.writeFileSync(item.policyFile, JSON.stringify(scoped), 'utf8');
+  const policy = loaded(item);
+  const wanted = admitDocumentWriteBridgeRequest(policy,
+    request(policy, { target: 'docs/new-result.md' }), { now: NOW });
+  assert.equal(resolveDocumentTarget(item.root, wanted), path.join(item.root, 'docs', 'new-result.md'));
+  assert.throws(() => admitDocumentWriteBridgeRequest(policy,
+    request(policy, { target: '../outside.md' }), { now: NOW }));
+  assert.throws(() => admitDocumentWriteBridgeRequest(policy,
+    request(policy, { target: 'docs/.env.md' }), { now: NOW }));
+  const outside = path.join(path.dirname(item.root), 'outside');
+  fs.mkdirSync(outside);
+  fs.symlinkSync(outside, path.join(item.root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  assert.throws(() => resolveDocumentTarget(item.root, { ...wanted, target: 'linked/new-result.md' }),
+    { code: 'CONTROL_PLANE_DOCUMENT_WRITE_REPARSE_DENIED' });
 });
 
 test('document write rejects invalid operation/source/target combinations before effect', (t) => {

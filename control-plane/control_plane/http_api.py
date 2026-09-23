@@ -33,7 +33,9 @@ from .mcp_oauth import (
     OAuthAuthenticationError,
     OAuthIntrospectionConfiguration,
     OAuthIntrospectionVerifier,
+    PrivateTunnelServiceConfiguration,
     oauth_configuration_from_environment,
+    private_service_configuration_from_environment,
 )
 from .store import (
     ConflictError,
@@ -327,6 +329,7 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
         mcp_ingress_only: bool = False,
         mcp_oauth: OAuthIntrospectionConfiguration | None = None,
         mcp_oauth_verifier: OAuthIntrospectionVerifier | None = None,
+        mcp_private_service: PrivateTunnelServiceConfiguration | None = None,
     ) -> None:
         operator_token_bytes = _operator_token_bytes(operator_token)
         if operator_token_bytes is None:
@@ -337,8 +340,11 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
             raise ValueError("an MCP ingress-only listener must enable the MCP route.")
         if mcp_oauth is None and mcp_oauth_verifier is not None:
             raise ValueError("an MCP OAuth verifier requires an MCP OAuth configuration.")
+        if mcp_oauth is not None and mcp_private_service is not None:
+            raise ValueError("MCP OAuth and private service modes are mutually exclusive.")
         self.store = store
         self.mcp_oauth = mcp_oauth
+        self.mcp_private_service = mcp_private_service
         self.mcp_oauth_verifier = (
             mcp_oauth_verifier
             if mcp_oauth_verifier is not None
@@ -346,23 +352,25 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
             if mcp_oauth is not None
             else None
         )
+        account_config = mcp_oauth or mcp_private_service
         self.mcp_facade = ControlPlaneMcpFacade(
             store,
-            oauth_scopes=(mcp_oauth.required_scope,) if mcp_oauth is not None else (),
-            oauth_file_read_enabled=bool(mcp_oauth is not None and mcp_oauth.file_read_enabled),
+            auth_kind="private_tunnel_service" if mcp_private_service is not None else None,
+            oauth_scopes=(account_config.required_scope,) if account_config is not None else (),
+            oauth_file_read_enabled=bool(account_config is not None and account_config.file_read_enabled),
             oauth_permission_requests_enabled=bool(
                 mcp_oauth is not None and mcp_oauth.permission_requests_enabled
             ),
-            oauth_patch_write_scope=mcp_oauth.patch_write_scope if mcp_oauth is not None else None,
+            oauth_patch_write_scope=account_config.patch_write_scope if account_config is not None else None,
             oauth_approved_patch_enabled=bool(
-                mcp_oauth is not None and (
-                    mcp_oauth.approved_patch_enabled or mcp_oauth.standing_write_enabled
+                account_config is not None and (
+                    (mcp_oauth is not None and mcp_oauth.approved_patch_enabled) or account_config.standing_write_enabled
                 )
             ),
             oauth_standing_write_enabled=bool(
-                mcp_oauth is not None and mcp_oauth.standing_write_enabled
+                account_config is not None and account_config.standing_write_enabled
             ),
-            oauth_exec_enabled=bool(mcp_oauth is not None and mcp_oauth.exec_enabled),
+            oauth_exec_enabled=bool(account_config is not None and account_config.exec_enabled),
         )
         # Keep only bytes so every later constant-time comparison has the
         # same representation. No route needs the raw text token.
@@ -497,6 +505,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         ) or (
             name == "agent_workflow"
             and (configuration.approved_patch_enabled or configuration.standing_write_enabled)
+        ) or (
+            name in {"exec_command", "command_control"}
+            and configuration.exec_enabled
         ):
             if configuration.patch_write_scope is None:
                 return required
@@ -511,6 +522,21 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         it can see inventory; raw token/claims never reach a node or receipt.
         """
 
+        if self.server.mcp_private_service is not None:
+            configuration = self.server.mcp_private_service
+            principal = self.server.store.authenticate_mcp_service_token(access_token=self._auth("Bearer"))
+            if principal["principal_id"] != configuration.principal_id:
+                raise PermissionError("MCP service grant does not match this configured principal.")
+            configured_scopes = configuration.verified_scopes
+            granted_scopes = principal["scopes"]
+            if configuration.required_scope not in granted_scopes or not granted_scopes <= configured_scopes:
+                raise PermissionError("MCP service grant scopes are not valid for this listener.")
+            return {
+                "owner_id": principal["owner_id"],
+                "principal_id": principal["principal_id"],
+                "context_id": None,
+                "oauth_scopes": granted_scopes,
+            }
         if self.server.mcp_oauth is None:
             return self.server.store.authenticate_mcp_access_token(access_token=self._auth("Bearer"))
         header = self.headers.get("Authorization")
@@ -965,6 +991,61 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         )
         return {"policy_template": self._read_only_policy_template(context)}
 
+    def _node_policy_authority(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Give an enrolled node current, path-free standing-policy metadata.
+
+        This is not a policy installation or an admission decision. The node
+        must independently recheck its local registered root at install time.
+        An active binding for the exact generation prevents a stale or merely
+        registered workspace from acquiring standing local authority.
+        """
+
+        if set(body) != {"workspace_id", "workspace_generation"}:
+            raise ValidationError("node policy authority payload is invalid.")
+        workspace_id = self._field(body, "workspace_id")
+        workspace_generation = self._field(body, "workspace_generation")
+        if not isinstance(workspace_id, str) or not isinstance(workspace_generation, str):
+            raise ValidationError("node policy authority fields are invalid.")
+        self._node(device_id)
+        facade = self.server.mcp_facade
+        if not (facade.oauth_enabled and facade.oauth_file_read_enabled):
+            raise ConflictError("account file-read policy is not enabled on this MCP listener.")
+        node = self.server.store.node(device_id=device_id)
+        owner_id = str(node["owner_id"])
+        if self.server.mcp_private_service is not None:
+            configured_principal = self.server.mcp_private_service.principal_id
+            if not any(
+                principal["principal_id"] == configured_principal
+                and principal["revoked_at_ms"] is None
+                for principal in self.server.store.list_private_tunnel_service_principals(owner_id=owner_id)
+            ):
+                raise ConflictError("selected node is not owned by the active MCP service principal.")
+        targets = [
+            target for target in self.server.store.list_account_targets(owner_id=owner_id)
+            if target["device_id"] == device_id
+            and target["endpoint_id"] == node["endpoint_id"]
+            and target["workspace_id"] == workspace_id
+            and target["workspace_generation"] == workspace_generation
+            and target["binding_state"] == "active"
+            and target["workspace_state"] == "active"
+            and target["capabilities"]["read"] is True
+        ]
+        if not targets:
+            raise ConflictError("selected workspace has no active readable binding.")
+        return {
+            "owner_id": owner_id,
+            "device_id": device_id,
+            "endpoint_id": node["endpoint_id"],
+            "workspace_id": workspace_id,
+            "workspace_generation": workspace_generation,
+            "facade_contract": {
+                key: facade.contract[key] for key in ("schema_version", "profile", "sha256")
+            },
+            "binding_count": len(targets),
+            "standing_write_enabled": facade.oauth_standing_write_enabled,
+            "observed_at_ms": self.server.store.clock(),
+        }
+
     def _register_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """Accept a path-free workspace inventory only from its own node.
 
@@ -1015,7 +1096,11 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 # This is deployment-supplied metadata, not an attestation of
                 # loaded bytes. Operators still need service/unit proof.
                 "declared_source_revision": self.server.declared_source_revision,
-                "mcp_authentication_mode": "oauth_introspection" if self.server.mcp_oauth is not None else "legacy_context_grant",
+                "mcp_authentication_mode": (
+                    "oauth_introspection" if self.server.mcp_oauth is not None
+                    else "private_tunnel_service" if self.server.mcp_private_service is not None
+                    else "legacy_context_grant"
+                ),
             }
         )
         return payload
@@ -1059,6 +1144,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             # without the existing explicit binding/context calls below.
             "workspace_registrations": workspace_registrations,
             "bindings": self.server.store.list_bindings(owner_id=owner_id),
+            "mcp_service_principals": self.server.store.list_private_tunnel_service_principals(owner_id=owner_id),
+            "mcp_service_grants": self.server.store.list_mcp_service_grants(owner_id=owner_id),
+            "scoped_pilot_decisions": self.server.store.list_scoped_pilot_decisions(owner_id=owner_id),
             "contexts": self.server.store.list_contexts(owner_id=owner_id),
             # Browser overview deliberately omits raw objective, criteria and
             # scope text. Those can contain private task data and are not needed
@@ -1160,6 +1248,21 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     {"mcp_access_grants": self.server.store.list_mcp_access_grants(owner_id=self._operator())},
                 )
                 return
+            if self.path == "/v1/mcp-service-principals":
+                self._json(HTTPStatus.OK, {
+                    "mcp_service_principals": self.server.store.list_private_tunnel_service_principals(owner_id=self._operator()),
+                })
+                return
+            if self.path == "/v1/mcp-service-grants":
+                self._json(HTTPStatus.OK, {
+                    "mcp_service_grants": self.server.store.list_mcp_service_grants(owner_id=self._operator()),
+                })
+                return
+            if self.path == "/v1/scoped-pilot-decisions":
+                self._json(HTTPStatus.OK, {
+                    "scoped_pilot_decisions": self.server.store.list_scoped_pilot_decisions(owner_id=self._operator()),
+                })
+                return
             if self.path == "/v1/oauth-principals":
                 self._json(
                     HTTPStatus.OK,
@@ -1238,6 +1341,18 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if self.server.mcp_ingress_only and self.path != "/mcp":
                 self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
                 return
+            if self.path == "/mcp" and self.server.mcp_private_service is not None:
+                # The Tunnel injects a shared bearer. A browser must not be
+                # able to submit a simple cross-origin text/plain form POST
+                # that queues a privileged action without reading its reply.
+                # Requiring JSON makes browser callers preflight; this server
+                # intentionally offers no CORS preflight/allow-origin route.
+                media_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+                if media_type != "application/json":
+                    self._json(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, {
+                        "error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "MCP requires application/json."},
+                    })
+                    return
             body = self._body()
             if self.path == "/v1/ui/login":
                 token, session = self._login(body)
@@ -1294,7 +1409,8 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 # must never be compared to the Console origin.  Keep the
                 # legacy grant boundary unchanged, and do not emit CORS
                 # headers: an Origin alone is not authority in either mode.
-                if modern and self.headers.get("Origin") and self.server.mcp_oauth is None:
+                if (modern and self.headers.get("Origin")
+                    and self.server.mcp_oauth is None and self.server.mcp_private_service is None):
                     self._require_web_origin()
                 response = self.server.mcp_facade.handle(
                     body,
@@ -1340,6 +1456,32 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     expires_at_ms=self._field(body, "expires_at_ms"),
                 )
                 self._json(HTTPStatus.CREATED, result)
+                return
+            if self.path == "/v1/mcp-service-principals":
+                if body:
+                    raise ValidationError("MCP service principal creation payload must be empty.")
+                self._json(HTTPStatus.CREATED, self.server.store.create_private_tunnel_service_principal(owner_id=self._operator()))
+                return
+            if self.path == "/v1/mcp-service-grants":
+                if set(body) != {"principal_id", "expires_at_ms", "scopes"}:
+                    raise ValidationError("MCP service grant payload is invalid.")
+                self._json(HTTPStatus.CREATED, self.server.store.create_mcp_service_grant(
+                    owner_id=self._operator(),
+                    principal_id=self._field(body, "principal_id"),
+                    expires_at_ms=self._field(body, "expires_at_ms"),
+                    scopes=self._field(body, "scopes"),
+                ))
+                return
+            if self.path == "/v1/scoped-pilot-decisions":
+                if set(body) != {"principal_id", "binding_id", "expires_at_ms", "reason"}:
+                    raise ValidationError("scoped pilot decision payload is invalid.")
+                self._json(HTTPStatus.CREATED, self.server.store.create_scoped_pilot_decision(
+                    owner_id=self._operator(),
+                    principal_id=self._field(body, "principal_id"),
+                    binding_id=self._field(body, "binding_id"),
+                    expires_at_ms=self._field(body, "expires_at_ms"),
+                    reason=self._field(body, "reason"),
+                ))
                 return
             if self.path == "/v1/oauth-principals":
                 if set(body) != {"issuer", "subject"}:
@@ -1410,6 +1552,30 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     grant_id=mcp_grant_revoke_match.group(1),
                 )
                 self._json(HTTPStatus.OK, result)
+                return
+            mcp_service_grant_revoke_match = re.fullmatch(r"/v1/mcp-service-grants/([^/]+)/revoke", self.path)
+            if mcp_service_grant_revoke_match:
+                if body:
+                    raise ValidationError("MCP service grant revocation payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.revoke_mcp_service_grant(
+                    owner_id=self._operator(), grant_id=mcp_service_grant_revoke_match.group(1),
+                ))
+                return
+            mcp_service_principal_revoke_match = re.fullmatch(r"/v1/mcp-service-principals/([^/]+)/revoke", self.path)
+            if mcp_service_principal_revoke_match:
+                if body:
+                    raise ValidationError("MCP service principal revocation payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.revoke_private_tunnel_service_principal(
+                    owner_id=self._operator(), principal_id=mcp_service_principal_revoke_match.group(1),
+                ))
+                return
+            scoped_pilot_revoke_match = re.fullmatch(r"/v1/scoped-pilot-decisions/([^/]+)/revoke", self.path)
+            if scoped_pilot_revoke_match:
+                if body:
+                    raise ValidationError("scoped pilot decision revocation payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.revoke_scoped_pilot_decision(
+                    owner_id=self._operator(), decision_id=scoped_pilot_revoke_match.group(1),
+                ))
                 return
             if self.path == "/v1/enrollment-requests":
                 result = self.server.store.request_enrollment(
@@ -1485,6 +1651,24 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     principal_id=ui_oauth_principal_revoke_match.group(1),
                 )
                 self._json(HTTPStatus.OK, result)
+                return
+            ui_service_grant_revoke_match = re.fullmatch(r"/v1/ui/mcp-service-grants/([^/]+)/revoke", self.path)
+            if ui_service_grant_revoke_match:
+                if body:
+                    raise ValidationError("browser MCP service grant revocation payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.revoke_mcp_service_grant(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    grant_id=ui_service_grant_revoke_match.group(1),
+                ))
+                return
+            ui_scoped_pilot_revoke_match = re.fullmatch(r"/v1/ui/scoped-pilot-decisions/([^/]+)/revoke", self.path)
+            if ui_scoped_pilot_revoke_match:
+                if body:
+                    raise ValidationError("browser scoped pilot revocation payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.revoke_scoped_pilot_decision(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    decision_id=ui_scoped_pilot_revoke_match.group(1),
+                ))
                 return
             if self.path == "/v1/maintenance/admission":
                 self._operator_for_admission(mode=body.get("mode"))
@@ -1717,6 +1901,13 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     self._node_assigned_read_only_policy_template(node_assigned_policy_match.group(1), body),
                 )
                 return
+            node_policy_authority_match = re.fullmatch(r"/v1/nodes/([^/]+)/policy-authority", self.path)
+            if node_policy_authority_match:
+                self._json(
+                    HTTPStatus.OK,
+                    self._node_policy_authority(node_policy_authority_match.group(1), body),
+                )
+                return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/poll", self.path)
             if node_match:
                 device_id = node_match.group(1)
@@ -1821,6 +2012,7 @@ def serve_from_environment() -> None:
     port = int(os.environ.get("CONTROL_PLANE_PORT", "8765"))
     mcp_bind, mcp_port = _mcp_ingress_address_from_environment()
     mcp_oauth = oauth_configuration_from_environment()
+    mcp_private_service = private_service_configuration_from_environment()
     store = ControlPlaneStore(database)
     shared = (
         store,
@@ -1837,6 +2029,7 @@ def serve_from_environment() -> None:
         web_session_ttl_seconds=int(os.environ.get("CONTROL_PLANE_WEB_SESSION_TTL_SECONDS", str(DEFAULT_WEB_SESSION_TTL_SECONDS))),
         mcp_enabled=False,
         mcp_oauth=mcp_oauth,
+        mcp_private_service=mcp_private_service,
     )
     mcp_server = ControlPlaneHttpServer(
         (mcp_bind, mcp_port),
@@ -1844,6 +2037,7 @@ def serve_from_environment() -> None:
         mcp_enabled=True,
         mcp_ingress_only=True,
         mcp_oauth=mcp_oauth,
+        mcp_private_service=mcp_private_service,
     )
     mcp_thread = Thread(target=mcp_server.serve_forever, kwargs={"poll_interval": 0.5}, daemon=True)
     mcp_thread.start()

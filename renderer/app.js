@@ -34,6 +34,13 @@ function createPreviewApi() {
     replaceControlPlaneWorkspace: ({ capabilities } = {}) => ok({ workspace_id: 'workspace_0123456789abcdef0123456789abcdef', old_workspace_generation: 'generation_abcdef0123456789abcdef0123456789', workspace_generation: 'generation_fedcba9876543210fedcba9876543210', display_name: 'my-project', capabilities: { read: true, write: capabilities?.write === true, exec: capabilities?.exec === true }, replayed: false, state: 'replaced' }),
     listControlPlaneWorkspaces: () => ok([]),
     installControlPlaneReadOnlyPolicyAssignment: () => ok({ enabled: true, expires_at_ms: Date.now() + 60 * 60 * 1000, policy_sha256: 'b'.repeat(64), runtime_mode: 'packaged', windows_acl_verified: false }),
+    installControlPlaneStandingFilePolicies: ({ workspaceId, workspaceGeneration, allowWrite } = {}) => ok({
+      state: allowWrite ? 'read_and_patch' : 'read_only', workspace_id: workspaceId,
+      workspace_generation: workspaceGeneration,
+      file_read: { kind: 'file_read', authority_mode: 'standing', policy_sha256: 'c'.repeat(64), windows_acl_verified: false },
+      approved_patch: allowWrite ? { kind: 'approved_patch', authority_mode: 'standing', policy_sha256: 'd'.repeat(64), windows_acl_verified: false } : null
+    }),
+    inspectControlPlaneStandingFilePolicies: () => ok({ file_read: { state: 'unavailable', reason: 'CONTROL_PLANE_FILE_READ_POLICY_MISSING' }, approved_patch: { state: 'unavailable', reason: 'CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING' } }),
     retireControlPlaneWorkspace: ({ workspaceId, workspaceGeneration } = {}) => ok({ workspace_id: workspaceId, workspace_generation: workspaceGeneration, display_name: 'my-project', capabilities: { read: true, write: false, exec: false }, replayed: false, state: 'retired' }),
     handoffCentralExecutor: () => { snapshot.settings.executionRole = 'central_executor'; snapshot.status.executionRole = 'central_executor'; snapshot.status.tunnelRunning = false; snapshot.status.fullyReady = false; return ok(snapshot); },
     start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot), acknowledgeConnectorContract: () => ok(snapshot),
@@ -83,6 +90,9 @@ const state = {
   centralWorkspaceReceipt: null,
   centralPolicyReceipt: null,
   centralPolicyBusy: false,
+  centralFilePolicies: null,
+  centralFilePolicyStatus: 'not_checked',
+  centralFilePolicyError: null,
   centralWorkspaceListBusy: false,
   centralWorkspaces: null,
   centralWorkspaceInventoryStatus: 'not_loaded',
@@ -138,7 +148,7 @@ const CENTRAL_WORKSPACE_PRESETS = Object.freeze({
   }),
   code: Object.freeze({
     label: 'Làm việc với mã nguồn',
-    detail: 'Đọc, sửa file và chạy công cụ trong policy đã được cấp.',
+    detail: 'Đăng ký khả năng đọc/sửa/chạy; policy file và lệnh phải bật riêng.',
     capabilities: Object.freeze({ read: true, write: true, exec: true })
   }),
   custom: Object.freeze({
@@ -189,24 +199,15 @@ function centralDispatchableTargetForLocalWorkspace() {
     ? state.centralAuthorityStatus.targets
     : [];
   const dispatchable = targets.filter((target) => target?.dispatch_state === 'dispatchable');
-  const matches = dispatchable.filter((target) => entries.some((entry) => {
-    if (target.workspace_id && target.workspace_generation) {
-      return entry.workspace_id === target.workspace_id
-        && entry.workspace_generation === target.workspace_generation;
-    }
-    return entry.display_name === target.workspace_display_name;
-  }));
-  // Prefer opaque identity/generation when the server supplies it. Legacy
-  // receipts may contain only a display name; still refuse ambiguity rather
-  // than guessing a target behind the user's back.
+  const matches = dispatchable.filter((target) => entries.some((entry) =>
+    entry.workspace_id === target.workspace_id
+      && entry.workspace_generation === target.workspace_generation));
+  // A display name is not target identity. Legacy receipts without opaque
+  // ID/generation cannot prove authority for this selected local root.
   if (matches.length !== 1) return null;
-  const matchingEntries = entries.filter((entry) => {
-    if (matches[0].workspace_id && matches[0].workspace_generation) {
-      return entry.workspace_id === matches[0].workspace_id
-        && entry.workspace_generation === matches[0].workspace_generation;
-    }
-    return entry.display_name === matches[0].workspace_display_name;
-  });
+  const matchingEntries = entries.filter((entry) =>
+    entry.workspace_id === matches[0].workspace_id
+      && entry.workspace_generation === matches[0].workspace_generation);
   return matchingEntries.length === 1 ? matches[0] : null;
 }
 
@@ -511,9 +512,11 @@ function renderCentralWorkspaceRegistrations(central) {
     const detail = document.createElement('small');
     const capabilities = workspace.capabilities || {};
     const targetMatches = (state.centralAuthorityStatus?.targets || [])
-      .filter((item) => (item.workspace_id && item.workspace_generation
-        ? item.workspace_id === workspace.workspace_id && item.workspace_generation === workspace.workspace_generation
-        : item.workspace_display_name === workspace.display_name));
+      .filter((item) => item.workspace_id === workspace.workspace_id
+        && item.workspace_generation === workspace.workspace_generation);
+    const legacyNameOnly = (state.centralAuthorityStatus?.targets || []).some((item) =>
+      (!item.workspace_id || !item.workspace_generation)
+        && item.workspace_display_name === workspace.display_name);
     const target = targetMatches.length === 1 ? targetMatches[0] : null;
     const targetLabel = targetMatches.length > 1
       ? 'Nhiều target trùng tên · cần xác định'
@@ -521,9 +524,35 @@ function renderCentralWorkspaceRegistrations(central) {
       ? 'Đã liên kết'
       : target
         ? 'Đã đăng ký · đang chờ quyền'
-        : 'Chưa liên kết tài khoản';
-    detail.textContent = `${targetLabel} · ${centralWorkspaceCapabilityLabel(capabilities)}`;
+        : legacyNameOnly ? 'Chưa xác minh liên kết ID'
+          : 'Chưa liên kết tài khoản';
+    const readPolicy = state.centralFilePolicies?.file_read;
+    const patchPolicy = state.centralFilePolicies?.approved_patch;
+    const matchingRead = readPolicy?.state === 'enabled'
+      && readPolicy.workspace_id === workspace.workspace_id
+      && readPolicy.workspace_generation === workspace.workspace_generation;
+    const matchingPatch = patchPolicy?.state === 'enabled'
+      && patchPolicy.workspace_id === workspace.workspace_id
+      && patchPolicy.workspace_generation === workspace.workspace_generation;
+    const filePolicyLabel = state.centralFilePolicyStatus !== 'loaded'
+      ? 'quyền file chưa xác minh'
+      : matchingRead
+        ? `đọc file đã bật${matchingPatch ? ', sửa file đã bật' : ''}`
+        : 'quyền file chưa bật cho target này';
+    detail.textContent = `${targetLabel} · ${centralWorkspaceCapabilityLabel(capabilities)} · ${filePolicyLabel}`;
     label.append(title, detail);
+    const filePolicy = document.createElement('button');
+    filePolicy.type = 'button';
+    filePolicy.className = 'secondary-button';
+    filePolicy.textContent = capabilities.write === true ? 'Bật đọc/sửa file' : 'Bật đọc file';
+    filePolicy.title = 'Cài policy local cho toàn bộ thư mục đã đăng ký này; không cấp quyền chạy lệnh.';
+    filePolicy.disabled = development || state.busy || state.centralWorkspaceBusy
+      || state.centralWorkspaceListBusy || state.centralPolicyBusy;
+    filePolicy.addEventListener('click', () => {
+      installControlPlaneStandingFilePolicies(workspace).catch((error) => {
+        toast('Không thể cài quyền file local', error.message, 'error');
+      });
+    });
     const advanced = document.createElement('details');
     advanced.className = 'workspace-advanced-actions';
     const advancedSummary = document.createElement('summary');
@@ -565,7 +594,7 @@ function renderCentralWorkspaceRegistrations(central) {
     });
     advancedActions.append(replace, retire, policy);
     advanced.append(advancedActions);
-    row.append(label, advanced);
+    row.append(label, filePolicy, advanced);
     container.append(row);
   }
 }
@@ -1988,16 +2017,15 @@ async function replaceControlPlaneWorkspace(workspace) {
   if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name) {
     throw new Error('Thư mục local được chọn không hợp lệ.');
   }
-  let workspacePath = String(state.centralWorkspaceCandidate || '').trim();
-  if (!workspacePath) {
-    workspacePath = await chooseControlPlaneWorkspace();
-  }
+  // Always choose the folder for the row being changed. A previous picker
+  // result may belong to another row with the same display name.
+  const workspacePath = await chooseControlPlaneWorkspace();
   if (!workspacePath) return null;
   const capabilities = centralWorkspaceCapabilitiesFromUi();
   const oldLabel = centralWorkspaceCapabilityLabel(workspace.capabilities);
   const newLabel = centralWorkspaceCapabilityLabel(capabilities);
   const accepted = window.confirm(
-    `Đổi mức quyền cho “${workspace.display_name}” (${oldLabel} → ${newLabel})? `
+    `Đổi mức quyền cho “${workspace.display_name}” tại ${workspacePath} (${oldLabel} → ${newLabel})? `
       + 'Ubuntu sẽ retire generation cũ, đóng binding/task cũ, vô hiệu policy local cũ và tạo generation mới. '
       + 'Bạn phải bind lại workspace mới trên tài khoản ChatGPT; không ghi đè âm thầm.'
   );
@@ -2007,6 +2035,8 @@ async function replaceControlPlaneWorkspace(workspace) {
   try {
     const receipt = unwrap(await api.replaceControlPlaneWorkspace({
       workspacePath,
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation,
       capabilities,
       confirmReplace: true
     }));
@@ -2041,6 +2071,7 @@ async function refreshControlPlaneWorkspaces({ quiet = false } = {}) {
     state.centralWorkspaces = Array.isArray(workspaces) ? workspaces : [];
     state.centralWorkspaceInventoryStatus = 'loaded';
     state.centralWorkspaceInventoryError = null;
+    await refreshControlPlaneStandingFilePolicies({ quiet: true });
     if (!quiet) toast('Đã tải workspace local', `${state.centralWorkspaces.length} workspace đang đăng ký.`, 'success');
     return state.centralWorkspaces;
   } catch (error) {
@@ -2050,6 +2081,79 @@ async function refreshControlPlaneWorkspaces({ quiet = false } = {}) {
     throw error;
   } finally {
     state.centralWorkspaceListBusy = false;
+    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  }
+}
+
+async function refreshControlPlaneStandingFilePolicies({ quiet = true } = {}) {
+  if (!isCentralExecutor(state.snapshot?.settings)
+    || typeof api.inspectControlPlaneStandingFilePolicies !== 'function') return null;
+  try {
+    const observation = unwrap(await api.inspectControlPlaneStandingFilePolicies());
+    state.centralFilePolicies = observation;
+    state.centralFilePolicyStatus = 'loaded';
+    state.centralFilePolicyError = null;
+    return observation;
+  } catch (error) {
+    state.centralFilePolicies = null;
+    state.centralFilePolicyStatus = 'unknown';
+    state.centralFilePolicyError = error?.message || 'CONTROL_PLANE_FILE_POLICY_OBSERVATION_FAILED';
+    if (!quiet) toast('Chưa xác minh quyền file', state.centralFilePolicyError, 'warning');
+    return null;
+  } finally {
+    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  }
+  if (workspaceStatus && central && state.centralFilePolicyStatus === 'unknown') {
+    workspaceStatus.textContent = `Chưa xác minh policy đọc/sửa file local (${state.centralFilePolicyError || 'lỗi chưa rõ'}). Tải lại inventory để kiểm tra; không suy quyền từ receipt cũ.`;
+  }
+}
+
+async function installControlPlaneStandingFilePolicies(workspace) {
+  if (!isCentralExecutor(state.snapshot?.settings)) {
+    throw new Error('Cài quyền file chỉ khả dụng cho central executor.');
+  }
+  assertPackagedCentralSetup('Cài quyền đọc/sửa file');
+  if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name) {
+    throw new Error('Workspace local được chọn không hợp lệ.');
+  }
+  const allowWrite = workspace.capabilities?.write === true;
+  const accepted = window.confirm(
+    `Bật ${allowWrite ? 'đọc và sửa' : 'đọc'} file cho toàn bộ thư mục “${workspace.display_name}” trên máy này? `
+      + 'Policy local sẽ thay thế policy file trước đó; quyền sửa cũ sẽ được tắt trước khi chuyển target. '
+      + 'Chỉ các binding hiện hành ở Ubuntu mới được gửi action. Thao tác này không cấp quyền chạy lệnh.'
+  );
+  if (!accepted) return null;
+  state.centralPolicyBusy = true;
+  renderCentralExecutorMode(state.snapshot);
+  try {
+    const receipt = unwrap(await api.installControlPlaneStandingFilePolicies({
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation,
+      allowWrite,
+      replaceExisting: true,
+      confirmInstall: true
+    }));
+    const observed = await refreshControlPlaneStandingFilePolicies({ quiet: false });
+    const sameTarget = (policy) => policy?.state === 'enabled'
+      && policy.workspace_id === workspace.workspace_id
+      && policy.workspace_generation === workspace.workspace_generation;
+    const readVerified = sameTarget(observed?.file_read)
+      && observed.file_read.policy_sha256 === receipt.file_read?.policy_sha256;
+    const writeVerified = !allowWrite || (sameTarget(observed?.approved_patch)
+      && observed.approved_patch.policy_sha256 === receipt.approved_patch?.policy_sha256);
+    if (receipt.state === 'read_only_partial' || !readVerified || !writeVerified) {
+      toast('Quyền file chưa hoàn tất',
+        `Cần kiểm tra policy local cho “${workspace.display_name}”; không coi quyền sửa đã sẵn sàng${receipt.error_code ? ` (${receipt.error_code})` : ''}.`,
+        'warning');
+    } else {
+      toast('Đã bật quyền file',
+        `Đã xác minh ${allowWrite ? 'đọc và sửa' : 'đọc'} file cho “${workspace.display_name}” trong policy local. Quyền chạy lệnh vẫn chưa được cấp.`,
+        'success');
+    }
+    await refreshSnapshot({ forceForms: false });
+    return receipt;
+  } finally {
+    state.centralPolicyBusy = false;
     if (state.snapshot) renderCentralExecutorMode(state.snapshot);
   }
 }

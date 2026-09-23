@@ -10,7 +10,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { URL } = require('node:url');
 
-const POLICY_SCHEMA_VERSION = 2;
+const POLICY_SCHEMA_VERSION = 3;
+const EXACT_POLICY_SCHEMA_VERSION = 2;
 const LEGACY_POLICY_SCHEMA_VERSION = 1;
 const STANDING_AUTHORITY_MODE = 'standing';
 const BRIDGE_ENVELOPE_SCHEMA_VERSION = 1;
@@ -147,14 +148,34 @@ function allowedPaths(value, code = 'CONTROL_PLANE_FILE_READ_POLICY_INVALID') {
   return Object.freeze([...normalized].sort());
 }
 
+function allowedPrefixes(value, code = 'CONTROL_PLANE_FILE_READ_POLICY_INVALID') {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_ALLOWED_PATHS) {
+    throw bridgeError(code, 'allowed_relative_prefixes is invalid.');
+  }
+  const normalized = value.map((item) => item === '.' ? '.' : relativePath(item, code));
+  if (new Set(normalized).size !== normalized.length || (normalized.includes('.') && normalized.length !== 1)) {
+    throw bridgeError(code, 'allowed_relative_prefixes must be distinct and canonical.');
+  }
+  return Object.freeze([...normalized].sort());
+}
+
+function policyAllowsPath(policy, relative) {
+  if (policy.schema_version === POLICY_SCHEMA_VERSION) {
+    return policy.allowed_relative_prefixes.some((prefix) =>
+      prefix === '.' || relative === prefix || relative.startsWith(`${prefix}/`));
+  }
+  return policy.allowed_relative_paths.includes(relative);
+}
+
 function normalisePolicy(value, { now = Date.now() } = {}) {
   const schemaVersion = Number(value?.schema_version);
-  const standing = schemaVersion === POLICY_SCHEMA_VERSION;
+  const prefixes = schemaVersion === POLICY_SCHEMA_VERSION;
+  const standing = prefixes || schemaVersion === EXACT_POLICY_SCHEMA_VERSION;
   const legacy = schemaVersion === LEGACY_POLICY_SCHEMA_VERSION;
   const expected = [
     'schema_version', 'enabled', 'server_origin', 'owner_id', 'device_id',
     'endpoint_id', 'workspace_id', 'workspace_generation', 'expires_at_ms',
-    'facade_contract', 'allowed_relative_paths', 'max_bytes', 'max_lines'
+    'facade_contract', prefixes ? 'allowed_relative_prefixes' : 'allowed_relative_paths', 'max_bytes', 'max_lines'
   ];
   if (standing) expected.push('authority_mode');
   if (!exactKeys(value, expected) || (!standing && !legacy)) {
@@ -185,7 +206,9 @@ function normalisePolicy(value, { now = Date.now() } = {}) {
     workspace_generation: identifier(value.workspace_generation, 'workspace_generation'),
     expires_at_ms: expiresAtMs,
     facade_contract: facadeContract(value.facade_contract),
-    allowed_relative_paths: allowedPaths(value.allowed_relative_paths),
+    ...(prefixes
+      ? { allowed_relative_prefixes: allowedPrefixes(value.allowed_relative_prefixes) }
+      : { allowed_relative_paths: allowedPaths(value.allowed_relative_paths) }),
     max_bytes: boundedInteger(value.max_bytes, 'max_bytes', MAX_FILE_BYTES, 'CONTROL_PLANE_FILE_READ_POLICY_INVALID'),
     max_lines: boundedInteger(value.max_lines, 'max_lines', MAX_FILE_LINES, 'CONTROL_PLANE_FILE_READ_POLICY_INVALID')
   };
@@ -263,6 +286,48 @@ function resolveRegisteredWorkspaceRoot(paths, policy) {
   }
 }
 
+function resolveDirectRegisteredFile(workspaceRoot, relative) {
+  if (typeof workspaceRoot !== 'string' || !path.isAbsolute(workspaceRoot)) {
+    throw bridgeError('CONTROL_PLANE_FILE_READ_WORKSPACE_REGISTRY_REQUIRED', 'file-read workspace is invalid.');
+  }
+  const filePath = relativePath(relative, 'CONTROL_PLANE_FILE_READ_PATH_DENIED');
+  let root;
+  try { root = fs.realpathSync.native(workspaceRoot); }
+  catch { throw bridgeError('CONTROL_PLANE_FILE_READ_WORKSPACE_REGISTRY_REQUIRED', 'file-read workspace is unavailable.'); }
+  const pathKey = (value) => {
+    const normalized = path.normalize(path.resolve(value));
+    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  };
+  if (pathKey(root) !== pathKey(workspaceRoot) || !fs.statSync(root).isDirectory()) {
+    throw bridgeError('CONTROL_PLANE_FILE_READ_WORKSPACE_REGISTRY_REQUIRED', 'file-read workspace has changed.');
+  }
+  const target = path.resolve(root, ...filePath.split('/'));
+  if (!pathKey(target).startsWith(`${pathKey(root)}${path.sep}`)) {
+    throw bridgeError('CONTROL_PLANE_FILE_READ_PATH_DENIED', 'file path escapes the registered workspace.');
+  }
+  const parts = filePath.split('/');
+  let cursor = root;
+  for (const [index, part] of parts.entries()) {
+    cursor = path.join(cursor, part);
+    let stat;
+    let real;
+    try {
+      stat = fs.lstatSync(cursor);
+      real = fs.realpathSync.native(cursor);
+    } catch {
+      throw bridgeError('CONTROL_PLANE_FILE_READ_TARGET_MISSING', 'file-read target is unavailable.');
+    }
+    if (stat.isSymbolicLink() || pathKey(real) !== pathKey(cursor)) {
+      throw bridgeError('CONTROL_PLANE_FILE_READ_REPARSE_DENIED', 'file-read path contains a reparse point.');
+    }
+    const final = index === parts.length - 1;
+    if (final ? !stat.isFile() : !stat.isDirectory()) {
+      throw bridgeError('CONTROL_PLANE_FILE_READ_TARGET_INVALID', 'file-read path is not a direct regular file.');
+    }
+  }
+  return target;
+}
+
 function admitFileReadBridgeRequest(policy, request, { now = Date.now() } = {}) {
   const expected = [
     'server_origin', 'owner_id', 'device_id', 'endpoint_id', 'workspace_id',
@@ -307,7 +372,7 @@ function admitFileReadBridgeRequest(policy, request, { now = Date.now() } = {}) 
   if (canonicalJson(candidate.facade_contract) !== canonicalJson(policy.facade_contract)) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_CONTRACT_MISMATCH', 'control-plane facade contract does not match local policy.');
   }
-  if (!policy.allowed_relative_paths.includes(candidate.path)) {
+  if (!policyAllowsPath(policy, candidate.path)) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_PATH_DENIED', 'file path is not explicitly admitted by the local policy.');
   }
   if (candidate.max_bytes > policy.max_bytes || candidate.max_lines > policy.max_lines) {
@@ -455,6 +520,7 @@ function normaliseFileReadResult(value, admission) {
 
 module.exports = {
   POLICY_SCHEMA_VERSION,
+  EXACT_POLICY_SCHEMA_VERSION,
   LEGACY_POLICY_SCHEMA_VERSION,
   STANDING_AUTHORITY_MODE,
   BRIDGE_ENVELOPE_SCHEMA_VERSION,
@@ -471,8 +537,10 @@ module.exports = {
   facadeContract,
   relativePath,
   normalisePolicy,
+  policyAllowsPath,
   loadFileReadBridgePolicy,
   resolveRegisteredWorkspaceRoot,
+  resolveDirectRegisteredFile,
   admitFileReadBridgeRequest,
   fileContentDigest,
   containsSensitiveFileContent,

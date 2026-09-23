@@ -1,9 +1,10 @@
 """Fail-closed root MCP facade for legacy contexts and trusted account lanes.
 
 The historical context mode remains time-bounded and read-only. The OAuth mode
-maps one verified account to one ``principal_id`` and lets its clients select an
-opaque ``binding_id``; standing file-read/write/document/structured-exec lanes
-still queue work for independent node-local admission and receipt verification.
+maps one verified account to one ``principal_id``; the private tunnel service
+mode uses a shared authenticated service principal. Both account lanes select
+an opaque ``binding_id`` and still queue work for independent node-local
+admission and receipt verification.
 The facade never forwards a client credential, treats a central record as OS
 authority, or claims local effect before the enrolled node proves it.
 """
@@ -29,6 +30,7 @@ from .store import (
     MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
     ControlPlaneError,
     ControlPlaneStore,
+    MCP_SERVICE_READ_SCOPE,
     NotFoundError,
     PermissionError,
     ValidationError,
@@ -76,6 +78,9 @@ OAUTH_STANDING_WRITE_FACADE_PROFILE = "control-plane-oauth-standing-write-v1"
 # argv execution changes authority again.
 OAUTH_EXEC_FACADE_SCHEMA_VERSION = 18
 OAUTH_EXEC_FACADE_PROFILE = "control-plane-oauth-bounded-exec-v2"
+PRIVATE_TUNNEL_SERVICE_FACADE_SCHEMA_VERSION = 20
+PRIVATE_TUNNEL_SERVICE_FACADE_PROFILE = "control-plane-private-tunnel-service-v1"
+PRIVATE_TUNNEL_SERVICE_AUTH_KIND = "private_tunnel_service"
 FILE_READ_MAX_BYTES = 16 * 1024
 FILE_READ_MAX_LINES = 200
 PUBLIC_TOOL_NAMES = (
@@ -238,6 +243,17 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
             },
         },
     }
+
+
+def _service_auth_description(value: str) -> str:
+    """Keep account-lane schemas truthful when a shared service token is used."""
+    return (
+        value.replace("authenticated OAuth principal", "authenticated service principal")
+        .replace("OAuth principal", "service principal")
+        .replace("OAuth account", "shared service account")
+        .replace("OAuth write scope", "verified service-token write scope")
+        .replace("OAuth scope", "verified service-token scope")
+    )
 
 
 def _task_control_input_schema(*, enabled: bool) -> dict[str, Any]:
@@ -671,6 +687,7 @@ def _tool_description(
 def _tool_contract_entry(
     name: str,
     *,
+    auth_kind: str,
     oauth_scopes: tuple[str, ...],
     oauth_file_read_enabled: bool = False,
     oauth_permission_requests_enabled: bool = False,
@@ -883,7 +900,13 @@ def _tool_contract_entry(
                 }
             },
         }
-    if oauth_enabled:
+    if auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+        entry["description"] = _service_auth_description(entry["description"])
+        for property_schema in entry["inputSchema"].get("properties", {}).values():
+            if isinstance(property_schema, dict) and isinstance(property_schema.get("description"), str):
+                property_schema["description"] = _service_auth_description(property_schema["description"])
+        entry["_meta"]["control_plane"]["access_scope"] = PRIVATE_TUNNEL_SERVICE_AUTH_KIND
+    elif oauth_enabled:
         # The descriptor field is the MCP authorization contract.  Mirror it
         # under ``_meta`` for clients that still read the compatibility copy;
         # both forms remain part of this OAuth-only contract digest.
@@ -1677,6 +1700,7 @@ def _completed_document_write_relay(action: dict[str, Any], contract: dict[str, 
 
 def tool_contract(
     *,
+    auth_kind: str | None = None,
     oauth_scopes: tuple[str, ...] = (),
     oauth_file_read_enabled: bool = False,
     oauth_permission_requests_enabled: bool = False,
@@ -1688,6 +1712,15 @@ def tool_contract(
     if any(not isinstance(scope, str) or not scope for scope in oauth_scopes):
         raise ValueError("OAuth tool scopes are invalid.")
     oauth_enabled = bool(oauth_scopes)
+    resolved_auth_kind = ("oauth_account" if oauth_enabled else "legacy_context_grant") if auth_kind is None else auth_kind
+    if not isinstance(resolved_auth_kind, str) or resolved_auth_kind not in {
+        "oauth_account", "legacy_context_grant", PRIVATE_TUNNEL_SERVICE_AUTH_KIND,
+    }:
+        raise ValueError("MCP auth kind is unsupported.")
+    if resolved_auth_kind == "legacy_context_grant" and oauth_enabled:
+        raise ValueError("Legacy context grants cannot advertise account scopes.")
+    if resolved_auth_kind != "legacy_context_grant" and not oauth_enabled:
+        raise ValueError("Account-scoped MCP auth requires declared tool scopes.")
     if oauth_file_read_enabled and not oauth_enabled:
         raise ValueError("OAuth bounded file reads require OAuth tool scopes.")
     if oauth_permission_requests_enabled and (not oauth_enabled or not oauth_file_read_enabled):
@@ -1717,6 +1750,7 @@ def tool_contract(
     tools = [
         _tool_contract_entry(
             name,
+            auth_kind=resolved_auth_kind,
             oauth_scopes=oauth_scopes,
             oauth_file_read_enabled=oauth_file_read_enabled,
             oauth_permission_requests_enabled=oauth_permission_requests_enabled,
@@ -1728,7 +1762,8 @@ def tool_contract(
         for name in PUBLIC_TOOL_NAMES
     ]
     schema_version = (
-        OAUTH_EXEC_FACADE_SCHEMA_VERSION if oauth_exec_enabled
+        PRIVATE_TUNNEL_SERVICE_FACADE_SCHEMA_VERSION if resolved_auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND
+        else OAUTH_EXEC_FACADE_SCHEMA_VERSION if oauth_exec_enabled
         else OAUTH_STANDING_WRITE_FACADE_SCHEMA_VERSION if oauth_standing_write_enabled
         else OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION if oauth_approved_patch_enabled
         else OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION if oauth_permission_requests_enabled
@@ -1737,7 +1772,8 @@ def tool_contract(
         else FACADE_SCHEMA_VERSION
     )
     profile = (
-        OAUTH_EXEC_FACADE_PROFILE if oauth_exec_enabled
+        PRIVATE_TUNNEL_SERVICE_FACADE_PROFILE if resolved_auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND
+        else OAUTH_EXEC_FACADE_PROFILE if oauth_exec_enabled
         else OAUTH_STANDING_WRITE_FACADE_PROFILE if oauth_standing_write_enabled
         else OAUTH_APPROVED_PATCH_FACADE_PROFILE if oauth_approved_patch_enabled
         else OAUTH_PERMISSION_REQUEST_FACADE_PROFILE if oauth_permission_requests_enabled
@@ -1792,6 +1828,7 @@ class ControlPlaneMcpFacade:
         self,
         store: ControlPlaneStore,
         *,
+        auth_kind: str | None = None,
         oauth_scopes: tuple[str, ...] = (),
         oauth_file_read_enabled: bool = False,
         oauth_permission_requests_enabled: bool = False,
@@ -1802,7 +1839,11 @@ class ControlPlaneMcpFacade:
     ) -> None:
         self.store = store
         self.oauth_scopes = oauth_scopes
+        # The historical oauth_* flags select account-lane capabilities. The
+        # explicit auth kind decides whether identity comes from OAuth or the
+        # authenticated private tunnel service token.
         self.oauth_enabled = bool(oauth_scopes)
+        self.auth_kind = ("oauth_account" if self.oauth_enabled else "legacy_context_grant") if auth_kind is None else auth_kind
         if oauth_file_read_enabled and not self.oauth_enabled:
             raise ValueError("OAuth bounded file reads require OAuth tool scopes.")
         if oauth_permission_requests_enabled and (not self.oauth_enabled or not oauth_file_read_enabled):
@@ -1835,6 +1876,7 @@ class ControlPlaneMcpFacade:
         self.oauth_standing_write_enabled = bool(oauth_standing_write_enabled)
         self.oauth_exec_enabled = bool(oauth_exec_enabled)
         self.contract = tool_contract(
+            auth_kind=self.auth_kind,
             oauth_scopes=oauth_scopes,
             oauth_file_read_enabled=self.oauth_file_read_enabled,
             oauth_permission_requests_enabled=self.oauth_permission_requests_enabled,
@@ -1846,13 +1888,15 @@ class ControlPlaneMcpFacade:
 
     @property
     def _access_scope(self) -> str:
+        if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+            return PRIVATE_TUNNEL_SERVICE_AUTH_KIND
         return "oauth_account" if self.oauth_enabled else "server_issued_context_grant"
 
     @property
     def _execution_mode(self) -> str:
         if self.oauth_exec_enabled:
             return "bounded_exec_local_policy_required"
-        if self.oauth_approved_patch_enabled:
+        if self.oauth_approved_patch_enabled or self.oauth_standing_write_enabled:
             if self.oauth_standing_write_enabled:
                 return "standing_write_local_policy_required"
             return "bounded_file_read_plus_approved_patch_local_policy_required"
@@ -1872,34 +1916,37 @@ class ControlPlaneMcpFacade:
         if not isinstance(requested, str) or not requested.strip():
             raise ValidationError("MCP protocol version must be a non-empty string.")
         negotiated = requested if requested in LEGACY_MCP_PROTOCOL_VERSIONS else MCP_PROTOCOL_VERSION
+        instructions = (
+            "This facade returns account inventory, can queue one bounded structured exec or one approved exact-file patch only under a distinct OAuth write scope and "
+            "independent local Windows policies, and can observe paged output or request verified stop. cwd is a start directory, never a sandbox; shell is never accepted."
+            if self.oauth_exec_enabled
+            else "This facade returns account inventory and can queue one exact-file patch under the selected workspace's standing local policy without a per-patch owner approval. It still requires the distinct OAuth write scope, task writer lease and independent Windows policy; "
+            if self.oauth_standing_write_enabled
+            else "This facade returns account inventory, can queue one explicitly approved exact-file patch only under a distinct OAuth write scope and an "
+            "independent local Windows patch policy, and can record owner-reviewed patch permission scopes. It cannot launch processes, select a last-used "
+            "target, use remote shell, or access a workspace directly."
+            if self.oauth_approved_patch_enabled
+            else "This facade returns account inventory, can queue only one explicitly selected, policy-bounded read-only file action, and can record one "
+            "owner-reviewed proposed patch permission scope. Permission approval is not an action or local grant. It cannot write files, launch processes, "
+            "select a last-used target, or access a workspace directly."
+            if self.oauth_permission_requests_enabled
+            else "This facade returns account inventory and can queue only one explicitly selected, policy-bounded read-only file action. "
+            "It cannot grant local authority, write files, launch processes, select a last-used target, or access a workspace directly."
+            if self.oauth_file_read_enabled
+            else "This facade returns only the authenticated account's authorized, path-free target inventory. It cannot select a target, "
+            "create a context, queue an action, access a local workspace, or grant local admission."
+            if self.oauth_enabled
+            else "This facade is context-scoped central status plus a queued fixed read-only intent and a verified compact completed "
+            "receipt projection. It never directly accesses a local workspace, calls a node, or grants local admission; a separate "
+            "local bridge must accept and complete the action."
+        )
+        if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+            instructions = _service_auth_description(instructions)
         return {
             "protocolVersion": negotiated,
             "serverInfo": {"name": "coding-tools-control-plane", "version": "0.1.0"},
             "capabilities": {"tools": {"listChanged": False}},
-            "instructions": (
-                "This facade returns account inventory, can queue one bounded structured exec or one approved exact-file patch only under a distinct OAuth write scope and "
-                "independent local Windows policies, and can observe paged output or request verified stop. cwd is a start directory, never a sandbox; shell is never accepted."
-                if self.oauth_exec_enabled
-                else "This facade returns account inventory and can queue one exact-file patch under the selected workspace's standing local policy without a per-patch owner approval. It still requires the distinct OAuth write scope, task writer lease and independent Windows policy; "
-                if self.oauth_standing_write_enabled
-                else "This facade returns account inventory, can queue one explicitly approved exact-file patch only under a distinct OAuth write scope and an "
-                "independent local Windows patch policy, and can record owner-reviewed patch permission scopes. It cannot launch processes, select a last-used "
-                "target, use remote shell, or access a workspace directly."
-                if self.oauth_approved_patch_enabled
-                else "This facade returns account inventory, can queue only one explicitly selected, policy-bounded read-only file action, and can record one "
-                "owner-reviewed proposed patch permission scope. Permission approval is not an action or local grant. It cannot write files, launch processes, "
-                "select a last-used target, or access a workspace directly."
-                if self.oauth_permission_requests_enabled
-                else "This facade returns account inventory and can queue only one explicitly selected, policy-bounded read-only file action. "
-                "It cannot grant local authority, write files, launch processes, select a last-used target, or access a workspace directly."
-                if self.oauth_file_read_enabled
-                else "This facade returns only the authenticated account's authorized, path-free target inventory. It cannot select a target, "
-                "create a context, queue an action, access a local workspace, or grant local admission."
-                if self.oauth_enabled
-                else "This facade is context-scoped central status plus a queued fixed read-only intent and a verified compact completed "
-                "receipt projection. It never directly accesses a local workspace, calls a node, or grants local admission; a separate "
-                "local bridge must accept and complete the action."
-            ),
+            "instructions": instructions,
             "_meta": {
                 "control_plane": {
                     "execution": self._execution_mode,
@@ -2303,10 +2350,10 @@ class ControlPlaneMcpFacade:
             operation = arguments.get("operation")
             if operation == "inventory":
                 if arguments != {"operation": "inventory"}:
-                    raise ValidationError("OAuth account inventory requires operation=inventory and no target arguments.")
+                    raise ValidationError("Account inventory requires operation=inventory and no target arguments.")
                 return name, {"operation": "inventory"}
             if not self.oauth_file_read_enabled:
-                raise ValidationError("OAuth account inventory requires operation=inventory and no target arguments.")
+                raise ValidationError("Account inventory requires operation=inventory and no target arguments.")
             if operation == "task_open":
                 allowed = {"operation", "binding_id", "label", "idempotency_key"}
                 if set(arguments) != allowed:
@@ -2382,7 +2429,7 @@ class ControlPlaneMcpFacade:
                 if not isinstance(action_id, str) or not 3 <= len(action_id.strip()) <= 128:
                     raise ValidationError("action_id is invalid.")
                 return name, {"operation": "read_status", "action_id": action_id.strip()}
-            raise ValidationError("OAuth workspace_context operation is unsupported.")
+            raise ValidationError("Account workspace_context operation is unsupported.")
         context_id = arguments.get("context_id")
         if not isinstance(context_id, str) or not 3 <= len(context_id.strip()) <= 128:
             raise ValidationError("context_id is invalid.")
@@ -2565,8 +2612,30 @@ class ControlPlaneMcpFacade:
         """Expose account targets without materializing a task context or action."""
 
         targets = self.store.list_account_targets(owner_id=owner_id)
+        message = "Authorized target inventory only; no workspace was accessed and no task authority was created."
+        if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+            # A shared connector identifies every permitted Business member
+            # as one service, so owner inventory is broader than the target
+            # they were delegated. Show only the exact currently delegated
+            # binding; an empty result is honest before/after a pilot decision.
+            now = self.store.clock()
+            delegated = {
+                decision["binding_id"]
+                for decision in self.store.list_scoped_pilot_decisions(owner_id=owner_id)
+                if decision["principal_id"] == principal_id
+                and decision["revoked_at_ms"] is None
+                and decision["expires_at_ms"] > now
+            }
+            targets = [
+                target for target in targets
+                if target["binding_id"] in delegated
+                and target["binding_state"] == "active"
+                and target["workspace_state"] == "active"
+                and target["node_state"] == "active"
+            ]
+            message = "Exact delegated service target inventory only; no workspace was accessed and no task authority was created."
         return {
-            "content": [{"type": "text", "text": "Authorized target inventory only; no workspace was accessed and no task authority was created."}],
+            "content": [{"type": "text", "text": message}],
             "structuredContent": {
                 "schema_version": self.contract["schema_version"],
                 "observation_kind": "control_plane_account_target_inventory",
@@ -2683,8 +2752,11 @@ class ControlPlaneMcpFacade:
 
     def _list_tasks(self, *, owner_id: str, principal_id: str) -> dict[str, Any]:
         tasks = self.store.list_mcp_task_sessions(owner_id=owner_id, principal_id=principal_id)
+        message = "Durable task handles for this OAuth account; each pins one immutable node/workspace target."
+        if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+            message = _service_auth_description(message)
         return {
-            "content": [{"type": "text", "text": "Durable task handles for this OAuth account; each pins one immutable node/workspace target."}],
+            "content": [{"type": "text", "text": message}],
             "structuredContent": {
                 "schema_version": self.contract["schema_version"],
                 "observation_kind": "control_plane_task_session_list",
@@ -3069,6 +3141,12 @@ class ControlPlaneMcpFacade:
             return False
         return set(self.oauth_scopes) <= set(oauth_scopes) and self.oauth_patch_write_scope in oauth_scopes
 
+    @property
+    def _write_scope_error(self) -> tuple[str, str]:
+        if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+            return "SERVICE_WRITE_SCOPE_REQUIRED", "verified service-token write scope"
+        return "OAUTH_WRITE_SCOPE_REQUIRED", "dedicated OAuth write scope"
+
     def _request_exec(self, *, owner_id: str, principal_id: str, arguments: dict[str, Any]) -> dict[str, Any]:
         current_contract = _contract_metadata(self.contract)
         if arguments["expected_facade_contract"] != current_contract:
@@ -3316,7 +3394,31 @@ class ControlPlaneMcpFacade:
         params: dict[str, Any],
     ) -> dict[str, Any]:
         name, arguments = self._arguments(params)
+        if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND and not set(self.oauth_scopes) <= oauth_scopes:
+            return self._call_error(
+                code="SERVICE_SCOPE_REQUIRED",
+                message="This shared service account requires the verified service-token scope.",
+                tool_name=name,
+            )
+        if (
+            self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND
+            and not (name == "workspace_context" and arguments.get("operation") == "inventory")
+            and MCP_SERVICE_READ_SCOPE not in oauth_scopes
+        ):
+            return self._call_error(
+                code="SERVICE_READ_SCOPE_REQUIRED",
+                message="This shared service action requires a verified content-read service scope.",
+                tool_name=name,
+            )
         if name == "task_control" and self.oauth_enabled and self.oauth_file_read_enabled:
+            if (self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND
+                and arguments["operation"] != "task_observe"
+                and not self._has_patch_write_scope(oauth_scopes)):
+                return self._call_error(
+                    code=self._write_scope_error[0],
+                    message=f"Task writer handoff requires the {self._write_scope_error[1]}.",
+                    tool_name=name,
+                )
             return self._task_control(
                 owner_id=owner_id,
                 principal_id=principal_id,
@@ -3325,8 +3427,8 @@ class ControlPlaneMcpFacade:
         if name == "request_permissions" and self.oauth_permission_requests_enabled:
             if not self._has_patch_write_scope(oauth_scopes):
                 return self._call_error(
-                    code="OAUTH_WRITE_SCOPE_REQUIRED",
-                    message="This mutation candidate requires the dedicated OAuth write scope.",
+                    code=self._write_scope_error[0],
+                    message=f"This mutation candidate requires the {self._write_scope_error[1]}.",
                     tool_name=name,
                 )
             if arguments["operation"] == "request_patch":
@@ -3343,8 +3445,8 @@ class ControlPlaneMcpFacade:
         if name == "agent_workflow" and (self.oauth_approved_patch_enabled or self.oauth_standing_write_enabled):
             if not self._has_patch_write_scope(oauth_scopes):
                 return self._call_error(
-                    code="OAUTH_WRITE_SCOPE_REQUIRED",
-                    message="This mutation candidate requires the dedicated OAuth write scope.",
+                    code=self._write_scope_error[0],
+                    message=f"This mutation candidate requires the {self._write_scope_error[1]}.",
                     tool_name=name,
                 )
             if arguments["operation"] == "apply_patch":
@@ -3367,14 +3469,20 @@ class ControlPlaneMcpFacade:
         if name == "exec_command" and self.oauth_exec_enabled:
             if not self._has_patch_write_scope(oauth_scopes):
                 return self._call_error(
-                    code="OAUTH_WRITE_SCOPE_REQUIRED",
-                    message="This mutation candidate requires the dedicated OAuth write scope.",
+                    code=self._write_scope_error[0],
+                    message=f"This mutation candidate requires the {self._write_scope_error[1]}.",
                     tool_name=name,
                 )
             if arguments["operation"] == "exec_run":
                 return self._request_exec(owner_id=owner_id, principal_id=principal_id, arguments=arguments)
             return self._exec_status(owner_id=owner_id, principal_id=principal_id, action_id=arguments["action_id"])
         if name == "command_control" and self.oauth_exec_enabled:
+            if not self._has_patch_write_scope(oauth_scopes):
+                return self._call_error(
+                    code=self._write_scope_error[0],
+                    message=f"Command observation and stop require the {self._write_scope_error[1]}.",
+                    tool_name=name,
+                )
             if arguments["operation"] == "exec_output":
                 return self._exec_output(
                     owner_id=owner_id, principal_id=principal_id, action_id=arguments["action_id"],
@@ -3388,10 +3496,10 @@ class ControlPlaneMcpFacade:
             if arguments["operation"] == read_op:
                 return self._request_artifact(owner_id=owner_id, principal_id=principal_id, kind=kind, arguments=arguments)
             if kind == "document" and self.oauth_standing_write_enabled and arguments["operation"] in {"doc_create", "doc_convert"}:
-                if not self._has_patch_write_scope(oauth_scopes):
+                if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND and not self._has_patch_write_scope(oauth_scopes):
                     return self._call_error(
-                        code="OAUTH_WRITE_SCOPE_REQUIRED",
-                        message="Standing document writes require the dedicated OAuth write scope.",
+                        code=self._write_scope_error[0],
+                        message=f"Standing document writes require the {self._write_scope_error[1]}.",
                         tool_name=name,
                     )
                 return self._request_document_write(
@@ -3419,6 +3527,12 @@ class ControlPlaneMcpFacade:
             if arguments["operation"] == "task_list":
                 return self._list_tasks(owner_id=owner_id, principal_id=principal_id)
             if arguments["operation"] == "task_close":
+                if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND and not self._has_patch_write_scope(oauth_scopes):
+                    return self._call_error(
+                        code=self._write_scope_error[0],
+                        message=f"Task closure requires the {self._write_scope_error[1]}.",
+                        tool_name=name,
+                    )
                 return self._close_task(owner_id=owner_id, principal_id=principal_id, arguments=arguments)
             if arguments["operation"] == "read_file":
                 return self._request_bounded_file_read(
@@ -3456,13 +3570,15 @@ class ControlPlaneMcpFacade:
         """Handle one authenticated JSON-RPC request without persistent session state."""
         request_id = _response_id(request)
         if oauth_scopes is None:
-            # Direct facade tests and the legacy grant path have no HTTP
-            # verifier.  The real OAuth ingress always supplies the verified
-            # access-token scope set below; do not make the constructor's
-            # advertised scope an HTTP authority substitute.
-            effective_oauth_scopes = frozenset(self.oauth_scopes) if self.oauth_enabled else frozenset()
+            # Preserve the direct OAuth facade test convention, but service
+            # mode must never promote constructor-declared scopes to verified
+            # HTTP authority. Its ingress supplies the checked scope set.
+            effective_oauth_scopes = (
+                frozenset(self.oauth_scopes)
+                if self.auth_kind == "oauth_account" else frozenset()
+            )
         elif not isinstance(oauth_scopes, frozenset) or any(not isinstance(scope, str) for scope in oauth_scopes):
-            raise ValidationError("OAuth scope set is invalid.")
+            raise ValidationError("Verified scope set is invalid.")
         else:
             effective_oauth_scopes = oauth_scopes
         if "id" not in request:

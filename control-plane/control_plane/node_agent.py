@@ -52,7 +52,8 @@ CONNECTED_AGENT_MAX_BACKOFF_SECONDS = 15 * 60
 FILE_READ_TOOL_NAME = "workspace_context"
 FILE_READ_OPERATION = "read_file"
 FILE_READ_JOURNAL_SCHEMA_VERSION = 1
-FILE_READ_POLICY_SCHEMA_VERSION = 2
+FILE_READ_POLICY_SCHEMA_VERSION = 3
+FILE_READ_POLICY_EXACT_SCHEMA_VERSION = 2
 FILE_READ_POLICY_LEGACY_SCHEMA_VERSION = 1
 FILE_READ_POLICY_STANDING_AUTHORITY = "standing"
 FILE_READ_POLICY_MAX_BYTES = 16 * 1024
@@ -69,7 +70,8 @@ APPROVED_PATCH_TOOL_NAME = "agent_workflow"
 APPROVED_PATCH_OPERATION = "apply_patch"
 APPROVED_PATCH_VALIDATION_PROFILE = "targeted"
 APPROVED_PATCH_JOURNAL_SCHEMA_VERSION = 1
-APPROVED_PATCH_POLICY_SCHEMA_VERSION = 2
+APPROVED_PATCH_POLICY_SCHEMA_VERSION = 3
+APPROVED_PATCH_POLICY_EXACT_SCHEMA_VERSION = 2
 APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION = 1
 APPROVED_PATCH_POLICY_STANDING_AUTHORITY = "standing"
 APPROVED_PATCH_POLICY_MAX_BYTES = 16 * 1024
@@ -1538,6 +1540,27 @@ def _file_read_policy_allowed_paths(value: Any) -> list[str]:
     return sorted(allowed)
 
 
+def _file_read_policy_allowed_prefixes(value: Any) -> list[str]:
+    if not isinstance(value, list) or not 1 <= len(value) <= FILE_READ_MAX_ALLOWED_PATHS:
+        raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+    allowed = [
+        "." if item == "." else _file_read_relative_path(item, code="CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+        for item in value
+    ]
+    if len(allowed) != len(set(allowed)) or ("." in allowed and len(allowed) != 1):
+        raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+    return sorted(allowed)
+
+
+def _policy_path_is_allowed(policy: dict[str, Any], path: str) -> bool:
+    """The request is always one validated file; only policy scope can be broad."""
+
+    if "allowed_relative_prefixes" in policy:
+        return any(prefix == "." or path == prefix or path.startswith(prefix + "/")
+                   for prefix in policy["allowed_relative_prefixes"])
+    return path in policy["allowed_relative_paths"]
+
+
 def _file_read_policy_limits(max_bytes: Any, max_lines: Any, *, code: str) -> tuple[int, int]:
     if (
         not isinstance(max_bytes, int)
@@ -1560,13 +1583,15 @@ def _normalise_file_read_policy(
     """Validate the exact C3 local policy without opening Recovery IPC."""
 
     schema_version = policy.get("schema_version") if isinstance(policy, dict) else None
-    standing = schema_version == FILE_READ_POLICY_SCHEMA_VERSION
+    prefixes = schema_version == FILE_READ_POLICY_SCHEMA_VERSION
+    standing = prefixes or schema_version == FILE_READ_POLICY_EXACT_SCHEMA_VERSION
     legacy = schema_version == FILE_READ_POLICY_LEGACY_SCHEMA_VERSION
     expected_fields = {
         "schema_version", "enabled", "server_origin", "owner_id", "device_id",
         "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms",
-        "facade_contract", "allowed_relative_paths", "max_bytes", "max_lines",
+        "facade_contract", "max_bytes", "max_lines",
     }
+    expected_fields.add("allowed_relative_prefixes" if prefixes else "allowed_relative_paths")
     if standing:
         expected_fields.add("authority_mode")
     if (
@@ -1613,10 +1638,13 @@ def _normalise_file_read_policy(
         "facade_contract": _policy_facade_contract(
             facade.get("schema_version"), facade.get("profile"), facade.get("sha256")
         ),
-        "allowed_relative_paths": _file_read_policy_allowed_paths(policy.get("allowed_relative_paths")),
         "max_bytes": max_bytes,
         "max_lines": max_lines,
     }
+    if prefixes:
+        result["allowed_relative_prefixes"] = _file_read_policy_allowed_prefixes(policy.get("allowed_relative_prefixes"))
+    else:
+        result["allowed_relative_paths"] = _file_read_policy_allowed_paths(policy.get("allowed_relative_paths"))
     if standing:
         result["authority_mode"] = authority_mode
     return result
@@ -1690,6 +1718,18 @@ def _approved_patch_policy_allowed_paths(value: Any) -> list[str]:
     return sorted(allowed)
 
 
+def _approved_patch_policy_allowed_prefixes(value: Any) -> list[str]:
+    if not isinstance(value, list) or not 1 <= len(value) <= APPROVED_PATCH_MAX_ALLOWED_PATHS:
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+    allowed = [
+        "." if item == "." else _approved_patch_relative_path(item, code="CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+        for item in value
+    ]
+    if len(allowed) != len(set(allowed)) or ("." in allowed and len(allowed) != 1):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+    return sorted(allowed)
+
+
 def _approved_patch_policy_limits(max_patch_bytes: Any, max_file_bytes: Any, *, code: str) -> tuple[int, int]:
     if (
         not isinstance(max_patch_bytes, int)
@@ -1712,14 +1752,16 @@ def _normalise_approved_patch_policy(
     """Validate the exact C4 default-deny local mutation policy."""
 
     schema_version = policy.get("schema_version") if isinstance(policy, dict) else None
-    standing = schema_version == APPROVED_PATCH_POLICY_SCHEMA_VERSION
+    prefixes = schema_version == APPROVED_PATCH_POLICY_SCHEMA_VERSION
+    standing = prefixes or schema_version == APPROVED_PATCH_POLICY_EXACT_SCHEMA_VERSION
     legacy = schema_version == APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION
     expected_fields = {
         "schema_version", "enabled", "server_origin", "owner_id", "device_id",
         "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms",
-        "facade_contract", "allowed_relative_paths", "max_patch_bytes",
+        "facade_contract", "max_patch_bytes",
         "max_file_bytes", "validation_profile",
     }
+    expected_fields.add("allowed_relative_prefixes" if prefixes else "allowed_relative_paths")
     if standing:
         expected_fields.add("authority_mode")
     if (
@@ -1770,11 +1812,14 @@ def _normalise_approved_patch_policy(
         "facade_contract": _policy_facade_contract(
             facade.get("schema_version"), facade.get("profile"), facade.get("sha256")
         ),
-        "allowed_relative_paths": _approved_patch_policy_allowed_paths(policy.get("allowed_relative_paths")),
         "max_patch_bytes": max_patch_bytes,
         "max_file_bytes": max_file_bytes,
         "validation_profile": APPROVED_PATCH_VALIDATION_PROFILE,
     }
+    if prefixes:
+        result["allowed_relative_prefixes"] = _approved_patch_policy_allowed_prefixes(policy.get("allowed_relative_prefixes"))
+    else:
+        result["allowed_relative_paths"] = _approved_patch_policy_allowed_paths(policy.get("allowed_relative_paths"))
     if standing:
         result["authority_mode"] = authority_mode
     return result
@@ -1866,7 +1911,8 @@ def _admit_file_read_policy_request(
         raise RuntimeError("CONTROL_PLANE_FILE_READ_REQUEST_EXPIRED")
     if policy["expires_at_ms"] is not None and expires_at_ms > policy["expires_at_ms"]:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
-    if request.get("path") not in policy["allowed_relative_paths"]:
+    path = _file_read_relative_path(request.get("path"), code="CONTROL_PLANE_FILE_READ_REQUEST_INVALID")
+    if not _policy_path_is_allowed(policy, path):
         raise RuntimeError("CONTROL_PLANE_FILE_READ_PATH_DENIED")
     max_bytes, max_lines = _file_read_policy_limits(
         request.get("max_bytes"), request.get("max_lines"), code="CONTROL_PLANE_FILE_READ_REQUEST_INVALID"
@@ -2056,7 +2102,8 @@ def _admit_approved_patch_policy_request(
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_EXPIRED")
     if policy["expires_at_ms"] is not None and expires_at_ms > policy["expires_at_ms"]:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED")
-    if request.get("path") not in policy["allowed_relative_paths"]:
+    path = _approved_patch_relative_path(request.get("path"), code="CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    if not _policy_path_is_allowed(policy, path):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED")
     patch = _exact_approved_patch_envelope(
         request.get("patch_envelope"),
@@ -2468,6 +2515,20 @@ def _file_read_allowed_paths_digest(paths: list[str]) -> str:
     ).hexdigest()
 
 
+def _policy_scope_receipt(policy: dict[str, Any]) -> dict[str, Any]:
+    if "allowed_relative_prefixes" in policy:
+        prefixes = policy["allowed_relative_prefixes"]
+        return {
+            "allowed_prefix_count": len(prefixes),
+            "allowed_prefixes_sha256": _file_read_allowed_paths_digest(prefixes),
+        }
+    paths = policy["allowed_relative_paths"]
+    return {
+        "allowed_path_count": len(paths),
+        "allowed_paths_sha256": _file_read_allowed_paths_digest(paths),
+    }
+
+
 def _install_file_read_policy_values(
     args: argparse.Namespace,
     *,
@@ -2481,6 +2542,7 @@ def _install_file_read_policy_values(
     allowed_relative_paths: Any,
     max_bytes: Any,
     max_lines: Any,
+    allowed_relative_prefixes: Any = None,
 ) -> dict[str, Any]:
     """Install only explicit, locally confirmed C3 content authority.
 
@@ -2510,8 +2572,14 @@ def _install_file_read_policy_values(
     )
     if entry["capabilities"].get("read") is not True:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
+    if (allowed_relative_prefixes is None) == (allowed_relative_paths is None):
+        raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+    if allowed_relative_prefixes is not None and not standing:
+        raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+    prefixes = allowed_relative_prefixes is not None
     policy = {
-        "schema_version": FILE_READ_POLICY_SCHEMA_VERSION if standing else FILE_READ_POLICY_LEGACY_SCHEMA_VERSION,
+        "schema_version": (FILE_READ_POLICY_SCHEMA_VERSION if prefixes else
+                           FILE_READ_POLICY_EXACT_SCHEMA_VERSION if standing else FILE_READ_POLICY_LEGACY_SCHEMA_VERSION),
         "enabled": True,
         "server_origin": _server_origin(config.get("server_url")),
         "owner_id": _policy_identifier(owner_id, "owner_id"),
@@ -2523,10 +2591,13 @@ def _install_file_read_policy_values(
         "facade_contract": _policy_facade_contract(
             facade_contract.get("schema_version"), facade_contract.get("profile"), facade_contract.get("sha256")
         ),
-        "allowed_relative_paths": _file_read_policy_allowed_paths(allowed_relative_paths),
         "max_bytes": max_bytes,
         "max_lines": max_lines,
     }
+    if prefixes:
+        policy["allowed_relative_prefixes"] = _file_read_policy_allowed_prefixes(allowed_relative_prefixes)
+    else:
+        policy["allowed_relative_paths"] = _file_read_policy_allowed_paths(allowed_relative_paths)
     if standing:
         policy["authority_mode"] = FILE_READ_POLICY_STANDING_AUTHORITY
     policy = _normalise_file_read_policy(policy, now_ms=now_ms, require_enabled=True)
@@ -2541,8 +2612,7 @@ def _file_read_policy_install_receipt(policy: dict[str, Any], args: argparse.Nam
         "authority_mode": policy.get("authority_mode", "expiring_legacy"),
         "expires_at_ms": policy["expires_at_ms"],
         "policy_sha256": _policy_digest(policy),
-        "allowed_path_count": len(policy["allowed_relative_paths"]),
-        "allowed_paths_sha256": _file_read_allowed_paths_digest(policy["allowed_relative_paths"]),
+        **_policy_scope_receipt(policy),
         "max_bytes": policy["max_bytes"],
         "max_lines": policy["max_lines"],
         "runtime_mode": _runtime_mode(args),
@@ -2574,6 +2644,7 @@ def install_file_read_policy(args: argparse.Namespace) -> int:
         allowed_relative_paths=getattr(args, "allowed_relative_path", None),
         max_bytes=args.max_bytes,
         max_lines=args.max_lines,
+        allowed_relative_prefixes=getattr(args, "allowed_relative_prefix", None),
     )
     _file_read_policy_install_receipt(policy, args)
     return 0
@@ -2593,11 +2664,12 @@ def inspect_file_read_policy(args: argparse.Namespace) -> int:
             "operation": "control_plane_file_read_policy_observation",
             "state": state,
             "enabled": policy["enabled"],
+            "workspace_id": policy["workspace_id"],
+            "workspace_generation": policy["workspace_generation"],
             "authority_mode": policy.get("authority_mode", "expiring_legacy"),
             "expires_at_ms": policy["expires_at_ms"],
             "policy_sha256": _policy_digest(policy),
-            "allowed_path_count": len(policy["allowed_relative_paths"]),
-            "allowed_paths_sha256": _file_read_allowed_paths_digest(policy["allowed_relative_paths"]),
+            **_policy_scope_receipt(policy),
             "max_bytes": policy["max_bytes"],
             "max_lines": policy["max_lines"],
             "runtime_mode": _runtime_mode(args),
@@ -2647,6 +2719,7 @@ def _install_approved_patch_policy_values(
     allowed_relative_paths: Any,
     max_patch_bytes: Any,
     max_file_bytes: Any,
+    allowed_relative_prefixes: Any = None,
 ) -> dict[str, Any]:
     """Install explicit local C4 exact-patch authority after local consent.
 
@@ -2676,8 +2749,14 @@ def _install_approved_patch_policy_values(
     )
     if entry["capabilities"].get("write") is not True:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
+    if (allowed_relative_prefixes is None) == (allowed_relative_paths is None):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+    if allowed_relative_prefixes is not None and not standing:
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+    prefixes = allowed_relative_prefixes is not None
     policy = {
-        "schema_version": APPROVED_PATCH_POLICY_SCHEMA_VERSION if standing else APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION,
+        "schema_version": (APPROVED_PATCH_POLICY_SCHEMA_VERSION if prefixes else
+                           APPROVED_PATCH_POLICY_EXACT_SCHEMA_VERSION if standing else APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION),
         "enabled": True,
         "server_origin": _server_origin(config.get("server_url")),
         "owner_id": _policy_identifier(owner_id, "owner_id"),
@@ -2689,11 +2768,14 @@ def _install_approved_patch_policy_values(
         "facade_contract": _policy_facade_contract(
             facade_contract.get("schema_version"), facade_contract.get("profile"), facade_contract.get("sha256")
         ),
-        "allowed_relative_paths": _approved_patch_policy_allowed_paths(allowed_relative_paths),
         "max_patch_bytes": max_patch_bytes,
         "max_file_bytes": max_file_bytes,
         "validation_profile": APPROVED_PATCH_VALIDATION_PROFILE,
     }
+    if prefixes:
+        policy["allowed_relative_prefixes"] = _approved_patch_policy_allowed_prefixes(allowed_relative_prefixes)
+    else:
+        policy["allowed_relative_paths"] = _approved_patch_policy_allowed_paths(allowed_relative_paths)
     if standing:
         policy["authority_mode"] = APPROVED_PATCH_POLICY_STANDING_AUTHORITY
     policy = _normalise_approved_patch_policy(policy, now_ms=now_ms, require_enabled=True)
@@ -2708,8 +2790,7 @@ def _approved_patch_policy_install_receipt(policy: dict[str, Any], args: argpars
         "authority_mode": policy.get("authority_mode", "expiring_legacy"),
         "expires_at_ms": policy["expires_at_ms"],
         "policy_sha256": _policy_digest(policy),
-        "allowed_path_count": len(policy["allowed_relative_paths"]),
-        "allowed_paths_sha256": _file_read_allowed_paths_digest(policy["allowed_relative_paths"]),
+        **_policy_scope_receipt(policy),
         "max_patch_bytes": policy["max_patch_bytes"],
         "max_file_bytes": policy["max_file_bytes"],
         "validation_profile": policy["validation_profile"],
@@ -2742,6 +2823,7 @@ def install_approved_patch_policy(args: argparse.Namespace) -> int:
         allowed_relative_paths=getattr(args, "allowed_relative_path", None),
         max_patch_bytes=args.max_patch_bytes,
         max_file_bytes=args.max_file_bytes,
+        allowed_relative_prefixes=getattr(args, "allowed_relative_prefix", None),
     )
     _approved_patch_policy_install_receipt(policy, args)
     return 0
@@ -2761,11 +2843,12 @@ def inspect_approved_patch_policy(args: argparse.Namespace) -> int:
             "operation": "control_plane_approved_patch_policy_observation",
             "state": state,
             "enabled": policy["enabled"],
+            "workspace_id": policy["workspace_id"],
+            "workspace_generation": policy["workspace_generation"],
             "authority_mode": policy.get("authority_mode", "expiring_legacy"),
             "expires_at_ms": policy["expires_at_ms"],
             "policy_sha256": _policy_digest(policy),
-            "allowed_path_count": len(policy["allowed_relative_paths"]),
-            "allowed_paths_sha256": _file_read_allowed_paths_digest(policy["allowed_relative_paths"]),
+            **_policy_scope_receipt(policy),
             "max_patch_bytes": policy["max_patch_bytes"],
             "max_file_bytes": policy["max_file_bytes"],
             "validation_profile": policy["validation_profile"],
@@ -3349,7 +3432,8 @@ def _document_write_policy_admission(
     except RuntimeError as error:
         raise RuntimeError(str(error).replace("APPROVED_PATCH", "DOCUMENT_WRITE")) from error
     if (
-        policy.get("schema_version") != APPROVED_PATCH_POLICY_SCHEMA_VERSION
+        policy.get("schema_version") not in (APPROVED_PATCH_POLICY_SCHEMA_VERSION,
+                                             APPROVED_PATCH_POLICY_EXACT_SCHEMA_VERSION)
         or policy.get("authority_mode") != APPROVED_PATCH_POLICY_STANDING_AUTHORITY
     ):
         raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_POLICY_INVALID")
@@ -3439,8 +3523,8 @@ def _admit_document_write_policy_request(
         raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
     if expires_at_ms <= now_ms:
         raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_EXPIRED")
-    if request["target"] not in policy["allowed_relative_paths"] or (
-        source is not None and source not in policy["allowed_relative_paths"]
+    if not _policy_path_is_allowed(policy, target) or (
+        source is not None and not _policy_path_is_allowed(policy, source)
     ):
         raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_PATH_DENIED")
     return policy, entry
@@ -4870,6 +4954,77 @@ def reconcile_authority_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def inspect_policy_authority(args: argparse.Namespace) -> int:
+    """Resolve standing-policy metadata for exactly one selected local root.
+
+    The enrolled node obtains the current owner and facade contract from
+    Ubuntu. This installs no policy and returns neither a path nor credential.
+    Local-registration checks bracket HTTP so a removed/replaced root cannot
+    be promoted from stale UI data.
+    """
+
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    workspace_id = _policy_identifier(args.workspace_id, "workspace_id")
+    workspace_generation = _policy_identifier(args.workspace_generation, "workspace_generation")
+    _require_current_local_workspace_registration(
+        args, config_path=config_path,
+        workspace_id=workspace_id, workspace_generation=workspace_generation,
+    )
+    response = _request(
+        str(config["server_url"]),
+        f"/v1/nodes/{config['device_id']}/policy-authority",
+        {"workspace_id": workspace_id, "workspace_generation": workspace_generation},
+        f"Node {config['node_secret']}",
+    )
+    expected = {
+        "owner_id", "device_id", "endpoint_id", "workspace_id",
+        "workspace_generation", "facade_contract", "binding_count",
+        "standing_write_enabled", "observed_at_ms",
+    }
+    if not isinstance(response, dict) or set(response) != expected:
+        raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_INVALID")
+    if (
+        response["device_id"] != config["device_id"]
+        or response["endpoint_id"] != config["endpoint_id"]
+        or response["workspace_id"] != workspace_id
+        or response["workspace_generation"] != workspace_generation
+    ):
+        raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_TARGET_MISMATCH")
+    binding_count = response["binding_count"]
+    standing_write_enabled = response["standing_write_enabled"]
+    observed_at_ms = response["observed_at_ms"]
+    if (
+        not isinstance(binding_count, int) or isinstance(binding_count, bool) or binding_count < 1
+        or not isinstance(standing_write_enabled, bool)
+        or not isinstance(observed_at_ms, int) or isinstance(observed_at_ms, bool) or observed_at_ms <= 0
+    ):
+        raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_INVALID")
+    owner_id = _policy_identifier(response["owner_id"], "owner_id")
+    contract = response["facade_contract"]
+    if not isinstance(contract, dict) or set(contract) != {"schema_version", "profile", "sha256"}:
+        raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_INVALID")
+    facade_contract = _policy_facade_contract(
+        contract["schema_version"], contract["profile"], contract["sha256"],
+    )
+    _require_current_local_workspace_registration(
+        args, config_path=config_path,
+        workspace_id=workspace_id, workspace_generation=workspace_generation,
+    )
+    print(json.dumps({
+        "operation": "control_plane_policy_authority_observation",
+        "owner_id": owner_id,
+        "workspace_id": workspace_id,
+        "workspace_generation": workspace_generation,
+        "facade_contract": facade_contract,
+        "binding_count": binding_count,
+        "standing_write_enabled": standing_write_enabled,
+        "observed_at_ms": observed_at_ms,
+        "runtime_mode": _runtime_mode(args),
+    }, separators=(",", ":")))
+    return 0
+
+
 def _workspace_capabilities(value: Any) -> dict[str, bool]:
     """Accept exactly the small local inventory that C2 can register.
 
@@ -5538,6 +5693,13 @@ def replace_workspace(args: argparse.Namespace) -> int:
     journal = _read_workspace_replacement_journal(journal_path)
     resumed = journal is not None
     registry = _read_workspace_registry(registry_path)
+    expected_workspace_id = getattr(args, "expected_workspace_id", None)
+    expected_workspace_generation = getattr(args, "expected_workspace_generation", None)
+    if (expected_workspace_id is None) != (expected_workspace_generation is None):
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_EXPECTED_TARGET_INVALID")
+    if expected_workspace_id is not None:
+        expected_workspace_id = _policy_identifier(expected_workspace_id, "workspace_id")
+        expected_workspace_generation = _policy_identifier(expected_workspace_generation, "workspace_generation")
     if journal is None:
         old_entry = next(
             (item for item in registry["entries"] if item["canonical_path"] == canonical_path),
@@ -5545,6 +5707,11 @@ def replace_workspace(args: argparse.Namespace) -> int:
         )
         if old_entry is None:
             raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_NOT_FOUND")
+        if expected_workspace_id is not None and (
+            old_entry["workspace_id"] != expected_workspace_id
+            or old_entry["workspace_generation"] != expected_workspace_generation
+        ):
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_EXPECTED_TARGET_MISMATCH")
         if old_entry["display_name"] == display_name and old_entry["capabilities"] == capabilities:
             raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_NO_CHANGE")
         journal = {
@@ -5564,6 +5731,11 @@ def replace_workspace(args: argparse.Namespace) -> int:
         journal = _workspace_replacement_record(journal)
         _write_json_atomic(journal_path, journal)
     else:
+        if expected_workspace_id is not None and (
+            journal["workspace_id"] != expected_workspace_id
+            or journal["old_workspace_generation"] != expected_workspace_generation
+        ):
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_EXPECTED_TARGET_MISMATCH")
         if (
             journal["device_id"] != config["device_id"]
             or journal["canonical_path"] != canonical_path
@@ -8920,15 +9092,19 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
             for field in ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
                 if action.get(field) != policy[field]:
                     raise RuntimeError("CONTROL_PLANE_FILE_READ_TARGET_MISMATCH")
-            allowed = policy.get("allowed_relative_paths", [])
-            if rel not in allowed:
+            rel = _file_read_relative_path(rel, code="CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            if not _policy_path_is_allowed(policy, rel):
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ALLOWLIST_DENIED")
-            root = Path(entry["canonical_path"]).resolve()
-            target = (root / rel).resolve()
-            try:
-                target.relative_to(root)
-            except ValueError as error:
-                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED") from error
+            declared_root = Path(entry["canonical_path"]).absolute()
+            root = declared_root.resolve(strict=True)
+            if os.path.normcase(str(root)) != os.path.normcase(str(declared_root)):
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            target = root
+            for part in rel.split("/"):
+                target = target / part
+                direct = target.resolve(strict=True)
+                if os.path.normcase(str(direct)) != os.path.normcase(str(target.absolute())):
+                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
             if not target.is_file():
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
             contract = {"schema_version": action.get("mcp_artifact_facade_schema_version"),
@@ -9065,6 +9241,14 @@ def main(argv: list[str] | None = None) -> int:
     authority_status.add_argument("--project-root", default="")
     authority_status.add_argument("--node", default="node")
     authority_status.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    policy_authority = subcommands.add_parser("inspect-policy-authority")
+    policy_authority.add_argument("--config", required=True)
+    policy_authority.add_argument("--workspace-registry", required=True)
+    policy_authority.add_argument("--workspace-id", required=True)
+    policy_authority.add_argument("--workspace-generation", required=True)
+    policy_authority.add_argument("--project-root", default="")
+    policy_authority.add_argument("--node", default="node")
+    policy_authority.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     rotate = subcommands.add_parser("rotate-credential")
     rotate.add_argument("--config", required=True)
     rotate.add_argument("--project-root", default="")
@@ -9105,6 +9289,8 @@ def main(argv: list[str] | None = None) -> int:
     replace_workspace_parser.add_argument("--capability-write", action="store_true")
     replace_workspace_parser.add_argument("--capability-exec", action="store_true")
     replace_workspace_parser.add_argument("--confirm-replace", action="store_true")
+    replace_workspace_parser.add_argument("--expected-workspace-id")
+    replace_workspace_parser.add_argument("--expected-workspace-generation")
     replace_workspace_parser.add_argument("--data-root", default="")
     replace_workspace_parser.add_argument("--project-root", default="")
     replace_workspace_parser.add_argument("--node", default="node")
@@ -9206,7 +9392,9 @@ def main(argv: list[str] | None = None) -> int:
     install_file_read_policy_parser.add_argument("--facade-schema-version", type=int, required=True)
     install_file_read_policy_parser.add_argument("--facade-profile", required=True)
     install_file_read_policy_parser.add_argument("--facade-sha256", required=True)
-    install_file_read_policy_parser.add_argument("--allowed-relative-path", action="append", required=True)
+    file_read_scope = install_file_read_policy_parser.add_mutually_exclusive_group(required=True)
+    file_read_scope.add_argument("--allowed-relative-path", action="append")
+    file_read_scope.add_argument("--allowed-relative-prefix", action="append")
     install_file_read_policy_parser.add_argument("--max-bytes", type=int, required=True)
     install_file_read_policy_parser.add_argument("--max-lines", type=int, required=True)
     # Omitted expiry installs standing local file-read authority.  The hidden
@@ -9275,7 +9463,9 @@ def main(argv: list[str] | None = None) -> int:
     install_approved_patch_policy_parser.add_argument("--facade-schema-version", type=int, required=True)
     install_approved_patch_policy_parser.add_argument("--facade-profile", required=True)
     install_approved_patch_policy_parser.add_argument("--facade-sha256", required=True)
-    install_approved_patch_policy_parser.add_argument("--allowed-relative-path", action="append", required=True)
+    approved_patch_scope = install_approved_patch_policy_parser.add_mutually_exclusive_group(required=True)
+    approved_patch_scope.add_argument("--allowed-relative-path", action="append")
+    approved_patch_scope.add_argument("--allowed-relative-prefix", action="append")
     install_approved_patch_policy_parser.add_argument("--max-patch-bytes", type=int, required=True)
     install_approved_patch_policy_parser.add_argument("--max-file-bytes", type=int, required=True)
     # Omitted expiry installs standing local patch authority.  An explicit
@@ -9409,6 +9599,7 @@ def main(argv: list[str] | None = None) -> int:
             "request-enrollment": request_enrollment,
             "reconcile-enrollment": reconcile_enrollment,
             "reconcile-authority-status": reconcile_authority_status,
+            "inspect-policy-authority": inspect_policy_authority,
             "rotate-credential": rotate_node_credential,
             "register-workspace": register_workspace,
             "list-workspaces": list_workspaces,

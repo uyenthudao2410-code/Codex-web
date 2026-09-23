@@ -364,6 +364,16 @@ test('central executor replaces a registered workspace generation only through e
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspace = path.join(root, 'fixture-workspace');
   fs.mkdirSync(workspace);
+  const workspaceId = 'workspace_0123456789abcdef0123456789abcdef';
+  const workspaceGeneration = 'generation_abcdef0123456789abcdef0123456789';
+  fs.writeFileSync(path.join(root, 'control-plane-workspaces.json'), JSON.stringify({
+    schema_version: 1,
+    entries: [{
+      workspace_id: workspaceId, workspace_generation: workspaceGeneration,
+      canonical_path: fs.realpathSync.native(workspace), display_name: 'fixture-workspace',
+      capabilities: { read: true, write: false, exec: false }, created_at_ms: Date.now()
+    }]
+  }));
   const calls = [];
   const service = new ControlPlaneEnrollmentService({
     paths: fixturePaths(root),
@@ -381,7 +391,10 @@ test('central executor replaces a registered workspace generation only through e
       }) + '\n', stderr: '' };
     }
   });
-  const receipt = await service.replaceWorkspace({ workspacePath: workspace, capabilities: { read: true, write: true, exec: true } });
+  const receipt = await service.replaceWorkspace({
+    workspacePath: workspace, workspaceId, workspaceGeneration,
+    capabilities: { read: true, write: true, exec: true }
+  });
   assert.deepEqual(receipt, {
     workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
     old_workspace_generation: 'generation_abcdef0123456789abcdef0123456789',
@@ -396,12 +409,23 @@ test('central executor replaces a registered workspace generation only through e
   assert.equal(command, path.join(root, 'python.exe'));
   assert.deepEqual(args.slice(0, 4), ['-I', path.join(root, 'node_agent.py'), 'replace-workspace', '--config']);
   assert.equal(args.includes('--confirm-replace'), true);
+  assert.equal(args[args.indexOf('--expected-workspace-id') + 1], workspaceId);
+  assert.equal(args[args.indexOf('--expected-workspace-generation') + 1], workspaceGeneration);
   assert.equal(args.includes('--capability-read'), true);
   assert.equal(args.includes('--capability-write'), true);
   assert.equal(args.includes('--capability-exec'), true);
   assert.equal(args.includes('must-not-reach-agent'), false);
   assert.deepEqual(options.env, { PATH: '/safe/path' });
   assert.equal(JSON.stringify(receipt).includes(workspace), false);
+  await assert.rejects(
+    service.replaceWorkspace({
+      workspacePath: workspace,
+      workspaceId: 'workspace_ffffffffffffffffffffffffffffffff', workspaceGeneration,
+      capabilities: { read: true, write: true, exec: true }
+    }),
+    { code: 'CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH' }
+  );
+  assert.equal(calls.length, 1, 'wrong row must not invoke the node agent');
   assert.throws(
     () => parseWorkspaceReplacementResult(JSON.stringify({
       workspace_id: 'workspace_0123456789abcdef0123456789abcdef',

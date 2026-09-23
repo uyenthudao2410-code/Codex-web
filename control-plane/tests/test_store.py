@@ -408,6 +408,162 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.store.authenticate_mcp_access_token(access_token=expired["access_token"])
 
+    def test_private_tunnel_service_grant_is_bounded_redacted_and_revocable(self) -> None:
+        service = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        grant = self.store.create_mcp_service_grant(
+            owner_id="owner_default",
+            principal_id=service["principal_id"],
+            expires_at_ms=self.now + 60_000,
+            scopes=["control-plane.inventory", "control-plane.read", "control-plane.patch"],
+        )
+        self.assertRegex(grant["access_token"], r"^mcpsvc_[A-Za-z0-9_-]{32,}$")
+        self.assertEqual(
+            self.store.authenticate_mcp_service_token(access_token=grant["access_token"]),
+            {
+                "grant_id": grant["grant_id"],
+                "owner_id": "owner_default",
+                "principal_id": service["principal_id"],
+                "expires_at_ms": self.now + 60_000,
+                "scopes": frozenset({"control-plane.inventory", "control-plane.read", "control-plane.patch"}),
+            },
+        )
+        listed = self.store.list_mcp_service_grants(owner_id="owner_default")
+        self.assertEqual(len(listed), 1)
+        self.assertNotIn("access_token", listed[0])
+        self.assertNotIn("token_digest", listed[0])
+        self.assertEqual(listed[0]["scopes"], ["control-plane.inventory", "control-plane.patch", "control-plane.read"])
+        with self.store._connection() as connection:
+            row = connection.execute(
+                "SELECT token_digest FROM mcp_service_grants WHERE grant_id = ?", (grant["grant_id"],)
+            ).fetchone()
+        self.assertNotEqual(row["token_digest"], grant["access_token"])
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_service_token(access_token="mcpsvc_not-the-grant")
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_service_token(access_token="mcp_wrong-token-type")
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_access_token(access_token=grant["access_token"])
+        with self.assertRaises(ValidationError):
+            self.store.create_mcp_service_grant(
+                owner_id="owner_default",
+                principal_id=service["principal_id"],
+                expires_at_ms=self.now + 30 * 24 * 60 * 60 * 1000 + 1,
+                scopes=["control-plane.inventory"],
+            )
+        with self.assertRaises(PermissionError):
+            self.store.revoke_mcp_service_grant(owner_id="another_owner", grant_id=grant["grant_id"])
+        revoked = self.store.revoke_mcp_service_grant(owner_id="owner_default", grant_id=grant["grant_id"])
+        self.assertEqual(revoked["revoked_at_ms"], self.now)
+        self.assertNotIn("access_token", revoked)
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_service_token(access_token=grant["access_token"])
+
+        expiring = self.store.create_mcp_service_grant(
+            owner_id="owner_default",
+            principal_id=service["principal_id"],
+            expires_at_ms=self.now + 1,
+            scopes=["control-plane.inventory"],
+        )
+        self.now += 1
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_service_token(access_token=expiring["access_token"])
+
+    def test_service_grant_scopes_are_immutable_and_invalid_scopes_fail_closed(self) -> None:
+        service = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        inventory = self.store.create_mcp_service_grant(
+            owner_id="owner_default", principal_id=service["principal_id"],
+            expires_at_ms=self.now + 60_000, scopes=["control-plane.inventory"],
+        )
+        patch = self.store.create_mcp_service_grant(
+            owner_id="owner_default", principal_id=service["principal_id"],
+            expires_at_ms=self.now + 60_000,
+            scopes=["control-plane.patch", "control-plane.read", "control-plane.inventory"],
+        )
+        self.assertEqual(inventory["scopes"], ["control-plane.inventory"])
+        self.assertEqual(patch["scopes"], ["control-plane.inventory", "control-plane.patch", "control-plane.read"])
+        with self.assertRaises(ValidationError):
+            self.store.create_mcp_service_grant(
+                owner_id="owner_default", principal_id=service["principal_id"],
+                expires_at_ms=self.now + 60_000,
+                scopes=["control-plane.inventory", "control-plane.patch"],
+            )
+        # A later configuration change can only affect a newly issued grant.
+        self.assertEqual(
+            self.store.authenticate_mcp_service_token(access_token=inventory["access_token"])["scopes"],
+            frozenset({"control-plane.inventory"}),
+        )
+        self.assertEqual(
+            self.store.authenticate_mcp_service_token(access_token=patch["access_token"])["scopes"],
+            frozenset({"control-plane.inventory", "control-plane.read", "control-plane.patch"}),
+        )
+        for invalid in (
+            [], ["control-plane.patch"], ["control-plane.inventory", "control-plane.inventory"],
+            ["control-plane.inventory", "control-plane.exec"], "control-plane.inventory",
+        ):
+            with self.subTest(scopes=invalid), self.assertRaises(ValidationError):
+                self.store.create_mcp_service_grant(
+                    owner_id="owner_default", principal_id=service["principal_id"],
+                    expires_at_ms=self.now + 60_000, scopes=invalid,
+                )
+        with self.store._connection() as connection:
+            connection.execute(
+                "UPDATE mcp_service_grants SET scopes_json = ? WHERE grant_id = ?",
+                ('["control-plane.exec"]', inventory["grant_id"]),
+            )
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_service_token(access_token=inventory["access_token"])
+
+    def test_service_principal_is_not_an_oauth_account_and_revocation_stops_grants(self) -> None:
+        oauth = self.store.link_oauth_principal(
+            owner_id="owner_default", issuer="https://accounts.example.com", subject="user-one"
+        )
+        service = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self.assertEqual(
+            [item["principal_id"] for item in self.store.list_oauth_principals(owner_id="owner_default")],
+            [oauth["principal_id"]],
+        )
+        self.assertEqual(
+            self.store.resolve_oauth_principal(issuer="https://accounts.example.com", subject="user-one"),
+            {"owner_id": "owner_default", "principal_id": oauth["principal_id"]},
+        )
+        with self.assertRaises(NotFoundError):
+            self.store.revoke_oauth_principal(owner_id="owner_default", principal_id=service["principal_id"])
+        with self.assertRaises(NotFoundError):
+            self.store.create_mcp_service_grant(
+                owner_id="owner_default", principal_id=oauth["principal_id"],
+                expires_at_ms=self.now + 60_000,
+                scopes=["control-plane.inventory"],
+            )
+        grant = self.store.create_mcp_service_grant(
+            owner_id="owner_default", principal_id=service["principal_id"],
+            expires_at_ms=self.now + 60_000,
+            scopes=["control-plane.inventory"],
+        )
+        context, _ = self._request()
+        # A shared service grant is identity, not admission. Even global open
+        # cannot create its task without an exact scoped pilot decision.
+        with self.assertRaises(ConflictError):
+            self.store.create_mcp_task_session(
+                owner_id="owner_default", principal_id=service["principal_id"],
+                binding_id=context["binding_id"], label="Shared tunnel task",
+                idempotency_key="service-task-0001",
+            )
+        principals = self.store.list_private_tunnel_service_principals(owner_id="owner_default")
+        self.assertEqual([item["principal_id"] for item in principals], [service["principal_id"]])
+        self.assertNotIn("subject_digest", principals[0])
+        self.assertNotIn("issuer", principals[0])
+        self.store.revoke_private_tunnel_service_principal(
+            owner_id="owner_default", principal_id=service["principal_id"]
+        )
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_mcp_service_token(access_token=grant["access_token"])
+        with self.assertRaises(ConflictError):
+            self.store.create_mcp_service_grant(
+                owner_id="owner_default", principal_id=service["principal_id"],
+                expires_at_ms=self.now + 60_000,
+                scopes=["control-plane.inventory"],
+            )
+
     def test_two_bound_nodes_with_the_same_workspace_id_poll_only_their_own_action(self) -> None:
         bravo = self.store.enroll_node(
             owner_id="owner_default",
@@ -1079,6 +1235,120 @@ class ControlPlaneStoreTests(unittest.TestCase):
             )
         finally:
             connection.close()
+
+    def test_v25_oauth_rows_migrate_to_v27_without_becoming_service_principals(self) -> None:
+        legacy_path = Path(self.tempdir.name) / "v25-oauth.sqlite3"
+        connection = sqlite3.connect(legacy_path)
+        try:
+            connection.execute(
+                """
+                CREATE TABLE oauth_principals (
+                    principal_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    issuer TEXT NOT NULL,
+                    subject_digest TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER,
+                    UNIQUE(issuer, subject_digest)
+                )
+                """
+            )
+            connection.execute(
+                "INSERT INTO oauth_principals VALUES (?, ?, ?, ?, ?, NULL)",
+                ("oauthprn_legacy", "owner_default", "https://accounts.example.com", "f" * 64, self.now),
+            )
+            connection.execute("PRAGMA user_version = 25")
+            connection.commit()
+        finally:
+            connection.close()
+        upgraded = ControlPlaneStore(legacy_path, clock=lambda: self.now)
+        self.assertEqual(
+            [item["principal_id"] for item in upgraded.list_oauth_principals(owner_id="owner_default")],
+            ["oauthprn_legacy"],
+        )
+        self.assertEqual(upgraded.list_private_tunnel_service_principals(owner_id="owner_default"), [])
+        ControlPlaneStore(legacy_path, clock=lambda: self.now)
+        connection = sqlite3.connect(legacy_path)
+        try:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
+            self.assertEqual(
+                connection.execute(
+                    "SELECT principal_kind FROM oauth_principals WHERE principal_id = 'oauthprn_legacy'"
+                ).fetchone()[0],
+                "oauth",
+            )
+            self.assertIn(
+                "mcp_service_grants",
+                {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")},
+            )
+        finally:
+            connection.close()
+
+    def test_v26_service_grants_migrate_to_inventory_only(self) -> None:
+        legacy_path = Path(self.tempdir.name) / "v26-service-grants.sqlite3"
+        token = "mcpsvc_" + "A" * 43
+        digest = hashlib.sha256(
+            b"coding-tools-control-plane:mcp-service-grant:v1\0" + token.encode("ascii")
+        ).hexdigest()
+        connection = sqlite3.connect(legacy_path)
+        try:
+            connection.execute(
+                """
+                CREATE TABLE oauth_principals (
+                    principal_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    issuer TEXT NOT NULL,
+                    subject_digest TEXT NOT NULL,
+                    principal_kind TEXT NOT NULL DEFAULT 'oauth',
+                    created_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER,
+                    UNIQUE(issuer, subject_digest)
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE mcp_service_grants (
+                    grant_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    token_digest TEXT NOT NULL UNIQUE,
+                    created_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER,
+                    CHECK(expires_at_ms > created_at_ms)
+                )
+                """
+            )
+            connection.execute(
+                "INSERT INTO oauth_principals VALUES (?, ?, ?, ?, ?, ?, NULL)",
+                ("svcprn_legacy", "owner_default", "private_tunnel_service", "f" * 64,
+                 "private_tunnel_service", self.now),
+            )
+            connection.execute(
+                "INSERT INTO mcp_service_grants VALUES (?, ?, ?, ?, ?, ?, NULL)",
+                ("mcpsvcgrant_legacy", "owner_default", "svcprn_legacy", digest,
+                 self.now, self.now + 60_000),
+            )
+            connection.execute("PRAGMA user_version = 26")
+            connection.commit()
+        finally:
+            connection.close()
+        upgraded = ControlPlaneStore(legacy_path, clock=lambda: self.now)
+        self.assertEqual(
+            upgraded.authenticate_mcp_service_token(access_token=token)["scopes"],
+            frozenset({"control-plane.inventory"}),
+        )
+        self.assertEqual(
+            upgraded.list_mcp_service_grants(owner_id="owner_default")[0]["scopes"],
+            ["control-plane.inventory"],
+        )
+        with upgraded._connection() as connection:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
+            self.assertEqual(
+                connection.execute("SELECT scopes_json FROM mcp_service_grants").fetchone()[0],
+                '["control-plane.inventory"]',
+            )
 
     def test_failed_schema_initialization_rolls_back_new_tables_and_version(self) -> None:
         broken_path = Path(self.tempdir.name) / "broken.sqlite3"
@@ -3056,6 +3326,218 @@ process.stdout.write(JSON.stringify(observation));
         self.assertEqual(entry["state"], "completed")
         self.assertTrue(entry["receipt"]["receipt_submitted"])
         self.assertNotIn("must-never-reach-central", json.dumps(entry))
+
+    def test_scoped_pilot_dispatches_only_decision_bound_file_read(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Selected workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        context = self.store.create_context(
+            owner_id="owner_default", binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+        )
+        request = self.store.create_work_request(
+            owner_id="owner_default", context_id=context["context_id"], objective="Old queued read",
+            criteria={}, scope={}, expires_at_ms=self.now + 60_000,
+        )
+        old = self.store.seal_action(
+            owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context",
+            arguments={"detail": "compact"}, idempotency_key="old-generic-action-001",
+            admission_reference="test", expires_at_ms=self.now + 60_000,
+        )
+        self._ready_node()
+        self.store.set_admission_mode(mode="recovery")
+        with self.assertRaises(ConflictError):
+            self.store.set_admission_mode(mode="scoped_pilot")
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+            reason="Pilot for the selected Windows workspace",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="generic"), [])
+        intent = self.store.request_mcp_bounded_file_read(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], path="README.md", start_line=1,
+            max_lines=10, max_bytes=1024, idempotency_key="pilot-file-read-001",
+            facade_contract=FACADE_CONTRACT,
+        )
+        action = self.store.action(owner_id="owner_default", action_id=intent["action_id"])
+        self.assertEqual(action["scoped_pilot_decision_id"], decision["decision_id"])
+        delivered = self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read")
+        self.assertEqual([row["action_id"] for row in delivered], [intent["action_id"]])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=old["action_id"])["delivery_state"], "queued")
+
+    def test_scoped_pilot_revocation_fences_queued_action_even_after_global_open(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Selected workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self._ready_node()
+        self.store.set_admission_mode(mode="recovery")
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+            reason="Short trial for selected workspace",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        intent = self.store.request_mcp_bounded_file_read(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], path="README.md", start_line=1,
+            max_lines=10, max_bytes=1024, idempotency_key="pilot-file-read-002",
+            facade_contract=FACADE_CONTRACT,
+        )
+        self.store.revoke_scoped_pilot_decision(owner_id="owner_default", decision_id=decision["decision_id"])
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        self.store.set_admission_mode(mode="open")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        # Simulate an old untagged service action surviving a schema upgrade.
+        with self.store._connection() as connection:
+            connection.execute(
+                "UPDATE actions SET scoped_pilot_decision_id = NULL WHERE action_id = ?",
+                (intent["action_id"],),
+            )
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=intent["action_id"])["delivery_state"], "queued")
+
+    def test_shared_service_never_inherits_global_open_and_old_pilot_task_cannot_rebind(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Selected workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        with self.assertRaises(ConflictError):
+            self.store.create_mcp_task_session(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], label="Not authorized by global open",
+            )
+        with self.assertRaises(ConflictError):
+            self.store.request_mcp_bounded_file_read(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], path="README.md", start_line=1,
+                max_lines=10, max_bytes=1024, idempotency_key="service-open-read-001",
+                facade_contract=FACADE_CONTRACT,
+            )
+        self.store.set_admission_mode(mode="recovery")
+        first = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+            reason="First task scope",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        task = self.store.create_mcp_task_session(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], label="Task pinned to first decision",
+        )
+        self.assertEqual(task["scoped_pilot_decision_id"], first["decision_id"])
+        self.store.set_admission_mode(mode="recovery")
+        second = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+            reason="Second task scope",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        with self.assertRaises(ConflictError):
+            self.store.request_mcp_bounded_file_read(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], path="README.md", start_line=1,
+                max_lines=10, max_bytes=1024, idempotency_key="old-pilot-task-read-001",
+                facade_contract=FACADE_CONTRACT, task_id=task["task_id"],
+            )
+        self.assertNotEqual(second["decision_id"], first["decision_id"])
+
+    def test_scoped_pilot_decision_rejects_unknown_effect_on_selected_node(self) -> None:
+        context, request = self._request()
+        self.store.seal_action(
+            owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context",
+            arguments={"detail": "compact"}, idempotency_key="unknown-before-pilot-001",
+            admission_reference="test", expires_at_ms=self.now + 30_000,
+        )
+        self._ready_node()
+        self.assertEqual(len(self.store.poll_actions(device_id="device-alpha")), 1)
+        self.store.set_admission_mode(mode="recovery")
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=context["binding_id"], expires_at_ms=self.now + 120_000,
+                reason="Unknown old effect must block selected node",
+            )
+
+    def test_scoped_pilot_exec_is_pinned_to_task_and_exact_target(self) -> None:
+        self.store.register_node_workspace(
+            device_id="device-alpha", workspace_id="workspace-code", workspace_generation="generation-code-1",
+            display_name="Code workspace", capabilities={"read": True, "write": True, "exec": True},
+        )
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-code",
+            workspace_generation="generation-code-1", display_name="Code workspace",
+        )
+        other = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Other workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self._ready_node()
+        self.store.set_admission_mode(mode="recovery")
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+            reason="Structured command pilot in one code workspace",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        with self.assertRaises(ConflictError):
+            self.store.create_mcp_task_session(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=other["binding_id"], label="Wrong workspace",
+            )
+        task = self.store.create_mcp_task_session(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], label="Selected workspace task",
+        )
+        with self.assertRaises(ConflictError):
+            self.store.request_mcp_exec(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], argv=["npm", "test"],
+                idempotency_key="pilot-exec-no-task-001", facade_contract=FACADE_CONTRACT,
+            )
+        intent = self.store.request_mcp_exec(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], task_id=task["task_id"], argv=["npm", "test"],
+            idempotency_key="pilot-exec-task-001", facade_contract=FACADE_CONTRACT,
+        )
+        action = self.store.action(owner_id="owner_default", action_id=intent["action_id"])
+        self.assertEqual(action["scoped_pilot_decision_id"], decision["decision_id"])
+        self.assertEqual(
+            [row["action_id"] for row in self.store.poll_actions(device_id="device-alpha", lane="bounded_exec")],
+            [intent["action_id"]],
+        )
+
+    def test_restore_candidate_closes_scoped_pilot_and_revokes_decision(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Selected workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self.store.set_admission_mode(mode="recovery")
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+            reason="Before recovery snapshot",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        source = Path(self.tempdir.name) / "scoped-pilot-source.sqlite3"
+        receipt = self.store.backup_to(source)
+        candidate = Path(self.tempdir.name) / "scoped-pilot-recovery.sqlite3"
+        create_recovery_restore_candidate(source, candidate, expected_sha256=str(receipt["snapshot_sha256"]))
+        restored = ControlPlaneStore(candidate, clock=lambda: self.now)
+        self.assertEqual(restored.admission_status()["admission_mode"], "recovery")
+        self.assertIsNotNone(restored.scoped_pilot_decision(
+            owner_id="owner_default", decision_id=decision["decision_id"],
+        )["revoked_at_ms"])
+        with self.assertRaises(ConflictError):
+            restored.set_admission_mode(mode="scoped_pilot")
 
     def test_read_only_bridge_defers_projection_until_request_binding(self) -> None:
         """The bridge must preserve IDs until the only final Python verifier."""

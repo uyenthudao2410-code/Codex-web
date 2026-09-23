@@ -28,15 +28,23 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from .store import MCP_SERVICE_INVENTORY_SCOPE, MCP_SERVICE_PATCH_SCOPE, MCP_SERVICE_READ_SCOPE
+
 
 MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT = "legacy_context_grant"
 MCP_AUTH_MODE_OAUTH_INTROSPECTION = "oauth_introspection"
-MCP_AUTH_MODES = frozenset({MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT, MCP_AUTH_MODE_OAUTH_INTROSPECTION})
+MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE = "private_tunnel_service"
+MCP_AUTH_MODES = frozenset({
+    MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT,
+    MCP_AUTH_MODE_OAUTH_INTROSPECTION,
+    MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE,
+})
 
 MAX_ACCESS_TOKEN_BYTES = 8192
 MAX_INTROSPECTION_RESPONSE_BYTES = 16 * 1024
 INTROSPECTION_TIMEOUT_SECONDS = 5
 _SCOPE_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{3,128}$")
+_SERVICE_PRINCIPAL_PATTERN = re.compile(r"^svcprn_[a-f0-9]{32}$")
 
 
 class OAuthConfigurationError(ValueError):
@@ -264,7 +272,7 @@ def oauth_configuration_from_environment(
         "CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED",
         "CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED",
     )
-    if mode == MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT:
+    if mode != MCP_AUTH_MODE_OAUTH_INTROSPECTION:
         if any(str(source.get(name, "") or "").strip() for name in oauth_names):
             raise OAuthConfigurationError("OAuth MCP settings require CONTROL_PLANE_MCP_AUTH_MODE=oauth_introspection.")
         return None
@@ -323,6 +331,93 @@ def oauth_configuration_from_environment(
         approved_patch_enabled=raw_approved_patch == "true",
         standing_write_enabled=raw_standing_write == "true",
         exec_enabled=raw_exec == "true",
+    )
+
+
+@dataclass(frozen=True)
+class PrivateTunnelServiceConfiguration:
+    """One shared service identity, never an asserted ChatGPT user identity.
+
+    The configured principal pins the service credential to a deliberately
+    provisioned owner record. Each tool call still needs a currently valid
+    server-issued service grant. Workspace access is bounded independently by
+    the central binding and Windows node-local policy.
+    """
+
+    principal_id: str
+    required_scope: str
+    patch_write_scope: str | None = None
+    file_read_enabled: bool = False
+    standing_write_enabled: bool = False
+    exec_enabled: bool = False
+
+    @property
+    def verified_scopes(self) -> frozenset[str]:
+        scopes = {self.required_scope}
+        if self.file_read_enabled:
+            scopes.add(MCP_SERVICE_READ_SCOPE)
+        if self.patch_write_scope:
+            scopes.add(self.patch_write_scope)
+        return frozenset(scopes)
+
+
+def private_service_configuration_from_environment(
+    environment: Mapping[str, str] | None = None,
+) -> PrivateTunnelServiceConfiguration | None:
+    """Parse an explicit private service mode without borrowing OAuth claims."""
+
+    source = os.environ if environment is None else environment
+    raw_mode = source.get("CONTROL_PLANE_MCP_AUTH_MODE", MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT)
+    mode = raw_mode.strip() if isinstance(raw_mode, str) else ""
+    mode = mode or MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT
+    if mode not in MCP_AUTH_MODES:
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_AUTH_MODE is invalid.")
+    names = (
+        "CONTROL_PLANE_MCP_SERVICE_PRINCIPAL_ID",
+        "CONTROL_PLANE_MCP_SERVICE_SCOPE",
+        "CONTROL_PLANE_MCP_SERVICE_PATCH_WRITE_SCOPE",
+        "CONTROL_PLANE_MCP_SERVICE_FILE_READ_ENABLED",
+        "CONTROL_PLANE_MCP_SERVICE_STANDING_WRITE_ENABLED",
+        "CONTROL_PLANE_MCP_SERVICE_EXEC_ENABLED",
+    )
+    if mode != MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE:
+        if any(str(source.get(name, "") or "").strip() for name in names):
+            raise OAuthConfigurationError("Private service MCP settings require CONTROL_PLANE_MCP_AUTH_MODE=private_tunnel_service.")
+        return None
+
+    principal_id = _required_environment(source, names[0])
+    if _SERVICE_PRINCIPAL_PATTERN.fullmatch(principal_id) is None:
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_SERVICE_PRINCIPAL_ID is invalid.")
+    required_scope = _required_environment(source, names[1])
+    if required_scope != MCP_SERVICE_INVENTORY_SCOPE:
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_SERVICE_SCOPE is invalid.")
+    write_scope = source.get(names[2], "")
+    if not isinstance(write_scope, str) or write_scope not in {"", MCP_SERVICE_PATCH_SCOPE}:
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_SERVICE_PATCH_WRITE_SCOPE is invalid.")
+    flags: dict[str, bool] = {}
+    for name in names[3:]:
+        value = source.get(name, "")
+        if not isinstance(value, str) or value not in {"", "false", "true"}:
+            raise OAuthConfigurationError(f"{name} must be true or false.")
+        flags[name] = value == "true"
+    file_read = flags[names[3]]
+    standing_write = flags[names[4]]
+    exec_enabled = flags[names[5]]
+    if standing_write and not file_read:
+        raise OAuthConfigurationError("Private service standing write requires file read.")
+    if exec_enabled and not standing_write:
+        raise OAuthConfigurationError("Private service exec requires standing write.")
+    if standing_write and (not write_scope or write_scope == required_scope):
+        raise OAuthConfigurationError("Private service write requires a distinct write scope.")
+    if write_scope and not standing_write:
+        raise OAuthConfigurationError("Private service write scope requires standing write.")
+    return PrivateTunnelServiceConfiguration(
+        principal_id=principal_id,
+        required_scope=required_scope,
+        patch_write_scope=write_scope or None,
+        file_read_enabled=file_read,
+        standing_write_enabled=standing_write,
+        exec_enabled=exec_enabled,
     )
 
 

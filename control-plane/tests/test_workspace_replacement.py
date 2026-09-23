@@ -180,6 +180,57 @@ class WorkspaceReplacementTests(unittest.TestCase):
         self.assertIn("CONTROL_PLANE_WORKSPACE_REPLACEMENT_CONFIRMATION_REQUIRED", stderr)
         request.assert_not_called()
 
+    def test_replacement_expected_identity_refuses_wrong_selected_row_before_effect(self) -> None:
+        argv = self.args() + [
+            "--expected-workspace-id", "workspace-unrelated-0001",
+            "--expected-workspace-generation", "generation-replace-old-0001",
+        ]
+        with mock.patch("control_plane.node_agent._request") as request:
+            result, _stdout, stderr = self.invoke(argv)
+        self.assertEqual(result, 1)
+        self.assertIn("CONTROL_PLANE_WORKSPACE_REPLACEMENT_EXPECTED_TARGET_MISMATCH", stderr)
+        request.assert_not_called()
+        self.assertFalse(self.config.with_name(f"{self.config.name}.control-plane-workspace-replacement.json").exists())
+
+    def test_policy_authority_observation_is_node_bound_and_path_free(self) -> None:
+        argv = [
+            "inspect-policy-authority", "--config", str(self.config),
+            "--workspace-registry", str(self.registry),
+            "--workspace-id", "workspace-replace-0001",
+            "--workspace-generation", "generation-replace-old-0001",
+            "--project-root", str(self.root),
+        ]
+        authority = {
+            "owner_id": "owner-default", "device_id": "device-replace-0001",
+            "endpoint_id": "endpoint-replace-0001",
+            "workspace_id": "workspace-replace-0001",
+            "workspace_generation": "generation-replace-old-0001",
+            "facade_contract": {
+                "schema_version": 20,
+                "profile": "control-plane-private-tunnel-service-v1",
+                "sha256": "a" * 64,
+            },
+            "binding_count": 1, "standing_write_enabled": True,
+            "observed_at_ms": 1_700_000_000_000,
+        }
+        with mock.patch("control_plane.node_agent._request", return_value=authority) as request:
+            result, stdout, stderr = self.invoke(argv)
+        self.assertEqual(result, 0, stderr)
+        receipt = json.loads(stdout)
+        self.assertEqual(receipt["operation"], "control_plane_policy_authority_observation")
+        self.assertEqual(receipt["workspace_generation"], "generation-replace-old-0001")
+        self.assertEqual(receipt["facade_contract"], authority["facade_contract"])
+        self.assertTrue(receipt["standing_write_enabled"])
+        self.assertNotIn(str(self.workspace), stdout)
+        self.assertNotIn("node-secret", stdout)
+        request.assert_called_once()
+        with mock.patch("control_plane.node_agent._request", return_value={
+            **authority, "workspace_generation": "generation-unrelated-0001",
+        }):
+            result, _stdout, stderr = self.invoke(argv)
+        self.assertEqual(result, 1)
+        self.assertIn("CONTROL_PLANE_POLICY_AUTHORITY_TARGET_MISMATCH", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

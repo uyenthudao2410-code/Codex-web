@@ -17,13 +17,16 @@ from control_plane.http_api import ControlPlaneHttpServer
 from control_plane.mcp_facade import PUBLIC_TOOL_NAMES, STATELESS_MCP_PROTOCOL_VERSION
 from control_plane.mcp_oauth import (
     MCP_AUTH_MODE_OAUTH_INTROSPECTION,
+    MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE,
     OAuthAccessIdentity,
     OAuthAuthenticationError,
     OAuthClientCredentials,
     OAuthConfigurationError,
     OAuthIntrospectionConfiguration,
     OAuthIntrospectionVerifier,
+    PrivateTunnelServiceConfiguration,
     oauth_configuration_from_environment,
+    private_service_configuration_from_environment,
 )
 from control_plane.store import (
     ConflictError,
@@ -39,6 +42,277 @@ RESOURCE = "https://mcp.example.test"
 INTROSPECTION_URL = "https://identity.example.test/tenant-one/introspect"
 SCOPE = "control-plane.inventory"
 WRITE_SCOPE = "control-plane.patch"
+
+
+class PrivateTunnelServiceConfigurationTests(unittest.TestCase):
+    def test_explicit_shared_service_mode_is_distinct_from_oauth_and_legacy(self) -> None:
+        env = {
+            "CONTROL_PLANE_MCP_AUTH_MODE": MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE,
+            "CONTROL_PLANE_MCP_SERVICE_PRINCIPAL_ID": "svcprn_" + "a" * 32,
+            "CONTROL_PLANE_MCP_SERVICE_SCOPE": SCOPE,
+            "CONTROL_PLANE_MCP_SERVICE_PATCH_WRITE_SCOPE": WRITE_SCOPE,
+            "CONTROL_PLANE_MCP_SERVICE_FILE_READ_ENABLED": "true",
+            "CONTROL_PLANE_MCP_SERVICE_STANDING_WRITE_ENABLED": "true",
+            "CONTROL_PLANE_MCP_SERVICE_EXEC_ENABLED": "true",
+        }
+        self.assertIsNone(oauth_configuration_from_environment(env))
+        config = private_service_configuration_from_environment(env)
+        self.assertIsNotNone(config)
+        self.assertEqual(config.principal_id, "svcprn_" + "a" * 32)
+        self.assertEqual(config.verified_scopes, frozenset({SCOPE, "control-plane.read", WRITE_SCOPE}))
+        self.assertTrue(config.exec_enabled)
+        self.assertIsNone(private_service_configuration_from_environment({}))
+
+    def test_shared_service_mode_rejects_partial_or_cross_mode_privilege(self) -> None:
+        base = {
+            "CONTROL_PLANE_MCP_AUTH_MODE": MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE,
+            "CONTROL_PLANE_MCP_SERVICE_PRINCIPAL_ID": "svcprn_" + "a" * 32,
+            "CONTROL_PLANE_MCP_SERVICE_SCOPE": SCOPE,
+        }
+        for patch in (
+            {"CONTROL_PLANE_MCP_SERVICE_EXEC_ENABLED": "true"},
+            {"CONTROL_PLANE_MCP_SERVICE_STANDING_WRITE_ENABLED": "true"},
+            {"CONTROL_PLANE_MCP_SERVICE_PATCH_WRITE_SCOPE": SCOPE,
+             "CONTROL_PLANE_MCP_SERVICE_FILE_READ_ENABLED": "true",
+             "CONTROL_PLANE_MCP_SERVICE_STANDING_WRITE_ENABLED": "true"},
+        ):
+            with self.subTest(patch=patch):
+                candidate = {**base, **patch}
+                with self.assertRaises(OAuthConfigurationError):
+                    private_service_configuration_from_environment(candidate)
+        with self.assertRaises(OAuthConfigurationError):
+            oauth_configuration_from_environment({**base, "CONTROL_PLANE_MCP_OAUTH_RESOURCE": RESOURCE})
+        with self.assertRaises(OAuthConfigurationError):
+            private_service_configuration_from_environment({
+                **base, "CONTROL_PLANE_MCP_AUTH_MODE": "legacy_context_grant",
+            })
+        with self.assertRaises(OAuthConfigurationError):
+            private_service_configuration_from_environment({
+                **base, "CONTROL_PLANE_MCP_SERVICE_SCOPE": "control-plane.typo",
+            })
+        with self.assertRaises(OAuthConfigurationError):
+            private_service_configuration_from_environment({
+                **base,
+                "CONTROL_PLANE_MCP_SERVICE_PATCH_WRITE_SCOPE": "control-plane.custom",
+                "CONTROL_PLANE_MCP_SERVICE_FILE_READ_ENABLED": "true",
+                "CONTROL_PLANE_MCP_SERVICE_STANDING_WRITE_ENABLED": "true",
+            })
+
+
+class PrivateTunnelServiceHttpTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory(prefix="control-plane-private-service-http-")
+        self.addCleanup(self.temporary.cleanup)
+        self.store = ControlPlaneStore(Path(self.temporary.name) / "control.sqlite3")
+        self.principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self.configuration = PrivateTunnelServiceConfiguration(
+            principal_id=self.principal["principal_id"],
+            required_scope=SCOPE,
+            patch_write_scope=WRITE_SCOPE,
+            file_read_enabled=True,
+            standing_write_enabled=True,
+            exec_enabled=True,
+        )
+        self.server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0), self.store, "o" * 40,
+            mcp_private_service=self.configuration,
+        )
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.url = f"http://127.0.0.1:{self.server.server_port}"
+
+    def tearDown(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=2)
+
+    def request(self, method: str, path: str, *, body: dict[str, Any] | None = None,
+                bearer: str | None = None,
+                extra_headers: dict[str, str] | None = None) -> tuple[int, dict[str, Any]]:
+        payload = None if body is None else json.dumps(body).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if bearer:
+            headers["Authorization"] = f"Bearer {bearer}"
+        headers.update(extra_headers or {})
+        request = Request(self.url + path, data=payload, headers=headers, method=method)
+        try:
+            with urlopen(request, timeout=3) as response:
+                return response.status, json.loads(response.read())
+        except HTTPError as error:
+            try:
+                return error.code, json.loads(error.read())
+            finally:
+                error.close()
+
+    def test_operator_provisioned_shared_service_has_no_chatgpt_user_claim_and_revokes(self) -> None:
+        operator = "o" * 40
+        status, forbidden = self.request("POST", "/v1/mcp-service-principals", body={})
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        status, created = self.request("POST", "/v1/mcp-service-principals", body={}, bearer=operator)
+        self.assertEqual(status, 201)
+        self.assertRegex(created["principal_id"], r"^svcprn_[a-f0-9]{32}$")
+        status, grant = self.request("POST", "/v1/mcp-service-grants", body={
+            "principal_id": self.principal["principal_id"],
+            "expires_at_ms": self.store.clock() + 60_000,
+            "scopes": [SCOPE, "control-plane.read", WRITE_SCOPE],
+        }, bearer=operator)
+        self.assertEqual(status, 201)
+        self.assertRegex(grant["access_token"], r"^mcpsvc_[A-Za-z0-9_-]{32,}$")
+        status, listed = self.request("GET", "/v1/mcp-service-grants", bearer=operator)
+        self.assertEqual(status, 200)
+        self.assertEqual(len(listed["mcp_service_grants"]), 1)
+        self.assertNotIn("access_token", json.dumps(listed))
+        self.assertNotIn("token_digest", json.dumps(listed))
+        status, tools = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "list", "method": "tools/list", "params": {},
+        }, bearer=grant["access_token"])
+        self.assertEqual(status, 200)
+        status, cross_origin = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "simple-form", "method": "tools/list", "params": {},
+        }, bearer=grant["access_token"], extra_headers={
+            "Origin": "https://untrusted.example.invalid", "Content-Type": "text/plain",
+        })
+        self.assertEqual(status, 415)
+        self.assertEqual(cross_origin["error"]["code"], "UNSUPPORTED_MEDIA_TYPE")
+        descriptors = {tool["name"]: tool for tool in tools["result"]["tools"]}
+        self.assertEqual(len(descriptors), 8)
+        self.assertEqual(descriptors["agent_workflow"]["_meta"]["control_plane"]["capability_state"], "standing_write")
+        self.assertNotIn("securitySchemes", descriptors["agent_workflow"])
+        self.assertEqual(descriptors["agent_workflow"]["_meta"]["control_plane"]["access_scope"], "private_tunnel_service")
+        status, inventoried = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "inventory", "method": "tools/call", "params": {
+                "name": "workspace_context", "arguments": {"operation": "inventory"},
+            },
+        }, bearer=grant["access_token"])
+        self.assertEqual(status, 200)
+        self.assertNotIn("error", inventoried)
+        self.assertEqual(inventoried["result"]["structuredContent"]["observation_kind"], "control_plane_account_target_inventory")
+        modern_body = {
+            "jsonrpc": "2.0", "id": "modern-list", "method": "tools/list",
+            "params": {"_meta": {
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientCapabilities": {},
+                "io.modelcontextprotocol/clientInfo": {"name": "service-fixture", "version": "1"},
+            }},
+        }
+        status, modern = self.request("POST", "/mcp", body=modern_body,
+            bearer=grant["access_token"], extra_headers={
+                "Origin": "https://chatgpt.com",
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": "2026-07-28",
+                "Mcp-Method": "tools/list",
+            })
+        self.assertEqual(status, 200)
+        self.assertEqual(len(modern["result"]["tools"]), 8)
+        status, revoked = self.request("POST", f"/v1/mcp-service-grants/{grant['grant_id']}/revoke",
+                                       body={}, bearer=operator)
+        self.assertEqual(status, 200)
+        self.assertIsInstance(revoked["revoked_at_ms"], int)
+        status, denied = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "list-again", "method": "tools/list", "params": {},
+        }, bearer=grant["access_token"])
+        self.assertEqual(status, 403)
+        self.assertEqual(denied["error"]["code"], "FORBIDDEN")
+
+    def test_private_service_auth_rejects_unknown_principal_without_oauth_fallback(self) -> None:
+        foreign = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        grant = self.store.create_mcp_service_grant(
+            owner_id="owner_default", principal_id=foreign["principal_id"],
+            expires_at_ms=self.store.clock() + 60_000,
+            scopes=[SCOPE],
+        )
+        status, denied = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "foreign", "method": "tools/list", "params": {},
+        }, bearer=grant["access_token"])
+        self.assertEqual(status, 403)
+        self.assertEqual(denied["error"]["code"], "FORBIDDEN")
+
+    def test_inventory_only_service_grant_cannot_read_content_at_http_ingress(self) -> None:
+        grant = self.store.create_mcp_service_grant(
+            owner_id="owner_default", principal_id=self.principal["principal_id"],
+            expires_at_ms=self.store.clock() + 60_000, scopes=[SCOPE],
+        )
+        status, inventory = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "inventory-only", "method": "tools/call",
+            "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+        }, bearer=grant["access_token"])
+        self.assertEqual(status, 200)
+        self.assertFalse(inventory["result"]["isError"])
+        status, denied = self.request("POST", "/mcp", body={
+            "jsonrpc": "2.0", "id": "read-denied", "method": "tools/call",
+            "params": {"name": "workspace_context", "arguments": {
+                "operation": "read_status", "action_id": "action-001",
+            }},
+        }, bearer=grant["access_token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(denied["result"]["structuredContent"]["code"], "SERVICE_READ_SCOPE_REQUIRED")
+        self.assertTrue(denied["result"]["isError"])
+
+    def test_node_policy_authority_requires_exact_active_writable_binding(self) -> None:
+        node = self.store.enroll_node(
+            owner_id="owner_default", device_id="device-policy-authority",
+            endpoint_id="endpoint-policy-authority", display_name="Policy node",
+        )
+        path = "/v1/nodes/device-policy-authority/policy-authority"
+        selection = {
+            "workspace_id": "workspace-policy-authority",
+            "workspace_generation": "generation-policy-authority",
+        }
+        node_headers = {"Authorization": f"Node {node['node_secret']}"}
+        status, denied = self.request("POST", path, body=selection)
+        self.assertEqual(status, 403)
+        self.assertEqual(denied["error"]["code"], "FORBIDDEN")
+        self.store.register_node_workspace(
+            device_id=node["device_id"], display_name="Selected workspace",
+            capabilities={"read": True, "write": True, "exec": False}, **selection,
+        )
+        status, unbound = self.request("POST", path, body=selection, extra_headers=node_headers)
+        self.assertEqual(status, 409)
+        self.assertEqual(unbound["error"]["code"], "CONFLICT")
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id=node["device_id"],
+            display_name="Selected workspace", **selection,
+        )
+        status, authority = self.request("POST", path, body=selection, extra_headers=node_headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(authority["owner_id"], "owner_default")
+        self.assertEqual(authority["workspace_generation"], selection["workspace_generation"])
+        self.assertEqual(authority["binding_count"], 1)
+        self.assertTrue(authority["standing_write_enabled"])
+        self.assertEqual(authority["facade_contract"], {
+            key: self.server.mcp_facade.contract[key]
+            for key in ("schema_version", "profile", "sha256")
+        })
+        self.assertNotIn("node_secret", json.dumps(authority))
+        status, wrong_generation = self.request("POST", path, body={
+            **selection, "workspace_generation": "generation-other",
+        }, extra_headers=node_headers)
+        self.assertEqual(status, 409)
+        self.assertEqual(wrong_generation["error"]["code"], "CONFLICT")
+        self.store.revoke_binding(owner_id="owner_default", binding_id=binding["binding_id"])
+        status, revoked = self.request("POST", path, body=selection, extra_headers=node_headers)
+        self.assertEqual(status, 409)
+        self.assertEqual(revoked["error"]["code"], "CONFLICT")
+
+        foreign_node = self.store.enroll_node(
+            owner_id="owner_foreign", device_id="device-policy-foreign",
+            endpoint_id="endpoint-policy-foreign", display_name="Foreign node",
+        )
+        self.store.register_node_workspace(
+            device_id=foreign_node["device_id"], display_name="Foreign workspace",
+            capabilities={"read": True, "write": True, "exec": False}, **selection,
+        )
+        self.store.create_binding(
+            owner_id="owner_foreign", device_id=foreign_node["device_id"],
+            display_name="Foreign workspace", **selection,
+        )
+        status, foreign = self.request(
+            "POST", "/v1/nodes/device-policy-foreign/policy-authority", body=selection,
+            extra_headers={"Authorization": f"Node {foreign_node['node_secret']}"},
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(foreign["error"]["code"], "CONFLICT")
 
 
 class _Response:

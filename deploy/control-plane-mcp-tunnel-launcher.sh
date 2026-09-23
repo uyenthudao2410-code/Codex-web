@@ -39,12 +39,13 @@ fi
 
 header_args=()
 case "$CONTROL_PLANE_MCP_AUTH_MODE" in
-  legacy_context_grant)
-    : "${CONTROL_PLANE_MCP_AUTH_HEADER_FILE:?CONTROL_PLANE_MCP_AUTH_HEADER_FILE is required in legacy_context_grant mode}"
-    # This file contains the complete historical MCP Authorization header
-    # value, not the OpenAI Runtime API Key or the control-plane operator
-    # credential. Inspect only metadata here: tunnel-client reads the file
-    # reference itself.
+  legacy_context_grant|private_tunnel_service)
+    : "${CONTROL_PLANE_MCP_AUTH_HEADER_FILE:?CONTROL_PLANE_MCP_AUTH_HEADER_FILE is required in grant modes}"
+    # This file contains the complete MCP Authorization header for the
+    # selected mode, never the OpenAI Runtime API Key or operator credential.
+    # In private_tunnel_service mode it authenticates a shared connector,
+    # not an individual ChatGPT member. Inspect metadata only; tunnel-client
+    # reads the protected file reference itself.
     if [[ "$CONTROL_PLANE_MCP_AUTH_HEADER_FILE" != /* ||
           "$CONTROL_PLANE_MCP_AUTH_HEADER_FILE" == *$'\n'* ||
           "$CONTROL_PLANE_MCP_AUTH_HEADER_FILE" == *$'\r'* ||
@@ -76,7 +77,7 @@ case "$CONTROL_PLANE_MCP_AUTH_MODE" in
     fi
     ;;
   *)
-    printf 'CONTROL_PLANE_MCP_AUTH_MODE must be legacy_context_grant or oauth_introspection\n' >&2
+    printf 'CONTROL_PLANE_MCP_AUTH_MODE must be legacy_context_grant, private_tunnel_service or oauth_introspection\n' >&2
     exit 2
     ;;
 esac

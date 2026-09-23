@@ -1,5 +1,38 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
+## Checkpoint mới — 23-09-2026, 20:25 +07 (source candidate, chưa triển khai)
+
+Windows checkout `E:\DEV\Codex-web` đang phát triển candidate chung cho hai
+thành viên ChatGPT Business. Ubuntu live đọc qua `/healthz` vẫn là schema 25,
+`legacy_context_grant`, admission `recovery`, declared revision `749ab5c9`.
+Đó là bằng chứng server cũ còn chạy, không phải candidate source đã lên server.
+Windows hiện có process `Coding Tools MCP.exe` từ
+`C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP`; `npm run
+dev:status` của source báo `DEV_UI_INSTALLATION_MISMATCH`, không phải bằng chứng
+process bản cài đã nạp source mới. Bản cài vẫn cần build/activation mới để
+nhận UI cài standing file policy. Chưa có canary ChatGPT → Ubuntu → Windows
+đọc/vá file.
+
+Candidate source tách một service principal chung khỏi OAuth cá nhân, cấp
+grant có scope `inventory`, `read`, `patch` bất biến, và chỉ nhận tác vụ cho
+binding/generation được owner chọn trong một quyết định `scoped_pilot` tối đa
+24 giờ. Action cũ không gắn quyết định không được poll trong pilot. App Windows
+cho chọn workspace đã đăng ký, lấy hợp đồng MCP từ node-authenticated Ubuntu,
+cài policy đọc/vá file exact generation và báo đúng trạng thái sau reload.
+Chưa cài policy chạy lệnh: `cwd`/argv-prefix không cách ly filesystem trên
+Windows, nên không được nói đã hoàn thiện yêu cầu exec tự động. Không mở
+admission, không cấp service grant live, không sửa policy live trong checkpoint
+này. Các kết quả kiểm tra tập trung được ghi trong báo cáo delivery tương ứng;
+source proof, packaged proof, live proof và natural-work proof vẫn là bốn gate
+riêng.
+
+Điều kiện tiếp theo: hoàn tất kiểm tra tích hợp và giao source; đối soát lịch
+sử action cũ, thử bản Ubuntu/Windows candidate trên môi trường cô lập, cấp
+service grant mới `[inventory, read, patch]` qua operator runbook, thay đúng
+generation/binding, sau đó canary đọc và vá file. Chỉ bật exec khi có rào OS
+thật hoặc phạm vi lệnh cố định được chấp nhận rõ là chạy dưới quyền Windows
+user, không phải sandbox workspace.
+
 **Ngày cập nhật:** 22-09-2026, 06:34 +07
 **Branch:** `main`
 **HEAD đã kiểm tra:** `99fbdd95b5bceb901c80e8d4b63582d0266bb456`

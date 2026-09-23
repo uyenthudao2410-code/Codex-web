@@ -61,7 +61,7 @@ The OpenAI Tunnel service template receives the second listener only. This
 prevents an MCP tunnel profile from becoming a proxy for the private console
 or node control API. It does not grant the Tunnel client operator authority.
 
-There are two explicit MCP authentication modes:
+There are three explicit MCP authentication modes:
 
 - `legacy_context_grant` is the current transition/default mode. `/mcp`
   requires one short-lived server-issued, context-scoped grant, and the Tunnel
@@ -74,6 +74,80 @@ There are two explicit MCP authentication modes:
   header. The default OAuth surface is inventory/task discovery only; the
   trusted-workspace profile below explicitly opts into standing local write and
   structured exec after its distinct scope, node policy and package gates pass.
+- `private_tunnel_service` is an explicit, shared Business-connector mode for
+  owners who permit every member of that connector to use the same bounded
+  workspace authority. The Tunnel injects a revocable, server-issued service
+  grant from an owner-private header file; Ubuntu records one service principal,
+  not a verified ChatGPT user. It must never be described as per-user OAuth.
+  The owner provisions and revokes this principal/grant through the protected
+  operator API. File read, standing patch and structured exec are separate
+  startup flags and remain bounded by current binding, workspace generation,
+  node-local policies, exact contract, lease and receipt checks. A grant alone
+  never changes Windows permissions or opens central admission.
+
+The shared service principal is not a ChatGPT Business member identity. Its
+grant scopes are exactly `control-plane.inventory`, the separate
+`control-plane.read` for content/task operations, and `control-plane.patch`
+for writes/command output; a new patch grant must also include read. Changing
+service configuration cannot upgrade an old grant. Existing inventory-only
+grants stay inventory-only after migration, and old `[inventory, patch]` grants
+cannot work under the new read gate: revoke/rotate them instead of treating
+their stored scope as upgraded. The service may create a task or action only
+for one unexpired, exact
+`scoped_pilot` decision naming its principal and binding. This remains true if
+global admission is later set to `open`. The decision can be created only in
+`recovery`, after reconciliation finds no unresolved prior delivery on that
+node. Switching to `scoped_pilot` is a separate bearer-operator runbook step;
+the private browser Console can only close admission or revoke a grant or
+decision. A revoked/expired decision stops new intake and polling, not an
+already-dispatched Windows effect. Restore candidates force `recovery`.
+
+The current Windows Command Center source can install standing file-read and
+exact-patch policies for the locally selected registered workspace generation
+after an authenticated node obtains the current facade contract from Ubuntu.
+It does not install an exec policy. `cwd` and an argv prefix do not sandbox a
+Windows process; do not set `CONTROL_PLANE_MCP_SERVICE_EXEC_ENABLED=true` or
+claim automatic command confinement for this candidate. Source/focused tests
+are not evidence that the Ubuntu service or installed Windows app has been
+updated or that ChatGPT completed an end-to-end file mutation.
+
+For a controlled source-candidate rollout, keep this order (none is performed
+by editing the example environment file):
+
+1. Snapshot/verify the current Ubuntu database, reconcile historical
+   unconfirmed actions, and keep admission in `recovery`. Record exact package,
+   service instance and schema before changing the service. The private
+   Console may display decisions and revoke them, but cannot reopen admission.
+2. Deploy the verified Ubuntu candidate with the MCP listener bound to
+   `127.0.0.1`; select `private_tunnel_service`, `FILE_READ_ENABLED=true`,
+   `STANDING_WRITE_ENABLED=true`, `EXEC_ENABLED=false`, and the fixed inventory
+   and patch scope names. Do not expose the operator API through the tunnel.
+3. Via the authenticated operator API, create one service principal, then a
+   short-lived grant with exactly `[control-plane.inventory,
+   control-plane.read, control-plane.patch]`. The raw token is returned once;
+   write its full `Bearer …` header directly to an owner-private 0400/0600
+   file outside the release/repository, never to chat, shell history, logs or
+   the browser Console. Point only the Ubuntu Tunnel launcher at that file.
+   Revoke an old grant after a replacement has been verified; grants expire
+   within 30 days and are not automatically renewed.
+4. On the packaged Windows app, select/re-register the exact root with
+   `read=true, write=true`. Replacing a read-only registration creates a new
+   generation and retires its old bindings/tasks/policies. Create a new Ubuntu
+   binding for that exact generation, then use Command Center to install and
+   re-observe the standing file-read and patch policies. Merely ticking
+   `write`/`exec` is not proof of an installed policy.
+5. The bearer operator creates a `POST /v1/scoped-pilot-decisions` record with
+   that service `principal_id`, exact `binding_id`, expiry no more than 24
+   hours ahead and an audit reason, then separately sets admission to
+   `scoped_pilot`. This is one target decision, not approval of each patch.
+   Read back `/v1/maintenance/admission` and the decision before canaries.
+6. Verify Tunnel health and `doctor`, refresh the ChatGPT connection metadata,
+   start a new conversation, and perform one selected-target inventory/read,
+   one exact existing-file patch, receipt readback and stop/replay canary. Do
+   not claim completion from `node.ready` or `workspace_accessed=false` alone.
+   Keep exec disabled until Windows process isolation or a separately accepted
+   fixed-command policy has its own proof. Closing admission or revoking the
+   decision blocks new intake/poll but cannot undo in-flight effects.
 
 In OAuth mode the dedicated MCP listener alone serves
 `GET /.well-known/oauth-protected-resource`; every other GET route remains
@@ -434,7 +508,9 @@ session, backup, or real environment file. Creating it does not change the
   refuse only queued, never-sent actions. They do not call a remote process,
   overwrite a possible effect, or pretend a sent action has stopped.
 - Operator-only `GET`/`POST /v1/maintenance/admission` exposes and changes the
-  durable central admission mode between `open` and `recovery`. Recovery blocks
+  durable central admission mode among `open`, `recovery`, and `scoped_pilot`.
+  The last mode admits only the exact live service decision and allowed lanes;
+  it is not a general reopening. Recovery blocks
   new action sealing and polling but keeps authenticated late receipts available
   for reconciliation; reopening is an operator decision, not proof that a
   restore is safe or that a node-side effect has stopped.
@@ -521,7 +597,7 @@ named local admission lane must independently pass its policy, strict-runtime
 and actor gates before a completed receipt can be observed. Mutation remains
 blocked until a local adapter can pass the local authority gate. A grant alone
 is never a file, process, local-policy, or task-approval authority.
-Schema migrations are additive, source-versioned (current `user_version=25`),
+Schema migrations are additive, source-versioned (current `user_version=28`),
 and applied atomically by the store. `ControlPlaneStore.backup_to()` creates a
 verified, non-overwriting SQLite Backup API snapshot when an operator calls it
 explicitly. It is not an automatic startup backup and does not execute a
@@ -829,11 +905,14 @@ an opaque identity during retirement.
 
 The earlier pilot asked an Ubuntu operator to issue a `ctx_…` value and made
 the Windows user paste it into Command Center. That path is retired from the
-normal trusted-workspace flow. The supported sequence is account OAuth →
-authorized target selection → Ubuntu creates one opaque `binding_id` for the
+normal trusted-workspace flow. The account OAuth and shared private-service
+lanes are distinct; the latter does not identify individual Business members.
+The intended sequence is authenticated connector → authorized target selection
+→ Ubuntu creates one opaque `binding_id` for the
 already-registered node/workspace generation → the node keeps standing
-`file-read`, `approved-patch`/document-write and structured `exec` policies
-locally. Every task pins the binding and the node reconnects after reboot
+`file-read` and `approved-patch` policies locally. A separate structured
+`exec` policy is not installed by Command Center in this candidate. Every
+task pins the binding and the node reconnects after reboot
 without a context copy or per-command approval. The public Windows path never
 accepts or displays a context ID. An Operator Token, Tunnel credential, API
 key, or context identifier is never a substitute for that account binding.

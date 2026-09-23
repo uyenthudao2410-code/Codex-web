@@ -1164,6 +1164,8 @@ function registerIpc() {
     }
     return controlPlaneEnrollment.replaceWorkspace({
       workspacePath: request?.workspacePath,
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration,
       capabilities: request?.capabilities
     });
   }));
@@ -1206,6 +1208,39 @@ function registerIpc() {
       workspaceGeneration: request?.workspaceGeneration,
       replaceExisting: request.replaceExisting
     });
+  }));
+  secureHandle('control-plane:install-standing-file-policies', (event, request) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Quyền đọc/sửa file Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_FILE_POLICY_ROLE_REQUIRED'
+      });
+    }
+    if (request?.confirmInstall !== true) {
+      throw Object.assign(new Error('Chủ máy phải xác nhận phạm vi workspace trước khi cài quyền đọc/sửa file.'), {
+        code: 'CONTROL_PLANE_FILE_POLICY_CONFIRMATION_REQUIRED'
+      });
+    }
+    if (typeof request?.allowWrite !== 'boolean' || typeof request?.replaceExisting !== 'boolean') {
+      throw Object.assign(new Error('Lựa chọn quyền file cục bộ không hợp lệ.'), {
+        code: 'CONTROL_PLANE_FILE_POLICY_REQUEST_INVALID'
+      });
+    }
+    return controlPlaneEnrollment.installStandingWorkspaceFilePolicies({
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration,
+      allowWrite: request.allowWrite,
+      replaceExisting: request.replaceExisting
+    });
+  }));
+  secureHandle('control-plane:inspect-standing-file-policies', (event) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Kiểm tra quyền file Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_FILE_POLICY_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.inspectStandingWorkspaceFilePolicies();
   }));
   secureHandle('control-plane:retire-workspace', (event, request) => invokeSafely(async () => {
     // Retirement is an exact opaque identity/generation operation. The node

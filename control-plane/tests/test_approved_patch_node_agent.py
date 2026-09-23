@@ -205,6 +205,27 @@ class ApprovedPatchNodeAgentTests(unittest.TestCase):
         )
         self.assertEqual(admitted["authority_mode"], "standing")
 
+    def test_workspace_prefix_policy_admits_exact_patch_and_denies_unsafe_targets(self) -> None:
+        policy = _install_approved_patch_policy_values(
+            self.args(), config_path=self.config_path, config=self.config,
+            owner_id="owner-control-plane-0001", workspace_id="workspace-control-plane-0001",
+            workspace_generation="generation-control-plane-0001", expires_at_ms=None,
+            facade_contract=FACADE_CONTRACT, allowed_relative_paths=None,
+            allowed_relative_prefixes=["."], max_patch_bytes=4096, max_file_bytes=4096,
+        )
+        self.assertEqual(policy["schema_version"], 3)
+        request = _approved_patch_bridge_request(self.action(), self.config)
+        admitted, _ = _admit_approved_patch_policy_request(
+            self.args(), config_path=self.config_path, config=self.config, request=request,
+        )
+        self.assertEqual(admitted["allowed_relative_prefixes"], ["."])
+        for unsafe in ("../outside.txt", "src/.env", "src/.git/config", "C:/outside.txt"):
+            with self.subTest(unsafe=unsafe), self.assertRaises(RuntimeError):
+                _admit_approved_patch_policy_request(
+                    self.args(), config_path=self.config_path, config=self.config,
+                    request={**request, "path": unsafe},
+                )
+
     def bridge_result(self, request: dict[str, object], policy: dict[str, object]) -> dict[str, object]:
         patch = zlib.decompress(base64.b64decode(
             "".join(line[1:] for line in str(request["patch_envelope"]).splitlines()[3:-1])

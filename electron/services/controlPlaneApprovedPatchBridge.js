@@ -13,7 +13,8 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const { URL } = require('node:url');
 
-const POLICY_SCHEMA_VERSION = 2;
+const POLICY_SCHEMA_VERSION = 3;
+const EXACT_POLICY_SCHEMA_VERSION = 2;
 const LEGACY_POLICY_SCHEMA_VERSION = 1;
 const STANDING_AUTHORITY_MODE = 'standing';
 const BRIDGE_ENVELOPE_SCHEMA_VERSION = 1;
@@ -165,14 +166,34 @@ function allowedPaths(value, code = 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID
   return Object.freeze([...normalized].sort());
 }
 
+function allowedPrefixes(value, code = 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID') {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_ALLOWED_PATHS) {
+    throw bridgeError(code, 'allowed_relative_prefixes is invalid.');
+  }
+  const normalized = value.map((item) => item === '.' ? '.' : relativePath(item, code));
+  if (new Set(normalized).size !== normalized.length || (normalized.includes('.') && normalized.length !== 1)) {
+    throw bridgeError(code, 'allowed_relative_prefixes must be distinct and canonical.');
+  }
+  return Object.freeze([...normalized].sort());
+}
+
+function policyAllowsPath(policy, relative) {
+  if (policy.schema_version === POLICY_SCHEMA_VERSION) {
+    return policy.allowed_relative_prefixes.some((prefix) =>
+      prefix === '.' || relative === prefix || relative.startsWith(`${prefix}/`));
+  }
+  return policy.allowed_relative_paths.includes(relative);
+}
+
 function normalisePolicy(value, { now = Date.now() } = {}) {
   const schemaVersion = Number(value?.schema_version);
-  const standing = schemaVersion === POLICY_SCHEMA_VERSION;
+  const prefixes = schemaVersion === POLICY_SCHEMA_VERSION;
+  const standing = prefixes || schemaVersion === EXACT_POLICY_SCHEMA_VERSION;
   const legacy = schemaVersion === LEGACY_POLICY_SCHEMA_VERSION;
   const expected = [
     'schema_version', 'enabled', 'server_origin', 'owner_id', 'device_id',
     'endpoint_id', 'workspace_id', 'workspace_generation', 'expires_at_ms',
-    'facade_contract', 'allowed_relative_paths', 'max_patch_bytes',
+    'facade_contract', prefixes ? 'allowed_relative_prefixes' : 'allowed_relative_paths', 'max_patch_bytes',
     'max_file_bytes', 'validation_profile'
   ];
   if (standing) expected.push('authority_mode');
@@ -207,7 +228,9 @@ function normalisePolicy(value, { now = Date.now() } = {}) {
     workspace_generation: identifier(value.workspace_generation, 'workspace_generation'),
     expires_at_ms: expiresAtMs,
     facade_contract: facadeContract(value.facade_contract),
-    allowed_relative_paths: allowedPaths(value.allowed_relative_paths),
+    ...(prefixes
+      ? { allowed_relative_prefixes: allowedPrefixes(value.allowed_relative_prefixes) }
+      : { allowed_relative_paths: allowedPaths(value.allowed_relative_paths) }),
     max_patch_bytes: boundedInteger(value.max_patch_bytes, 'max_patch_bytes', MAX_PATCH_BYTES, 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID'),
     max_file_bytes: boundedInteger(value.max_file_bytes, 'max_file_bytes', MAX_EXACT_FILE_BYTES, 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID'),
     validation_profile: VALIDATION_PROFILE
@@ -241,6 +264,28 @@ function loadApprovedPatchBridgePolicy(paths, { now = Date.now() } = {}) {
 function pathKey(value) {
   const normalized = path.normalize(path.resolve(value));
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
+function assertDirectPatchComponents(root, relative, missingCode) {
+  const parts = relative.split('/');
+  let cursor = root;
+  for (const [index, part] of parts.entries()) {
+    cursor = path.join(cursor, part);
+    let stat;
+    let real;
+    try {
+      stat = fs.lstatSync(cursor);
+      real = fs.realpathSync.native(cursor);
+    } catch {
+      throw bridgeError(missingCode, 'approved patch target is unavailable.');
+    }
+    if (stat.isSymbolicLink() || pathKey(real) !== pathKey(cursor)) {
+      throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_REPARSE_DENIED', 'approved patch path contains a reparse point.');
+    }
+    if (index === parts.length - 1 ? !stat.isFile() : !stat.isDirectory()) {
+      throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_REPARSE_DENIED', 'approved patch path is not a direct regular file.');
+    }
+  }
 }
 
 function resolveRegisteredWorkspaceRoot(paths, policy) {
@@ -430,7 +475,7 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
   if (canonicalJson(candidate.facade_contract) !== canonicalJson(policy.facade_contract)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_CONTRACT_MISMATCH', 'control-plane facade contract does not match local policy.');
   }
-  if (!policy.allowed_relative_paths.includes(candidate.path)) {
+  if (!policyAllowsPath(policy, candidate.path)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED', 'file path is not explicitly admitted by the local approved-patch policy.');
   }
   const patch = exactApprovedPatchEnvelope(candidate.patch_envelope, {
@@ -466,6 +511,7 @@ function resolveExactRegisteredPatchTarget(workspaceRoot, admission) {
   if (!pathKey(target).startsWith(rootPrefix)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED', 'approved patch path escapes the local workspace.');
   }
+  assertDirectPatchComponents(root, relative, 'CONTROL_PLANE_APPROVED_PATCH_TARGET_MISSING');
   let stat;
   let realTarget;
   try {
@@ -512,6 +558,7 @@ function verifyExactRegisteredPatchPostimage(workspaceRoot, admission) {
   if (!pathKey(target).startsWith(rootPrefix)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED', 'approved patch path escapes the local workspace.');
   }
+  assertDirectPatchComponents(root, relative, 'CONTROL_PLANE_APPROVED_PATCH_POSTIMAGE_MISSING');
   let stat;
   let realTarget;
   let current;
@@ -715,6 +762,7 @@ function normaliseApprovedPatchResult(value, admission) {
 
 module.exports = {
   POLICY_SCHEMA_VERSION,
+  EXACT_POLICY_SCHEMA_VERSION,
   LEGACY_POLICY_SCHEMA_VERSION,
   STANDING_AUTHORITY_MODE,
   BRIDGE_ENVELOPE_SCHEMA_VERSION,
@@ -733,6 +781,7 @@ module.exports = {
   facadeContract,
   relativePath,
   normalisePolicy,
+  policyAllowsPath,
   loadApprovedPatchBridgePolicy,
   resolveRegisteredWorkspaceRoot,
   exactApprovedPatchEnvelope,

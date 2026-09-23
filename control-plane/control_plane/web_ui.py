@@ -43,7 +43,7 @@ WEB_UI_HTML = """<!doctype html>
     </section>
 
     <section id="dashboard" hidden>
-      <p class="notice">Bảng này chỉ quan sát dữ liệu central và điều khiển admission. Nó không mở shell, không chọn path Windows, không xác nhận job đã dừng và không tự suy diễn Windows đã sẵn sàng.</p>
+      <p class="notice">Bảng này quan sát dữ liệu central và có thể thu hồi quyền central. Nó không mở shell, không chọn path Windows, không xác nhận job đã dừng và không tự suy diễn Windows đã sẵn sàng.</p>
 
       <div class="grid cards" aria-live="polite">
         <article class="card">
@@ -74,9 +74,23 @@ WEB_UI_HTML = """<!doctype html>
         </article>
       </div>
 
+      <section class="panel" aria-labelledby="service-pilot-title">
+        <h2 id="service-pilot-title">ChatGPT Business qua private tunnel</h2>
+        <p class="muted">Hai thành viên dùng chung một service principal của tunnel; Control Plane không xác định thành viên nào đã gọi. Đây không phải OAuth đăng nhập từng người. Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh; binding, quyết định pilot, admission và policy tại Windows vẫn là các cửa kiểm tra riêng.</p>
+        <p id="service-pilot-next-action" class="notice" aria-live="polite">Đang đọc cấu hình service và pilot.</p>
+        <h3>Service principals</h3>
+        <div class="table-wrap"><table><thead><tr><th>Principal opaque</th><th>Trạng thái</th><th>Tạo lúc</th><th>Thu hồi lúc</th></tr></thead><tbody id="mcp-service-principals-body"></tbody></table></div>
+        <h3>Grants của tunnel</h3>
+        <p class="muted">Chỉ hiển thị metadata đã che. Token chỉ nhận một lần qua operator runbook khi phát hành; Console không lưu, khôi phục hay hiển thị token. Thu hồi grant chặn lần gọi MCP mới, không chứng minh Job đã gửi đã dừng.</p>
+        <div class="table-wrap"><table><thead><tr><th>Grant / principal</th><th>Scopes</th><th>Trạng thái / hạn</th><th>Thao tác</th></tr></thead><tbody id="mcp-service-grants-body"></tbody></table></div>
+        <h3>Pilot ghim đúng workspace binding</h3>
+        <p class="muted">Decision được tạo bằng operator runbook sau đối soát; trang này không mở admission. Ngay cả khi central đang ở <code>scoped_pilot</code>, quyền thực tế vẫn phụ thuộc generation và policy của workspace đã chọn trong app Windows. Thu hồi decision chặn intake/dispatch mới trong scope đó; action đã gửi phải quan sát hoặc dừng riêng.</p>
+        <div class="table-wrap"><table><thead><tr><th>Decision / principal</th><th>Binding / node / workspace generation</th><th>Trạng thái / hạn</th><th>Thao tác</th></tr></thead><tbody id="scoped-pilot-decisions-body"></tbody></table></div>
+      </section>
+
       <section class="panel">
         <h2>Kết nối một lần (wizard)</h2>
-        <p class="muted">Một luồng duy nhất, không chép token/context mỗi lần làm việc: duyệt enrollment → chọn root local tại máy → tạo binding → mở task ghim đích → cài policy local tại máy (owner xác nhận) → giao việc từ ChatGPT/Console. Wizard không tự approve máy lạ, không nhận path Windows và không biến đổi UI thành quyền remote.</p>
+        <p class="muted">Một luồng duy nhất: duyệt enrollment → chọn workspace trong app Windows → tạo binding → ghim task đúng đích → cài policy local tại app → giao việc từ ChatGPT/Console. Wizard không tự approve máy lạ, không nhận path Windows và không biến đổi UI thành quyền remote.</p>
         <div class="table-wrap"><table><thead><tr><th>Bước</th><th>Trạng thái hiện tại</th><th>Đi tới</th></tr></thead><tbody id="onboarding-wizard-body"></tbody></table></div>
       </section>
       <section class="panel">
@@ -125,6 +139,7 @@ WEB_UI_HTML = """<!doctype html>
         <p class="muted">Mỗi task ghim một máy/workspace/generation bất biến cho nhiều lần đọc, xin quyền, patch và quan sát. Hai chat dùng hai task không đổi đích của nhau. Đóng task chỉ chặn action mới; action đã gửi vẫn quan sát/dừng được. ChatGPT không được chọn đích bằng tên hiển thị hay chat_id.</p>
         <form id="task-session-form" class="operator-form">
           <h3>Mở task mới</h3>
+          <p class="muted">Với service principal dùng chung, task chỉ được mở cho binding nằm trong decision pilot còn hiệu lực khi admission đang ở <code>scoped_pilot</code>. Chọn principal/binding ở đây không tự cấp local policy.</p>
           <label>Tài khoản (principal opaque) <select id="task-principal-id" required></select></label>
           <label>Binding đích <select id="task-binding-id" required></select></label>
           <label>Nhãn task <input id="task-label" maxlength="120" autocomplete="off" spellcheck="false" required></label>
@@ -294,6 +309,18 @@ WEB_UI_JAVASCRIPT = """(() => {
     revoke.addEventListener('click', () => revokeOAuthPrincipal(principal.principal_id, revoke)); cell.appendChild(revoke);
     row.appendChild(cell);
   }
+  function appendServiceGrantControls(row, grant) {
+    const cell = document.createElement('td');
+    if (grant.revoked_at_ms || !Number.isFinite(grant.expires_at_ms) || grant.expires_at_ms <= Date.now()) { cell.textContent = '—'; row.appendChild(cell); return; }
+    const revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'secondary'; revoke.textContent = 'Thu hồi grant'; revoke.disabled = !csrfToken;
+    revoke.addEventListener('click', () => revokeServiceGrant(grant.grant_id, revoke)); cell.appendChild(revoke); row.appendChild(cell);
+  }
+  function appendScopedPilotControls(row, decision) {
+    const cell = document.createElement('td');
+    if (decision.revoked_at_ms || !Number.isFinite(decision.expires_at_ms) || decision.expires_at_ms <= Date.now()) { cell.textContent = '—'; row.appendChild(cell); return; }
+    const revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'secondary'; revoke.textContent = 'Thu hồi pilot'; revoke.disabled = !csrfToken;
+    revoke.addEventListener('click', () => revokeScopedPilot(decision.decision_id, revoke)); cell.appendChild(revoke); row.appendChild(cell);
+  }
   function appendPermissionRequestControls(row, request) {
     const cell = document.createElement('td');
     if (request.state !== 'pending') { cell.textContent = '—'; row.appendChild(cell); return; }
@@ -336,6 +363,8 @@ WEB_UI_JAVASCRIPT = """(() => {
     const mcpAuthenticationMode = health.mcp_authentication_mode;
     text('mcp-authentication-mode', mcpAuthenticationMode === 'oauth_introspection'
       ? 'OAuth account introspection'
+      : mcpAuthenticationMode === 'private_tunnel_service'
+        ? 'private tunnel service — danh tính dùng chung, không phải OAuth từng thành viên'
       : mcpAuthenticationMode === 'legacy_context_grant'
         ? 'legacy context grant — không phải đăng nhập tài khoản'
         : 'không xác định');
@@ -345,13 +374,93 @@ WEB_UI_JAVASCRIPT = """(() => {
     const admission = data.admission || {};
     admissionMode = admission.admission_mode || null;
     text('admission-state', admission.admission_mode || null);
-    text('admission-explanation', admission.admission_mode === 'recovery' ? 'Intake/dispatch mới đang bị chặn; late receipt hợp lệ vẫn được ghi. Mở lại theo runbook sau khi đối soát.' : 'Admission đang mở. Nút browser chỉ cho phép đóng về recovery; mở lại cần runbook và xác minh độc lập.');
+    text('admission-explanation', admission.admission_mode === 'recovery'
+      ? 'Intake/dispatch mới đang bị chặn; late receipt hợp lệ vẫn được ghi. Mở lại theo runbook sau khi đối soát.'
+      : admission.admission_mode === 'scoped_pilot'
+        ? 'Chỉ exact target của decision còn hạn được xét intake/dispatch; policy Windows vẫn quyết định local effect. Browser chỉ có thể đóng về recovery.'
+        : admission.admission_mode === 'open'
+          ? 'Admission toàn cục đang mở. Browser chỉ có thể đóng về recovery; mở lại cần runbook và xác minh độc lập.'
+          : 'Không xác định admission; không suy ra intake/dispatch đã được mở.');
     byId('close-admission').disabled = !csrfToken || admissionMode === 'recovery';
+
+    const serviceReadModelAvailable = Array.isArray(data.mcp_service_principals) && Array.isArray(data.mcp_service_grants) && Array.isArray(data.scoped_pilot_decisions);
+    const servicePrincipals = data.mcp_service_principals || [];
+    const servicePrincipalById = new Map(servicePrincipals.map((principal) => [principal.principal_id, principal]));
+    const nodeById = new Map((data.nodes || []).map((node) => [node.device_id, node]));
+    const pilotScopeCurrent = (decision) => {
+      const principal = servicePrincipalById.get(decision.principal_id);
+      const binding = (data.bindings || []).find((item) => item.binding_id === decision.binding_id);
+      const node = nodeById.get(decision.device_id);
+      const registration = (data.workspace_registrations || []).find((item) => item.device_id === decision.device_id && item.workspace_id === decision.workspace_id && item.workspace_generation === decision.workspace_generation);
+      return !!(principal && !principal.revoked_at_ms && binding && !binding.revoked_at_ms
+        && binding.device_id === decision.device_id && binding.endpoint_id === decision.endpoint_id
+        && binding.workspace_id === decision.workspace_id && binding.workspace_generation === decision.workspace_generation
+        && node && !node.revoked_at_ms && node.endpoint_id === decision.endpoint_id
+        && registration && !registration.retired_at_ms);
+    };
+    const servicePrincipalRows = clearBody('mcp-service-principals-body');
+    if (!servicePrincipals.length) emptyRow(servicePrincipalRows, 4, serviceReadModelAvailable ? 'Chưa có service principal được cấp.' : 'API hiện hành chưa trả metadata service principal.');
+    for (const principal of servicePrincipals) {
+      const row = document.createElement('tr');
+      appendCell(row, principal.principal_id);
+      appendCell(row, principal.revoked_at_ms ? 'đã thu hồi' : 'đang tồn tại — chưa chứng minh tunnel dùng principal này');
+      appendCell(row, formatTime(principal.created_at_ms));
+      appendCell(row, formatTime(principal.revoked_at_ms));
+      servicePrincipalRows.appendChild(row);
+    }
+    const serviceGrants = data.mcp_service_grants || [];
+    const serviceGrantRows = clearBody('mcp-service-grants-body');
+    if (!serviceGrants.length) emptyRow(serviceGrantRows, 4, serviceReadModelAvailable ? 'Chưa có grant tunnel; không thể xác thực MCP bằng service principal.' : 'API hiện hành chưa trả metadata grant.');
+    for (const grant of serviceGrants) {
+      const row = document.createElement('tr');
+      const principal = servicePrincipalById.get(grant.principal_id);
+      const grantState = grant.revoked_at_ms ? `đã thu hồi / ${formatTime(grant.revoked_at_ms)}`
+        : !principal ? 'không thấy service principal tương ứng — không suy ra hiệu lực'
+        : principal?.revoked_at_ms ? 'principal đã thu hồi — grant không còn hiệu lực'
+        : !Number.isFinite(grant.expires_at_ms) ? 'không có hạn hợp lệ — không suy ra hiệu lực'
+        : Number.isFinite(grant.expires_at_ms) && grant.expires_at_ms <= Date.now() ? 'đã hết hạn'
+        : 'còn hạn trên central — chưa chứng minh tunnel đã nạp';
+      appendCell(row, `${grant.grant_id || '—'} / ${grant.principal_id || '—'}`);
+      appendCell(row, Array.isArray(grant.scopes) ? grant.scopes.join(', ') : 'chưa có quan sát');
+      appendCell(row, `${grantState} / hết hạn ${formatTime(grant.expires_at_ms)}`);
+      appendServiceGrantControls(row, grant);
+      serviceGrantRows.appendChild(row);
+    }
+    const pilotDecisions = data.scoped_pilot_decisions || [];
+    const pilotRows = clearBody('scoped-pilot-decisions-body');
+    if (!pilotDecisions.length) emptyRow(pilotRows, 4, serviceReadModelAvailable ? 'Chưa có quyết định pilot cho binding cụ thể.' : 'API hiện hành chưa trả metadata pilot.');
+    for (const decision of pilotDecisions) {
+      const row = document.createElement('tr');
+      const pilotState = decision.revoked_at_ms ? `đã thu hồi / ${formatTime(decision.revoked_at_ms)}`
+        : !Number.isFinite(decision.expires_at_ms) ? 'không có hạn hợp lệ — không suy ra hiệu lực'
+        : Number.isFinite(decision.expires_at_ms) && decision.expires_at_ms <= Date.now() ? 'đã hết hạn'
+        : !pilotScopeCurrent(decision) ? 'target/principal không còn current — không được dispatch'
+        : admissionMode === 'scoped_pilot' ? 'central scoped_pilot — local effect chưa được chứng minh'
+        : 'decision còn hạn nhưng admission chưa ở scoped_pilot';
+      appendCell(row, `${decision.decision_id || '—'} / ${decision.principal_id || '—'}`);
+      appendCell(row, `${decision.binding_id || '—'} / ${decision.device_id || '—'} / ${decision.workspace_id || '—'} / ${decision.workspace_generation || '—'}`);
+      appendCell(row, `${pilotState} / hết hạn ${formatTime(decision.expires_at_ms)}`);
+      appendScopedPilotControls(row, decision);
+      pilotRows.appendChild(row);
+    }
+    const activePrincipal = servicePrincipals.some((principal) => !principal.revoked_at_ms);
+    const activeGrant = serviceGrants.some((grant) => !grant.revoked_at_ms && !!servicePrincipalById.get(grant.principal_id) && !servicePrincipalById.get(grant.principal_id).revoked_at_ms && Number.isFinite(grant.expires_at_ms) && grant.expires_at_ms > Date.now());
+    const livePilot = pilotDecisions.some((decision) => !decision.revoked_at_ms && Number.isFinite(decision.expires_at_ms) && decision.expires_at_ms > Date.now());
+    const currentPilot = pilotDecisions.some((decision) => !decision.revoked_at_ms && Number.isFinite(decision.expires_at_ms) && decision.expires_at_ms > Date.now() && pilotScopeCurrent(decision));
+    text('service-pilot-next-action', !serviceReadModelAvailable
+      ? 'Build/API hiện hành chưa cung cấp metadata service và pilot; không suy ra đã cấu hình hoặc đang hoạt động. Kiểm tra phiên bản Ubuntu.'
+      : mcpAuthenticationMode !== 'private_tunnel_service'
+      ? 'Listener hiện chưa ở private_tunnel_service. Cần xác minh build/config Ubuntu và tunnel theo runbook; các grant trong database không chứng minh connector đã dùng chúng.'
+      : !activePrincipal ? 'Bước tiếp theo: tạo service principal dùng chung bằng operator runbook; không cấp quyền Windows từ trang này.'
+      : !activeGrant ? 'Bước tiếp theo: cấp grant còn hạn bằng operator runbook, nạp vào tunnel và kiểm chứng MCP transport. Token chỉ trả một lần, không xuất hiện tại đây.'
+      : livePilot && !currentPilot ? 'Decision còn hạn nhưng target/principal không còn current: đóng admission về recovery, thu hồi decision và đối soát trước khi tạo pilot mới.'
+      : !livePilot ? 'Bước tiếp theo: đối soát action cũ, chọn binding hiện hành và tạo decision pilot exact-target bằng operator runbook. Admission vẫn phải được xét riêng.'
+      : admissionMode !== 'scoped_pilot' ? 'Decision còn hạn nhưng admission chưa mở scoped_pilot. Chỉ operator runbook sau đối soát mới được mở; browser không có nút mở.'
+      : 'Central scoped_pilot đang mở cho decision còn hạn. Xác minh generation/policy của workspace đã chọn trong app Windows, sau đó canary và receipt; trạng thái này chưa chứng minh sửa file/chạy lệnh end-to-end.');
 
     const nodes = clearBody('nodes-body');
     if (!data.nodes?.length) emptyRow(nodes, 6, 'Chưa có node được enrollment.');
     for (const node of data.nodes || []) { const row = document.createElement('tr'); appendCell(row, node.display_name || node.device_id); appendCell(row, nodeReadiness(node)); appendCell(row, heartbeat(node.last_seen_at_ms)); appendCell(row, `${node.runtime_instance_id || '—'} / ${node.activation_epoch || '—'}`); appendCell(row, node.contract_version); appendCell(row, policyState(node)); nodes.appendChild(row); }
-    const nodeById = new Map((data.nodes || []).map((node) => [node.device_id, node]));
     const wizard = clearBody('onboarding-wizard-body');
     {
       const pendingEnrollments = (data.enrollment_requests || []).filter((item) => item.enrollment_id && !item.approved_at_ms);
@@ -361,9 +470,11 @@ WEB_UI_JAVASCRIPT = """(() => {
         { name: '1. Duyệt enrollment máy', state: (data.nodes || []).length ? 'đã có node' : pendingEnrollments.length ? `đợi duyệt (${pendingEnrollments.length})` : 'chưa có yêu cầu', target: 'Yêu cầu và enrollment' },
         { name: '2. Node đăng ký root local', state: currentRegistrations.length ? `${currentRegistrations.length} root current` : 'chưa có root', target: 'Workspace đã đăng ký' },
         { name: '3. Tạo binding (chọn root)', state: (data.bindings || []).length ? `${data.bindings.length} binding` : 'chưa có binding', target: 'Workspace đã đăng ký' },
-        { name: '4. Mở task ghim đích', state: openTasks.length ? `${openTasks.length} task mở` : 'chưa có task mở', target: 'Phiên công việc đa đích' },
-        { name: '5. Cài policy tại máy + giao việc', state: 'policy cài bằng CLI tại máy sau khi owner xác nhận; ChatGPT/Console giao việc theo task', target: 'Action và receipt' },
       ];
+      if (mcpAuthenticationMode === 'private_tunnel_service') steps.push({ name: '4. Tunnel grant + pilot exact-target', state: !activeGrant ? 'chưa có grant còn hạn' : !currentPilot ? 'chưa có decision current' : admissionMode !== 'scoped_pilot' ? 'decision current; admission chưa mở' : 'central scoped_pilot; cần kiểm chứng tunnel/local', target: 'ChatGPT Business qua private tunnel' });
+      steps.push({ name: `${steps.length + 1}. Cài policy workspace tại app Windows`, state: 'chỉ local policy cho workspace đã chọn mới cấp quyền file/lệnh; central observation không thay thế kiểm chứng', target: 'Windows nodes' });
+      steps.push({ name: `${steps.length + 1}. Mở task ghim đích`, state: openTasks.length ? `${openTasks.length} task mở; chưa chứng minh effect` : 'chưa có task mở', target: 'Phiên công việc đa đích' });
+      steps.push({ name: `${steps.length + 1}. Canary + receipt`, state: 'đọc, patch và exec cần receipt/proof riêng trước khi kết luận end-to-end', target: 'Action và receipt' });
       for (const step of steps) {
         const row = document.createElement('tr');
         appendCell(row, step.name);
@@ -400,11 +511,14 @@ WEB_UI_JAVASCRIPT = """(() => {
     const contextsByBinding = new Map();
     for (const context of data.contexts || []) { const entries = contextsByBinding.get(context.binding_id) || []; entries.push(`${context.context_id} / ${formatTime(context.expires_at_ms)}`); contextsByBinding.set(context.binding_id, entries); }
     const bindings = clearBody('bindings-body');
-    if (!data.bindings?.length) emptyRow(bindings, 5, 'Chưa có workspace binding.');
+    if (!data.bindings?.length) emptyRow(bindings, 6, 'Chưa có workspace binding.');
     for (const binding of data.bindings || []) { const row = document.createElement('tr'); const matchingContexts = (data.contexts || []).filter((context) => context.binding_id === binding.binding_id); const activeContext = matchingContexts.find((context) => !context.closed_at_ms && Number.isFinite(context.expires_at_ms) && context.expires_at_ms > Date.now()) || null; appendCell(row, `${binding.display_name || binding.binding_id} / ${binding.workspace_id || '—'}`); appendCell(row, binding.device_id); appendCell(row, binding.workspace_generation); appendCell(row, (contextsByBinding.get(binding.binding_id) || []).join('\\n') || 'chưa có context'); appendReadOnlyButton(row, activeContext); appendBindingControls(row, binding, activeContext); bindings.appendChild(row); }
     setSelectOptions('context-binding-id', (data.bindings || []).map((binding) => ({ value: binding.binding_id, label: `${binding.display_name || binding.binding_id} (${binding.workspace_id})` })), 'Chọn binding', 'binding');
     setSelectOptions('task-binding-id', (data.bindings || []).filter((binding) => !binding.revoked_at_ms).map((binding) => ({ value: binding.binding_id, label: `${binding.display_name || binding.binding_id} · ${binding.device_id} · ${binding.workspace_generation}` })), 'Chọn binding đích', 'binding');
-    setSelectOptions('task-principal-id', (data.oauth_principals || []).map((principal) => ({ value: principal.principal_id, label: principal.principal_id })), 'Chọn principal', 'principal');
+    setSelectOptions('task-principal-id', [
+      ...(data.oauth_principals || []).filter((principal) => principal.state === 'enabled').map((principal) => ({ value: principal.principal_id, label: `${principal.principal_id} (OAuth)` })),
+      ...servicePrincipals.filter((principal) => !principal.revoked_at_ms).map((principal) => ({ value: principal.principal_id, label: `${principal.principal_id} (service dùng chung)` })),
+    ], 'Chọn principal', 'principal');
 
     const requests = clearBody('requests-body');
     const work = data.work_requests || [];
@@ -586,6 +700,24 @@ WEB_UI_JAVASCRIPT = """(() => {
       connectionStatus.textContent = 'Đã thu hồi liên kết OAuth; yêu cầu task mới của principal này sẽ bị chặn.';
       await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không thu hồi liên kết OAuth: ${error.message}`; button.disabled = false; }
+  }
+  async function revokeServiceGrant(grantId, button) {
+    if (!csrfToken || !grantId || !confirm('Thu hồi service grant sẽ chặn các lần gọi MCP mới qua bearer này. Nó không dừng Job đã gửi và không thay đổi policy Windows. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang thu hồi service grant…';
+    try {
+      await api(`/v1/ui/mcp-service-grants/${encodeURIComponent(grantId)}/revoke`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã thu hồi service grant cho intake MCP mới; Job đã gửi vẫn cần quan sát/dừng riêng.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không thu hồi service grant: ${error.message}`; button.disabled = false; }
+  }
+  async function revokeScopedPilot(decisionId, button) {
+    if (!csrfToken || !decisionId || !confirm('Thu hồi decision pilot sẽ chặn intake/dispatch mới theo scope này. Nó không dừng Job đã gửi và không tự chuyển admission về recovery. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang thu hồi scoped pilot…';
+    try {
+      await api(`/v1/ui/scoped-pilot-decisions/${encodeURIComponent(decisionId)}/revoke`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã thu hồi decision pilot; action đã gửi vẫn cần đối soát riêng. Đóng admission về recovery nếu cần.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không thu hồi scoped pilot: ${error.message}`; button.disabled = false; }
   }
   async function revokeBinding(bindingId, button) {
     if (!csrfToken || !bindingId || !confirm('Thu hồi binding sẽ từ chối action chưa gửi của binding này. Tiếp tục?')) return;

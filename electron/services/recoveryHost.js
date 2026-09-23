@@ -15,6 +15,7 @@ const {
 const {
   loadFileReadBridgePolicy,
   resolveRegisteredWorkspaceRoot,
+  resolveDirectRegisteredFile,
   admitFileReadBridgeRequest,
   normaliseFileReadResult
 } = require('./controlPlaneFileReadBridge');
@@ -33,6 +34,7 @@ const {
 const {
   loadDocumentWriteBridgePolicy,
   resolveRegisteredDocumentWorkspaceRoot,
+  resolveDocumentTarget,
   admitDocumentWriteBridgeRequest,
   normaliseDocumentWriteResult
 } = require('./controlPlaneDocumentWriteBridge');
@@ -2107,6 +2109,7 @@ class RecoveryHost {
       );
     }
     const workspaceRoot = resolveRegisteredWorkspaceRoot(this.paths, policy);
+    resolveDirectRegisteredFile(workspaceRoot, admitted.path);
     const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
 
     const runtime = await this.orchestrator.lightweightSnapshot();
@@ -2158,6 +2161,7 @@ class RecoveryHost {
         'control-plane file-read bridge facade contract changed while the action was in flight.'
       );
     }
+    resolveDirectRegisteredFile(workspaceRoot, admitted.path);
     return normalized;
   }
 
@@ -2308,6 +2312,8 @@ class RecoveryHost {
       );
     }
     const workspaceRoot = resolveRegisteredDocumentWorkspaceRoot(this.paths, policy);
+    resolveDocumentTarget(workspaceRoot, admitted);
+    if (admitted.source !== null) resolveDocumentTarget(workspaceRoot, admitted, { source: true });
     const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
 
     const runtime = await this.orchestrator.lightweightSnapshot();

@@ -71,7 +71,7 @@ test('Central wizard resumes from the registered Ubuntu inventory, not legacy di
   assert.match(app, /function centralDispatchableTargetForLocalWorkspace\(\)/);
   assert.match(app, /const workspaceReady = central\s*\?\s*inventoryKnown && centralWorkspaceEntries\(\)\.length > 0/);
   assert.match(app, /centralWorkspaceInventoryStatus/);
-  assert.match(app, /Boolean\(centralDispatchableTargetForLocalWorkspace\(\)\)/);
+  assert.match(app, /const currentTarget = central \? centralDispatchableTargetForLocalWorkspace\(\) : null;[\s\S]*?Boolean\(currentTarget\)/);
   assert.match(app, /centralWorkspaceSummary\(\)/);
   assert.match(app, /if \(isCentralExecutor\(state\.snapshot\?\.settings\)\) await chooseControlPlaneWorkspace\(\);/);
   assert.match(app, /action\.dataset\.setupAction[\s\S]*?\? 'account'/);

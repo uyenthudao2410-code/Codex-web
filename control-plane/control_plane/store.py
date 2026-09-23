@@ -27,7 +27,16 @@ TASK_ID_PATTERN = re.compile(r"^task_[a-f0-9]{32}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
 NODE_ROTATION_STATES = frozenset({"prepared", "activated", "completed", "aborted"})
-SCHEMA_VERSION = 25
+SCHEMA_VERSION = 28
+MCP_SERVICE_GRANT_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000
+SCOPED_PILOT_MAX_TTL_MS = 24 * 60 * 60 * 1000
+PRIVATE_TUNNEL_SERVICE_ISSUER = "private_tunnel_service"
+MCP_SERVICE_INVENTORY_SCOPE = "control-plane.inventory"
+MCP_SERVICE_READ_SCOPE = "control-plane.read"
+MCP_SERVICE_PATCH_SCOPE = "control-plane.patch"
+MCP_SERVICE_ALLOWED_SCOPES = frozenset({
+    MCP_SERVICE_INVENTORY_SCOPE, MCP_SERVICE_READ_SCOPE, MCP_SERVICE_PATCH_SCOPE,
+})
 MCP_TASK_SESSION_MAX_TTL_MS = 24 * 60 * 60 * 1000
 MCP_TASK_WRITER_LEASE_TTL_MS = 60 * 1000
 MAX_HEARTBEAT_AGE_MS = 60_000
@@ -368,6 +377,26 @@ def _mcp_access_token_digest(value: str) -> str:
     return hashlib.sha256(
         b"coding-tools-control-plane:mcp-access-grant:v1\0" + str(value or "").encode("utf-8")
     ).hexdigest()
+
+
+def _mcp_service_token_digest(value: str) -> str:
+    """Keep service bearers separate from context grant and node credentials."""
+
+    return hashlib.sha256(
+        b"coding-tools-control-plane:mcp-service-grant:v1\0" + str(value or "").encode("utf-8")
+    ).hexdigest()
+
+
+def _mcp_service_scopes(value: Any) -> tuple[str, ...]:
+    """Validate immutable scopes issued with one shared service grant."""
+
+    if not isinstance(value, (list, tuple)) or not value:
+        raise ValidationError("MCP service grant scopes are invalid.")
+    if any(not isinstance(scope, str) or scope not in MCP_SERVICE_ALLOWED_SCOPES for scope in value):
+        raise ValidationError("MCP service grant scopes are invalid.")
+    if len(value) != len(set(value)) or MCP_SERVICE_INVENTORY_SCOPE not in value:
+        raise ValidationError("MCP service grant scopes are invalid.")
+    return tuple(sorted(value))
 
 
 def _oauth_issuer(value: Any) -> str:
@@ -758,7 +787,7 @@ def create_recovery_restore_candidate(
     inspected_source = inspect_verified_snapshot(source, expected_sha256=expected_sha256)
     if int(inspected_source["schema_version"]) != SCHEMA_VERSION:
         raise ConflictError("restore candidate requires an exact current control-plane schema snapshot.")
-    if inspected_source["admission_mode"] not in {"open", "recovery"}:
+    if inspected_source["admission_mode"] not in {"open", "recovery", "scoped_pilot"}:
         raise ConflictError("restore candidate source has no valid durable admission mode.")
     if destination == source:
         raise ValidationError("restore candidate destination must differ from the source snapshot.")
@@ -789,12 +818,16 @@ def create_recovery_restore_candidate(
             admission = candidate.execute(
                 "SELECT state_value FROM control_plane_state WHERE state_key = 'admission_mode'"
             ).fetchone()
-            if admission is None or str(admission[0]) not in {"open", "recovery"}:
+            if admission is None or str(admission[0]) not in {"open", "recovery", "scoped_pilot"}:
                 candidate.execute("ROLLBACK")
                 raise ConflictError("restore candidate source has no valid durable admission mode.")
             changed_at_ms = int(time.time() * 1000)
             candidate.execute(
                 "UPDATE control_plane_state SET state_value = 'recovery', changed_at_ms = ? WHERE state_key = 'admission_mode'",
+                (changed_at_ms,),
+            )
+            candidate.execute(
+                "UPDATE scoped_pilot_decisions SET revoked_at_ms = ? WHERE revoked_at_ms IS NULL",
                 (changed_at_ms,),
             )
             candidate.execute(
@@ -1013,6 +1046,20 @@ class ControlPlaneStore:
                     state_value TEXT NOT NULL,
                     changed_at_ms INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS scoped_pilot_decisions (
+                    decision_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    device_id TEXT NOT NULL,
+                    endpoint_id TEXT NOT NULL,
+                    workspace_id TEXT NOT NULL,
+                    workspace_generation TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER
+                );
                 CREATE TABLE IF NOT EXISTS mcp_read_only_intents (
                     owner_id TEXT NOT NULL,
                     principal_id TEXT NOT NULL,
@@ -1135,6 +1182,17 @@ class ControlPlaneStore:
                     expires_at_ms INTEGER NOT NULL,
                     revoked_at_ms INTEGER
                 );
+                CREATE TABLE IF NOT EXISTS mcp_service_grants (
+                    grant_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    token_digest TEXT NOT NULL UNIQUE,
+                    scopes_json TEXT NOT NULL DEFAULT '["control-plane.inventory"]',
+                    created_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER,
+                    CHECK(expires_at_ms > created_at_ms)
+                );
                 CREATE TABLE IF NOT EXISTS mcp_exec_intents (
                     owner_id TEXT NOT NULL,
                     principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
@@ -1219,6 +1277,8 @@ class ControlPlaneStore:
                     owner_id TEXT NOT NULL,
                     issuer TEXT NOT NULL,
                     subject_digest TEXT NOT NULL,
+                    principal_kind TEXT NOT NULL DEFAULT 'oauth'
+                        CHECK(principal_kind IN ('oauth', 'private_tunnel_service')),
                     created_at_ms INTEGER NOT NULL,
                     revoked_at_ms INTEGER,
                     UNIQUE(issuer, subject_digest)
@@ -1362,6 +1422,8 @@ class ControlPlaneStore:
                     ON mcp_standing_patch_intents(owner_id, principal_id, created_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_access_grants_context_idx
                     ON mcp_access_grants(context_id, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_service_grants_owner_idx
+                    ON mcp_service_grants(owner_id, principal_id, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS oauth_principals_owner_idx
                     ON oauth_principals(owner_id, revoked_at_ms, created_at_ms);
                 CREATE INDEX IF NOT EXISTS oauth_link_requests_owner_state_idx
@@ -1376,6 +1438,8 @@ class ControlPlaneStore:
                     ON mcp_task_sessions(owner_id, principal_id, created_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_task_sessions_binding_idx
                     ON mcp_task_sessions(binding_id, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS scoped_pilot_decisions_target_idx
+                    ON scoped_pilot_decisions(owner_id, device_id, binding_id, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_task_action_links_action_idx
                     ON mcp_task_action_links(action_id);
                 CREATE UNIQUE INDEX IF NOT EXISTS mcp_task_writer_leases_active_binding_idx
@@ -1421,6 +1485,17 @@ class ControlPlaneStore:
                 action_columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(actions)").fetchall()}
                 if "writer_lease_generation" not in action_columns:
                     connection.execute("ALTER TABLE actions ADD COLUMN writer_lease_generation INTEGER")
+                if "scoped_pilot_decision_id" not in action_columns:
+                    connection.execute(
+                        "ALTER TABLE actions ADD COLUMN scoped_pilot_decision_id TEXT REFERENCES scoped_pilot_decisions(decision_id)"
+                    )
+                task_columns = {
+                    str(row["name"]) for row in connection.execute("PRAGMA table_info(mcp_task_sessions)").fetchall()
+                }
+                if "scoped_pilot_decision_id" not in task_columns:
+                    connection.execute(
+                        "ALTER TABLE mcp_task_sessions ADD COLUMN scoped_pilot_decision_id TEXT REFERENCES scoped_pilot_decisions(decision_id)"
+                    )
                 approved_patch_columns = {
                     str(row["name"])
                     for row in connection.execute("PRAGMA table_info(mcp_approved_patch_intents)").fetchall()
@@ -1435,6 +1510,26 @@ class ControlPlaneStore:
                 }
                 if "writer_lease_generation" not in exec_columns:
                     connection.execute("ALTER TABLE mcp_exec_intents ADD COLUMN writer_lease_generation INTEGER")
+                oauth_principal_columns = {
+                    str(row["name"])
+                    for row in connection.execute("PRAGMA table_info(oauth_principals)").fetchall()
+                }
+                if "principal_kind" not in oauth_principal_columns:
+                    connection.execute(
+                        "ALTER TABLE oauth_principals ADD COLUMN principal_kind TEXT NOT NULL DEFAULT 'oauth' "
+                        "CHECK(principal_kind IN ('oauth', 'private_tunnel_service'))"
+                    )
+                service_grant_columns = {
+                    str(row["name"])
+                    for row in connection.execute("PRAGMA table_info(mcp_service_grants)").fetchall()
+                }
+                if "scopes_json" not in service_grant_columns:
+                    # Pre-v27 grants had no persisted scope. They remain
+                    # inventory-only regardless of a later server config.
+                    connection.execute(
+                        "ALTER TABLE mcp_service_grants ADD COLUMN scopes_json TEXT NOT NULL "
+                        "DEFAULT '[\"control-plane.inventory\"]'"
+                    )
                 intent_columns = {
                     str(row["name"])
                     for row in connection.execute("PRAGMA table_info(mcp_read_only_intents)").fetchall()
@@ -1490,7 +1585,7 @@ class ControlPlaneStore:
             "SELECT state_value FROM control_plane_state WHERE state_key = 'admission_mode'"
         ).fetchone()
         mode = str(row["state_value"]) if row is not None else "recovery"
-        return mode if mode in {"open", "recovery"} else "recovery"
+        return mode if mode in {"open", "recovery", "scoped_pilot"} else "recovery"
 
     def admission_status(self) -> dict[str, Any]:
         with self._connection() as connection:
@@ -1499,19 +1594,39 @@ class ControlPlaneStore:
             ).fetchone()
         mode = str(row["state_value"]) if row is not None else "recovery"
         return {
-            "admission_mode": mode if mode in {"open", "recovery"} else "recovery",
+            "admission_mode": mode if mode in {"open", "recovery", "scoped_pilot"} else "recovery",
             "changed_at_ms": row["changed_at_ms"] if row is not None else None,
         }
 
     def set_admission_mode(self, *, mode: str) -> dict[str, Any]:
         mode = str(mode or "").strip().lower()
-        if mode not in {"open", "recovery"}:
+        if mode not in {"open", "recovery", "scoped_pilot"}:
             raise ValidationError("admission mode is invalid.")
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             current = self._admission_mode(connection)
+            now = self.clock()
+            if mode == "scoped_pilot" and current != mode:
+                active = connection.execute(
+                    "SELECT COUNT(*) FROM scoped_pilot_decisions WHERE revoked_at_ms IS NULL AND expires_at_ms > ?",
+                    (now,),
+                ).fetchone()[0]
+                if active != 1:
+                    raise ConflictError("scoped pilot requires exactly one live owner decision.")
+            if mode == "recovery":
+                # A later pilot must get a new decision. Otherwise an old
+                # queued action could become dispatchable after reopening.
+                revoked = connection.execute(
+                    "SELECT decision_id FROM scoped_pilot_decisions WHERE revoked_at_ms IS NULL"
+                ).fetchall()
+                connection.execute(
+                    "UPDATE scoped_pilot_decisions SET revoked_at_ms = ? WHERE revoked_at_ms IS NULL",
+                    (now,),
+                )
+                for row in revoked:
+                    self._event(connection, "scoped_pilot_decision", str(row["decision_id"]),
+                                "scoped_pilot_decision_revoked_by_recovery", {})
             if current != mode:
-                now = self.clock()
                 connection.execute(
                     "UPDATE control_plane_state SET state_value = ?, changed_at_ms = ? WHERE state_key = 'admission_mode'",
                     (mode, now),
@@ -1519,6 +1634,215 @@ class ControlPlaneStore:
                 self._event(connection, "control_plane", "admission", "admission_mode_changed", {"mode": mode})
             connection.execute("COMMIT")
         return self.admission_status()
+
+    def create_scoped_pilot_decision(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        expires_at_ms: int,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Authorize one current service principal and exact registered target.
+
+        Creating the decision does not open admission. The owner must separately
+        select scoped_pilot; the node's local policy remains authoritative.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        reason = str(reason or "").strip()
+        if not 1 <= len(reason) <= 400:
+            raise ValidationError("scoped pilot reason is invalid.")
+        if isinstance(expires_at_ms, bool) or not isinstance(expires_at_ms, int):
+            raise ValidationError("scoped pilot expiry is invalid.")
+        decision_id = f"pilot_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            now = self.clock()
+            if self._admission_mode(connection) != "recovery":
+                raise ConflictError("scoped pilot decision requires recovery admission.")
+            if not now < expires_at_ms <= now + SCOPED_PILOT_MAX_TTL_MS:
+                raise ValidationError("scoped pilot expiry must be within 24 hours.")
+            existing = connection.execute(
+                "SELECT COUNT(*) FROM scoped_pilot_decisions WHERE revoked_at_ms IS NULL AND expires_at_ms > ?",
+                (now,),
+            ).fetchone()[0]
+            if existing:
+                raise ConflictError("another scoped pilot decision is active.")
+            target = connection.execute(
+                """
+                SELECT b.*, n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                       n.revoked_at_ms AS node_revoked_at_ms, n.readiness AS node_readiness,
+                       nw.retired_at_ms AS workspace_retired_at_ms,
+                       p.owner_id AS principal_owner_id, p.revoked_at_ms AS principal_revoked_at_ms,
+                       p.principal_kind
+                FROM bindings AS b
+                JOIN nodes AS n ON n.device_id = b.device_id
+                JOIN node_workspaces AS nw ON nw.device_id = b.device_id
+                  AND nw.workspace_id = b.workspace_id
+                  AND nw.workspace_generation = b.workspace_generation
+                JOIN oauth_principals AS p ON p.principal_id = ?
+                WHERE b.binding_id = ?
+                """,
+                (principal_id, binding_id),
+            ).fetchone()
+            if target is None:
+                raise NotFoundError("scoped pilot target does not exist.")
+            if (
+                target["owner_id"] != owner_id
+                or target["node_owner_id"] != owner_id
+                or target["principal_owner_id"] != owner_id
+                or target["principal_kind"] != "private_tunnel_service"
+            ):
+                raise PermissionError("scoped pilot target or service principal is not owned by this account.")
+            if (
+                target["revoked_at_ms"] is not None
+                or target["node_revoked_at_ms"] is not None
+                or target["principal_revoked_at_ms"] is not None
+                or target["workspace_retired_at_ms"] is not None
+                or target["node_endpoint_id"] != target["endpoint_id"]
+            ):
+                raise ConflictError("scoped pilot target is no longer current.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=str(target["device_id"]),
+                workspace_id=str(target["workspace_id"]),
+                workspace_generation=str(target["workspace_generation"]),
+            )
+            unresolved = connection.execute(
+                """SELECT COUNT(*) FROM actions WHERE device_id = ?
+                   AND delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')""",
+                (target["device_id"],),
+            ).fetchone()[0]
+            if unresolved:
+                raise ConflictError("selected node has unresolved prior actions.")
+            connection.execute(
+                """INSERT INTO scoped_pilot_decisions
+                   (decision_id, owner_id, principal_id, binding_id, device_id, endpoint_id,
+                    workspace_id, workspace_generation, reason, created_at_ms, expires_at_ms, revoked_at_ms)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
+                (decision_id, owner_id, principal_id, binding_id, target["device_id"],
+                 target["endpoint_id"], target["workspace_id"], target["workspace_generation"],
+                 reason, now, expires_at_ms),
+            )
+            self._event(connection, "scoped_pilot_decision", decision_id, "scoped_pilot_decision_created",
+                        {"binding_id": binding_id, "device_id": target["device_id"],
+                         "principal_id": principal_id, "expires_at_ms": expires_at_ms})
+            connection.execute("COMMIT")
+        return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
+
+    def scoped_pilot_decision(self, *, owner_id: str, decision_id: str) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        decision_id = _text(decision_id, "decision_id")
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM scoped_pilot_decisions WHERE decision_id = ?", (decision_id,)).fetchone()
+        if row is None:
+            raise NotFoundError("scoped pilot decision does not exist.")
+        if row["owner_id"] != owner_id:
+            raise PermissionError("scoped pilot decision belongs to another owner.")
+        return dict(row)
+
+    def list_scoped_pilot_decisions(self, *, owner_id: str) -> list[dict[str, Any]]:
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT * FROM scoped_pilot_decisions WHERE owner_id = ? ORDER BY created_at_ms, decision_id",
+                (owner_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def revoke_scoped_pilot_decision(self, *, owner_id: str, decision_id: str) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        decision_id = _text(decision_id, "decision_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM scoped_pilot_decisions WHERE decision_id = ?",
+                (decision_id,),
+            ).fetchone()
+            if row is None:
+                raise NotFoundError("scoped pilot decision does not exist.")
+            if row["owner_id"] != owner_id:
+                raise PermissionError("scoped pilot decision belongs to another owner.")
+            if row["revoked_at_ms"] is None:
+                connection.execute(
+                    "UPDATE scoped_pilot_decisions SET revoked_at_ms = ? WHERE decision_id = ?",
+                    (self.clock(), decision_id),
+                )
+                self._event(connection, "scoped_pilot_decision", decision_id, "scoped_pilot_decision_revoked", {})
+            connection.execute("COMMIT")
+        return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
+
+    def _admission_decision(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        lane: str,
+        now: int,
+        task_id: str | None = None,
+    ) -> str | None:
+        """Return the decision pinned to a new pilot action, or reject intake."""
+        mode = self._admission_mode(connection)
+        principal = connection.execute(
+            "SELECT owner_id, principal_kind, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+            (principal_id,),
+        ).fetchone()
+        if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+            raise PermissionError("MCP principal is not active for this owner.")
+        if mode == "recovery":
+            raise ConflictError("central admission is in recovery mode.")
+        if principal["principal_kind"] != "private_tunnel_service":
+            if mode != "open":
+                raise ConflictError("central admission is scoped to one private service target.")
+            return None
+        # Shared service credentials never inherit global owner inventory as
+        # execution authority, even if an operator later reopens global mode.
+        if lane not in {"task_open", "bounded_file_read", "standing_patch", "bounded_exec"}:
+            raise ConflictError("shared MCP service cannot admit this execution lane.")
+        if lane == "bounded_exec" and task_id is None:
+            raise ConflictError("scoped pilot exec requires a current task and writer lease.")
+        rows = connection.execute(
+            """
+            SELECT d.decision_id, d.device_id, d.workspace_id, d.workspace_generation
+            FROM scoped_pilot_decisions AS d
+            JOIN bindings AS b ON b.binding_id = d.binding_id
+            JOIN nodes AS n ON n.device_id = d.device_id
+            JOIN node_workspaces AS nw ON nw.device_id = d.device_id
+              AND nw.workspace_id = d.workspace_id
+              AND nw.workspace_generation = d.workspace_generation
+            JOIN oauth_principals AS p ON p.principal_id = d.principal_id
+            WHERE d.owner_id = ? AND d.principal_id = ? AND d.binding_id = ?
+              AND d.revoked_at_ms IS NULL AND d.expires_at_ms > ?
+              AND b.owner_id = d.owner_id AND b.device_id = d.device_id
+              AND b.endpoint_id = d.endpoint_id AND b.workspace_id = d.workspace_id
+              AND b.workspace_generation = d.workspace_generation AND b.revoked_at_ms IS NULL
+              AND n.owner_id = d.owner_id AND n.endpoint_id = d.endpoint_id AND n.revoked_at_ms IS NULL
+              AND nw.retired_at_ms IS NULL AND p.owner_id = d.owner_id AND p.revoked_at_ms IS NULL
+              AND p.principal_kind = 'private_tunnel_service'
+            """,
+            (owner_id, principal_id, binding_id, now),
+        ).fetchall()
+        if len(rows) != 1:
+            raise ConflictError("no current scoped pilot decision covers this target.")
+        if task_id is not None:
+            task = connection.execute(
+                "SELECT scoped_pilot_decision_id FROM mcp_task_sessions WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            if task is None or task["scoped_pilot_decision_id"] != rows[0]["decision_id"]:
+                raise ConflictError("task is not bound to the current scoped pilot decision.")
+        self._require_current_workspace_registration(
+            connection,
+            device_id=str(rows[0]["device_id"]),
+            workspace_id=str(rows[0]["workspace_id"]),
+            workspace_generation=str(rows[0]["workspace_generation"]),
+        )
+        return str(rows[0]["decision_id"])
 
     def _event(self, connection: sqlite3.Connection, subject_type: str, subject_id: str, event_type: str, details: dict[str, Any]) -> None:
         connection.execute(
@@ -2266,7 +2590,7 @@ class ControlPlaneStore:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
-                "SELECT * FROM oauth_principals WHERE issuer = ? AND subject_digest = ?",
+                "SELECT * FROM oauth_principals WHERE principal_kind = 'oauth' AND issuer = ? AND subject_digest = ?",
                 (issuer, subject_digest),
             ).fetchone()
             if row is not None:
@@ -2352,7 +2676,7 @@ class ControlPlaneStore:
                     """
                     SELECT principal_id, owner_id, revoked_at_ms
                     FROM oauth_principals
-                    WHERE issuer = ? AND subject_digest = ?
+                    WHERE principal_kind = 'oauth' AND issuer = ? AND subject_digest = ?
                     """,
                     (issuer, subject_digest),
                 ).fetchone()
@@ -2446,7 +2770,7 @@ class ControlPlaneStore:
                     # later explicit principal revocation must never be
                     # silently undone by clicking/retrying this endpoint.
                     principal = connection.execute(
-                        "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                        "SELECT * FROM oauth_principals WHERE principal_id = ? AND principal_kind = 'oauth'",
                         (request["principal_id"],),
                     ).fetchone()
                     if principal is None:
@@ -2460,7 +2784,7 @@ class ControlPlaneStore:
                     }
 
                 principal = connection.execute(
-                    "SELECT * FROM oauth_principals WHERE issuer = ? AND subject_digest = ?",
+                    "SELECT * FROM oauth_principals WHERE principal_kind = 'oauth' AND issuer = ? AND subject_digest = ?",
                     (request["issuer"], request["subject_digest"]),
                 ).fetchone()
                 now = self.clock()
@@ -2569,7 +2893,7 @@ class ControlPlaneStore:
                 """
                 SELECT principal_id, owner_id, revoked_at_ms
                 FROM oauth_principals
-                WHERE issuer = ? AND subject_digest = ?
+                WHERE principal_kind = 'oauth' AND issuer = ? AND subject_digest = ?
                 """,
                 (issuer, subject_digest),
             ).fetchone()
@@ -2588,7 +2912,7 @@ class ControlPlaneStore:
             rows = connection.execute(
                 """
                 SELECT * FROM oauth_principals
-                WHERE owner_id = ?
+                WHERE owner_id = ? AND principal_kind = 'oauth'
                 ORDER BY created_at_ms, principal_id
                 """,
                 (owner_id,),
@@ -2603,7 +2927,7 @@ class ControlPlaneStore:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
-                "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                "SELECT * FROM oauth_principals WHERE principal_id = ? AND principal_kind = 'oauth'",
                 (principal_id,),
             ).fetchone()
             if row is None:
@@ -2625,6 +2949,89 @@ class ControlPlaneStore:
             ).fetchone()
             connection.execute("COMMIT")
         return self._oauth_principal_projection(row)
+
+    def create_private_tunnel_service_principal(self, *, owner_id: str) -> dict[str, Any]:
+        """Create one owner-scoped service identity with no OAuth subject."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = f"svcprn_{uuid.uuid4().hex}"
+        subject_digest = hashlib.sha256(
+            b"coding-tools-control-plane:private-tunnel-principal:v1\0" + principal_id.encode("ascii")
+        ).hexdigest()
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            now = self.clock()
+            connection.execute(
+                """
+                INSERT INTO oauth_principals(
+                    principal_id, owner_id, issuer, subject_digest,
+                    principal_kind, created_at_ms, revoked_at_ms
+                ) VALUES (?, ?, ?, ?, 'private_tunnel_service', ?, NULL)
+                """,
+                (principal_id, owner_id, PRIVATE_TUNNEL_SERVICE_ISSUER, subject_digest, now),
+            )
+            self._event(connection, "mcp_service_principal", principal_id, "mcp_service_principal_created", {})
+            connection.execute("COMMIT")
+        return {
+            "principal_id": principal_id,
+            "owner_id": owner_id,
+            "principal_kind": "private_tunnel_service",
+            "created_at_ms": now,
+            "revoked_at_ms": None,
+        }
+
+    def list_private_tunnel_service_principals(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """Return only safe service identity metadata to the owner."""
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT principal_id, owner_id, principal_kind, created_at_ms, revoked_at_ms
+                FROM oauth_principals
+                WHERE owner_id = ? AND principal_kind = 'private_tunnel_service'
+                ORDER BY created_at_ms, principal_id
+                """,
+                (owner_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def revoke_private_tunnel_service_principal(self, *, owner_id: str, principal_id: str) -> dict[str, Any]:
+        """Stop all service grants for this principal without erasing audit."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT principal_id, owner_id, principal_kind, created_at_ms, revoked_at_ms
+                FROM oauth_principals
+                WHERE principal_id = ? AND principal_kind = 'private_tunnel_service'
+                """,
+                (principal_id,),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("MCP service principal does not exist.")
+            if row["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("MCP service principal is not owned by this account.")
+            if row["revoked_at_ms"] is None:
+                connection.execute(
+                    "UPDATE oauth_principals SET revoked_at_ms = ? WHERE principal_id = ?",
+                    (self.clock(), principal_id),
+                )
+                self._event(connection, "mcp_service_principal", principal_id, "mcp_service_principal_revoked", {})
+            result = connection.execute(
+                """
+                SELECT principal_id, owner_id, principal_kind, created_at_ms, revoked_at_ms
+                FROM oauth_principals WHERE principal_id = ?
+                """,
+                (principal_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return dict(result)
 
     def _refuse_queued_actions(
         self,
@@ -3364,6 +3771,10 @@ class ControlPlaneStore:
             binding_id=binding_id,
         )
         now = self.clock()
+        self._admission_decision(
+            connection, owner_id=owner_id, principal_id=principal_id,
+            binding_id=str(task["binding_id"]), lane="bounded_exec", now=now, task_id=task_id,
+        )
         active = connection.execute(
             "SELECT * FROM mcp_task_writer_leases WHERE binding_id = ? AND released_at_ms IS NULL "
             "ORDER BY acquired_at_ms DESC LIMIT 1",
@@ -3686,8 +4097,10 @@ class ControlPlaneStore:
                         raise ConflictError("task idempotency lineage is invalid.")
                     connection.execute("COMMIT")
                     return self.mcp_task_session(owner_id=owner_id, principal_id=principal_id, task_id=str(existing_key["task_id"]))
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                pilot_decision_id = self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="task_open", now=self.clock(),
+                )
                 live = connection.execute(
                     """
                     SELECT b.*, n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
@@ -3741,6 +4154,11 @@ class ControlPlaneStore:
                     (principal_id, idempotency_key, intent_digest, task_id, now),
                 )
                 self._event(connection, "mcp_task_session", task_id, "mcp_task_session_created", {"binding_id": binding_id})
+                if pilot_decision_id is not None:
+                    connection.execute(
+                        "UPDATE mcp_task_sessions SET scoped_pilot_decision_id = ? WHERE task_id = ?",
+                        (pilot_decision_id, task_id),
+                    )
                 connection.execute("COMMIT")
             except Exception:
                 connection.execute("ROLLBACK")
@@ -4514,6 +4932,195 @@ class ControlPlaneStore:
             connection.execute("COMMIT")
         return _row(result) or {}
 
+    def create_mcp_service_grant(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        expires_at_ms: int,
+        scopes: list[str] | tuple[str, ...],
+    ) -> dict[str, Any]:
+        """Issue a short-lived bearer for a private tunnel service identity.
+
+        The bearer identifies the shared service, not a ChatGPT member. It
+        never carries workspace authority by itself; every requested action
+        still passes the existing binding, policy, and node admission checks.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        grant_scopes = _mcp_service_scopes(scopes)
+        if MCP_SERVICE_PATCH_SCOPE in grant_scopes and MCP_SERVICE_READ_SCOPE not in grant_scopes:
+            raise ValidationError("MCP service patch scope requires content-read scope.")
+        if isinstance(expires_at_ms, bool):
+            raise ValidationError("MCP service grant expiry is invalid.")
+        try:
+            expires_at_ms = int(expires_at_ms)
+        except (TypeError, ValueError) as error:
+            raise ValidationError("MCP service grant expiry is invalid.") from error
+        access_token = f"mcpsvc_{secrets.token_urlsafe(32)}"
+        token_digest = _mcp_service_token_digest(access_token)
+        grant_id = f"mcpsvcgrant_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            now = self.clock()
+            if not now < expires_at_ms <= now + MCP_SERVICE_GRANT_MAX_TTL_MS:
+                connection.execute("ROLLBACK")
+                raise ValidationError("MCP service grant expiry must be within 30 days.")
+            principal = connection.execute(
+                """
+                SELECT owner_id, revoked_at_ms
+                FROM oauth_principals
+                WHERE principal_id = ? AND principal_kind = 'private_tunnel_service'
+                """,
+                (principal_id,),
+            ).fetchone()
+            if principal is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("MCP service principal does not exist.")
+            if principal["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("MCP service principal is not owned by this account.")
+            if principal["revoked_at_ms"] is not None:
+                connection.execute("ROLLBACK")
+                raise ConflictError("MCP service principal is revoked.")
+            connection.execute(
+                """
+                INSERT INTO mcp_service_grants(
+                    grant_id, owner_id, principal_id, token_digest, scopes_json,
+                    created_at_ms, expires_at_ms, revoked_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (grant_id, owner_id, principal_id, token_digest, _canonical_json(grant_scopes), now, expires_at_ms),
+            )
+            self._event(
+                connection,
+                "mcp_service_grant",
+                grant_id,
+                "mcp_service_grant_created",
+                {"principal_id": principal_id, "expires_at_ms": expires_at_ms, "scopes": list(grant_scopes)},
+            )
+            connection.execute("COMMIT")
+        return {
+            "grant_id": grant_id,
+            "owner_id": owner_id,
+            "principal_id": principal_id,
+            "created_at_ms": now,
+            "expires_at_ms": expires_at_ms,
+            "scopes": list(grant_scopes),
+            "access_token": access_token,
+        }
+
+    def authenticate_mcp_service_token(self, *, access_token: str) -> dict[str, Any]:
+        """Resolve a live private-tunnel bearer to one shared service owner."""
+
+        if not isinstance(access_token, str) or re.fullmatch(r"mcpsvc_[A-Za-z0-9_-]{32,128}", access_token) is None:
+            raise PermissionError("MCP service authentication failed.")
+        token_digest = _mcp_service_token_digest(access_token)
+        with self._connection() as connection:
+            row = connection.execute(
+                """
+                SELECT g.grant_id, g.owner_id, g.principal_id, g.token_digest, g.scopes_json,
+                       g.expires_at_ms, g.revoked_at_ms,
+                       p.owner_id AS principal_owner_id, p.revoked_at_ms AS principal_revoked_at_ms
+                FROM mcp_service_grants g
+                JOIN oauth_principals p ON p.principal_id = g.principal_id
+                WHERE g.token_digest = ? AND p.principal_kind = 'private_tunnel_service'
+                """,
+                (token_digest,),
+            ).fetchone()
+        if row is None or not hmac.compare_digest(str(row["token_digest"]), token_digest):
+            raise PermissionError("MCP service authentication failed.")
+        if (
+            row["revoked_at_ms"] is not None
+            or row["principal_revoked_at_ms"] is not None
+            or row["expires_at_ms"] <= self.clock()
+            or row["principal_owner_id"] != row["owner_id"]
+        ):
+            raise PermissionError("MCP service grant is no longer live.")
+        try:
+            stored_scopes = json.loads(row["scopes_json"])
+            verified_scopes = frozenset(_mcp_service_scopes(stored_scopes))
+        except (TypeError, ValueError, ValidationError) as error:
+            raise PermissionError("MCP service grant scopes are invalid.") from error
+        return {
+            "grant_id": row["grant_id"],
+            "owner_id": row["owner_id"],
+            "principal_id": row["principal_id"],
+            "expires_at_ms": row["expires_at_ms"],
+            "scopes": verified_scopes,
+        }
+
+    def list_mcp_service_grants(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """List redacted service grant metadata for rotation and revocation."""
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT grant_id, owner_id, principal_id, scopes_json,
+                       created_at_ms, expires_at_ms, revoked_at_ms
+                FROM mcp_service_grants
+                WHERE owner_id = ?
+                ORDER BY created_at_ms, grant_id
+                """,
+                (owner_id,),
+            ).fetchall()
+        return [
+            {
+                "grant_id": row["grant_id"],
+                "owner_id": row["owner_id"],
+                "principal_id": row["principal_id"],
+                "scopes": list(_mcp_service_scopes(json.loads(row["scopes_json"]))),
+                "created_at_ms": row["created_at_ms"],
+                "expires_at_ms": row["expires_at_ms"],
+                "revoked_at_ms": row["revoked_at_ms"],
+            }
+            for row in rows
+        ]
+
+    def revoke_mcp_service_grant(self, *, owner_id: str, grant_id: str) -> dict[str, Any]:
+        """Revoke one bearer without altering the service principal or tasks."""
+
+        owner_id = _text(owner_id, "owner_id")
+        grant_id = _text(grant_id, "grant_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM mcp_service_grants WHERE grant_id = ?",
+                (grant_id,),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("MCP service grant does not exist.")
+            if row["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("MCP service grant is not owned by this account.")
+            if row["revoked_at_ms"] is None:
+                connection.execute(
+                    "UPDATE mcp_service_grants SET revoked_at_ms = ? WHERE grant_id = ?",
+                    (self.clock(), grant_id),
+                )
+                self._event(connection, "mcp_service_grant", grant_id, "mcp_service_grant_revoked", {})
+            result = connection.execute(
+                """
+                SELECT grant_id, owner_id, principal_id, scopes_json,
+                       created_at_ms, expires_at_ms, revoked_at_ms
+                FROM mcp_service_grants WHERE grant_id = ?
+                """,
+                (grant_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return {
+            "grant_id": result["grant_id"],
+            "owner_id": result["owner_id"],
+            "principal_id": result["principal_id"],
+            "scopes": list(_mcp_service_scopes(json.loads(result["scopes_json"]))),
+            "created_at_ms": result["created_at_ms"],
+            "expires_at_ms": result["expires_at_ms"],
+            "revoked_at_ms": result["revoked_at_ms"],
+        }
+
     def request_mcp_read_only_workspace_context(
         self,
         *,
@@ -4829,8 +5436,10 @@ class ControlPlaneStore:
                     }
 
                 now = self.clock()
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                pilot_decision_id = self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="bounded_file_read", now=now, task_id=task_id,
+                )
                 if task_id is not None:
                     self._require_live_mcp_task(
                         connection,
@@ -4957,6 +5566,11 @@ class ControlPlaneStore:
                         action_idempotency_key, f"mcp_file_read:{intent_digest}", now, expires_at_ms,
                     ),
                 )
+                if pilot_decision_id is not None:
+                    connection.execute(
+                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
+                        (pilot_decision_id, action_id),
+                    )
                 connection.execute(
                     """
                     INSERT INTO mcp_file_read_intents(
@@ -5201,8 +5815,10 @@ class ControlPlaneStore:
                         raise ConflictError("idempotency key is already bound to a different permission request.")
                     connection.execute("COMMIT")
                     return self._mcp_permission_request_projection(existing, include_principal=False) | {"replayed": True}
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="owner_review", now=self.clock(), task_id=task_id,
+                )
                 if task_id is not None:
                     self._require_live_mcp_task(
                         connection,
@@ -5408,8 +6024,10 @@ class ControlPlaneStore:
                 ).fetchone()
                 if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
                     raise ConflictError("permission request principal is no longer active.")
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=str(row["principal_id"]),
+                    binding_id=str(row["binding_id"]), lane="owner_review", now=now,
+                )
                 self._mcp_patch_permission_binding(
                     connection,
                     owner_id=owner_id,
@@ -5608,8 +6226,11 @@ class ControlPlaneStore:
                     raise ConflictError("permission request is not approved.")
                 if permission["expires_at_ms"] <= now:
                     raise ConflictError("permission request is expired.")
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=str(permission["binding_id"]), lane="owner_review", now=now,
+                    task_id=str(effective_task_id) if effective_task_id is not None else None,
+                )
                 if effective_task_id is not None:
                     writer_lease = self._require_mcp_task_writer_lease(
                         connection,
@@ -5893,8 +6514,10 @@ class ControlPlaneStore:
                 ).fetchone()
                 if legacy_existing is not None:
                     raise ConflictError("idempotency key is already bound to a different patch authority mode.")
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                pilot_decision_id = self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="standing_patch", now=self.clock(), task_id=task_id,
+                )
                 self._require_live_mcp_task(
                     connection,
                     owner_id=owner_id,
@@ -5990,6 +6613,11 @@ class ControlPlaneStore:
                         action_idempotency_key, f"mcp_standing_patch:{intent_digest}", now, expires_at_ms,
                     ),
                 )
+                if pilot_decision_id is not None:
+                    connection.execute(
+                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
+                        (pilot_decision_id, action_id),
+                    )
                 connection.execute(
                     """
                     INSERT INTO mcp_standing_patch_intents(
@@ -6235,8 +6863,10 @@ class ControlPlaneStore:
                         "replayed": True,
                     }
                 now = self.clock()
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                pilot_decision_id = self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="bounded_exec", now=now, task_id=task_id,
+                )
                 if task_id is not None:
                     writer_lease = self._require_mcp_task_writer_lease(
                         connection,
@@ -6327,6 +6957,11 @@ class ControlPlaneStore:
                      _canonical_json(action_arguments), action_digest, writer_lease_generation, action_idempotency_key,
                      f"mcp_exec:{intent_digest}", now, expires_at_ms),
                 )
+                if pilot_decision_id is not None:
+                    connection.execute(
+                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
+                        (pilot_decision_id, action_id),
+                    )
                 connection.execute(
                     """INSERT INTO mcp_exec_intents(owner_id, principal_id, binding_id, task_id, writer_lease_generation, argv_json, argv_digest,
                         cwd, timeout_ms, max_output_bytes, idempotency_key, intent_digest, facade_schema_version,
@@ -6519,8 +7154,10 @@ class ControlPlaneStore:
                                                 "profile": existing["facade_profile"],
                                                 "sha256": existing["facade_contract_sha256"]}, "replayed": True}
                 now = self.clock()
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="artifact", now=now, task_id=task_id,
+                )
                 if task_id is not None:
                     self._require_live_mcp_task(connection, owner_id=owner_id, principal_id=principal_id,
                                                 task_id=task_id, binding_id=binding_id)
@@ -6722,8 +7359,10 @@ class ControlPlaneStore:
                         },
                         "replayed": True,
                     }
-                if self._admission_mode(connection) != "open":
-                    raise ConflictError("central admission is in recovery mode.")
+                self._admission_decision(
+                    connection, owner_id=owner_id, principal_id=principal_id,
+                    binding_id=binding_id, lane="document_write", now=self.clock(), task_id=task_id,
+                )
                 self._require_live_mcp_task(
                     connection,
                     owner_id=owner_id,
@@ -6984,9 +7623,58 @@ class ControlPlaneStore:
         now = self.clock()
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            if self._admission_mode(connection) != "open":
+            mode = self._admission_mode(connection)
+            if mode == "recovery":
                 connection.execute("COMMIT")
                 return []
+            # A pilot action is dispatchable only under its original live
+            # decision, even if central admission later becomes globally open.
+            # This predicate runs before LIMIT, so old queued actions cannot
+            # hide eligible pilot actions or be accidentally delivered.
+            pilot_eligible = """(
+                pilot.decision_id = a.scoped_pilot_decision_id
+                AND pilot.owner_id = a.owner_id
+                AND pilot.binding_id = a.binding_id
+                AND pilot.device_id = a.device_id
+                AND pilot.endpoint_id = a.endpoint_id
+                AND pilot.workspace_id = a.workspace_id
+                AND pilot.workspace_generation = a.workspace_generation
+                AND pilot.revoked_at_ms IS NULL AND pilot.expires_at_ms > ?
+                AND pilot_principal.owner_id = pilot.owner_id
+                AND pilot_principal.principal_kind = 'private_tunnel_service'
+                AND pilot_principal.revoked_at_ms IS NULL
+                AND ((f.action_id IS NOT NULL AND f.principal_id = pilot.principal_id
+                      AND f.binding_id = pilot.binding_id
+                      AND (tl.task_id IS NULL OR (
+                          pilot_task.scoped_pilot_decision_id = pilot.decision_id
+                          AND pilot_task.principal_id = pilot.principal_id
+                          AND pilot_task.binding_id = pilot.binding_id)))
+                  OR (s.action_id IS NOT NULL AND s.principal_id = pilot.principal_id
+                      AND s.binding_id = pilot.binding_id
+                      AND pilot_task.scoped_pilot_decision_id = pilot.decision_id
+                      AND pilot_task.principal_id = pilot.principal_id
+                      AND pilot_task.binding_id = pilot.binding_id)
+                  OR (e.action_id IS NOT NULL AND e.principal_id = pilot.principal_id
+                      AND e.binding_id = pilot.binding_id
+                      AND pilot_task.scoped_pilot_decision_id = pilot.decision_id
+                      AND pilot_task.principal_id = pilot.principal_id
+                      AND pilot_task.binding_id = pilot.binding_id))
+            )"""
+            untagged_non_service = """(
+                a.scoped_pilot_decision_id IS NULL
+                AND NOT EXISTS (
+                    SELECT 1 FROM oauth_principals AS queued_principal
+                    WHERE queued_principal.principal_kind = 'private_tunnel_service'
+                      AND queued_principal.principal_id IN (
+                          m.principal_id, f.principal_id, p.principal_id,
+                          s.principal_id, e.principal_id, a2.principal_id, d.principal_id
+                      )
+                )
+            )"""
+            admission_predicate = (
+                pilot_eligible if mode == "scoped_pilot"
+                else f"({untagged_non_service} OR {pilot_eligible})"
+            )
             rows = connection.execute(
                 f"""
                 SELECT
@@ -7078,6 +7766,9 @@ class ControlPlaneStore:
                 JOIN contexts c ON c.context_id = a.context_id
                 JOIN work_requests w ON w.request_id = a.request_id
                 LEFT JOIN mcp_task_action_links tl ON tl.action_id = a.action_id
+                LEFT JOIN mcp_task_sessions pilot_task ON pilot_task.task_id = tl.task_id
+                LEFT JOIN scoped_pilot_decisions pilot ON pilot.decision_id = a.scoped_pilot_decision_id
+                LEFT JOIN oauth_principals pilot_principal ON pilot_principal.principal_id = pilot.principal_id
                 LEFT JOIN mcp_task_writer_leases wl
                     ON wl.binding_id = a.binding_id
                    AND wl.released_at_ms IS NULL
@@ -7092,11 +7783,12 @@ class ControlPlaneStore:
                 LEFT JOIN mcp_exec_intents e ON e.action_id = a.action_id
                 LEFT JOIN mcp_artifact_intents a2 ON a2.action_id = a.action_id
                 LEFT JOIN mcp_document_write_intents d ON d.action_id = a.action_id
-                WHERE a.device_id = ? AND a.delivery_state = 'queued' AND {lane_predicate}
+                WHERE a.device_id = ? AND a.delivery_state = 'queued'
+                  AND {lane_predicate} AND {admission_predicate}
                 ORDER BY a.created_at_ms
                 LIMIT ?
                 """,
-                (device_id, limit),
+                (device_id, now, limit),
             ).fetchall()
             result: list[dict[str, Any]] = []
             for row in rows:
@@ -7716,6 +8408,7 @@ class ControlPlaneStore:
                     "mcp_approved_patch_intents",
                     "mcp_standing_patch_intents",
                     "mcp_access_grants",
+                    "mcp_service_grants",
                     "oauth_principals",
                     "oauth_link_requests",
                     "node_workspaces",

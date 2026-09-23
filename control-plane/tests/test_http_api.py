@@ -161,6 +161,63 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             display_name=display_name,
         )
 
+    def test_shared_service_and_scoped_pilot_operator_routes_stay_redacted_and_csrf_protected(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default", device_id="device-pilot-http",
+            endpoint_id="endpoint-pilot-http", display_name="Pilot node",
+        )
+        binding = self._registered_binding(
+            owner_id="owner_default", device_id=node["device_id"],
+            workspace_id="workspace-pilot-http", workspace_generation="generation-pilot-http",
+            display_name="Pilot workspace",
+        )
+        status, principal = self._post(
+            "/v1/mcp-service-principals", {}, f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 201)
+        status, grant = self._post("/v1/mcp-service-grants", {
+            "principal_id": principal["principal_id"],
+            "expires_at_ms": self.server.store.clock() + 60_000,
+            "scopes": ["control-plane.inventory", "control-plane.read", "control-plane.patch"],
+        }, f"Bearer {self.operator_token}")
+        self.assertEqual(status, 201)
+        self.assertIn("access_token", grant)
+        self.server.store.set_admission_mode(mode="recovery")
+        status, decision = self._post("/v1/scoped-pilot-decisions", {
+            "principal_id": principal["principal_id"],
+            "binding_id": binding["binding_id"],
+            "expires_at_ms": self.server.store.clock() + 60_000,
+            "reason": "Exact selected workspace pilot",
+        }, f"Bearer {self.operator_token}")
+        self.assertEqual(status, 201)
+        status, overview = self._get("/v1/ui/overview", f"Bearer {self.operator_token}")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(overview["mcp_service_principals"]), 1)
+        self.assertEqual(len(overview["mcp_service_grants"]), 1)
+        self.assertEqual(len(overview["scoped_pilot_decisions"]), 1)
+        self.assertNotIn(grant["access_token"], json.dumps(overview))
+        self.assertNotIn("token_digest", json.dumps(overview))
+        cookie, csrf = self._ui_login()
+        status, forbidden, _ = self._request_with_headers(
+            f"/v1/ui/scoped-pilot-decisions/{decision['decision_id']}/revoke",
+            method="POST", payload={}, headers={"Origin": self.web_origin, "Cookie": cookie},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        headers = {"Origin": self.web_origin, "Cookie": cookie, CSRF_HEADER_NAME: csrf}
+        status, revoked, _ = self._request_with_headers(
+            f"/v1/ui/scoped-pilot-decisions/{decision['decision_id']}/revoke",
+            method="POST", payload={}, headers=headers,
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNotNone(revoked["revoked_at_ms"])
+        status, revoked_grant, _ = self._request_with_headers(
+            f"/v1/ui/mcp-service-grants/{grant['grant_id']}/revoke",
+            method="POST", payload={}, headers=headers,
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNotNone(revoked_grant["revoked_at_ms"])
+
     def test_two_step_enrollment_never_exposes_node_secret_to_operator(self) -> None:
         node_secret = "n" * 40
         credential_hash = hashlib.sha256(

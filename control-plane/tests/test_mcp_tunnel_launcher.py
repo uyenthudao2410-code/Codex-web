@@ -84,6 +84,14 @@ class McpTunnelLauncherTests(unittest.TestCase):
             json.loads(result.stdout)["argv"],
         )
 
+    def test_private_service_mode_uses_protected_header_for_discovery_and_calls(self) -> None:
+        result = self.run_launcher(CONTROL_PLANE_MCP_AUTH_MODE="private_tunnel_service")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        argv = json.loads(result.stdout)["argv"]
+        self.assertIn("--mcp.discovery-extra-headers", argv)
+        self.assertIn("--mcp.extra-headers", argv)
+        self.assertEqual(argv.count(f"Authorization: file:{self.header}"), 2)
+
     def test_oauth_mode_never_injects_the_legacy_authorization_header(self) -> None:
         self.environment.pop("CONTROL_PLANE_MCP_AUTH_HEADER_FILE")
         result = self.run_launcher(CONTROL_PLANE_MCP_AUTH_MODE="oauth_introspection")

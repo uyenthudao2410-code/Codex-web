@@ -230,6 +230,54 @@ test('standing approved-patch policy remains valid after the former TTL window',
   assert.equal(loaded.expires_at_ms, null);
 });
 
+test('workspace prefix patch policy admits one exact nested file and rejects escapes and reparse parents', (t) => {
+  const item = fixture(t);
+  const scoped = policy();
+  scoped.schema_version = 3;
+  scoped.authority_mode = 'standing';
+  scoped.expires_at_ms = null;
+  delete scoped.allowed_relative_paths;
+  scoped.allowed_relative_prefixes = ['.'];
+  fs.writeFileSync(item.policyFile, JSON.stringify(scoped), 'utf8');
+  writeRegistry(item.paths, item.root);
+  const nested = path.join(item.root, 'src', 'deep');
+  fs.mkdirSync(nested, { recursive: true });
+  fs.writeFileSync(path.join(nested, 'fixture.txt'), 'before\n', 'utf8');
+  const exact = patch('src/deep/fixture.txt', 'before\n', 'after\n');
+  const wanted = transportRequest(request());
+  Object.assign(wanted, {
+    path: 'src/deep/fixture.txt', patch_envelope: exact.envelope,
+    preimage_sha256: exact.preimage, patch_sha256: exact.patch_sha256,
+    authority_mode: 'standing', permission_request_id: 'standing'
+  });
+  const loaded = loadApprovedPatchBridgePolicy(item.paths, { now: NOW });
+  assert.equal(loaded.schema_version, 3);
+  const admitted = admitApprovedPatchBridgeRequest(loaded, wanted, { now: NOW });
+  assert.equal(admitted.path, wanted.path);
+  assert.equal(resolveExactRegisteredPatchTarget(item.root, admitted).preimage_sha256, exact.preimage);
+  for (const denied of ['../outside.txt', 'src/.env', 'src/.git/config', 'C:/outside.txt']) {
+    assert.throws(() => admitApprovedPatchBridgeRequest(loaded, { ...wanted, path: denied }, { now: NOW }));
+  }
+  fs.writeFileSync(item.policyFile, JSON.stringify({
+    ...scoped, allowed_relative_paths: ['src/deep/fixture.txt']
+  }), 'utf8');
+  assert.throws(() => loadApprovedPatchBridgePolicy(item.paths, { now: NOW }),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID' });
+  const outside = path.join(path.dirname(item.root), 'outside');
+  fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, 'fixture.txt'), 'before\n', 'utf8');
+  fs.symlinkSync(outside, path.join(item.root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  const linked = { ...admitted, path: 'linked/fixture.txt' };
+  assert.throws(() => resolveExactRegisteredPatchTarget(item.root, linked),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_REPARSE_DENIED' });
+  const exactPolicy = { ...scoped, schema_version: 2, allowed_relative_paths: ['fixture.txt'] };
+  delete exactPolicy.allowed_relative_prefixes;
+  fs.writeFileSync(item.policyFile, JSON.stringify(exactPolicy), 'utf8');
+  assert.throws(() => admitApprovedPatchBridgeRequest(
+    loadApprovedPatchBridgePolicy(item.paths, { now: NOW }), wanted, { now: NOW }
+  ), { code: 'CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED' });
+});
+
 test('approved-patch admits only an exact approved envelope, local target and contract', (t) => {
   const item = fixture(t);
   fs.writeFileSync(item.policyFile, JSON.stringify(policy()), 'utf8');
