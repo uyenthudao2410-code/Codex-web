@@ -6,30 +6,30 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước. Checkpoint Windows hiện hành là **23-09-2026, sau 11:15 +07** tại
-> `main @ 7d7012e66400150ba4fa26ea616df36daace7022`; source sạch, runtime
+> trước. Checkpoint Windows hiện hành là **23-09-2026, 11:41 +07** tại
+> `main @ 90b3044e48be7659c4de84ae7c2a77d3d1335ede`; source/test sạch, runtime
 > evidence `.coding-tools/**` tiếp tục được giữ theo retention policy. Ubuntu
 > control-plane vẫn chạy package release exact HEAD `e44b0a4613a780e2239027c085b54257e1df266c`
 > trong admission `recovery`; các commit sau đó không chạm `control-plane/` hay
-> `deploy/`. Windows runtime đã `CURRENT` về mặt kỹ thuật và packaged smoke
-> PASS, nhưng connector strict discovery, real `workspace_context`, admission
-> mở và `LIVE_ACCEPTED` vẫn chưa có.
+> `deploy/`. Packaged smoke lịch sử PASS, nhưng live Windows recapture hiện
+> đang fail-closed `state=MISSING`, `fully_ready=false`, nên connector strict
+> discovery, real `workspace_context`, admission mở và `LIVE_ACCEPTED` vẫn chưa
+> có.
 
-## Current executive checkpoint — 23-09-2026, sau 10:50 +07
+## Current executive checkpoint — 23-09-2026, 11:41 +07
 
 Đây là checkpoint hiện hành; các Wave cũ bên dưới là chronology và không được
 đọc như live state mới hơn checkpoint này.
 
 ```text
-branch / HEAD / origin       = main / 7d7012e6 / 7d7012e6
+branch / HEAD / origin       = main / 90b3044e / 90b3044e
 source worktree              = clean (chỉ runtime evidence .coding-tools dirty)
-npm start                    = exit 0
-UI                           = CURRENT, PID 35920, instance bd451991…
-MCP/native/components        = true / true / true
-fully_ready / update_incomp = true / false
-execution_role               = central_executor
-central_connected/authority  = true / true
-tunnel_running               = false (đúng execution role)
+npm start                    = last controlled run exit 0 (not recaptured after docs-only commits)
+UI                           = MISSING, stale registered PID 35920 not alive
+components_ready             = true
+fully_ready / update_incomp = false / true
+execution_role               = central_executor (last verified role)
+tunnel_running               = false (central route does not require local Tunnel)
 connector                    = CHANGED_NEEDS_DISCOVERY
 connector_rediscovered       = false
 connector_refresh_required   = true
@@ -42,7 +42,10 @@ Commit `3cf53cc9` sửa false-negative trong lifecycle `runtimeReadiness()`: rol
 regression sweep sau delivery đạt `283` Node tests và `97` Python tests cùng
 `4` subtests. Packaged recovery smoke sau đó cũng PASS với resource contract,
 user-data isolation, Recovery Host/MCP và Supervisor guard. Đây là
-source/runtime/packaged proof, không phải strict client discovery.
+source/runtime/packaged proof, không phải strict client discovery. Identity/
+Recovery Host packet sau đó đã được giao tại `527bc7af`, `b14463b3` và
+`90b3044e`; focused identity/recovery/lifecycle/UI suite đạt `198/198`, còn
+token dashboard fixture đạt `8/8`.
 
 Các gate hiện vẫn đóng: current-process `tools/list`/`server/discover`, real
 `workspace_context` có attested client, reboot/logon acceptance, Machine B và
