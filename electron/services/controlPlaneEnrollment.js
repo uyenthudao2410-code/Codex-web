@@ -513,6 +513,11 @@ class ControlPlaneEnrollmentService {
     this.paths = paths;
     this.runner = runner;
     this.environment = environment;
+    // Electron's packaged appRoot is app.asar, a file. Child processes need
+    // the physical installation directory for both cwd and --project-root.
+    this.agentProjectRoot = paths.runtimeMode() === 'packaged'
+      ? path.dirname(paths.executablePath())
+      : paths.appRoot();
   }
 
   async request({ serverUrl, deviceIdentity } = {}) {
@@ -541,11 +546,11 @@ class ControlPlaneEnrollmentService {
         '--device-id', identity.device_id,
         '--endpoint-id', endpoint,
         '--display-name', identity.display_name,
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -583,11 +588,11 @@ class ControlPlaneEnrollmentService {
         '-I', agent, 'reconcile-enrollment',
         '--config', config,
         '--device-id', identity.device_id,
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -618,11 +623,11 @@ class ControlPlaneEnrollmentService {
       result = await this.runner(python, [
         '-I', agent, 'rotate-credential',
         '--config', config,
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -654,11 +659,11 @@ class ControlPlaneEnrollmentService {
         '-I', agent, 'reconcile-authority-status',
         '--config', config,
         '--device-id', identity.device_id,
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -695,7 +700,7 @@ class ControlPlaneEnrollmentService {
       '--workspace-id', normalizedWorkspaceId,
       '--workspace-generation', normalizedWorkspaceGeneration,
       '--confirm-install',
-      '--project-root', this.paths.appRoot(),
+      '--project-root', this.agentProjectRoot,
       '--node', this.paths.executablePath(),
       '--runtime-mode', 'packaged'
     ];
@@ -703,7 +708,7 @@ class ControlPlaneEnrollmentService {
     let result;
     try {
       result = await this.runner(python, args, {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -743,11 +748,11 @@ class ControlPlaneEnrollmentService {
         '--capability-read',
         ...(capabilities.write ? ['--capability-write'] : []),
         ...(capabilities.exec ? ['--capability-exec'] : []),
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -779,11 +784,11 @@ class ControlPlaneEnrollmentService {
         '-I', agent, 'list-workspaces',
         '--config', config,
         '--workspace-registry', registry,
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -819,11 +824,11 @@ class ControlPlaneEnrollmentService {
         '--workspace-registry', registry,
         '--workspace-id', normalizedWorkspaceId,
         '--workspace-generation', normalizedWorkspaceGeneration,
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });
@@ -864,11 +869,11 @@ class ControlPlaneEnrollmentService {
         ...(capabilities.write ? ['--capability-write'] : []),
         ...(capabilities.exec ? ['--capability-exec'] : []),
         '--confirm-replace',
-        '--project-root', this.paths.appRoot(),
+        '--project-root', this.agentProjectRoot,
         '--node', this.paths.executablePath(),
         '--runtime-mode', 'packaged'
       ], {
-        cwd: this.paths.appRoot(),
+        cwd: this.agentProjectRoot,
         env: safeEnrollmentEnvironment(this.environment),
         timeoutMs: ENROLLMENT_TIMEOUT_MS
       });

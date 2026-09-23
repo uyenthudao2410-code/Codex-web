@@ -131,6 +131,49 @@ test('central enrollment reconciles durable status after reload without passing 
   );
 });
 
+test('packaged setup runs the node agent from the installation directory, not app.asar', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-packaged-root-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const appArchive = path.join(root, 'resources', 'app.asar');
+  fs.mkdirSync(path.dirname(appArchive), { recursive: true });
+  fs.writeFileSync(appArchive, 'packaged application fixture');
+  const paths = { ...fixturePaths(root), appRoot: () => appArchive };
+  const calls = [];
+  const service = new ControlPlaneEnrollmentService({
+    paths,
+    runner: async (_command, args, options) => {
+      calls.push({ args, options });
+      const operation = args[2];
+      const payload = operation === 'reconcile-enrollment'
+        ? {
+            device_id: identity.device_id, enrollment_id: 'enroll_12345678', state: 'approved',
+            credential_generation: 1, fresh: true, observed_at_ms: Date.now(),
+            error_code: null, server_origin: 'https://svhome.tail0e4032.ts.net'
+          }
+        : operation === 'reconcile-authority-status'
+          ? {
+              device_id: identity.device_id, state: 'no_binding', node_display_name: identity.display_name,
+              workspace_count: 1, target_count: 0, dispatchable_target_count: 0, targets: [],
+              fresh: true, observed_at_ms: Date.now(), error_code: null
+            }
+          : { workspaces: [] };
+      return { code: 0, stdout: `${JSON.stringify(payload)}\n`, stderr: '' };
+    }
+  });
+
+  assert.equal((await service.reconcileEnrollment({ deviceIdentity: identity })).state, 'approved');
+  assert.equal((await service.reconcileAuthorityStatus({ deviceIdentity: identity })).state, 'no_binding');
+  assert.deepEqual(await service.listWorkspaces(), []);
+  assert.deepEqual(calls.map(({ args }) => args[2]), [
+    'reconcile-enrollment', 'reconcile-authority-status', 'list-workspaces'
+  ]);
+  for (const { args, options } of calls) {
+    assert.equal(options.cwd, root);
+    assert.equal(args[args.indexOf('--project-root') + 1], root);
+    assert.notEqual(options.cwd, appArchive);
+  }
+});
+
 test('central executor runs durable credential rotation through the packaged node agent without exposing a secret', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-credential-rotation-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
