@@ -9,9 +9,10 @@
 > trước: checkpoint vận hành mới nhất **23-09-2026, 09:33 +07** đã xác nhận
 > package-relevant source ở `main @ e44b0a4613a780e2239027c085b54257e1df266c`
 > và Ubuntu đang chạy release exact package đó trong admission `recovery` với
-> package fingerprint khớp. `origin/main` hiện đã tiến lên
-> `d11474af9aed8600b14d5b71ad35de610941ae0e` bằng một commit chỉ gồm docs và
-> `.coding-tools` evidence; `control-plane/` và `deploy/` không đổi. Windows
+> package fingerprint khớp. `origin/main` hiện đã tiến lên các commit docs và
+> `.coding-tools` evidence `d11474af9aed8600b14d5b71ad35de610941ae0e` và
+> `cc39b03bbcd7ad0a36cf65c07e1ca621faf7d836`; `control-plane/` và `deploy/`
+> không đổi. Windows
 > runtime đã `CURRENT` về mặt kỹ thuật, nhưng connector strict discovery, real
 > `workspace_context`, admission mở và `LIVE_ACCEPTED` vẫn chưa có.
 
@@ -102,10 +103,11 @@ release acceptance. Exact next action vẫn là supported Windows
 ChatWeb/Coding Tools client thực hiện discovery/`workspace_context` qua
 managed-attested path, sau đó mới guarded ACK và canary độc lập.
 
-Sau checkpoint này, commit `d11474af9aed8600b14d5b71ad35de610941ae0e` được
-push lên `origin/main`. Đối chiếu `git diff HEAD^ HEAD -- control-plane deploy`
+Sau checkpoint này, các commit `d11474af9aed8600b14d5b71ad35de610941ae0e`
+và `cc39b03bbcd7ad0a36cf65c07e1ca621faf7d836` đã được push lên
+`origin/main`. Đối chiếu các commit này với `control-plane/` và `deploy/`
 trống, nên release server `e44b0a46…` vẫn là exact byte package của source
-hiện hành; commit mới không cần restart server.
+hiện hành; các commit mới không cần restart server.
 
 ## Checkpoint Wave 47 — Windows fast-forward đã đồng bộ, runtime không restart — 22-09-2026, 06:34 +07
 
