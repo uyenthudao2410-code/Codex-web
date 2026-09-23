@@ -1,5 +1,47 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
+## Checkpoint Ubuntu live — 23-09-2026, 20:59 +07
+
+Release `97f26a13b0def2795421c454bc32e1f301aa0704` đã được chép qua SSH
+`svhome`, đối chiếu SHA-256 archive và verifier trên Ubuntu, sau đó cài vào
+versioned releases và kích hoạt bằng symlink `current` cùng systemd user unit.
+Trước migration đã tạo snapshot SQLite bằng Backup API, SHA-256
+`08c92f75f202049e98382f784187056c7ba37e110873c7a4d80da9feab54c3e2`,
+schema 25, integrity `ok`, admission `recovery`; file snapshot owner-only 0600.
+Một bản sao tạm đã migrate thử schema 25→28 giữ nguyên 18 action rồi tự dọn.
+
+Sau restart, `/healthz` và release verifier xác nhận Ubuntu live schema 28,
+SQLite integrity `ok`, package SHA
+`sha256:a2f23a7666abaac083b49f851400b792b868f87e2fe5bd9bbc477c320048abf4`,
+service instance `cp_2c46fcb41a7849c3aee196e60ad43fbd`; 18 action/13
+receipt không đổi. Tunnel unit vẫn active, local `/healthz` và `/readyz` của
+tunnel trả `live`/`ready`. Chạy `tunnel-client doctor` song song với daemon
+đang sống báo health listener 8768 đã được chiếm, nên không dùng kết quả doctor
+đó làm chứng cứ tunnel hỏng hay làm thay thế cho real ChatGPT MCP call. Quan
+trọng: auth vẫn
+`legacy_context_grant`, admission vẫn `recovery`; chưa cấp service principal/
+grant, chưa đổi header Tunnel, chưa mở pilot, chưa thay Windows bản cài. Có 11
+action không có kết quả cuối trên hai node lịch sử (10 `reconcile_required`,
+1 `dispatch_unconfirmed`); tất cả đã có disposition cách ly, nhưng không được
+gọi là effect đã được xác minh hoặc tự ý mở global admission.
+
+Tiếp theo là nghiệm thu bản Windows candidate trên đúng installed/runtime,
+thay generation read-only sang quyền file cần thiết, tạo binding mới, cài và
+quan sát policy local. Sau đó mới cấu hình shared service grant và pilot đúng
+binding; quyền exec vẫn đóng vì chưa có cách ly tiến trình theo workspace.
+
+Windows NSIS candidate `dist/windows-installer-97f26a13/coding-tools-mcp-setup-1.0.7.exe`
+đã build, SHA-256
+`DFF23CE4FFE743FD49159893719C244FD6156F659C85E07615A56C2CAD70F19D`;
+unpacked cùng build vượt qua packaged recovery smoke. `npm test` đạt 1044/1044,
+source-root và repository secret check PASS. Candidate **chưa cài đè** app
+đang chạy: per-user installation hiện có, Recovery Supervisor `healthy` với
+agent `running_heartbeat_only`, còn preflight activation của checkout trả
+`RECOVERY_HOST_INSTALLATION_MISMATCH`. Quy trình chính thức đòi đúng owner
+installation và acceptance closure theo HEAD; không tắt process theo tên hoặc
+cài đè để vượt gate. Installed smoke cũng chỉ hợp lệ trên máy không có bản
+cài per-user, nên chưa chạy trên máy này.
+
 ## Checkpoint mới — 23-09-2026, 20:46 +07 (local package candidate, chưa triển khai)
 
 Windows checkout `E:\DEV\Codex-web` đang phát triển candidate chung cho hai

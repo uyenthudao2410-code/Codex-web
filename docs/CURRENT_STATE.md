@@ -1,6 +1,17 @@
 # Current Project State — Tools-Codex-web
 
-> Checkpoint mới 23-09-2026, 20:46 +07: commit `97f26a13` có candidate
+> Checkpoint mới nhất 23-09-2026, 20:59 +07: Ubuntu live đã nạp release
+> `97f26a13` với schema 28, package fingerprint
+> `sha256:a2f23a7666abaac083b49f851400b792b868f87e2fe5bd9bbc477c320048abf4`,
+> admission `recovery` và MCP auth `legacy_context_grant`; tunnel active,
+> 18 action/13 receipt giữ nguyên. Chưa đổi Windows bản cài, chưa cấp shared
+> service grant/pilot hoặc nghiệm thu ChatGPT file/exec E2E. Windows installer
+> candidate đã build, packaged smoke và 1044 Node tests đạt; preflight của
+> checkout vẫn trả `RECOVERY_HOST_INSTALLATION_MISMATCH`, vì owner live là bản
+> cài khác. Không cài đè khi gate activation chưa có closure đúng HEAD. Xem
+> [checkpoint vận hành](SHARED_ACCOUNT_WORKSPACE_STATUS.md).
+
+> Checkpoint lịch sử 23-09-2026, 20:46 +07: commit `97f26a13` có candidate
 > `private_tunnel_service` và `scoped_pilot`; local Ubuntu release schema 28
 > verify PASS và Windows unpacked recovery smoke PASS. Ubuntu live `/healthz` vẫn schema
 > 25, `legacy_context_grant`, admission `recovery`, declared revision `749ab5c9`.
