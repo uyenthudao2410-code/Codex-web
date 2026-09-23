@@ -42,6 +42,15 @@ installation và acceptance closure theo HEAD; không tắt process theo tên ho
 cài đè để vượt gate. Installed smoke cũng chỉ hợp lệ trên máy không có bản
 cài per-user, nên chưa chạy trên máy này.
 
+Sau Ubuntu upgrade, node-agent **của bản cài Windows hiện hành** gọi lại
+`reconcile-authority-status` thành công: node `4c4b7a5b-…` có một binding
+active cho workspace `Codex-web` generation `generation_a91d…`, presence
+`online`, nhưng capabilities vẫn `read=true, write=false, exec=false`, node
+readiness `degraded`, policy `expired_or_disabled`. Vì vậy đường node→Ubuntu
+còn sống, song không có quyền file-write/exec live. Sau quan sát này Tailscale
+SSH đòi xác thực lại cho một truy vấn read-only tiếp theo; không thử vượt qua
+login, không có thay đổi server sau thời điểm đó.
+
 ## Checkpoint mới — 23-09-2026, 20:46 +07 (local package candidate, chưa triển khai)
 
 Windows checkout `E:\DEV\Codex-web` đang phát triển candidate chung cho hai
