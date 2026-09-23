@@ -838,10 +838,14 @@ function renderSetupState(snapshot) {
   const connectionReady = central ? enrollmentReady || status.centralConnected === true : directConnectionReady;
   const guidance = central ? centralSetupGuidance(snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus) : null;
   const authorityStatus = state.centralAuthorityStatus;
+  const currentTarget = central ? centralDispatchableTargetForLocalWorkspace() : null;
   const accountTargetReady = authorityStatus?.fresh === true
     && authorityStatus?.state === 'active'
     && Number(authorityStatus?.dispatchable_target_count || 0) > 0
-    && Boolean(centralDispatchableTargetForLocalWorkspace());
+    && Boolean(currentTarget);
+  const readOnlyTarget = central && currentTarget?.capabilities?.read === true
+    && currentTarget.capabilities.write !== true
+    && currentTarget.capabilities.exec !== true;
   const authorityReady = central
     ? status.authorityReady === true && accountTargetReady
     : status.tunnelRunning === true;
@@ -864,7 +868,9 @@ function renderSetupState(snapshot) {
     ['setupStepAccount', authorityReady, central
       ? (accountTargetReady ? 'Đã có target được cấp' : authorityStatus?.state === 'no_binding' ? 'Chưa có liên kết tài khoản' : 'Chờ Ubuntu xác nhận target')
       : (status.tunnelRunning === true ? 'Tunnel đã phản hồi' : 'Chờ Tunnel phản hồi')],
-    ['setupStepVerify', fullyReady, fullyReady ? 'Sẵn sàng nhận việc' : 'Chưa có receipt sẵn sàng']
+    ['setupStepVerify', fullyReady, fullyReady
+      ? (central ? (readOnlyTarget ? 'Sẵn sàng kiểm tra trạng thái · target chỉ xem' : 'Runtime và target đã sẵn sàng') : 'Sẵn sàng nhận việc')
+      : 'Chưa có receipt sẵn sàng']
   ];
   steps.forEach(([id, done, detail]) => {
     const item = $(`#${id}`);
@@ -897,7 +903,9 @@ function renderSetupState(snapshot) {
       : centralWorkspaceSummary()
     : workspaceReady ? settings.workspace : 'Chưa chọn thư mục';
   if (summary) summary.textContent = fullyReady
-    ? 'Máy này đã sẵn sàng trong phạm vi quyền được cấp'
+    ? (central
+      ? (readOnlyTarget ? 'Máy đã kết nối Ubuntu · target chỉ xem' : 'Máy đã kết nối Ubuntu trong phạm vi quyền được cấp')
+      : 'Máy này đã sẵn sàng trong phạm vi quyền được cấp')
     : central && !connectionReady
       ? guidance.title
       : inventoryUnknown
@@ -906,17 +914,21 @@ function renderSetupState(snapshot) {
           ? 'Chưa chọn thư mục làm việc'
         : 'Cần hoàn tất một bước thiết lập';
   if (summaryText) summaryText.textContent = fullyReady
-    ? 'Sẵn sàng không có nghĩa đã nghiệm thu bản phát hành; bằng chứng ChatGPT vẫn được hiển thị riêng.'
+    ? (central
+      ? `${readOnlyTarget ? 'Sẵn sàng kiểm tra trạng thái với target chỉ xem. ' : 'Runtime, pairing và target đã được xác nhận. '}Quyền đọc file, sửa file và chạy lệnh từ ChatGPT cần policy và receipt riêng.`
+      : 'Sẵn sàng không có nghĩa đã nghiệm thu bản phát hành; bằng chứng ChatGPT vẫn được hiển thị riêng.')
     : central
       ? 'Cấu hình đã lưu. Không cần nhập context ID, token hoặc JSON để tiếp tục.'
       : 'Bạn có thể đóng cửa sổ; dữ liệu đã lưu sẽ xuất hiện lại khi mở Cài đặt.';
   if (badge) {
-    badge.textContent = fullyReady ? 'SẴN SÀNG' : 'ĐANG CHỜ';
+    badge.textContent = fullyReady ? (readOnlyTarget ? 'SẴN SÀNG · CHỈ XEM' : 'SẴN SÀNG') : 'ĐANG CHỜ';
     badge.className = `soft-badge ${fullyReady ? 'positive' : 'neutral'}`;
   }
   if (nextDetail) {
     nextDetail.textContent = fullyReady
-      ? 'Có thể mở Command Center để xem bằng chứng runtime.'
+      ? (central
+        ? 'Mở Command Center để xem bằng chứng runtime. Quyền làm việc với file và lệnh từ ChatGPT cần xác minh riêng.'
+        : 'Có thể mở Command Center để xem bằng chứng runtime.')
       : central && !connectionReady
         ? guidance.detail
       : inventoryUnknown
@@ -1420,11 +1432,15 @@ function renderSnapshot(snapshot, options = {}) {
   state.selectedWorkspace = settings.workspace;
   const { central, route: centralRoute } = renderCentralExecutorMode(snapshot);
   const localRuntimeReady = status.fullyReady === true;
+  const currentTarget = central ? centralDispatchableTargetForLocalWorkspace() : null;
   const accountTargetReady = central
     && state.centralAuthorityStatus?.fresh === true
     && state.centralAuthorityStatus?.state === 'active'
     && Number(state.centralAuthorityStatus?.dispatchable_target_count || 0) > 0
-    && Boolean(centralDispatchableTargetForLocalWorkspace());
+    && Boolean(currentTarget);
+  const readOnlyTarget = currentTarget?.capabilities?.read === true
+    && currentTarget.capabilities.write !== true
+    && currentTarget.capabilities.exec !== true;
   const ready = central ? localRuntimeReady && accountTargetReady : localRuntimeReady;
   renderRecoveryTunnelSettings(snapshot);
   renderDevice(snapshot);
@@ -1434,7 +1450,7 @@ function renderSnapshot(snapshot, options = {}) {
     || status.activationEpoch?.update_incomplete === true
     || status.activationEpoch?.state === 'UPDATE_INCOMPLETE';
   $('#sideRuntimeText').textContent = central
-    ? (ready ? 'Executor Ubuntu đã sẵn sàng nhận việc' : localRuntimeReady ? 'Runtime local sẵn sàng · chờ target' : `${centralRoute.label}`)
+    ? (ready ? (readOnlyTarget ? 'Ubuntu đã nối · target chỉ xem' : 'Runtime và target Ubuntu sẵn sàng') : localRuntimeReady ? 'Runtime local sẵn sàng · chờ target' : `${centralRoute.label}`)
     : (ready
       ? 'Dịch vụ sẵn sàng'
       : activationIncomplete
@@ -1466,13 +1482,13 @@ function renderSnapshot(snapshot, options = {}) {
   renderAuthorizedRoots(settings.authorizedRoots || []);
 
   $('#heroBadge').textContent = central
-    ? (ready ? 'Executor central sẵn sàng nhận việc' : localRuntimeReady ? 'CENTRAL EXECUTOR · chờ liên kết target' : `CENTRAL EXECUTOR · ${centralRoute.label}`)
+    ? (ready ? (readOnlyTarget ? 'Ubuntu đã nối · target chỉ xem' : 'Runtime và target Ubuntu sẵn sàng') : localRuntimeReady ? 'CENTRAL EXECUTOR · chờ liên kết target' : `CENTRAL EXECUTOR · ${centralRoute.label}`)
     : (ready ? 'Tất cả dịch vụ đang hoạt động bình thường' : activationIncomplete ? 'UPDATE_INCOMPLETE · đang đồng bộ runtime' : 'Chưa hoàn tất triển khai');
   $('#heroTitle').textContent = central
     ? (ready ? 'Máy thực thi được Ubuntu quản lý' : localRuntimeReady ? 'Runtime local đã sẵn sàng, còn chờ target' : 'Máy thực thi được Ubuntu quản lý')
     : (ready ? 'Workspace lập trình web đã sẵn sàng' : 'Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn');
   $('#heroText').textContent = central
-    ? `Không cần Runtime API Key hoặc OpenAI Tunnel tại máy này. ${centralRoute.detail}${localRuntimeReady && !accountTargetReady ? ' Runtime local có thể sống nhưng chưa có binding/target được cấp cho tài khoản.' : ''}`
+    ? `Không cần Runtime API Key hoặc OpenAI Tunnel tại máy này. ${centralRoute.detail}${ready ? ' Khả năng đọc file, sửa file và chạy lệnh từ ChatGPT cần xác minh riêng.' : ''}${localRuntimeReady && !accountTargetReady ? ' Runtime local có thể sống nhưng chưa có binding/target được cấp cho tài khoản.' : ''}`
     : (ready
       ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
       : 'Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.');

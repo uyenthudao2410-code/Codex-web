@@ -205,6 +205,64 @@ test('central setup source preserves a single enrollment request and opens opera
   assert.match(app, /await openControlPlaneConsole\(\)/);
 });
 
+function centralSetupReadyFixture(capabilities) {
+  const source = read('renderer/app.js');
+  const start = source.indexOf('function renderSetupState(snapshot)');
+  const end = source.indexOf('\nasync function handleSetupPrimaryAction()', start);
+  assert.ok(start >= 0 && end > start, 'setup renderer must exist');
+
+  const elements = new Map();
+  const element = (id) => {
+    if (!elements.has(id)) {
+      const small = { textContent: '' };
+      const title = { textContent: id };
+      elements.set(id, {
+        textContent: '', dataset: {}, className: '',
+        classList: { toggle: () => {} },
+        querySelector: (selector) => selector === 'small' ? small : selector === 'b' ? title : null,
+        setAttribute: () => {}, small
+      });
+    }
+    return elements.get(id);
+  };
+  const target = { capabilities };
+  const context = {
+    state: {
+      centralWorkspaceInventoryStatus: 'loaded',
+      centralEnrollmentStatus: { fresh: true, state: 'approved' },
+      centralAuthorityStatus: { fresh: true, state: 'active', dispatchable_target_count: 1 }
+    },
+    $: (selector) => element(selector.slice(1)),
+    isCentralExecutor: () => true,
+    centralWorkspaceEntries: () => [{ workspace_id: 'workspace-1', capabilities }],
+    centralDispatchableTargetForLocalWorkspace: () => target,
+    centralWorkspaceSummary: () => 'Codex-web',
+    centralSetupGuidance: () => ({ title: 'Đã kết nối', detail: 'Đã xác nhận', action: 'workspace', actionLabel: 'Mở thư mục' })
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  context.renderSetupState({
+    settings: { executionRole: 'central_executor' },
+    status: { centralConnected: true, authorityReady: true, fullyReady: true },
+    environment: {}
+  });
+  return { element };
+}
+
+test('central setup ready text limits a read-only target to status and keeps file and command lanes unverified', () => {
+  const fixture = centralSetupReadyFixture({ read: true, write: false, exec: false });
+  assert.match(fixture.element('setupSummaryTitle').textContent, /target chỉ xem/);
+  assert.equal(fixture.element('setupSummaryBadge').textContent, 'SẴN SÀNG · CHỈ XEM');
+  assert.match(fixture.element('setupStepVerify').small.textContent, /kiểm tra trạng thái/);
+  assert.match(fixture.element('setupSummaryText').textContent, /đọc file, sửa file và chạy lệnh từ ChatGPT cần policy và receipt riêng/);
+});
+
+test('central setup does not turn registered write and exec capabilities into ChatGPT execution proof', () => {
+  const fixture = centralSetupReadyFixture({ read: true, write: true, exec: true });
+  assert.equal(fixture.element('setupSummaryBadge').textContent, 'SẴN SÀNG');
+  assert.match(fixture.element('setupSummaryText').textContent, /Quyền đọc file, sửa file và chạy lệnh từ ChatGPT cần policy và receipt riêng/);
+  assert.doesNotMatch(fixture.element('setupStepVerify').small.textContent, /Sẵn sàng nhận việc/);
+});
+
 function navigationHarness() {
   const source = read('renderer/app.js');
   const start = source.indexOf('function navigate(page)');
