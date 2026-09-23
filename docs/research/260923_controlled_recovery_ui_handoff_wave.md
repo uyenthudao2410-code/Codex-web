@@ -2114,3 +2114,104 @@ không chạy reboot/Machine B/fault/natural-use canary, và không chỉnh ledg
 thiếu client authority. Bước duy nhất còn có ý nghĩa là cung cấp/khôi phục
 supported ChatWeb/Coding Tools client, rồi bind discovery + real
 `workspace_context` vào đúng process/server/epoch/contract trước khi tiếp tục.
+
+## 15.22. Current read-only recapture sau Wave 15.21 — 23/09/2026 10:05–10:13 +07
+
+Đã recapture lại đúng checkout hiện hành bằng các surface read-only. Wave này
+không tạo writer, không sửa SQLite, không restart process, không gọi ACK và
+không tạo RUN/receipt mới.
+
+### Git và runtime
+
+```text
+branch/origin             = main / origin/main
+HEAD                      = 71a35c1be7b42d90eb094a7f807f3f40d5cde4e8
+source status             = clean (ngoài runtime evidence bắt buộc)
+dirty runtime evidence   = ledger.sqlite3, task-context-workspaces.json, performance.json
+
+dev:status                = CURRENT, UI PID 14624, instance 7606a101…
+Recovery Supervisor       = healthy, PID 6944, consecutive_failures=0
+Recovery Host             = PID 26304, instance 4417374156…
+host runtime mode         = development
+Recovery/MCP revision     = running == disk, update_pending=false
+MCP/native/components     = true / true / true
+fully_ready/update_incomp = true / false
+execution role            = central_executor (tunnel=false là đúng theo role)
+central connected/authority= true / true
+activation epoch          = activation-mudh3smu-01ecc9bc28e94d16761f721eb78813ba
+epoch state/admission     = READY / true
+process/server instance   = -hdd9-scsDHGRhmM / ed7MEZDrJ0iuFnyO
+contract SHA              = bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0
+```
+
+Read-only `collect-boot-runtime-observation` trả `status=OBSERVED` và
+`identity_current=true`, nhưng vẫn trả `authority_granted=false`,
+`live_accepted=false`, `client=null`. Strict connector chưa mở:
+
+```text
+connector_state             = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered     = false
+connector_refresh_required  = true
+connector_contract_ack      = false
+missing                     = REAL_CLIENT_WORKSPACE_READ, CLIENT_DELIVERY_CONFIRMATION,
+                              CLIENT_DISCOVERY_PROVENANCE, BOOT_BEFORE_AFTER,
+                              PACKAGE_EXECUTABLE_SUPERVISOR_HASHES,
+                              CENTRAL_BINDING_POLICY_RECEIPT,
+                              ATTEMPT_HISTORY_STARTUP_INTENT
+```
+
+`fully_ready=true` ở đây chỉ là local component/central admission readiness;
+nó không phải strict connector readiness, reboot acceptance hay Problem
+closure. `tunnel=false` cũng không phải lỗi khi runtime đang ở role
+`central_executor`.
+
+### Ledger và các chỉ số knowledge/evaluation
+
+Immutable lifecycle census lúc `2026-09-23T03:06:35.652Z` xác nhận:
+
+```text
+schema/integrity/FK       = 12 / ok / 0
+ledger size               = 97,742,848 bytes
+mutated_canonical_ledger  = false
+ordinary_active_runs     = 17 (THRESHOLD_SENSITIVE_STALE_CANDIDATE; không phải 17 live jobs)
+P5 epochs                 = 6
+unexplained/residue       = 0 / 0
+```
+
+PRL C4 canary read-only lúc `2026-09-23T03:13:17.387Z` vẫn là
+`C4_SOURCE_READY_AWAITING_NATURAL_CANARY`: SQLite/chain integrity pass,
+criterion-to-proof structural coverage `34/34`, exact revision binding
+`193/211 = 91.4692%`, nhưng natural evidence chưa được attested. Báo cáo
+resolution economics trên snapshot cùng thời kỳ có `49` Problem Revision,
+`3` receipt-bound independent confirmations (`3/49 = 0.061224`), `37`
+right-censored revisions; state projection là `7 OPEN`, `30
+PROVISIONALLY_RESOLVED`, `3 RESOLVED_CONFIRMED`, `2 BLOCKED`. Đây là chỉ số
+coverage/evidence, không phải success rate của app.
+
+P4/P5 vẫn giữ nguyên:
+
+```text
+P4                         = COLLECTING, empirically_complete=false
+representative terminal   = 98 / shadow population 100
+raw post-replan repaired  = 20
+causal-solution repaired  = 0
+unknown repair labels     = 29
+P5 baseline               = ready (engineering), epoch=EPOCH_HARD_STOPPED
+P5 experiment_start_ready = false
+treatment/auto-promotion = off
+```
+
+### Operator checkpoint và next action
+
+Wave này chỉ làm rõ hiện trạng, không làm thay đổi mức proof. Trạng thái mạnh
+nhất là `SOURCE_PRESENT + FOCUSED_PROOF + PACKAGED/PROCESS CONTINUITY +
+CENTRAL_RUNTIME_READY`; chưa phải `STRICT_REDISCOVERED`, `LIVE_ACCEPTED`,
+`PACKAGED_REBOOT_ACCEPTED`, `NATURAL_PROBLEM_OUTCOME` hay `ECONOMICS_POLICY`.
+
+Exact next action vẫn là khôi phục một supported ChatWeb/Coding Tools client
+để lấy current-process `tools/list` hoặc `server/discover`, bind receipt vào
+PID/process instance, MCP server instance, activation epoch và contract SHA,
+rồi gọi một `workspace_context` thật trên `E:\\DEV\\Codex-web`. Nếu client
+không xuất hiện, terminalize ở `WAITING_FOR_SUPPORTED_CONNECTOR`; không refresh
+mù, không ACK thủ công, không bulk reconcile 17 stale candidates, không reboot,
+không mở P5 và không đóng hai Problem.
