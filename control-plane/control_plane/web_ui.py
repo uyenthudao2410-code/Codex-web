@@ -674,7 +674,7 @@ WEB_UI_JAVASCRIPT = """(() => {
   dispatchDispositionForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = dispatchDispositionForm.querySelector('button[type="submit"]');
-    const actionIds = byId('dispatch-disposition-action-ids').value.split(/\s+/).filter(Boolean);
+    const actionIds = byId('dispatch-disposition-action-ids').value.split(/\\s+/).filter(Boolean);
     const declaration = byId('dispatch-disposition-declaration').value.trim();
     const rationale = byId('dispatch-disposition-rationale').value.trim();
     if (!confirm(`Cách ly ${actionIds.length} dispatch cũ không có receipt? Action vẫn unconfirmed, không retry và không tạo receipt.`)) return;
