@@ -2069,3 +2069,48 @@ discovery + real `workspace_context`, sau đó chỉ chạy một canary Goal c�
 budget, controller/review authority và outcome receipt được bind exact; nếu
 client surface chưa được hỗ trợ thì giữ fail-closed, không tạo RUN/receipt
 nhân tạo.
+
+## 15.21. Final runtime recapture sau delivery — 23/09/2026 09:57 +07
+
+Sau commit/push `fdada08d9045b2f7c2e2af908082cbe1ea850db4`, readback live mới
+nhất vẫn giữ cùng một activation, không có replacement hoặc restart ngoài ý
+muốn:
+
+```text
+main/origin                 = fdada08d9045b2f7c2e2af908082cbe1ea850db4
+UI                         = CURRENT, PID 14624, instance 7606a101…
+Supervisor                 = healthy, PID 6944, consecutive_failures=0
+Recovery Host              = PID 26304, instance 4417374156…
+MCP/native/components      = true / true / true
+fully_ready/update_incomp  = true / false
+central_connected/authority = true / true
+epoch                      = activation-mudh3smu-01ecc9bc28e94d16761f721eb78813ba
+MCP process/server         = -hdd9-scsDHGRhm / ed7MEZDrJ0iuFnyO
+contract SHA               = bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0
+```
+
+Các gate chưa đổi:
+
+```text
+connector_state             = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered     = false
+connector_refresh_required  = true
+client                      = null
+authority_granted           = false
+live_accepted               = false
+boot_observation            = OBSERVED (không phải reboot acceptance)
+```
+
+Tôi đã thử inventory Computer Use/browser để tìm đường client được hỗ trợ;
+surface trả `apps=[]`, `browsers=[]`, lỗi `Codex auth token is unavailable`.
+Theo đó không có UI/browser client hợp lệ để thực hiện managed-attested
+`tools/list`/`server/discover`; không login, upload, gửi dữ liệu hay gọi WebMCP
+qua đường không được chứng thực.
+
+**Checkpoint kết thúc wave:** delivery source/docs đã push và focused proof đã
+đạt; runtime local vẫn technically ready nhưng chưa strict rediscovered/live
+accepted. Hai Problem vẫn OPEN; không được gọi hệ thống hoàn tất, không mở P5,
+không chạy reboot/Machine B/fault/natural-use canary, và không chỉnh ledger khi
+thiếu client authority. Bước duy nhất còn có ý nghĩa là cung cấp/khôi phục
+supported ChatWeb/Coding Tools client, rồi bind discovery + real
+`workspace_context` vào đúng process/server/epoch/contract trước khi tiếp tục.
