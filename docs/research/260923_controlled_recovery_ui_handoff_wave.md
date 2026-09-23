@@ -2483,3 +2483,44 @@ Nếu client surface chưa xuất hiện, trạng thái chính xác là
 `WAITING_FOR_SUPPORTED_CONNECTOR`; không refresh mù, không ACK thủ công,
 không bulk reconcile 17 stale candidates, không reboot/Machine B, không mở P5
 và không đóng hai Problem.
+
+## 15.25. Recapture sau `npm start` post-delivery — 23/09/2026 10:50 +07
+
+Sau khi delivery `0f41defd` đã được push, đã chạy đúng entrypoint người dùng
+vẫn dùng:
+
+```text
+npm start                         = exit 0
+DEV_UI MISSING action=launch     = host=current
+DEV_UI CURRENT                   = PID 35920, instance bd451991877714002b741e85732dba01
+runtime                          = ready
+mcp_running/native_alive         = true / true
+tunnel_running                   = false (đúng với central_executor)
+```
+
+`npm run dev:status` ngay sau đó xác nhận:
+
+```text
+state=CURRENT
+running_revision == disk_revision = true
+mcp_revision_state                 = current
+mcp_update_pending                 = false
+components_ready / fully_ready    = true / true
+runtime_update_incomplete         = false
+connector_state                   = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered            = false
+connector_refresh_required        = true
+```
+
+PID/instance thay đổi từ snapshot §15.24 vì `npm start` đã launch lại UI khi
+đăng ký UI cũ không còn hiện diện; đây là bằng chứng lifecycle start đã tự
+phục hồi, không phải bằng chứng strict connector, reboot/logon hay
+`workspace_context`. Recovery Host/MCP revision và central route vẫn được
+giữ theo cùng contract; không có ACK, tunnel CRUD, direct ledger write,
+reboot hoặc Machine B action.
+
+**Checkpoint:** source repair và package entrypoint hiện đều PASS cho
+`central_executor`; blocker còn lại không còn là false-negative local tunnel
+mà là supported-client discovery/provenance và các acceptance/outcome gate
+được liệt kê ở §15.24. Working tree sau recapture chỉ dirty ở runtime
+evidence `.coding-tools/**`; `HEAD == origin/main == 0f41defd`.
