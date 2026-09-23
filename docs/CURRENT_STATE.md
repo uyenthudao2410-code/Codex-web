@@ -91,6 +91,13 @@ Focused suite sau packet mutex đạt `198 passed, 0 failed`; mức proof hiện
 `SOURCE_PRESENT + FOCUSED_PROOF + DELIVERED_MAIN`, chưa phải runtime/package/
 connector/natural acceptance.
 
+Read-only P4/P5 recapture lúc 11:41 +07 sau delivery cho thấy source đã sạch,
+`p5_baseline_ready=true` nhưng P4 vẫn `COLLECTING`, không có validated signal,
+không có causal-solution repair (0/100; 29 unknown), P5 epoch vẫn
+`EPOCH_HARD_STOPPED` và experiment start vẫn `false`. Đây là readiness của
+instrumentation/policy, không phải bằng chứng hiệu quả sản phẩm hoặc closure
+của hai Problem.
+
 ## Checkpoint Wave 48 — Ubuntu exact-HEAD rollout và central MCP recheck — 23-09-2026, 09:28–09:33 +07
 
 Sau khi SSH/Tailscale được xác thực lại, source authority trên Windows và

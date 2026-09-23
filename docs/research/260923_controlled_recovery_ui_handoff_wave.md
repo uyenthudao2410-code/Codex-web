@@ -2863,3 +2863,29 @@ Vì Computer Use vẫn không có supported client (`apps=[]`, `browsers=[]`,
 attested receipt, packaged reboot/logon, Machine B, fault matrix, 48-hour
 natural-use cho C01–C12, provider dispatch/real continuation và natural Goal
 cho BG01–BG14, independent outcome, P4/P5 promotion hoặc economics policy.
+
+## 15.32. P4/P5 readiness recapture sau delivery — 23/09/2026 11:41 +07
+
+Đã chạy lại `report_p4_readiness.py` ở read-only mode sau khi source đã sạch
+ngoài `.coding-tools/**`. Kết quả hiện hành:
+
+```text
+state                         = COLLECTING
+p4_empirically_complete      = false
+representative shadow tasks  = 100
+raw repaired tasks            = 20
+causal-solution repairs      = 0
+causal-solution unknown      = 29
+p4 predictive targeting      = false
+source worktree clean        = true
+p5_baseline_ready            = true
+p5 epoch lifecycle           = EPOCH_HARD_STOPPED
+p5 experiment start          = false
+validated signals            = none
+```
+
+Việc `p5_baseline_ready=true` chỉ nói source/runtime baseline đủ điều kiện
+chuẩn bị theo contract hiện tại; không mở epoch, không bật treatment và không
+cho phép auto-promotion. P4 vẫn thiếu variation của causal-solution repair,
+predictive holdout và independent natural outcomes; các con số `20 raw repaired`
+và `29 unknown` không được đổi thành hiệu quả nhân quả.
