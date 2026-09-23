@@ -1524,6 +1524,8 @@ test('Recovery Host exposes bounded UI lifecycle identity without exposing its d
 test('Electron main makes duplicate start actionable and accepts only exact UI lifecycle signals', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'electron', 'main.js'), 'utf8');
   assert.match(source, /CODING_TOOLS_MCP_UI_ALREADY_RUNNING/);
+  assert.match(source, /function requestUiSingleInstanceLock\(\)\s*\{/);
+  assert.match(source, /singleInstanceLockPath\(\{\s*userDataPath: sharedUserDataPath,\s*runtimeMode: uiRuntimeIdentity\.mode\s*\}\)/s);
   assert.match(source, /app\.requestSingleInstanceLock\(\{\s*runtime_mode: uiRuntimeIdentity\.mode,\s*installation_id: uiRuntimeIdentity\.installation_id\s*\}\)/s);
   assert.match(source, /app\.on\('second-instance', \(_event, commandLine, _workingDirectory, additionalData\) => handleSecondInstance\(commandLine, additionalData\)\)/);
   assert.match(source, /CODING_TOOLS_MCP_PACKAGED_BLOCKED_BY_EXISTING_UI/);

@@ -11,7 +11,10 @@ const {
   RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS
 } = require('../electron/services/componentRevision');
 const { createInstallationIdentity } = require('../electron/services/runtimeIdentity');
-const { createRuntimePaths } = require('../electron/services/runtimePaths');
+const {
+  createRuntimePaths,
+  singleInstanceLockPath
+} = require('../electron/services/runtimePaths');
 const {
   RecoveryIpcServer,
   RecoveryIpcClient,
@@ -64,6 +67,16 @@ test('installation identity contains no raw checkout path', () => {
   const serialized = JSON.stringify(identity);
   assert.equal(serialized.includes(root), false);
   assert.match(identity.installation_id, /^[a-f0-9]{64}$/);
+});
+
+test('UI mutexes are mode-specific while the profile path remains shared', () => {
+  const profile = path.join('C:', 'Users', 'Admin', 'AppData', 'Roaming', 'web-mcp-assistant');
+  const development = singleInstanceLockPath({ userDataPath: profile, runtimeMode: 'development' });
+  const packaged = singleInstanceLockPath({ userDataPath: profile, runtimeMode: 'packaged' });
+  assert.notEqual(development, packaged);
+  assert.match(development, /web-mcp-assistant-ui-lock-development$/);
+  assert.match(packaged, /web-mcp-assistant-ui-lock-packaged$/);
+  assert.throws(() => singleInstanceLockPath({ userDataPath: profile, runtimeMode: 'preview' }), /runtimeMode/);
 });
 
 test('a foreign Recovery Host fallback client refuses all mutating RPCs', async () => {

@@ -21,7 +21,8 @@ const runtimePathApi = require('./paths');
 const { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;
 const {
   createElectronRuntimePaths,
-  configureElectronUserDataPath
+  configureElectronUserDataPath,
+  singleInstanceLockPath
 } = require('./services/runtimePaths');
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const {
@@ -236,6 +237,26 @@ function existingInstanceDiagnostic(argv = process.argv) {
   return uiRuntimeIdentity.mode === 'packaged'
     ? 'CODING_TOOLS_MCP_PACKAGED_BLOCKED_BY_EXISTING_UI Close the development runtime (npm start) and its Recovery Host, then reopen the installed Coding Tools MCP.'
     : 'CODING_TOOLS_MCP_UI_ALREADY_RUNNING Use "npm run dev" to inspect/activate the current checkout or "npm run dev:replace" for a verified replacement.';
+}
+
+function requestUiSingleInstanceLock() {
+  const sharedUserDataPath = app.getPath('userData');
+  const lockPath = singleInstanceLockPath({
+    userDataPath: sharedUserDataPath,
+    runtimeMode: uiRuntimeIdentity.mode
+  });
+  // Keep settings/Recovery Host state in the shared profile, while using a
+  // mode-specific mutex so a development window cannot consume a packaged
+  // launch (or vice versa) before the runtime identity can be displayed.
+  app.setPath('userData', lockPath);
+  try {
+    return app.requestSingleInstanceLock({
+      runtime_mode: uiRuntimeIdentity.mode,
+      installation_id: uiRuntimeIdentity.installation_id
+    });
+  } finally {
+    app.setPath('userData', sharedUserDataPath);
+  }
 }
 
 async function codeActivationRequest(component, allowAcceptancePending = false) {
@@ -1485,10 +1506,7 @@ function registerIpc() {
 if (recoveryHostMode) {
   app.whenReady().then(() => startRecoveryHostApplication(app));
 } else {
-  const hasSingleInstanceLock = app.requestSingleInstanceLock({
-    runtime_mode: uiRuntimeIdentity.mode,
-    installation_id: uiRuntimeIdentity.installation_id
-  });
+  const hasSingleInstanceLock = requestUiSingleInstanceLock();
   if (!hasSingleInstanceLock) {
     process.stderr.write(`${existingInstanceDiagnostic()}\n`);
     app.quit();

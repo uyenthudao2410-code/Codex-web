@@ -30,6 +30,15 @@ function configureElectronUserDataPath(app, { argv = process.argv, recoveryHostM
 // Recovery Host descriptor survive a switch between npm start and the
 // installed app, but their UI mutexes must not be shared: otherwise a stale
 // development window can swallow the packaged launch and remain on screen.
+function singleInstanceLockPath({ userDataPath, runtimeMode } = {}) {
+  const profilePath = requiredRoot(userDataPath, 'userDataPath');
+  const mode = String(runtimeMode || '').trim().toLowerCase();
+  if (!['development', 'packaged'].includes(mode)) {
+    throw new Error('runtimeMode must be development or packaged.');
+  }
+  const profileName = path.basename(profilePath);
+  return path.join(path.dirname(profilePath), `${profileName}-ui-lock-${mode}`);
+}
 
 function optionalArtifactId(value, name) {
   const text = String(value || '').trim();
@@ -161,5 +170,6 @@ module.exports = {
   createRuntimePaths,
   createElectronRuntimePaths,
   configureElectronUserDataPath,
+  singleInstanceLockPath,
   hasExplicitUserDataDirectory
 };

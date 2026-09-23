@@ -2805,3 +2805,25 @@ Packet này vẫn chỉ nâng mức lên `SOURCE_PRESENT + FOCUSED_PROOF`. Nó c
 chứng minh source đã được activation vào runtime đang chạy, strict connector,
 real `workspace_context`, packaged reboot/logon, Machine B, natural outcome
 hoặc closure của hai Problem.
+
+## 15.30. Bổ sung mutex theo runtime mode sau push — 23/09/2026 11:36 +07
+
+Sau commit/push `527bc7af`, source lại nhận một packet nhỏ cùng phạm vi
+installation identity. `main.js` hiện dùng `singleInstanceLockPath()` để đặt
+mutex UI riêng cho `development` và `packaged`, nhưng vẫn giữ settings,
+Recovery Host descriptor và profile dữ liệu ở cùng `userData` chuẩn. Mục tiêu là
+không để một cửa sổ dev cũ nuốt mất lần mở packaged; `second-instance` vẫn gửi
+`runtime_mode`/`installation_id` để cảnh báo khi hai runtime khác loại va vào
+nhau. Test mới kiểm tra cả hai mutex khác nhau và profile không bị thay thế.
+
+Focused regression sau packet này:
+
+```text
+identity/recovery/lifecycle/UI suite = 198 passed, 0 failed
+```
+
+Tại thời điểm ghi checkpoint, bốn file source/test liên quan còn dirty sau
+`527bc7af` và chưa được push tiếp. Đây là `SOURCE_PRESENT + FOCUSED_PROOF`,
+không được gọi là packaged/reboot acceptance. Next action là stage/commit/push
+packet này trên `main`, sau đó recapture lại HEAD và giữ nguyên các gate
+connector/reboot/natural đang đóng.
