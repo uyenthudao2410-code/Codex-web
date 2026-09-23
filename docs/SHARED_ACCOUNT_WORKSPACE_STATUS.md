@@ -1,6 +1,6 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-## Checkpoint mới — 23-09-2026, 20:25 +07 (source candidate, chưa triển khai)
+## Checkpoint mới — 23-09-2026, 20:46 +07 (local package candidate, chưa triển khai)
 
 Windows checkout `E:\DEV\Codex-web` đang phát triển candidate chung cho hai
 thành viên ChatGPT Business. Ubuntu live đọc qua `/healthz` vẫn là schema 25,
@@ -13,17 +13,26 @@ process bản cài đã nạp source mới. Bản cài vẫn cần build/activat
 nhận UI cài standing file policy. Chưa có canary ChatGPT → Ubuntu → Windows
 đọc/vá file.
 
-Candidate source tách một service principal chung khỏi OAuth cá nhân, cấp
+Commit cục bộ `97f26a13` tách một service principal chung khỏi OAuth cá nhân, cấp
 grant có scope `inventory`, `read`, `patch` bất biến, và chỉ nhận tác vụ cho
 binding/generation được owner chọn trong một quyết định `scoped_pilot` tối đa
 24 giờ. Action cũ không gắn quyết định không được poll trong pilot. App Windows
 cho chọn workspace đã đăng ký, lấy hợp đồng MCP từ node-authenticated Ubuntu,
 cài policy đọc/vá file exact generation và báo đúng trạng thái sau reload.
+Ubuntu release candidate `codex-control-plane-97f26a13…` đã build và verify
+local với schema 28, package SHA
+`sha256:a2f23a7666abaac083b49f851400b792b868f87e2fe5bd9bbc477c320048abf4`.
+Windows unpacked candidate ở `dist/windows-candidate-97f26a13/win-unpacked`
+đã qua packaged recovery smoke (resource exact, user-data isolation, Recovery
+Host/MCP và supervisor); chưa cài đè bản đang chạy. Ubuntu qua SSH `svhome`
+được xác nhận service+tunnel đang active, release live `749ab5c9` verifier
+PASS với schema 25. Đây là local `PACKAGED_PROOF`, không phải Ubuntu deploy,
+Windows installed proof hay ChatGPT E2E.
+
 Chưa cài policy chạy lệnh: `cwd`/argv-prefix không cách ly filesystem trên
 Windows, nên không được nói đã hoàn thiện yêu cầu exec tự động. Không mở
 admission, không cấp service grant live, không sửa policy live trong checkpoint
-này. Các kết quả kiểm tra tập trung được ghi trong báo cáo delivery tương ứng;
-source proof, packaged proof, live proof và natural-work proof vẫn là bốn gate
+này. Source proof, packaged proof, live proof và natural-work proof vẫn là bốn gate
 riêng.
 
 Điều kiện tiếp theo: hoàn tất kiểm tra tích hợp và giao source; đối soát lịch
