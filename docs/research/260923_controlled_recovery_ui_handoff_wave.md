@@ -1863,3 +1863,173 @@ evidence; không được mở treatment, ACK connector hoặc đóng Problem.
 **Operator checkpoint:** source baseline đã sạch theo policy, nhưng strict
 connector, real `workspace_context`, reboot/natural-use và P4/P5 acceptance
 vẫn mở. Tiếp tục bằng supported connector discovery, không lặp refresh mù.
+
+## 15.18. Checkpoint revalidation và proof hẹp hiện tại — 23/09/2026 09:31 +07
+
+Đã thực hiện một vòng đối chiếu read-only mới trên đúng checkout `main`. Git
+không có source drift: `HEAD=e44b0a4613a780e2239027c085b54257e1df266c` và
+`origin/main` trùng nhau. Ba tệp dirty duy nhất vẫn là runtime evidence bắt
+buộc phải giữ dưới `.coding-tools/` (`orchestration/ledger.sqlite3`,
+`orchestration/task-context-workspaces.json`, `performance.json`); không có
+source/untracked build artifact mới. `git diff --check` vẫn sạch.
+
+Runtime hiện tại được đọc qua các surface hỗ trợ, không suy diễn từ snapshot
+cũ:
+
+```text
+UI                         = CURRENT, PID 14624, instance 7606a101…
+Recovery Supervisor        = healthy, PID 6944, failures=0
+Recovery Host              = PID 26304, instance 4417374156…
+activation_epoch            = activation-mudh3smu-01ecc9bc28e94d16761f721eb78813ba
+operation                   = full-clean-refresh-mudh3afs-3ceb1dd9bc61c7e8d76df8e4
+Recovery Host revision      = 4158c76a… == disk
+Coding MCP revision         = a49891f… == disk
+MCP/native/components      = true / true / true
+fully_ready/update_incomp  = true / false
+execution_role              = central_executor (tunnel=false là đúng theo role)
+central_connected/authority = true / true
+process/server instance     = -hdd9-scsDHGRhm / ed7MEZDrJ0iuFnyO
+contract SHA                = bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0
+```
+
+Strict connector gate vẫn **chưa mở**:
+
+```text
+connector_state             = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered     = false
+connector_refresh_required  = true
+client                      = null
+authority_granted           = false
+live_accepted               = false
+boot_observation            = OBSERVED (không phải acceptance)
+workspace_matched           = true
+```
+
+`collect-boot-runtime-observation` liệt kê còn thiếu real client
+`workspace_context`, client-delivery/discovery provenance, before/after boot,
+package/executable/Supervisor hashes, central binding receipt và startup
+attempt history. Các trường `fully_ready=true` ở trên chỉ là local
+component-readiness; không được nâng thành connector/reboot acceptance.
+
+Đã gọi surface Tunnel hỗ trợ ở chế độ read-only (`list_runtime_aliases`).
+Kết quả native `tunnel-client runtimes list --json` là `aliases=[]` (binary đã
+chọn từ `E:\DEV\Codex-web\resources\tools\tunnel-client.exe`), nên hiện
+không có alias để status/rediscover. Không tạo tunnel, không attach stdio,
+không gọi raw HTTP và không tự ghi receipt. Việc này xác nhận blocker là
+**thiếu supported client/discovery path**, không phải bằng chứng Tunnel local
+bị hỏng; central executor vốn không yêu cầu local Tunnel.
+
+Canonical ledger được đọc qua Backup-API immutable/query-only, không mở writer:
+
+```text
+snapshot_at                 = 2026-09-23T02:31:13.239Z
+schema/integrity/FK         = 12 / ok / 0
+mutated_canonical_ledger    = false
+projection_drift/residue    = false / 0
+ordinary_active_runs        = 17 (đều stale-candidate; không phải 17 live jobs)
+P5 anchors                  = 6, epoch=EPOCH_HARD_STOPPED
+```
+
+Bound RUN census (đếm theo `ENGINEERING_ATTEMPT_BOUND`, không chỉ đọc một
+projection rời) hiện là:
+
+| Problem / revision | Criteria | Accepted | Aborted | Active | Total | State |
+|---|---:|---:|---:|---:|---:|---|
+| `prl-22e670302757c9b7663170e226ed7c26` / rev1 | 12 | 47 | 16 | 3 | 66 | OPEN |
+| `prl-e918c7d33e70c2d304d0797e11b05fcb` / rev2 | 18 | 16 | 10 | 13 | 39 | OPEN |
+
+Không suy ra closure từ Accepted RUN; cả hai chain vẫn mở và cần proof đúng
+revision riêng biệt.
+
+### Proof vừa chạy lại
+
+Trên đúng `HEAD` hiện tại:
+
+```text
+node --test tests/recovery-bootstrap.test.js tests/boot-acceptance.test.js tests/activation-closure.test.js
+103 passed, 0 failed
+
+python -m pytest tests/test_activation_epoch.py -q
+24 passed, 5 subtests passed
+```
+
+Bộ proof xác nhận lại P1 semantic-stop refusal, P2 rollback giữ nguyên
+startup-intent/baseline, identity/epoch/process binding và boot-oracle
+fail-closed. Lần chạy Python đầu tiên sai working directory và trả
+`ModuleNotFoundError`; chạy lại từ `resources/coding-tools-mcp` đã pass, nên đó
+là lỗi setup của lệnh, không phải lỗi sản phẩm. Không có source/runtime/ledger
+mutation trong wave proof này.
+
+P4/P5 vẫn chưa đủ để mở policy:
+
+```text
+P4                         = COLLECTING (empirically_complete=false)
+representative terminal   = 98
+raw post-replan repaired   = 20
+causal-solution repaired   = 0
+unknown repair labels     = 29
+independent outcome       = 3/49 = 0.061224
+natural cohort             = COLLECTING; observed=2, typed=1, accepted=0
+P5 experiment_start_ready  = false
+```
+
+**Operator checkpoint:** source/focused proof và local runtime continuity đang
+đạt; strict rediscovery, real workspace read, authority/live acceptance,
+packaged reboot/logon, Machine B/fault matrix, natural-use 48 giờ của
+`prl-22e…` rev1, durable Goal dispatch của `prl-e918…` rev2, independent
+outcome và P4/P5 policy vẫn chưa đạt. Exact next action là có một supported
+ChatWeb/Coding Tools client thực sự gọi `tools/list` hoặc `server/discover`
+qua managed-attested transport, bind receipt vào đúng process/server/epoch/SHA,
+sau đó gọi `workspace_context` thật trên `E:\DEV\Codex-web`. Nếu surface đó
+chưa xuất hiện, giữ nguyên fail-closed và không lặp refresh/reboot hay sửa
+ledger.
+
+## 15.19. Ubuntu exact-HEAD rollout và central MCP recheck — 23/09/2026 09:28–09:33 +07
+
+SSH/Tailscale đã được xác thực lại. `main`, `origin/main` và source authority
+đều ở `e44b0a4613a780e2239027c085b54257e1df266c`. Một detached worktree sạch
+được dùng để build release exact HEAD; verifier local/remote đều PASS với 34
+file, schema 25, package fingerprint
+`sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c` và
+archive SHA-256
+`e82cd7b2fb4bfb7045df4e621cf232eb5708c2c13013b298a0314942a3547acd`.
+
+Archive được upload/extract vào
+`/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-e44b0a4613a780e2239027c085b54257e1df266c`.
+Snapshot trước switch có SHA-256
+`da0dc9cb3dc1ad043f5f6b690a7194f5dc6053955d14b9c58af8d49286a37169`,
+SQLite `integrity=ok`, schema `25`, admission `recovery` và
+`unquarantined_unresolved_action_count=0`. `current` được chuyển atomic,
+protected env/drop-in được bind cùng identity, `codex-control-plane.service`
+được `daemon-reload`/restart. Health và official healthcheck sau restart xác
+nhận:
+
+```text
+current = .../codex-control-plane-e44b0a4613a780e2239027c085b54257e1df266c
+service = active/running, NRestarts=0
+service_instance_id = cp_c4b3202eb5d840e79f56ddc74940f74b
+declared_source_revision = e44b0a4613a780e2239027c085b54257e1df266c
+package_source_sha256 = expected_package_source_sha256
+sqlite_integrity = ok, schema = 25, admission = recovery
+```
+
+MCP grant cũ trả `403 FORBIDDEN` vì TTL đã hết; không hồi sinh grant cũ.
+Một grant mới cho cùng context/principal `ubuntu-root-tunnel-da7d8273` được
+tạo qua operator API, file authorization được ghi atomically mode `0600`,
+rồi `codex-control-plane-mcp-tunnel.service` restart thành công
+(`active/running`, `NRestarts=0`). Authenticated loopback proof sau đó gọi
+`server/discover`, `tools/list` (đúng 8 public tools, contract schema 6 /
+`control-plane-scoped-read-only-relay-v5`) và
+`workspace_context.status` (`workspace_accessed=false`,
+`execution=not_implemented`, `local_admission=unverified`). Đây là proof
+server/local MCP sau deployment, không phải Windows ChatWeb client discovery.
+
+Windows readback sau rollout vẫn `CURRENT`, component/runtime technically
+ready, central route/authority connected, nhưng
+`connector_state=CHANGED_NEEDS_DISCOVERY`, `connector_rediscovered=false`,
+`connector_refresh_required=true`, `client=null`, `authority_granted=false`
+và `live_accepted=false`. Admission giữ `recovery`; không ACK connector,
+không mở mutation/scheduler và không gọi local probe/heartbeat là natural
+outcome. Exact next action vẫn là supported ChatWeb/Coding Tools client thực
+hiện discovery và workspace read qua managed-attested path; nếu surface đó
+không xuất hiện, giữ `WAITING_FOR_SUPPORTED_CONNECTOR`.

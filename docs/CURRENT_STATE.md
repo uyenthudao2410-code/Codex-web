@@ -6,12 +6,99 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **22-09-2026, 06:34 +07** đã đối chiếu Linux,
-> GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
-> 99fbdd95b5bceb901c80e8d4b63582d0266bb456`. Exact Windows package 1.0.7 đang
-> chạy packaged Recovery Host/MCP, nhưng full-clean epoch đã hết hạn và
-> admission vẫn đóng; central enrollment mới chỉ `pending_operator_approval`.
-> Mức proof chưa vượt `PACKAGED_PROOF`, chưa có `LIVE_ACCEPTED`.
+> trước: checkpoint vận hành mới nhất **23-09-2026, 09:33 +07** đã xác nhận
+> GitHub/Windows source ở `main @ e44b0a4613a780e2239027c085b54257e1df266c`
+> và Ubuntu đang chạy release exact HEAD trong admission `recovery` với
+> package fingerprint khớp. Windows runtime đã `CURRENT` về mặt kỹ thuật,
+> nhưng connector strict discovery, real `workspace_context`, admission mở và
+> `LIVE_ACCEPTED` vẫn chưa có.
+
+## Checkpoint Wave 48 — Ubuntu exact-HEAD rollout và central MCP recheck — 23-09-2026, 09:28–09:33 +07
+
+Sau khi SSH/Tailscale được xác thực lại, source authority trên Windows và
+GitHub vẫn trùng nhau:
+
+```text
+branch      = main
+HEAD        = e44b0a4613a780e2239027c085b54257e1df266c
+origin/main = e44b0a4613a780e2239027c085b54257e1df266c
+```
+
+Control Plane release được dựng từ một detached worktree sạch tại đúng HEAD
+này. Artifact local/remote đã được đối chiếu:
+
+```text
+release = codex-control-plane-e44b0a4613a780e2239027c085b54257e1df266c
+archive_sha256 = e82cd7b2fb4bfb7045df4e621cf232eb5708c2c13013b298a0314942a3547acd
+package_source_sha256 = sha256:4cbb2b37b4c2ce84ba8aaaa5564ebed83b376dd2d8e5d7af62c98adc3ea6a18c
+schema = 25
+files = 34
+```
+
+Archive đã được upload qua SSH, verify SHA-256 ở Ubuntu, giải nén vào release
+directory versioned và pass verifier trước/sau khi cài. Snapshot SQLite mới
+được tạo ngay trước switch:
+
+```text
+captured_at_utc = 2026-09-23T02:28:37.522071Z
+snapshot_sha256 = da0dc9cb3dc1ad043f5f6b690a7194f5dc6053955d14b9c58af8d49286a37169
+sqlite_integrity = ok
+schema = 25
+admission = recovery
+unquarantined_unresolved_action_count = 0
+```
+
+`current` đã được chuyển atomic sang release exact HEAD; protected env và
+systemd drop-in cùng mang revision/fingerprint mới. Sau `daemon-reload` và
+restart có kiểm soát, Ubuntu readback xác nhận:
+
+```text
+current = /home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-e44b0a4613a780e2239027c085b54257e1df266c
+service = active/running, NRestarts = 0
+service_instance_id = cp_c4b3202eb5d840e79f56ddc74940f74b
+declared_source_revision = e44b0a4613a780e2239027c085b54257e1df266c
+package_source_sha256 = expected_package_source_sha256
+sqlite_integrity = ok
+schema_version = 25
+admission_mode = recovery
+unquarantined_unresolved_action_count = 0
+```
+
+Official healthcheck cũng PASS. Grant MCP cũ bị `403 FORBIDDEN` vì hết TTL;
+đây là fail-closed đúng thiết kế, không phải code crash. Một grant mới cho
+đúng context/principal `ubuntu-root-tunnel-da7d8273` đã được tạo qua operator
+API, ghi atomically vào file mode `0600`, rồi tunnel được restart và trở lại
+`active/running`, `NRestarts=0`. Authenticated loopback MCP sau đó đã thực hiện
+`server/discover`/`tools/list` và kiểm tra read-only:
+
+```text
+tools/list = 8 public tools
+tool_contract = schema 6 / control-plane-scoped-read-only-relay-v5
+workspace_context.status = 200
+workspace_accessed = false
+execution = not_implemented
+local_admission = unverified
+```
+
+Đây là bằng chứng server package + process + backup + authenticated local MCP
+discovery sau rollout. Nó không phải ChatWeb/Coding Tools client discovery
+trên Windows và không được dùng để ACK connector Windows.
+
+Windows runtime hiện vẫn giữ:
+
+```text
+state = CURRENT, components_ready = true, fully_ready = true
+runtime_update_incomplete = false
+central_connected = true, authority_ready = true
+connector_state = CHANGED_NEEDS_DISCOVERY
+connector_rediscovered = false, connector_refresh_required = true
+```
+
+Vì vậy admission Ubuntu vẫn cố ý ở `recovery`; không mở scheduler/mutation,
+không forge receipt, không coi `fully_ready` cục bộ là natural-work hoặc
+release acceptance. Exact next action vẫn là supported Windows
+ChatWeb/Coding Tools client thực hiện discovery/`workspace_context` qua
+managed-attested path, sau đó mới guarded ACK và canary độc lập.
 
 ## Checkpoint Wave 47 — Windows fast-forward đã đồng bộ, runtime không restart — 22-09-2026, 06:34 +07
 
