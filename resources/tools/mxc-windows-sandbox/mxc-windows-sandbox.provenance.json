@@ -1,0 +1,33 @@
+{
+    "component":  "Microsoft MXC Windows Sandbox state-aware candidate",
+    "source_repository":  "https://github.com/microsoft/mxc",
+    "source_commit":  "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "local_patch_file":  "scripts/patches/mxc-windows-sandbox-c-drive-share.patch",
+    "local_patch_sha256":  "85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df",
+    "source_commit_signature":  "unsigned",
+    "mxc_crate_version":  "0.8.0",
+    "schema_version":  "0.10.0-alpha",
+    "backend":  "windows_sandbox",
+    "lifecycle":  "state-aware",
+    "experimental":  true,
+    "build_profile":  "release",
+    "target":  "x86_64-pc-windows-msvc",
+    "rustc":  "1.93.1 (01f6ddf75 2026-02-11)",
+    "authenticode":  "unsigned-local-source-build",
+    "distribution":  "development-candidate-only",
+    "license":  "MIT",
+    "binaries":  {
+                     "wxc-exec.exe":  {
+                                          "sha256":  "8668cf65887b51f2afb167da5fb8476f53ddc09341288e8f558c9e02c5c6e7cb",
+                                          "size_bytes":  5959168
+                                      },
+                     "wxc-windows-sandbox-daemon.exe":  {
+                                                            "sha256":  "6232c7ee1628321d35aefa50e986805521e61b9b7c7c5bf255091d6250899fcf",
+                                                            "size_bytes":  1537536
+                                                        },
+                     "wxc-windows-sandbox-guest.exe":  {
+                                                           "sha256":  "c7fcb668abd7139a94145fabbe0d4397dcc2e9302ced11c19767809d14a3f9b5",
+                                                           "size_bytes":  1422848
+                                                       }
+                 }
+}

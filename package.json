@@ -48,7 +48,7 @@
     "canary:opencode-flash": "electron scripts/execution-hub-provider-canary.js",
     "audit:prod": "npm audit --omit=dev",
     "dist": "npm run icon:build && npm run test:all && node scripts/clean-dist.js && electron-builder --win nsis",
-    "dist:dir": "npm run icon:build && node scripts/clean-dist.js && electron-builder --dir"
+    "dist:dir": "npm run icon:build && node scripts/build-dev-candidate.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.9"
@@ -90,6 +90,7 @@
           "!**/.pytest_cache/**",
           "!**/*.egg-info/**",
           "!**/.coding-tools/**",
+          "!**/%SystemDrive%/**",
           "!**/*.pyc",
           "!**/*.pyo"
         ]

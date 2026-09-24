@@ -446,6 +446,9 @@ body[data-theme="light"] .hero-card {
 .authorized-roots-panel { margin-bottom: 16px; }
 .authorized-root-list { display: grid; gap: 8px; }
 .authorized-root-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.central-workspace-row { flex-wrap: wrap; }
+.central-workspace-row > span { flex: 1 1 220px; min-width: 160px; }
+.central-exec-controls { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 6px; }
 .authorized-root-row code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .authorized-root-row button { flex: 0 0 auto; }
 .capability-picker { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }

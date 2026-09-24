@@ -180,6 +180,7 @@ async function main() {
     supervisorScript,
     path.join(packagedResources, 'recovery-mcp', 'recovery_mcp.py'),
     packagedPython,
+    path.join(packagedResources, 'tools', 'wxc-exec.exe'),
     path.join(packagedResources, 'tools', 'tunnel-client.exe'),
     path.join(packagedResources, 'coding-tools-mcp', 'coding_tools_mcp', 'server.py'),
     path.join(packagedResources, 'coding-tools-mcp', 'scripts', 'reconcile_exact_stale_run.py'),

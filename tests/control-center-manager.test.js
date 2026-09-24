@@ -167,6 +167,10 @@ test('central workspace row installs standing file policy only for its exact loc
   assert.match(app, /filePolicy\.textContent = capabilities\.write === true \? 'Bật đọc\/sửa file' : 'Bật đọc file'/);
   assert.match(app, /api\.installControlPlaneStandingFilePolicies\(\{/);
   assert.match(app, /api\.inspectControlPlaneStandingFilePolicies\(\)/);
+  assert.match(app, /api\.inspectControlPlaneExecPolicy\(\{/);
+  assert.match(app, /api\.installControlPlaneExecPolicy\(\{/);
+  assert.match(app, /WINDOWS_WORKSPACE_REALPATH_EPERM/);
+  assert.match(app, /không hỏi duyệt từng lần/);
   assert.match(app, /readVerified[\s\S]*writeVerified/);
   assert.match(app, /Chưa xác minh liên kết ID/);
   const targetMatch = app.slice(app.indexOf('function centralDispatchableTargetForLocalWorkspace'), app.indexOf('function centralWorkspaceCapabilitiesFromUi'));
@@ -175,13 +179,17 @@ test('central workspace row installs standing file policy only for its exact loc
   assert.match(app, /workspaceId: workspace\.workspace_id,[\s\S]*workspaceGeneration: workspace\.workspace_generation/);
   assert.match(preload, /installControlPlaneStandingFilePolicies:.*control-plane:install-standing-file-policies/);
   assert.match(preload, /inspectControlPlaneStandingFilePolicies:.*control-plane:inspect-standing-file-policies/);
+  assert.match(preload, /installControlPlaneExecPolicy:.*control-plane:install-exec-policy/);
+  assert.match(preload, /inspectControlPlaneExecPolicy:.*control-plane:inspect-exec-policy/);
   assert.match(main, /secureHandle\('control-plane:install-standing-file-policies'/);
   assert.match(main, /secureHandle\('control-plane:inspect-standing-file-policies'/);
+  assert.match(main, /secureHandle\('control-plane:install-exec-policy'/);
+  assert.match(main, /secureHandle\('control-plane:inspect-exec-policy'/);
   assert.match(service, /'inspect-policy-authority'/);
   assert.match(service, /'--allowed-relative-prefix', '\.'/);
   assert.match(service, /'--expected-workspace-id', normalizedWorkspaceId/);
   assert.match(service, /'--expected-workspace-generation', normalizedWorkspaceGeneration/);
-  assert.doesNotMatch(service.slice(service.indexOf('async installStandingWorkspaceFilePolicies'), service.indexOf('async inspectStandingWorkspaceFilePolicies')), /install-exec-policy/);
+  assert.doesNotMatch(service.slice(service.indexOf('async installStandingWorkspaceFilePolicies'), service.indexOf('async runPackagedNodeAgent')), /install-exec-policy/);
 });
 
 test('manager Command Center exposes the truthful nine-node topology in the overview fabric', () => {

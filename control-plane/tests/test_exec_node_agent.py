@@ -281,6 +281,18 @@ class ExecNodeReceiptTests(unittest.TestCase):
         self.assertEqual(reenabled["authority_mode"], "standing")
         self.assertIsNone(reenabled["expires_at_ms"])
 
+    def test_cli_requires_explicit_confirmation_to_disable_standing_exec(self) -> None:
+        policy_path = self.data_root / "control-plane-exec-policy.json"
+        self.install_policy()
+        with redirect_stderr(io.StringIO()) as error:
+            self.assertEqual(main([
+                "disable-exec-policy",
+                "--data-root", str(self.data_root),
+                "--project-root", str(self.workspace),
+            ]), 1)
+        self.assertIn("CONTROL_PLANE_EXEC_POLICY_DISABLE_CONFIRMATION_REQUIRED", error.getvalue())
+        self.assertTrue(json.loads(policy_path.read_text(encoding="utf-8"))["enabled"])
+
     def test_cli_rejects_legacy_expiry_without_writing_policy(self) -> None:
         stderr = io.StringIO()
         with redirect_stdout(io.StringIO()), redirect_stderr(stderr):

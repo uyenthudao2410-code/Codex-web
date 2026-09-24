@@ -1,6 +1,94 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-## Checkpoint latest — 23-09-2026, 22:19 +07
+## Phân biệt hai loại workspace
+
+Trong app Coding Tools, workspace được chọn/đăng ký là **thư mục dự án local trên
+Windows** (ví dụ `E:\DEV\Codex-web`), gắn với `workspace_id` và generation của
+node. Đây là thư mục duy nhất được cấp quyền ghi trong Windows Sandbox.
+
+**ChatGPT Business workspace** là tổ chức chứa thành viên và connector dùng
+chung; nó quyết định ai có thể gọi Ubuntu Control Plane, nhưng không phải đường
+dẫn file và không chọn thư mục Windows. Các quyền local-folder binding và quyền
+thành viên Business là hai lớp riêng.
+
+## Checkpoint mới hơn — 24-09-2026, 12:35 +07
+
+Source `main @ 50cd0e86`, worktree dirty. Workspace của Coding Tools là thư mục
+Windows đã chọn trong app; ChatGPT Business workspace là tổ chức chứa thành viên
+và connector, không phải đường dẫn file.
+
+Candidate `r8` unpacked build/afterPack pass và runtime canary **PASS** trên
+`E:\DEV\Codex-web`: Windows Sandbox guest realpath/cwd/temp, nested Node child,
+`npm prefix` trỏ đúng thư mục probe và synthetic `npm test` marker đều đúng;
+lease được nhả/reacquire, MXC deprovision trả thành công, cache placeholder không
+phát sinh. Python adapter **18/18** (+2 subtests), NPM resolver **2/2** (+2
+subtests), build verifier **12/12**, Node exec sandbox **4/4**. PowerShell argv
+round-trip hỗ trợ space/quote/trailing slash/empty argument. Binary MXC vẫn
+**unsigned/experimental/dev-only**; đây chưa phải installer hay release.
+
+Packaged Recovery Host smoke của r8 cũng **PASS**: user-data cô lập, descriptor
+bản cài giữ nguyên, Recovery Host/MCP ready, supervisor healthy và fail-closed
+trong owner/hash mismatch; không sửa scheduled task.
+
+Ghi nhận lỗi canary r7: npm không khóa prefix nên đã chọn nhầm package root và
+bắt đầu script `npm test` của repo; timeout sau 30 giây đã dừng nó trong Windows
+Sandbox. HEAD và danh sách đường dẫn Git không đổi sau lần thử, nhưng `.coding-tools`
+đã dirty trước đó nên không có baseline để khẳng định nội dung SQLite không drift.
+r8 precheck `npm prefix` xác nhận package probe trước khi cho chạy script, tránh
+lặp lại workload repo ngoài ý muốn.
+
+Các candidate chẩn đoán r4–r7 và bốn cache files do lần thử lỗi tạo đã được chuyển
+nguyên vẹn, hash-verified, vào `E:\Caches\Temp\codex-mxc-quarantine-20260924`;
+candidate r1–r3 không đổi. Source/r8 resources không có `%SystemDrive%` placeholder.
+Probe không để lại thư mục `.mxc-wsb-*` trong workspace; VMMEM đã tự thoát sau
+deprovision, không reboot, kill hay force-reclaim.
+
+## Mô hình OpenAI Tunnel và shared service
+
+Theo [Secure MCP Tunnel docs](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels), tunnel là transport riêng tư: cần `tunnel_id`, Platform runtime API key cho `tunnel-client`, và liên kết đúng cả Platform organization lẫn ChatGPT workspace. Tunnel không đại diện danh tính từng thành viên; quyền Tunnels và quyền developer mode/workspace là hai lớp riêng.
+
+ChatGPT MCP OAuth là user authorization-code + PKCE. OpenAI nêu rõ ChatGPT không hỗ trợ client-credentials/service-account grants hoặc customer API keys cho OAuth MCP, còn tool `noauth` là anonymous; với write tools, [auth guidance](https://developers.openai.com/plugins/build/auth) khuyến nghị xác thực user. Repo có một lựa chọn riêng `private_tunnel_service`: một shared service principal/grant được tunnel-client đưa vào request cục bộ; nó không tạo user identity riêng cho từng thành viên. Đây là lựa chọn khớp với quyết định của chủ workspace (hai thành viên dùng chung service identity trong scope folder đã bind), nhưng cần giữ service grant hẹp và binding Windows exact.
+
+Ubuntu peer `svhome` online trên Tailscale và host-key khớp entry trusted theo IP hiện tại, nhưng Tailscale SSH từ chối user `admin` theo policy. Không đổi ACL hay thử user khác. ChatGPT connector UI cũng chưa đối chiếu được trong phiên này vì Computer Use retry vẫn trả `Codex auth token is unavailable`. Server snapshot gần nhất (23-09) còn schema 28, admission `recovery`, auth `legacy_context_grant`, chưa service grant/binding Windows write/exec; chưa có ChatGPT Business→Ubuntu→Windows canary. Chưa ghi/đổi/deploy/restart Ubuntu, chưa bật policy, commit hoặc push.
+
+## Checkpoint Windows Sandbox state-aware candidate — 24-09-2026
+
+Source hiện `main @ 50cd0e86`, worktree dirty; bảo toàn mọi `.coding-tools/**`
+evidence. Windows ProcessContainer trên máy này vẫn fail `realpath EPERM`, nên
+đường exec đã ghép sang state-aware Windows Sandbox khi feature và bộ binary
+candidate cùng sẵn sàng. Một Runtime giữ tối đa một VM ấm; command single-flight,
+chỉ map workspace đã chọn RW và toolchains RO, network bị chặn trong guest.
+Cancellation, cleanup không chắc chắn, workspace đổi và Runtime đóng đều dừng
+VM; nếu teardown không xác nhận, lần chạy sau giữ fail-closed.
+
+MXC source được ghim tại
+`cbe1774364ea2ec846f56ab744e43a416f751420`, schema `0.10.0-alpha`;
+local patch `85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df`
+đổi guest share destinations sang `C:\CodexWorkspace\share-0` (ghi) và
+`C:\CodexToolchains\share-N` (chỉ đọc); thư mục E: trên host không còn bị dùng
+làm guest drive E:. Ba binary là **unsigned, experimental, dev-only**. Windows
+feature `Containers-DisposableClientVM` đã bật và reboot xác nhận.
+
+**Bằng chứng hiện có:** upstream Windows Sandbox/CLI tests **281/281**; adapter
+state-aware **11/11**; session/build **89/89**; Wave-A **13/13**; Node policy,
+packaging, Control Plane **30/30**. Manual Windows Sandbox guest E:-host→C:-guest
+share smoke ghi marker và teardown thành công; MXC one-shot no-share chạy được.
+Unpacked `r3` đã qua exact resources **295 files**, adapter **9 files**,
+sanitation, legacy binary Authenticode và `RunAsNode`.
+
+Runtime acceptance còn thiếu: patched state-aware VM đã handshake `Ready`, nhưng
+nested PowerShell/Node canary thoát code 1. Sau đó state-aware start-only trả
+`backend_error`; hai `vmmemWindowsSandbox` processes còn sau khi daemon và
+RemoteSession đã rời. Không kill process SYSTEM hoặc dùng `--force-reclaim`.
+Exec standing policy chưa cài; chưa xác nhận binding/admission mới trên Ubuntu;
+chưa có ChatGPT→Ubuntu→Windows end-to-end canary. Không đổi ACL, không deploy/
+restart Ubuntu, không commit/push. Candidate `r1`, failed `r1` và các installer
+trước đây vẫn được giữ nguyên.
+
+Đây là source/focused-test evidence, chưa phải packaged/installed/released,
+Ubuntu deployment, hay natural ChatGPT E2E proof.
+
+## Last observed Ubuntu deployment checkpoint — 23-09-2026, 22:19 +07
 
 Code commit 2119d980 adds a Windows fail-closed gate: Control Plane
 structured exec_command now returns SANDBOX_UNAVAILABLE before process spawn

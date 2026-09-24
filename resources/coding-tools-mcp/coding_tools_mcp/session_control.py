@@ -96,6 +96,7 @@ class SessionControlMixin:
         timeout_at: float | None = None,
         warnings: list[str] | None = None,
         pty_master_fd: int | None = None,
+        cleanup_callback: Any = None,
     ) -> ExecSession:
         return ExecSession(
             session_id=session_id or secrets.token_urlsafe(18),
@@ -107,6 +108,7 @@ class SessionControlMixin:
             timeout_at=timeout_at,
             warnings=warnings or [],
             pty_master_fd=pty_master_fd,
+            cleanup_callback=cleanup_callback,
         )
 
     def _remember_output_session(self, session: ExecSession) -> None:
@@ -169,6 +171,7 @@ class SessionControlMixin:
         # after the root shell exited. POSIX process groups get the equivalent
         # bounded cleanup signal.
         terminate_process_group(session.process, signal.SIGTERM)
+        session.cleanup_sandbox_state()
         if session.managed_job_id and not session.resource_terminal_recorded:
             lifecycle = (
                 "timeout"
@@ -518,6 +521,7 @@ class SessionControlMixin:
         evict = True
         if session.process.poll() is None:
             session.terminating = True
+            session.sandbox_abort_on_cleanup = True
             terminate_process_group(session.process, signum, force=force)
             exited = self._wait_for_session_exit(session, int(args.get("wait_ms", 5000)) / 1000.0)
             if not exited and not force:
@@ -555,7 +559,10 @@ class SessionControlMixin:
             return
         session.refresh_status()
         if session.process.poll() is None:
+            session.sandbox_abort_on_cleanup = True
             terminate_process_group(session.process, signal.SIGTERM)
+        if session.process.poll() is not None:
+            session.cleanup_sandbox_state()
 
     def cancel_request(self, request_id: str | int) -> None:
         with self.request_sessions_lock:

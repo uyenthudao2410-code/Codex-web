@@ -67,7 +67,10 @@ const secrets = new SecretStore(runtimePaths);
 const log = new LogService(runtimePaths);
 const environment = new EnvironmentService(runtimePaths);
 const chatEvaluationJournal = new ChatEvaluationJournal();
-const controlPlaneEnrollment = new ControlPlaneEnrollmentService({ paths: runtimePaths });
+const controlPlaneEnrollment = new ControlPlaneEnrollmentService({
+  paths: runtimePaths,
+  experimentalWindowsSandbox: runtimePaths.runtimeMode() === 'packaged'
+});
 const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
 const uiInstanceId = crypto.randomBytes(16).toString('hex');
 const uiStartedAtUnixMs = Date.now();
@@ -1241,6 +1244,36 @@ function registerIpc() {
       });
     }
     return controlPlaneEnrollment.inspectStandingWorkspaceFilePolicies();
+  }));
+  secureHandle('control-plane:install-exec-policy', (event, request) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Sandboxed exec Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_EXEC_POLICY_ROLE_REQUIRED'
+      });
+    }
+    if (request?.confirmInstall !== true || request?.replaceExisting !== true) {
+      throw Object.assign(new Error('Chủ máy phải xác nhận cài hoặc thay policy exec cho đúng workspace generation.'), {
+        code: 'CONTROL_PLANE_EXEC_POLICY_CONFIRMATION_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.installStandingWorkspaceExecPolicy({
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration,
+      replaceExisting: request.replaceExisting
+    });
+  }));
+  secureHandle('control-plane:inspect-exec-policy', (event, request) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Kiểm tra sandbox exec Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_EXEC_POLICY_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.inspectStandingWorkspaceExecPolicy({
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration
+    });
   }));
   secureHandle('control-plane:retire-workspace', (event, request) => invokeSafely(async () => {
     // Retirement is an exact opaque identity/generation operation. The node

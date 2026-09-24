@@ -4980,7 +4980,7 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
     expected = {
         "owner_id", "device_id", "endpoint_id", "workspace_id",
         "workspace_generation", "facade_contract", "binding_count",
-        "standing_write_enabled", "observed_at_ms",
+        "standing_write_enabled", "exec_enabled", "exec_binding_count", "observed_at_ms",
     }
     if not isinstance(response, dict) or set(response) != expected:
         raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_INVALID")
@@ -4993,10 +4993,15 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
         raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_TARGET_MISMATCH")
     binding_count = response["binding_count"]
     standing_write_enabled = response["standing_write_enabled"]
+    exec_enabled = response["exec_enabled"]
+    exec_binding_count = response["exec_binding_count"]
     observed_at_ms = response["observed_at_ms"]
     if (
         not isinstance(binding_count, int) or isinstance(binding_count, bool) or binding_count < 1
         or not isinstance(standing_write_enabled, bool)
+        or not isinstance(exec_enabled, bool)
+        or not isinstance(exec_binding_count, int) or isinstance(exec_binding_count, bool)
+        or not 0 <= exec_binding_count <= binding_count
         or not isinstance(observed_at_ms, int) or isinstance(observed_at_ms, bool) or observed_at_ms <= 0
     ):
         raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_INVALID")
@@ -5019,6 +5024,8 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
         "facade_contract": facade_contract,
         "binding_count": binding_count,
         "standing_write_enabled": standing_write_enabled,
+        "exec_enabled": exec_enabled,
+        "exec_binding_count": exec_binding_count,
         "observed_at_ms": observed_at_ms,
         "runtime_mode": _runtime_mode(args),
     }, separators=(",", ":")))
@@ -7962,6 +7969,20 @@ def _install_exec_policy_values(*, owner_id: str, device_id: str, endpoint_id: s
     }, require_enabled=True)
 
 
+def _exec_policy_receipt_scope(policy: dict[str, Any]) -> dict[str, Any]:
+    prefixes = policy["allowed_argv_prefixes"]
+    encoded = json.dumps(prefixes, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return {
+        "workspace_id": policy["workspace_id"],
+        "workspace_generation": policy["workspace_generation"],
+        "allowed_argv_prefix_count": len(prefixes),
+        "allowed_argv_prefixes_sha256": hashlib.sha256(encoded).hexdigest(),
+        "max_timeout_ms": policy["max_timeout_ms"],
+        "max_output_bytes": policy["max_output_bytes"],
+        "max_concurrent": policy["max_concurrent"],
+    }
+
+
 def _exec_allowlist_match(argv: list[str], prefixes: list[list[str]]) -> bool:
     for prefix in prefixes:
         if len(argv) >= len(prefix) and argv[:len(prefix)] == prefix:
@@ -8990,33 +9011,75 @@ def install_exec_policy(args: argparse.Namespace) -> int:
         "max_concurrent": 2,
     }, require_enabled=True)
     _write_local_policy(_exec_policy_path(args), policy, replace=getattr(args, "replace", False) is True)
-    print(json.dumps({"execution": "exec_policy_installed", "policy_sha256": _policy_digest(policy),
-                      "authority_mode": policy["authority_mode"], "expires_at_ms": None}, separators=(",", ":")))
+    print(json.dumps({
+        "operation": "control_plane_exec_policy_installed",
+        "execution": "exec_policy_installed",
+        "enabled": True,
+        "policy_sha256": _policy_digest(policy),
+        "authority_mode": policy["authority_mode"],
+        "expires_at_ms": None,
+        "runtime_mode": _runtime_mode(args),
+        **_exec_policy_receipt_scope(policy),
+    }, separators=(",", ":")))
     return 0
 
 
 def inspect_exec_policy(args: argparse.Namespace) -> int:
-    policy = _read_exec_policy(_exec_policy_path(args))
-    print(json.dumps({"execution": "exec_policy_inspected", "policy_sha256": _policy_digest(policy),
-                      "authority_mode": policy["authority_mode"], "expires_at_ms": None,
-                      "enabled": policy["enabled"]},
-                     separators=(",", ":")))
+    try:
+        policy = _read_exec_policy(_exec_policy_path(args))
+        print(json.dumps({
+            "operation": "control_plane_exec_policy_observation",
+            "execution": "exec_policy_inspected",
+            "state": "enabled" if policy["enabled"] else "disabled",
+            "policy_sha256": _policy_digest(policy),
+            "authority_mode": policy["authority_mode"],
+            "expires_at_ms": policy["expires_at_ms"],
+            "enabled": policy["enabled"],
+            "runtime_mode": _runtime_mode(args),
+            **_exec_policy_receipt_scope(policy),
+        }, separators=(",", ":")))
+    except RuntimeError as error:
+        code = _safe_error_code(error, "CONTROL_PLANE_EXEC_POLICY_UNAVAILABLE")
+        if code not in {"CONTROL_PLANE_EXEC_POLICY_MISSING", "CONTROL_PLANE_EXEC_POLICY_INVALID",
+                        "CONTROL_PLANE_EXEC_POLICY_EXPIRED"}:
+            raise
+        print(json.dumps({
+            "operation": "control_plane_exec_policy_observation",
+            "execution": "exec_policy_inspected",
+            "state": "unavailable",
+            "reason": code,
+            "runtime_mode": _runtime_mode(args),
+        }, separators=(",", ":")))
     return 0
 
 
 def disable_exec_policy(args: argparse.Namespace) -> int:
+    if getattr(args, "confirm_disable", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_DISABLE_CONFIRMATION_REQUIRED")
     path = _exec_policy_path(args)
     try:
         policy = _read_exec_policy(path)
     except RuntimeError as error:
         if _safe_error_code(error) == "CONTROL_PLANE_EXEC_POLICY_MISSING":
-            print(json.dumps({"execution": "exec_policy_disabled", "reason": "already_missing"},
-                             separators=(",", ":")))
+            print(json.dumps({
+                "operation": "control_plane_exec_policy_disabled",
+                "execution": "exec_policy_disabled",
+                "enabled": False,
+                "reason": "already_missing",
+                "runtime_mode": _runtime_mode(args),
+            }, separators=(",", ":")))
             return 0
         raise
     policy["enabled"] = False
     _write_json_atomic(path, policy)
-    print(json.dumps({"execution": "exec_policy_disabled"}, separators=(",", ":")))
+    print(json.dumps({
+        "operation": "control_plane_exec_policy_disabled",
+        "execution": "exec_policy_disabled",
+        "enabled": False,
+        "policy_sha256": _policy_digest(policy),
+        "runtime_mode": _runtime_mode(args),
+        **_exec_policy_receipt_scope(policy),
+    }, separators=(",", ":")))
     return 0
 
 

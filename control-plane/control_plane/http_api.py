@@ -1043,6 +1043,8 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             },
             "binding_count": len(targets),
             "standing_write_enabled": facade.oauth_standing_write_enabled,
+            "exec_binding_count": sum(1 for target in targets if target["capabilities"].get("exec") is True),
+            "exec_enabled": facade.oauth_exec_enabled,
             "observed_at_ms": self.server.store.clock(),
         }
 

@@ -37,6 +37,13 @@ from .landlock_exec import (
 from . import processes
 from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var
 from .task_state import command_payload_succeeded
+from .windows_mxc_sandbox import build_mxc_invocation, cleanup_mxc_invocation
+from .windows_mxc_state_aware import (
+    MxcWindowsSandboxManager,
+    build_mxc_windows_sandbox_invocation,
+    cleanup_mxc_windows_sandbox_invocation,
+    windows_sandbox_feature_enabled,
+)
 from .processes import (
     ECOSYSTEM_CACHE_ENV_NAMES,
     MAX_ACTIVE_EXEC_SESSIONS,
@@ -250,20 +257,6 @@ class ExecToolsMixin:
                     "Control-plane structured argv exceeds its bounded size.",
                     category="validation",
                 )
-            if os.name == "nt":
-                # The cwd and argv-prefix checks below constrain which
-                # executable/arguments may be selected; they do not sandbox
-                # filesystem access by Windows processes or descendants.
-                # Landlock is Linux-only, and the kill-on-close Job Object is
-                # lifecycle containment rather than an access boundary. Until
-                # a Windows OS sandbox is available, fail closed before any
-                # process can run under the host user's file permissions.
-                raise ToolFailure(
-                    "SANDBOX_UNAVAILABLE",
-                    "Control-plane structured execution on Windows requires an OS filesystem sandbox.",
-                    category="security",
-                    details={"platform": os.name, "workspace_cwd_is_sandbox": False},
-                )
             if str(args.get("cmd", "")) != structured_argv[0]:
                 raise ToolFailure(
                     "INVALID_ARGUMENT",
@@ -319,7 +312,12 @@ class ExecToolsMixin:
         popen_cmd: Any = structured_argv if structured_argv is not None else cmd
         popen_shell = structured_argv is None
         popen_extra = process_group_popen_kwargs()
-        if self.landlock_enabled():
+        windows_mxc = os.name == "nt" and structured_argv is not None
+        windows_mxc_invocation = None
+        windows_mxc_stateful = False
+        windows_mxc_session_holder: dict[str, ExecSession | None] = {"session": None}
+        sandbox_cleanup_callback = None
+        if self.landlock_enabled() and not windows_mxc:
             try:
                 landlock_fd = open_landlock_ruleset(
                     self._current_request_workspace_root(),
@@ -432,6 +430,48 @@ class ExecToolsMixin:
                     retryable=exc.retryable,
                     details=exc.details,
                 ) from exc
+            if windows_mxc:
+                workspace_root = self._current_request_workspace_root()
+                if windows_sandbox_feature_enabled():
+                    with self.sessions_lock:
+                        sandbox_manager = getattr(self, "_windows_mxc_sandbox_manager", None)
+                        if sandbox_manager is None:
+                            sandbox_manager = MxcWindowsSandboxManager()
+                            self._windows_mxc_sandbox_manager = sandbox_manager
+                    invocation = build_mxc_windows_sandbox_invocation(
+                        structured_argv,
+                        manager=sandbox_manager,
+                        workspace_root=workspace_root,
+                        workdir=workdir.path,
+                        timeout_ms=timeout_ms,
+                        extra_environment=args.get("env", {}),
+                        tty=tty,
+                    )
+                    windows_mxc_stateful = True
+                    def cleanup_stateful_sandbox() -> bool:
+                        session_state = windows_mxc_session_holder["session"]
+                        abort = session_state is None or bool(
+                            session_state.timed_out
+                            or session_state.sandbox_abort_on_cleanup
+                            or session_state.signal_name is not None
+                        )
+                        return cleanup_mxc_windows_sandbox_invocation(invocation, abort=abort)
+                    sandbox_cleanup_callback = cleanup_stateful_sandbox
+                else:
+                    invocation = build_mxc_invocation(
+                        structured_argv,
+                        workspace_root=workspace_root,
+                        workdir=workdir.path,
+                        timeout_ms=timeout_ms,
+                        extra_environment=args.get("env", {}),
+                    )
+                    sandbox_cleanup_callback = lambda: cleanup_mxc_invocation(invocation)
+                windows_mxc_invocation = invocation
+                popen_cmd = list(invocation.argv)
+                popen_shell = False
+                env = invocation.environment
+                # VM startup is a separate lifecycle phase, not command runtime.
+                deadline = time.time() + (timeout_ms / 1000.0)
             process, pty_master_fd = spawn_process(
                 popen_cmd,
                 cwd=str(workdir.path),
@@ -441,6 +481,12 @@ class ExecToolsMixin:
                 popen_kwargs=popen_extra,
             )
             self.execution_resource_governor.bind_process(admission, process)
+            session_warnings = [landlock_warning] if landlock_warning else []
+            if windows_mxc_invocation is not None and getattr(windows_mxc_invocation, "cwd_alias_path", None) is not None:
+                session_warnings.append(
+                    "Windows sandbox uses a temporary system-drive junction for this non-system-drive working directory; "
+                    "the junction targets the registered workspace and is removed when the process tree ends."
+                )
             session = self._make_session(
                 process,
                 session_id=command_id,
@@ -449,9 +495,12 @@ class ExecToolsMixin:
                 owner_wave_id=admission.wave_id,
                 resource_class=admission.resource_class,
                 timeout_at=deadline,
-                warnings=[landlock_warning] if landlock_warning else None,
+                warnings=session_warnings or None,
                 pty_master_fd=pty_master_fd,
+                cleanup_callback=sandbox_cleanup_callback,
             )
+            if windows_mxc_stateful:
+                windows_mxc_session_holder["session"] = session
             try:
                 self.task_state.record_command_started(
                     cmd,
@@ -480,6 +529,8 @@ class ExecToolsMixin:
                     self.starting_sessions -= 1
             if process is not None and process.poll() is None:
                 terminate_process_group(process, signal.SIGTERM)
+            if sandbox_cleanup_callback is not None and (process is None or process.poll() is not None):
+                sandbox_cleanup_callback()
             if admission is not None:
                 self.execution_resource_governor.spawn_failed(admission)
             raise
@@ -521,6 +572,7 @@ class ExecToolsMixin:
             except Exception:
                 return ""
             if status in {"paused", "stopped"} and process.poll() is None:
+                session.sandbox_abort_on_cleanup = True
                 terminate_process_group(process, signal.SIGTERM)
                 session.refresh_status()
                 session.drain_readers()
@@ -696,7 +748,10 @@ class ExecToolsMixin:
         if not argv:
             raise ToolFailure("INVALID_ARGUMENT", "Internal structured argv is empty.", category="validation")
         executable = Path(argv[0]).name.lower()
-        if executable in {"bash", "cmd", "cmd.exe", "powershell", "pwsh", "sh", "zsh"}:
+        if executable in {
+            "bash", "bash.exe", "cmd", "cmd.exe", "powershell", "powershell.exe",
+            "pwsh", "pwsh.exe", "sh", "sh.exe", "wscript.exe", "cscript.exe", "zsh", "zsh.exe",
+        }:
             raise ToolFailure("INTERNAL_STRUCTURED_ARGV_DENIED", "Internal structured argv cannot invoke a shell.", category="security")
         compact = " ".join(argv).lower()
         if not self.dangerously_skip_all_permissions:

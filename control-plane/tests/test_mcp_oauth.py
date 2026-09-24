@@ -280,6 +280,8 @@ class PrivateTunnelServiceHttpTests(unittest.TestCase):
         self.assertEqual(authority["workspace_generation"], selection["workspace_generation"])
         self.assertEqual(authority["binding_count"], 1)
         self.assertTrue(authority["standing_write_enabled"])
+        self.assertTrue(authority["exec_enabled"])
+        self.assertEqual(authority["exec_binding_count"], 0)
         self.assertEqual(authority["facade_contract"], {
             key: self.server.mcp_facade.contract[key]
             for key in ("schema_version", "profile", "sha256")

@@ -9,8 +9,11 @@ const {
   assertExactPackagedResources,
   assertExactControlPlaneAdapter,
   assertRunAsNode,
+  assertMxcWindowsExecutor,
+  assertMxcWindowsSandboxCandidate,
   CONTROL_PLANE_ADAPTER_FILES
 } = require('../scripts/verify-packaged-resources');
+const { verifyMxcWindowsSandboxCandidate } = require('../electron/services/controlPlaneEnrollment');
 const { cleanDistRoot } = require('../scripts/clean-dist');
 
 test('build verification detects Electron package scripts', () => {
@@ -54,6 +57,7 @@ test('electron packaging excludes volatile resource evidence and validates the p
     '!**/.pytest_cache/**',
     '!**/*.egg-info/**',
     '!**/.coding-tools/**',
+    '!**/%SystemDrive%/**',
     '!**/*.pyc',
     '!**/*.pyo',
   ];
@@ -72,7 +76,17 @@ test('electron packaging excludes volatile resource evidence and validates the p
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
   assert.equal(packageJson.devDependencies?.['@electron/fuses'], '1.8.0');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
-  assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
+  assert.doesNotMatch(packageJson.scripts?.['dist:dir'] || '', /clean-dist\.js/);
+  assert.match(packageJson.scripts?.['dist:dir'] || '', /scripts\/build-dev-candidate\.js/);
+  assert.doesNotMatch(packageJson.scripts?.dist || '', /CODEX_ALLOW_MXC_WSB_DEV_CANDIDATE/);
+  assert.match(
+    fs.readFileSync(path.join(__dirname, '..', 'scripts', 'build-dev-candidate.js'), 'utf8'),
+    /CODEX_ALLOW_MXC_WSB_DEV_CANDIDATE = "1"/
+  );
+  assert.match(
+    fs.readFileSync(path.join(__dirname, '..', 'scripts', 'build-dev-candidate.js'), 'utf8'),
+    /Refusing to overwrite existing dev-candidate output/
+  );
   assert.match(packageJson.scripts?.['dist:control-plane'] || '', /build-control-plane-release\.py --output-dir dist/);
   const packagedSmoke = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'packaged-recovery-smoke.js'), 'utf8');
   assert.match(packagedSmoke, /CODEX_PACKAGED_APP_ROOT/);
@@ -81,6 +95,43 @@ test('electron packaging excludes volatile resource evidence and validates the p
   assert.match(packagedSmoke, /recovery_exec_bridge\.cjs/);
   assert.match(packagedSmoke, /assertExactControlPlaneAdapter/);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'scripts', 'installed-recovery-smoke.js')), true);
+});
+
+test('experimental MXC Windows Sandbox candidate is pinned and dev-only', () => {
+  const resourcesRoot = path.join(__dirname, '..', 'resources');
+  const candidate = assertMxcWindowsSandboxCandidate(resourcesRoot);
+  assert.equal(candidate.source_commit, 'cbe1774364ea2ec846f56ab744e43a416f751420');
+  assert.equal(candidate.local_patch_sha256, '85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df');
+  assert.deepEqual(Object.keys(candidate.hashes).sort(), [
+    'wxc-exec.exe',
+    'wxc-windows-sandbox-daemon.exe',
+    'wxc-windows-sandbox-guest.exe'
+  ].sort());
+  const serviceCandidate = verifyMxcWindowsSandboxCandidate(resourcesRoot);
+  assert.equal(serviceCandidate.source_commit, candidate.source_commit);
+  assert.deepEqual(serviceCandidate.hashes, candidate.hashes);
+});
+
+test('legacy MXC Authenticode verification embeds literal arguments safely', () => {
+  const resourcesRoot = path.join(__dirname, '..', 'resources');
+  const observed = [];
+  const result = assertMxcWindowsExecutor(resourcesRoot, {
+    spawnSyncFn(executable, args, options) {
+      observed.push({ executable, args, options });
+      return { status: 0, stdout: '', stderr: '' };
+    }
+  });
+  assert.equal(result.sha256, '6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a');
+  if (process.platform === 'win32') {
+    assert.equal(observed.length, 1);
+    assert.match(observed[0].executable, /WindowsPowerShell\\v1\.0\\powershell\.exe$/i);
+    assert.deepEqual(observed[0].args.slice(0, 3), ['-NoProfile', '-NonInteractive', '-EncodedCommand']);
+    assert.equal(observed[0].args.length, 4, 'no trailing arguments are parsed as PowerShell commands');
+    assert.match(observed[0].options.env.PSModulePath, /WindowsPowerShell\\v1\.0\\Modules$/i);
+    const script = Buffer.from(observed[0].args[3], 'base64').toString('utf16le');
+    assert.match(script, /Get-AuthenticodeSignature -LiteralPath '.*wxc-exec\.exe'/);
+    assert.match(script, /Microsoft Corporation/);
+  }
 });
 
 test('packaged Electron proof requires an executable RunAsNode fuse', () => {
@@ -150,6 +201,19 @@ test('packaged resources must be byte-identical to the current allowed source pr
     assert.throws(() => assertExactPackagedResources(source, packaged, {
       separatelyVerifiedTopLevelDirectories: ['control-plane']
     }), /not present in current source/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('packaged resources reject literal Windows environment-placeholder cache trees', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'web-mcp-system-drive-placeholder-'));
+  try {
+    const cache = path.join(root, '%SystemDrive%', 'ProgramData', 'Microsoft', 'Windows', 'Caches');
+    fs.mkdirSync(cache, { recursive: true });
+    fs.writeFileSync(path.join(cache, 'cversions.2.db'), 'cache');
+    assert.throws(
+      () => assertSanitizedPackagedResources(root),
+      /packaged resources sanitation failed: %SystemDrive% \(volatile runtime\/cache directory\)/,
+    );
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 

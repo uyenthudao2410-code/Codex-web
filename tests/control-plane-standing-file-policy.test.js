@@ -36,6 +36,7 @@ function authority() {
     operation: 'control_plane_policy_authority_observation', owner_id: 'owner_default',
     workspace_id: workspaceId, workspace_generation: workspaceGeneration,
     facade_contract: facade, binding_count: 1, standing_write_enabled: true,
+    exec_enabled: true, exec_binding_count: 1,
     observed_at_ms: Date.now(), runtime_mode: 'packaged'
   };
 }
@@ -62,6 +63,16 @@ function observed(kind, enabled = true) {
   };
 }
 
+function missingExecPolicy() {
+  return {
+    operation: 'control_plane_exec_policy_observation',
+    execution: 'exec_policy_inspected',
+    runtime_mode: 'packaged',
+    state: 'unavailable',
+    reason: 'CONTROL_PLANE_EXEC_POLICY_MISSING'
+  };
+}
+
 test('packaged policy service gets authenticated authority and scopes standing read+patch to the selected registered generation', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-standing-file-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -76,6 +87,7 @@ test('packaged policy service gets authenticated authority and scopes standing r
         ? { workspaces: [{ workspace_id: workspaceId, workspace_generation: workspaceGeneration,
           display_name: 'fixture', capabilities: { read: true, write: true, exec: false } }] }
         : operation === 'inspect-policy-authority' ? authority()
+          : operation === 'inspect-exec-policy' ? missingExecPolicy()
           : operation === 'inspect-file-read-policy' ? { operation: 'control_plane_file_read_policy_observation',
             state: 'unavailable', reason: 'CONTROL_PLANE_FILE_READ_POLICY_MISSING', runtime_mode: 'packaged', windows_acl_verified: false }
             : operation === 'inspect-approved-patch-policy' ? { operation: 'control_plane_approved_patch_policy_observation',
@@ -95,7 +107,8 @@ test('packaged policy service gets authenticated authority and scopes standing r
   assert.equal(result.approved_patch.policy_sha256, 'c'.repeat(64));
   assert.deepEqual(calls.map(({ args }) => args[2]), [
     'list-workspaces', 'inspect-policy-authority', 'inspect-file-read-policy',
-    'inspect-approved-patch-policy', 'install-file-read-policy', 'install-approved-patch-policy'
+    'inspect-approved-patch-policy', 'inspect-exec-policy',
+    'install-file-read-policy', 'install-approved-patch-policy'
   ]);
   for (const { args, options } of calls.slice(-2)) {
     assert.equal(args[args.indexOf('--workspace-id') + 1], workspaceId);
@@ -139,6 +152,7 @@ test('read-only policy transition disables a previously enabled patch lane befor
         ? { workspaces: [{ workspace_id: workspaceId, workspace_generation: workspaceGeneration,
           display_name: 'fixture', capabilities: { read: true, write: false, exec: false } }] }
         : operation === 'inspect-policy-authority' ? { ...authority(), standing_write_enabled: false }
+          : operation === 'inspect-exec-policy' ? missingExecPolicy()
           : operation === 'inspect-file-read-policy' ? { operation: 'control_plane_file_read_policy_observation',
             state: 'unavailable', reason: 'CONTROL_PLANE_FILE_READ_POLICY_MISSING', runtime_mode: 'packaged', windows_acl_verified: false }
             : operation === 'inspect-approved-patch-policy' ? observed('approved_patch')
@@ -173,6 +187,7 @@ test('patch installer failure returns an explicit read-only partial receipt afte
         ? { workspaces: [{ workspace_id: workspaceId, workspace_generation: workspaceGeneration,
           display_name: 'fixture', capabilities: { read: true, write: true, exec: false } }] }
         : operation === 'inspect-policy-authority' ? authority()
+          : operation === 'inspect-exec-policy' ? missingExecPolicy()
           : operation === 'inspect-file-read-policy' ? { operation: 'control_plane_file_read_policy_observation',
             state: 'unavailable', reason: 'CONTROL_PLANE_FILE_READ_POLICY_MISSING', runtime_mode: 'packaged', windows_acl_verified: false }
             : operation === 'inspect-approved-patch-policy' ? observed('approved_patch')

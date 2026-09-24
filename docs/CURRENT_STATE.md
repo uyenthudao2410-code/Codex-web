@@ -1,6 +1,52 @@
 # Current Project State — Tools-Codex-web
 
-> Checkpoint mới nhất 23-09-2026, 22:19 +07: Ubuntu live đã nạp release
+> Checkpoint Windows MXC / shared tunnel — 24-09-2026, 12:35 +07: branch
+> `main @ 50cd0e86`, worktree dirty; `.coding-tools/**`, older candidates and
+> installer artifacts remain preserved. MXC is pinned to
+> `cbe1774364ea2ec846f56ab744e43a416f751420` with patch SHA-256
+> `85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df`; the
+> three binaries are unsigned/experimental/dev-only.
+>
+> Four reproduced Windows execution faults are fixed in source: host cwd is mapped
+> into the guest C: share; Node/npm leases are released between commands; the
+> encoded PowerShell launcher was shortened from 9,030 to 7,418 characters (below
+> cmd.exe's 8,191 limit); and `SystemDrive` is preserved in the MXC host environment.
+> The PowerShell wrapper also suppresses async `VoidTaskResult` stdout noise. NPM
+> and NPX now bind an explicit `--prefix` to the selected `workdir`, rejecting an
+> out-of-scope override; the probe checks `npm prefix` before running its synthetic
+> script so it cannot fall through to the repository's real `npm test`.
+>
+> Exact packaged dev candidate `dist/windows-candidate-mxc-wsb-cbe1774-r8/win-unpacked`
+> passed afterPack/resource, Control Plane adapter, sanitation, legacy MXC
+> Authenticode and RunAsNode gates. Packaged runtime canary **PASS**: guest
+> workspace/cwd realpath, temp write/cleanup, Node child, exact `npm prefix`, and a
+> synthetic `npm test` marker all succeeded; state-aware deprovision returned
+> success. Focused tests: adapter **18/18** (+2 subtests), npm resolver **2/2**
+> (+2 subtests), build verifier **12/12**, Control Plane exec sandbox **4/4**;
+> PowerShell argv round-trip covers spaces, quotes, trailing backslash and empty
+> argument. Packaged Recovery Host smoke also passed: isolated user-data, stable
+> installed descriptor, ready Recovery Host/MCP, supervisor fail-closed cases,
+> and no scheduled-task mutation. Candidate remains dev-only, not installer/release
+> or ChatGPT/installed-app E2E.
+>
+> Earlier diagnostic candidates r4-r7 and four generated Windows cache files were
+> moved intact, with hashes checked, to
+> `E:\Caches\Temp\codex-mxc-quarantine-20260924`. The source and r8 package contain
+> no `%SystemDrive%` cache tree. VMMEM from the r8 run has exited; no force reclaim,
+> service restart or reboot was used.
+>
+> OpenAI Secure MCP Tunnel is transport, not ChatGPT user identity: it requires a
+> Platform runtime API key + `tunnel_id` and association with the target ChatGPT
+> workspace and Platform org. The local repo has `private_tunnel_service` shared
+> identity/grant mode, distinct from per-user OAuth; no service grant is active on
+> the last observed Ubuntu snapshot. The target `svhome` Tailscale peer is online
+> and its host key matches a trusted entry, but Tailscale SSH denies user `admin`.
+> ChatGPT connector UI inspection also failed after one CUA retry (`Codex auth token
+> is unavailable`). No Ubuntu read/write/deploy/restart, policy enable, app install,
+> commit or push has occurred; standing Windows write/exec and ChatGPT→Ubuntu→Windows
+> end-to-end remain open.
+
+> Checkpoint triển khai Ubuntu được quan sát gần nhất 23-09-2026, 22:19 +07: Ubuntu live đã nạp release
 > `97f26a13` với schema 28, package fingerprint
 > `sha256:a2f23a7666abaac083b49f851400b792b868f87e2fe5bd9bbc477c320048abf4`,
 > admission `recovery` và MCP auth `legacy_context_grant`; tunnel active,

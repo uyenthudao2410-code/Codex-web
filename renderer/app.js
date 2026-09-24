@@ -41,6 +41,11 @@ function createPreviewApi() {
       approved_patch: allowWrite ? { kind: 'approved_patch', authority_mode: 'standing', policy_sha256: 'd'.repeat(64), windows_acl_verified: false } : null
     }),
     inspectControlPlaneStandingFilePolicies: () => ok({ file_read: { state: 'unavailable', reason: 'CONTROL_PLANE_FILE_READ_POLICY_MISSING' }, approved_patch: { state: 'unavailable', reason: 'CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING' } }),
+    installControlPlaneExecPolicy: () => Promise.resolve({ ok: false, error: 'PREVIEW_ONLY' }),
+    inspectControlPlaneExecPolicy: () => ok({
+      policy: { state: 'unavailable', reason: 'CONTROL_PLANE_EXEC_POLICY_MISSING' },
+      sandbox: { state: 'unavailable', reason: 'DEVELOPMENT_RUNTIME' }
+    }),
     retireControlPlaneWorkspace: ({ workspaceId, workspaceGeneration } = {}) => ok({ workspace_id: workspaceId, workspace_generation: workspaceGeneration, display_name: 'my-project', capabilities: { read: true, write: false, exec: false }, replayed: false, state: 'retired' }),
     handoffCentralExecutor: () => { snapshot.settings.executionRole = 'central_executor'; snapshot.status.executionRole = 'central_executor'; snapshot.status.tunnelRunning = false; snapshot.status.fullyReady = false; return ok(snapshot); },
     start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot), acknowledgeConnectorContract: () => ok(snapshot),
@@ -93,6 +98,8 @@ const state = {
   centralFilePolicies: null,
   centralFilePolicyStatus: 'not_checked',
   centralFilePolicyError: null,
+  centralExecBusy: false,
+  centralExecObservations: Object.create(null),
   centralWorkspaceListBusy: false,
   centralWorkspaces: null,
   centralWorkspaceInventoryStatus: 'not_loaded',
@@ -469,6 +476,29 @@ async function openControlPlaneConsole() {
   catch (error) { toast('Không thể mở trang quản trị Ubuntu', error.message, 'error'); }
 }
 
+function controlPlaneExecSandboxReason(reason) {
+  const code = String(reason || '').trim();
+  const messages = {
+    WINDOWS_WORKSPACE_REALPATH_EPERM: 'Windows không cho sandbox chuẩn hoá đường dẫn workspace (EPERM); policy exec vẫn tắt.',
+    WINDOWS_CWD_REALPATH_EPERM: 'Windows không cho sandbox chuẩn hoá working directory (EPERM); policy exec vẫn tắt.',
+    WINDOWS_NPM_SCRIPT_PROCESS_UNAVAILABLE: 'Windows sandbox chưa khởi chạy được process con của npm trên workspace này.',
+    WINDOWS_CHILD_PROCESS_PROBE_TIMEOUT: 'Smoke-test process con quá thời gian; policy exec vẫn tắt.',
+    CHILD_PROCESS_PROBE_CLEANUP_UNCERTAIN: 'Chưa xác nhận được dọn sạch sandbox tạm; policy exec vẫn tắt.',
+    WINDOWS_SANDBOX_NOT_READY: 'Windows Sandbox feature chưa sẵn sàng (có thể cần bật feature hoặc khởi động lại Windows).',
+    SANDBOX_TTY_UNAVAILABLE: 'Windows Sandbox VM chưa hỗ trợ phiên terminal tương tác; hãy chạy lệnh non-TTY.',
+    SANDBOX_BUSY: 'VM Windows Sandbox đang chạy lệnh khác; đợi lệnh đó kết thúc rồi thử lại.',
+    SANDBOX_STATE_UNCERTAIN: 'Không xác nhận được trạng thái dọn VM; policy exec giữ fail-closed đến khi khôi phục trạng thái.',
+    SANDBOX_TEARDOWN_UNCONFIRMED: 'Không xác nhận được dọn VM trước khi đổi workspace; không mở rộng quyền sang workspace mới.',
+    SANDBOX_TOOLCHAIN_WORKSPACE_OVERLAP: 'Workspace lồng trong thư mục toolchain; để tránh cấp write vượt phạm vi workspace, exec chưa sẵn sàng.',
+    WINDOWS_WORKSPACE_REALPATH_UNAVAILABLE: 'Windows Sandbox không chuẩn hoá được đúng đường dẫn workspace.',
+    WINDOWS_CWD_REALPATH_UNAVAILABLE: 'Windows Sandbox không chuẩn hoá được working directory trong workspace.',
+    WINDOWS_TEMP_UNAVAILABLE: 'Windows Sandbox không tạo được thư mục tạm trong workspace.',
+    WINDOWS_CHILD_PROCESS_UNAVAILABLE: 'Windows Sandbox không chạy được process con trong workspace.',
+    WINDOWS_NPM_SCRIPT_PROCESS_UNAVAILABLE: 'Windows Sandbox không chạy được npm script trong workspace.'
+  };
+  return messages[code] || (code ? `Sandbox exec chưa sẵn sàng (${code}).` : 'Sandbox exec chưa được xác minh.');
+}
+
 function renderCentralWorkspaceRegistrations(central) {
   const container = $('#controlPlaneWorkspaceRegistrations');
   if (!container) return;
@@ -539,7 +569,23 @@ function renderCentralWorkspaceRegistrations(central) {
       : matchingRead
         ? `đọc file đã bật${matchingPatch ? ', sửa file đã bật' : ''}`
         : 'quyền file chưa bật cho target này';
-    detail.textContent = `${targetLabel} · ${centralWorkspaceCapabilityLabel(capabilities)} · ${filePolicyLabel}`;
+    const execKey = `${workspace.workspace_id}:${workspace.workspace_generation}`;
+    const execObservation = state.centralExecObservations[execKey] || null;
+    const sandbox = execObservation?.sandbox || null;
+    const execPolicy = execObservation?.policy || null;
+    const matchingExecPolicy = execPolicy?.state === 'enabled'
+      && execPolicy.workspace_id === workspace.workspace_id
+      && execPolicy.workspace_generation === workspace.workspace_generation;
+    const execPolicyLabel = capabilities.exec !== true
+      ? 'chạy chưa đăng ký'
+      : !execObservation
+        ? 'sandbox/chạy chưa kiểm tra'
+        : sandbox?.state !== 'available'
+          ? controlPlaneExecSandboxReason(sandbox?.reason)
+          : matchingExecPolicy
+            ? 'chạy lệnh đã bật'
+            : 'sandbox sẵn sàng · chạy chưa bật';
+    detail.textContent = `${targetLabel} · ${centralWorkspaceCapabilityLabel(capabilities)} · ${filePolicyLabel} · ${execPolicyLabel}`;
     label.append(title, detail);
     const filePolicy = document.createElement('button');
     filePolicy.type = 'button';
@@ -553,6 +599,39 @@ function renderCentralWorkspaceRegistrations(central) {
         toast('Không thể cài quyền file local', error.message, 'error');
       });
     });
+    let execControls = null;
+    if (capabilities.exec === true) {
+      execControls = document.createElement('div');
+      execControls.className = 'central-exec-controls';
+      const inspectExec = document.createElement('button');
+      inspectExec.type = 'button';
+      inspectExec.className = 'secondary-button';
+      inspectExec.textContent = 'Kiểm tra lệnh';
+      inspectExec.title = 'Kiểm tra process con trong sandbox ngay trên đúng workspace này; không cài policy hay chạy dự án.';
+      inspectExec.disabled = state.busy || state.centralWorkspaceBusy
+        || state.centralWorkspaceListBusy || state.centralExecBusy;
+      inspectExec.addEventListener('click', () => {
+        inspectControlPlaneExecPolicy(workspace).catch((error) => {
+          toast('Không thể kiểm tra sandbox lệnh', error.message, 'warning');
+        });
+      });
+      const enableExec = document.createElement('button');
+      enableExec.type = 'button';
+      enableExec.className = 'secondary-button';
+      enableExec.textContent = matchingExecPolicy ? 'Đã bật chạy lệnh' : 'Bật chạy lệnh';
+      enableExec.title = target?.dispatch_state !== 'dispatchable'
+        ? 'Ubuntu cần liên kết và cấp quyền exec cho đúng workspace trước.'
+        : 'Cài policy exec đứng trên đúng workspace này; không hỏi duyệt từng lệnh sau khi bật.';
+      enableExec.disabled = development || state.busy || state.centralWorkspaceBusy
+        || state.centralWorkspaceListBusy || state.centralExecBusy || matchingExecPolicy
+        || target?.dispatch_state !== 'dispatchable';
+      enableExec.addEventListener('click', () => {
+        installControlPlaneExecPolicy(workspace).catch((error) => {
+          toast('Không thể bật chạy lệnh tự động', error.message, 'warning');
+        });
+      });
+      execControls.append(inspectExec, enableExec);
+    }
     const advanced = document.createElement('details');
     advanced.className = 'workspace-advanced-actions';
     const advancedSummary = document.createElement('summary');
@@ -594,7 +673,9 @@ function renderCentralWorkspaceRegistrations(central) {
     });
     advancedActions.append(replace, retire, policy);
     advanced.append(advancedActions);
-    row.append(label, filePolicy, advanced);
+    row.append(label, filePolicy);
+    if (execControls) row.append(execControls);
+    row.append(advanced);
     container.append(row);
   }
 }
@@ -647,6 +728,7 @@ function renderCentralExecutorMode(snapshot) {
   if (!central) {
     state.centralWorkspaceCandidate = '';
     state.centralPolicyReceipt = null;
+    state.centralExecObservations = Object.create(null);
   }
   if (retryHandoff) {
     retryHandoff.hidden = !central || !retryable;
@@ -2105,6 +2187,121 @@ async function refreshControlPlaneStandingFilePolicies({ quiet = true } = {}) {
   }
   if (workspaceStatus && central && state.centralFilePolicyStatus === 'unknown') {
     workspaceStatus.textContent = `Chưa xác minh policy đọc/sửa file local (${state.centralFilePolicyError || 'lỗi chưa rõ'}). Tải lại inventory để kiểm tra; không suy quyền từ receipt cũ.`;
+  }
+}
+
+function centralExecObservationKey(workspace) {
+  return `${workspace?.workspace_id || ''}:${workspace?.workspace_generation || ''}`;
+}
+
+async function inspectControlPlaneExecPolicy(workspace) {
+  if (!isCentralExecutor(state.snapshot?.settings)) {
+    throw new Error('Kiểm tra sandbox exec chỉ khả dụng cho central executor.');
+  }
+  if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name) {
+    throw new Error('Workspace local được chọn không hợp lệ.');
+  }
+  if (typeof api.inspectControlPlaneExecPolicy !== 'function') {
+    throw new Error('Runtime này chưa có API kiểm tra sandbox exec.');
+  }
+  const key = centralExecObservationKey(workspace);
+  state.centralExecBusy = true;
+  if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  try {
+    const observation = unwrap(await api.inspectControlPlaneExecPolicy({
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation
+    }));
+    state.centralExecObservations[key] = observation;
+    const sandbox = observation?.sandbox;
+    if (sandbox?.state === 'available') {
+      const backend = sandbox.backend === 'windows_sandbox'
+        ? 'Windows Sandbox VM state-aware'
+        : 'Windows ProcessContainer';
+      toast('Sandbox exec đã kiểm tra', `${backend}: process con chạy được trong phạm vi “${workspace.display_name}”. Chưa cấp policy chạy lệnh.`, 'success');
+    } else {
+      toast('Sandbox exec chưa sẵn sàng', `${controlPlaneExecSandboxReason(sandbox?.reason)} Chưa bật quyền chạy.`, 'warning');
+    }
+    return observation;
+  } catch (error) {
+    state.centralExecObservations[key] = {
+      policy: { state: 'unknown', reason: error?.code || 'EXEC_POLICY_OBSERVATION_FAILED' },
+      sandbox: { state: 'unavailable', reason: error?.code || 'EXEC_SANDBOX_OBSERVATION_FAILED' }
+    };
+    throw error;
+  } finally {
+    state.centralExecBusy = false;
+    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  }
+}
+
+async function installControlPlaneExecPolicy(workspace) {
+  if (!isCentralExecutor(state.snapshot?.settings)) {
+    throw new Error('Cài quyền chạy lệnh chỉ khả dụng cho central executor.');
+  }
+  assertPackagedCentralSetup('Bật chạy lệnh tự động');
+  if (!workspace?.workspace_id || !workspace?.workspace_generation || !workspace?.display_name
+    || workspace.capabilities?.exec !== true) {
+    throw new Error('Workspace phải được đăng ký capability exec trước khi bật quyền chạy.');
+  }
+  if (typeof api.inspectControlPlaneExecPolicy !== 'function'
+    || typeof api.installControlPlaneExecPolicy !== 'function') {
+    throw new Error('Runtime này chưa có API cài policy exec.');
+  }
+  const key = centralExecObservationKey(workspace);
+  state.centralExecBusy = true;
+  if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  try {
+    const before = unwrap(await api.inspectControlPlaneExecPolicy({
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation
+    }));
+    state.centralExecObservations[key] = before;
+    if (before?.sandbox?.state !== 'available') {
+      toast('Chưa bật quyền chạy', `${controlPlaneExecSandboxReason(before?.sandbox?.reason)} Policy hiện tại không bị thay đổi.`, 'warning');
+      return null;
+    }
+    const current = before?.policy;
+    if (current?.state === 'enabled'
+      && current.workspace_id === workspace.workspace_id
+      && current.workspace_generation === workspace.workspace_generation) {
+      toast('Quyền chạy đã bật', `Policy hiện hành đã gắn đúng “${workspace.display_name}”.`, 'success');
+      return current;
+    }
+    const accepted = window.confirm(
+      `Bật chạy lệnh tự động cho toàn bộ workspace “${workspace.display_name}” trên máy này? `
+        + 'Sau lần xác nhận cài policy này, các lệnh được phép sẽ không hỏi duyệt từng lần. '
+        + 'Cả hai thành viên ChatGPT Business dùng chung policy của node này; không phân biệt người gọi. '
+        + 'Chỉ cho phép git, node, npm, npx, python và python3; process bị sandbox giới hạn trong workspace, không có network, tối đa 5 phút/64 KiB. '
+        + 'Policy đứng không hết hạn và sẽ thay policy exec local của workspace trước đó.'
+    );
+    if (!accepted) return null;
+    const receipt = unwrap(await api.installControlPlaneExecPolicy({
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation,
+      confirmInstall: true,
+      replaceExisting: true
+    }));
+    const after = unwrap(await api.inspectControlPlaneExecPolicy({
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation
+    }));
+    state.centralExecObservations[key] = after;
+    const verified = after?.policy?.state === 'enabled'
+      && after.policy.workspace_id === workspace.workspace_id
+      && after.policy.workspace_generation === workspace.workspace_generation
+      && after.policy.policy_sha256 === receipt?.policy_sha256
+      && after.sandbox?.state === 'available';
+    toast(verified ? 'Đã bật chạy lệnh' : 'Chưa xác minh được quyền chạy',
+      verified
+        ? `Policy exec đã được xác minh cho “${workspace.display_name}”. Không cần duyệt từng lệnh trong allowlist này.`
+        : `Receipt/policy/sandbox chưa khớp workspace ${workspace.display_name}; không coi quyền chạy đã sẵn sàng.`,
+      verified ? 'success' : 'warning');
+    if (verified) await refreshSnapshot({ forceForms: false });
+    return receipt;
+  } finally {
+    state.centralExecBusy = false;
+    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
   }
 }
 

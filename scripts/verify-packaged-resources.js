@@ -10,6 +10,7 @@ const FORBIDDEN_DIRECTORY_NAMES = new Set([
   "__pycache__",
   ".pytest_cache",
   ".coding-tools",
+  "%SystemDrive%",
 ]);
 const DEV_ONLY_CODING_MCP_DIRECTORIES = new Set([
   "tests",
@@ -30,6 +31,111 @@ const CONTROL_PLANE_ADAPTER_FILES = Object.freeze([
   "recovery_read_only_bridge.cjs",
   "recovery_runtime_adapter.cjs",
 ]);
+const MXC_EXEC_SHA256 = "6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a";
+const MXC_EXEC_SIGNER = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US";
+const MXC_WSB_SOURCE_COMMIT = "cbe1774364ea2ec846f56ab744e43a416f751420";
+const MXC_WSB_LOCAL_PATCH_SHA256 = "85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df";
+const MXC_WSB_BINARY_NAMES = Object.freeze([
+  "wxc-exec.exe",
+  "wxc-windows-sandbox-daemon.exe",
+  "wxc-windows-sandbox-guest.exe"
+]);
+
+function assertMxcWindowsExecutor(resourcesRoot, { spawnSyncFn = spawnSync } = {}) {
+  const executable = path.join(path.resolve(resourcesRoot), "tools", "wxc-exec.exe");
+  if (!fs.existsSync(executable) || !fs.statSync(executable).isFile()) {
+    throw new Error("bundled Microsoft MXC Windows executor is missing");
+  }
+  const sha256 = sha256File(executable);
+  if (sha256 !== MXC_EXEC_SHA256) {
+    throw new Error("bundled Microsoft MXC Windows executor does not match the pinned binary");
+  }
+  if (process.platform === "win32") {
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || "C:\\Windows";
+    const nativePowerShellRoot = path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0");
+    const powershellLiteral = value => `'${String(value).replace(/'/g, "''")}'`;
+    const script = `$s=Get-AuthenticodeSignature -LiteralPath ${powershellLiteral(executable)}; if ($s.Status.ToString() -ne ${powershellLiteral("Valid")} -or $s.SignerCertificate.Subject -ne ${powershellLiteral(MXC_EXEC_SIGNER)}) { exit 1 }`;
+    const encodedScript = Buffer.from(script, "utf16le").toString("base64");
+    const result = spawnSyncFn(path.join(nativePowerShellRoot, "powershell.exe"), [
+      "-NoProfile", "-NonInteractive", "-EncodedCommand", encodedScript
+    ], {
+      env: {
+        ...process.env,
+        PSModulePath: path.join(nativePowerShellRoot, "Modules")
+      },
+      windowsHide: true,
+      encoding: "utf8",
+      timeout: 10_000
+    });
+    if (result?.error || result?.status !== 0) {
+      throw new Error("bundled Microsoft MXC Windows executor signature is not valid");
+    }
+  }
+  return { executable, sha256, authenticode_verified: process.platform === "win32" };
+}
+
+function assertMxcWindowsSandboxCandidate(resourcesRoot) {
+  const directory = path.join(path.resolve(resourcesRoot), "tools", "mxc-windows-sandbox");
+  if (!fs.existsSync(directory)) return null;
+  const provenancePath = path.join(directory, "mxc-windows-sandbox.provenance.json");
+  let provenance;
+  try {
+    provenance = JSON.parse(fs.readFileSync(provenancePath, "utf8"));
+  } catch {
+    throw new Error("MXC Windows Sandbox candidate provenance is missing or invalid");
+  }
+  const expectedKeys = "authenticode,backend,binaries,build_profile,component,distribution,experimental,license,lifecycle,local_patch_file,local_patch_sha256,mxc_crate_version,rustc,schema_version,source_commit,source_commit_signature,source_repository,target";
+  if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)
+    || Object.keys(provenance).sort().join(",") !== expectedKeys
+    || provenance.component !== "Microsoft MXC Windows Sandbox state-aware candidate"
+    || provenance.source_repository !== "https://github.com/microsoft/mxc"
+    || provenance.source_commit !== MXC_WSB_SOURCE_COMMIT
+    || provenance.local_patch_file !== "scripts/patches/mxc-windows-sandbox-c-drive-share.patch"
+    || provenance.local_patch_sha256 !== MXC_WSB_LOCAL_PATCH_SHA256
+    || provenance.source_commit_signature !== "unsigned"
+    || provenance.mxc_crate_version !== "0.8.0"
+    || provenance.schema_version !== "0.10.0-alpha"
+    || provenance.backend !== "windows_sandbox"
+    || provenance.lifecycle !== "state-aware"
+    || provenance.experimental !== true
+    || provenance.build_profile !== "release"
+    || provenance.target !== "x86_64-pc-windows-msvc"
+    || provenance.authenticode !== "unsigned-local-source-build"
+    || provenance.distribution !== "development-candidate-only"
+    || provenance.license !== "MIT"
+    || typeof provenance.rustc !== "string"
+    || Object.keys(provenance.binaries || {}).sort().join(",") !== [...MXC_WSB_BINARY_NAMES].sort().join(",")) {
+    throw new Error("MXC Windows Sandbox candidate provenance does not match the pinned development build");
+  }
+  const hashes = {};
+  for (const name of MXC_WSB_BINARY_NAMES) {
+    const file = path.join(directory, name);
+    let stat;
+    let sha256;
+    try {
+      stat = fs.statSync(file);
+      if (!stat.isFile()) throw new Error("not-file");
+      sha256 = sha256File(file);
+    } catch {
+      throw new Error(`MXC Windows Sandbox candidate binary is missing: ${name}`);
+    }
+    const receipt = provenance.binaries[name];
+    if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)
+      || Object.keys(receipt).sort().join(",") !== "sha256,size_bytes"
+      || !/^[a-f0-9]{64}$/.test(String(receipt.sha256 || ""))
+      || !Number.isSafeInteger(receipt.size_bytes) || receipt.size_bytes <= 0
+      || stat.size !== receipt.size_bytes || sha256 !== receipt.sha256) {
+      throw new Error(`MXC Windows Sandbox candidate binary hash mismatch: ${name}`);
+    }
+    hashes[name] = sha256;
+  }
+  return Object.freeze({
+    directory,
+    source_commit: MXC_WSB_SOURCE_COMMIT,
+    local_patch_sha256: MXC_WSB_LOCAL_PATCH_SHA256,
+    hashes: Object.freeze(hashes)
+  });
+}
 
 function assertRunAsNode(executable, { spawnSyncFn = spawnSync } = {}) {
   const environment = { ...process.env, ELECTRON_RUN_AS_NODE: "1" };
@@ -209,6 +315,11 @@ async function afterPack(context) {
   await configureWindowsFuses(context);
   const sourceResourcesRoot = path.resolve(__dirname, "..", "resources");
   const packagedResourcesRoot = path.join(context.appOutDir, "resources", "resources");
+  assertMxcWindowsExecutor(sourceResourcesRoot);
+  const mxcWindowsSandboxCandidate = assertMxcWindowsSandboxCandidate(sourceResourcesRoot);
+  if (mxcWindowsSandboxCandidate && process.env.CODEX_ALLOW_MXC_WSB_DEV_CANDIDATE !== "1") {
+    throw new Error("unsigned experimental MXC Windows Sandbox binaries are development-candidate-only; set CODEX_ALLOW_MXC_WSB_DEV_CANDIDATE=1 only for the unpacked dev build");
+  }
   assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot, {
     separatelyVerifiedTopLevelDirectories: ["control-plane"],
   });
@@ -224,6 +335,8 @@ exports.assertExactPackagedResources = assertExactPackagedResources;
 exports.assertExactControlPlaneAdapter = assertExactControlPlaneAdapter;
 exports.assertRunAsNode = assertRunAsNode;
 exports.configureWindowsFuses = configureWindowsFuses;
+exports.assertMxcWindowsExecutor = assertMxcWindowsExecutor;
+exports.assertMxcWindowsSandboxCandidate = assertMxcWindowsSandboxCandidate;
 exports.forbiddenReason = forbiddenReason;
 exports.SANCTIONED_CODING_MCP_RUNTIME_FILES = SANCTIONED_CODING_MCP_RUNTIME_FILES;
 exports.CONTROL_PLANE_ADAPTER_FILES = CONTROL_PLANE_ADAPTER_FILES;

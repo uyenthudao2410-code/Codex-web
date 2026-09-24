@@ -147,6 +147,8 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   installControlPlaneReadOnlyPolicyAssignment: (request) => ipcRenderer.invoke('control-plane:install-read-only-policy-assignment', request),
   installControlPlaneStandingFilePolicies: (request) => ipcRenderer.invoke('control-plane:install-standing-file-policies', request),
   inspectControlPlaneStandingFilePolicies: () => ipcRenderer.invoke('control-plane:inspect-standing-file-policies'),
+  installControlPlaneExecPolicy: (request) => ipcRenderer.invoke('control-plane:install-exec-policy', request),
+  inspectControlPlaneExecPolicy: (request) => ipcRenderer.invoke('control-plane:inspect-exec-policy', request),
   retireControlPlaneWorkspace: (request) => ipcRenderer.invoke('control-plane:retire-workspace', request),
   start: () => ipcRenderer.invoke('runtime:start'),
   stop: () => ipcRenderer.invoke('runtime:stop'),

@@ -211,6 +211,7 @@ class WorkspaceReplacementTests(unittest.TestCase):
                 "sha256": "a" * 64,
             },
             "binding_count": 1, "standing_write_enabled": True,
+            "exec_enabled": True, "exec_binding_count": 1,
             "observed_at_ms": 1_700_000_000_000,
         }
         with mock.patch("control_plane.node_agent._request", return_value=authority) as request:
@@ -221,6 +222,8 @@ class WorkspaceReplacementTests(unittest.TestCase):
         self.assertEqual(receipt["workspace_generation"], "generation-replace-old-0001")
         self.assertEqual(receipt["facade_contract"], authority["facade_contract"])
         self.assertTrue(receipt["standing_write_enabled"])
+        self.assertTrue(receipt["exec_enabled"])
+        self.assertEqual(receipt["exec_binding_count"], 1)
         self.assertNotIn(str(self.workspace), stdout)
         self.assertNotIn("node-secret", stdout)
         request.assert_called_once()

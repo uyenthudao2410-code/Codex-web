@@ -11,6 +11,34 @@
 
 本程序可能调用用户电脑中已经安装的 Python、Git 与其他开发工具；这些外部工具不随本程序分发，其许可由各自项目提供。
 
+## Microsoft MXC Windows process sandbox
+
+The application bundles the unmodified, Authenticode-signed `wxc-exec.exe`
+from Microsoft MXC release `v0.8.0` for Windows structured Control Plane
+execution. MXC is a pre-release and is distributed under the MIT License; the
+full notice is in [MXC-LICENSE-MIT.txt](resources/tools/MXC-LICENSE-MIT.txt).
+The pinned release archive and binary hashes, signer and selected sandbox
+policy are recorded in
+[mxc-wxc-exec.provenance.json](resources/tools/mxc-wxc-exec.provenance.json).
+Recreate or verify the binary with
+[`prepare-mxc-windows-runner.ps1`](scripts/prepare-mxc-windows-runner.ps1).
+Microsoft's MXC trademarks remain Microsoft property; this application is not
+Microsoft-endorsed.
+
+The unpacked Windows dev candidate also contains an **unsigned, experimental**
+state-aware Windows Sandbox build from MXC source commit
+`cbe1774364ea2ec846f56ab744e43a416f751420` (schema `0.10.0-alpha`) with a
+local host-to-guest C-drive share/working-directory adapter in
+[`mxc-windows-sandbox-c-drive-share.patch`](scripts/patches/mxc-windows-sandbox-c-drive-share.patch).
+Host paths remain the authorization keys; each share is mounted at a
+deterministic guest `C:\` path. The patch hash, individual binary hashes and
+toolchain provenance are recorded in
+[mxc-windows-sandbox.provenance.json](resources/tools/mxc-windows-sandbox/mxc-windows-sandbox.provenance.json).
+The build is reproducible with
+[`prepare-mxc-windows-sandbox-runner.ps1`](scripts/prepare-mxc-windows-sandbox-runner.ps1).
+It is distributed under the same MIT License above; no Microsoft Authenticode
+signature or production-security certification is claimed for this local build.
+
 ## Bundled display fonts
 
 The application bundles the following unmodified Google Fonts webfont

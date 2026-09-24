@@ -25,6 +25,23 @@ const WORKSPACE_CAPABILITY_KEYS = Object.freeze(['read', 'write', 'exec']);
 const FULL_WORKSPACE_PREFIX_SHA256 = crypto.createHash('sha256').update('["."]').digest('hex');
 const FILE_READ_LIMITS = Object.freeze({ max_bytes: 16 * 1024, max_lines: 200 });
 const PATCH_LIMITS = Object.freeze({ max_patch_bytes: 32 * 1024, max_file_bytes: 256 * 1024 });
+const EXEC_POLICY_LIMITS = Object.freeze({ max_timeout_ms: 300_000, max_output_bytes: 65_536 });
+const EXEC_ARGV_PREFIXES = Object.freeze([
+  Object.freeze(['git']),
+  Object.freeze(['node']),
+  Object.freeze(['npm']),
+  Object.freeze(['npx']),
+  Object.freeze(['python']),
+  Object.freeze(['python3'])
+]);
+const EXEC_PREFIXES_SHA256 = crypto.createHash('sha256')
+  .update(JSON.stringify(EXEC_ARGV_PREFIXES)).digest('hex');
+const MXC_EXEC_SHA256 = '6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a';
+const MXC_BASE_CONTAINER_PROBE_TIMEOUT_MS = 8_000;
+const MXC_CHILD_PROCESS_PROBE_TIMEOUT_MS = 45_000;
+const MXC_WINDOWS_SANDBOX_PROBE_TIMEOUT_MS = 360_000;
+const MXC_WSB_SOURCE_COMMIT = 'cbe1774364ea2ec846f56ab744e43a416f751420';
+const MXC_WSB_LOCAL_PATCH_SHA256 = '85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df';
 const AUTHORITY_STATUS_STATES = new Set([
   'pending_operator_approval', 'no_binding', 'active', 'binding_revoked',
   'workspace_missing', 'workspace_retired', 'blocked', 'revoked', 'unknown'
@@ -129,6 +146,35 @@ function assertSelectedWorkspaceRegistration(registryFile, canonicalPath, worksp
   if (matches.length !== 1) {
     throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH', 'Thư mục vừa chọn không khớp với workspace ở dòng này. Chưa đổi quyền nào.');
   }
+}
+
+function registeredWorkspacePath(registryFile, workspaceId, workspaceGeneration) {
+  let registry;
+  try {
+    const raw = fs.readFileSync(registryFile);
+    if (raw.length > 64 * 1024) throw new Error('registry-too-large');
+    registry = JSON.parse(raw.toString('utf8'));
+  } catch {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_UNVERIFIED', 'Không thể xác minh đường dẫn local của workspace đã chọn.');
+  }
+  if (!registry || registry.schema_version !== 1 || !Array.isArray(registry.entries)
+    || registry.entries.length > 64) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_UNVERIFIED', 'Inventory workspace local không hợp lệ.');
+  }
+  const matches = registry.entries.filter((entry) => entry && typeof entry === 'object'
+    && entry.workspace_id === workspaceId && entry.workspace_generation === workspaceGeneration
+    && typeof entry.canonical_path === 'string' && entry.canonical_path.trim());
+  if (matches.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH', 'Workspace đã chọn không khớp duy nhất một đường dẫn local đã đăng ký.');
+  }
+  const canonicalPath = canonicalWorkspacePath(matches[0].canonical_path);
+  const storedPath = path.normalize(matches[0].canonical_path);
+  const currentPath = path.normalize(canonicalPath);
+  if ((process.platform === 'win32' ? storedPath.toLowerCase() : storedPath) !==
+    (process.platform === 'win32' ? currentPath.toLowerCase() : currentPath)) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH', 'Đường dẫn workspace local đã thay đổi so với inventory đã đăng ký.');
+  }
+  return canonicalPath;
 }
 
 function normalizeWorkspaceCapabilities(value = undefined) {
@@ -403,12 +449,15 @@ function parsePolicyAuthorityObservation(stdout, workspaceId, workspaceGeneratio
   catch { throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_OUTPUT_INVALID', 'Node authority trả về receipt không hợp lệ.'); }
   const facade = payload?.facade_contract;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)
-    || Object.keys(payload).sort().join(',') !== 'binding_count,facade_contract,observed_at_ms,operation,owner_id,runtime_mode,standing_write_enabled,workspace_generation,workspace_id'
+    || Object.keys(payload).sort().join(',') !== 'binding_count,exec_binding_count,exec_enabled,facade_contract,observed_at_ms,operation,owner_id,runtime_mode,standing_write_enabled,workspace_generation,workspace_id'
     || payload.operation !== 'control_plane_policy_authority_observation'
     || payload.workspace_id !== workspaceId || payload.workspace_generation !== workspaceGeneration
     || !NODE_ID_PATTERN.test(String(payload.owner_id || ''))
     || !Number.isSafeInteger(payload.binding_count) || payload.binding_count < 1
     || typeof payload.standing_write_enabled !== 'boolean'
+    || typeof payload.exec_enabled !== 'boolean'
+    || !Number.isSafeInteger(payload.exec_binding_count) || payload.exec_binding_count < 0
+    || payload.exec_binding_count > payload.binding_count
     || !Number.isSafeInteger(payload.observed_at_ms) || payload.observed_at_ms <= 0
     || payload.runtime_mode !== 'packaged'
     || !facade || typeof facade !== 'object' || Array.isArray(facade)
@@ -429,7 +478,247 @@ function parsePolicyAuthorityObservation(stdout, workspaceId, workspaceGeneratio
     }),
     binding_count: payload.binding_count,
     standing_write_enabled: payload.standing_write_enabled,
+    exec_enabled: payload.exec_enabled,
+    exec_binding_count: payload.exec_binding_count,
     observed_at_ms: payload.observed_at_ms
+  });
+}
+
+function parseMxcSandboxProbe(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'MXC sandbox probe vượt giới hạn.');
+  }
+  let payload;
+  try { payload = JSON.parse(output); }
+  catch { throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'MXC sandbox probe không phải JSON hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || typeof payload.tier !== 'string'
+    || typeof payload.needsDaclAugmentation !== 'boolean'
+    || !payload.probes || typeof payload.probes !== 'object' || Array.isArray(payload.probes)
+    || typeof payload.probes.baseContainerApiPresent !== 'boolean'
+    || typeof payload.probes.baseContainerSupportsDenyPaths !== 'boolean'
+    || !Array.isArray(payload.warnings)
+    || payload.warnings.some((item) => typeof item !== 'string')) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'MXC sandbox probe thiếu trường bắt buộc.');
+  }
+  const available = payload.tier === 'base-container'
+    && payload.needsDaclAugmentation === false
+    && payload.probes.baseContainerApiPresent === true
+    && payload.probes.baseContainerSupportsDenyPaths === true
+    && payload.warnings.length === 0;
+  return Object.freeze({
+    state: available ? 'available' : 'unavailable',
+    tier: payload.tier,
+    dacl_fallback: payload.needsDaclAugmentation,
+    base_container_api: payload.probes.baseContainerApiPresent,
+    deny_paths_supported: payload.probes.baseContainerSupportsDenyPaths,
+    reason: available ? null : 'WINDOWS_BASE_CONTAINER_UNAVAILABLE'
+  });
+}
+
+function parseMxcChildProcessProbe(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Nested-process probe vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Nested-process probe không trả đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Nested-process probe receipt không hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'available,probe,reason'
+    || payload.probe !== 'mxc_nested_process_v1'
+    || typeof payload.available !== 'boolean'
+    || (payload.available && payload.reason !== null)
+    || (!payload.available && !/^[A-Z0-9_]{3,96}$/.test(String(payload.reason || '')))) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Nested-process probe receipt thiếu trường hoặc sai định dạng.');
+  }
+  return Object.freeze({ available: payload.available, reason: payload.reason });
+}
+
+function parseMxcWindowsSandboxChildProcessProbe(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Windows Sandbox child probe vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Windows Sandbox child probe không trả đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Windows Sandbox child probe receipt không hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'available,probe,reason'
+    || payload.probe !== 'mxc_wsb_child_process_v1'
+    || typeof payload.available !== 'boolean'
+    || (payload.available && payload.reason !== null)
+    || (!payload.available && !/^[A-Z0-9_]{2,96}$/.test(String(payload.reason || '')))) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_SANDBOX_PROBE_INVALID', 'Windows Sandbox child probe receipt sai schema.');
+  }
+  return Object.freeze({ available: payload.available, reason: payload.reason });
+}
+
+function verifyMxcWindowsSandboxCandidate(resourcesRoot) {
+  const directory = path.join(path.resolve(resourcesRoot), 'tools', 'mxc-windows-sandbox');
+  const expectedBinaryNames = [
+    'wxc-exec.exe',
+    'wxc-windows-sandbox-daemon.exe',
+    'wxc-windows-sandbox-guest.exe'
+  ];
+  let provenance;
+  try {
+    provenance = JSON.parse(fs.readFileSync(path.join(directory, 'mxc-windows-sandbox.provenance.json'), 'utf8'));
+  } catch {
+    throw enrollmentError('MXC_WSB_PROVENANCE_INVALID', 'Provenance của MXC Windows Sandbox candidate không đọc được.');
+  }
+  const expectedProvenanceKeys = 'authenticode,backend,binaries,build_profile,component,distribution,experimental,license,lifecycle,local_patch_file,local_patch_sha256,mxc_crate_version,rustc,schema_version,source_commit,source_commit_signature,source_repository,target';
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)
+    || Object.keys(provenance).sort().join(',') !== expectedProvenanceKeys
+    || provenance.component !== 'Microsoft MXC Windows Sandbox state-aware candidate'
+    || provenance.source_repository !== 'https://github.com/microsoft/mxc'
+    || provenance.source_commit !== MXC_WSB_SOURCE_COMMIT
+    || provenance.local_patch_file !== 'scripts/patches/mxc-windows-sandbox-c-drive-share.patch'
+    || provenance.local_patch_sha256 !== MXC_WSB_LOCAL_PATCH_SHA256
+    || provenance.source_commit_signature !== 'unsigned'
+    || provenance.mxc_crate_version !== '0.8.0'
+    || provenance.schema_version !== '0.10.0-alpha'
+    || provenance.backend !== 'windows_sandbox'
+    || provenance.lifecycle !== 'state-aware'
+    || provenance.experimental !== true
+    || provenance.build_profile !== 'release'
+    || provenance.target !== 'x86_64-pc-windows-msvc'
+    || provenance.authenticode !== 'unsigned-local-source-build'
+    || provenance.distribution !== 'development-candidate-only'
+    || provenance.license !== 'MIT'
+    || typeof provenance.rustc !== 'string'
+    || Object.keys(provenance.binaries || {}).sort().join(',') !== expectedBinaryNames.slice().sort().join(',')) {
+    throw enrollmentError('MXC_WSB_PROVENANCE_INVALID', 'Provenance của MXC Windows Sandbox candidate không khớp source/contract đã ghim.');
+  }
+  const hashes = {};
+  for (const name of expectedBinaryNames) {
+    const file = path.join(directory, name);
+    let metadata;
+    let digest;
+    try {
+      metadata = fs.statSync(file);
+      if (!metadata.isFile()) throw new Error('not-file');
+      digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    } catch {
+      throw enrollmentError('MXC_WSB_BINARY_MISSING', 'Thiếu binary của MXC Windows Sandbox candidate.');
+    }
+    const receipt = provenance.binaries[name];
+    if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)
+      || Object.keys(receipt).sort().join(',') !== 'sha256,size_bytes'
+      || !SHA256_PATTERN.test(String(receipt.sha256 || ''))
+      || !Number.isSafeInteger(receipt.size_bytes) || receipt.size_bytes <= 0
+      || metadata.size !== receipt.size_bytes || digest !== receipt.sha256) {
+      throw enrollmentError('MXC_WSB_BINARY_HASH_MISMATCH', 'Hash của MXC Windows Sandbox candidate không khớp provenance build đã ghim.');
+    }
+    hashes[name] = digest;
+  }
+  return Object.freeze({
+    directory,
+    hashes: Object.freeze(hashes),
+    source_commit: MXC_WSB_SOURCE_COMMIT,
+    local_patch_sha256: MXC_WSB_LOCAL_PATCH_SHA256
+  });
+}
+
+function parseExecPolicyInstallResult(stdout, workspaceId, workspaceGeneration) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OUTPUT_INVALID', 'Node exec policy trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OUTPUT_INVALID', 'Node exec policy không trả đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OUTPUT_INVALID', 'Node exec policy receipt không hợp lệ.'); }
+  const expectedKeys = 'allowed_argv_prefix_count,allowed_argv_prefixes_sha256,authority_mode,enabled,execution,expires_at_ms,max_concurrent,max_output_bytes,max_timeout_ms,operation,policy_sha256,runtime_mode,workspace_generation,workspace_id';
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== expectedKeys
+    || payload.operation !== 'control_plane_exec_policy_installed'
+    || payload.execution !== 'exec_policy_installed'
+    || payload.enabled !== true || payload.authority_mode !== 'standing' || payload.expires_at_ms !== null
+    || payload.workspace_id !== workspaceId || payload.workspace_generation !== workspaceGeneration
+    || payload.allowed_argv_prefix_count !== EXEC_ARGV_PREFIXES.length
+    || payload.allowed_argv_prefixes_sha256 !== EXEC_PREFIXES_SHA256
+    || payload.max_timeout_ms !== EXEC_POLICY_LIMITS.max_timeout_ms
+    || payload.max_output_bytes !== EXEC_POLICY_LIMITS.max_output_bytes
+    || payload.max_concurrent !== 2
+    || !SHA256_PATTERN.test(String(payload.policy_sha256 || '').toLowerCase())
+    || payload.runtime_mode !== 'packaged') {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OUTPUT_INVALID', 'Node exec policy receipt không đúng workspace, generation hoặc allowlist đã chọn.');
+  }
+  return Object.freeze({
+    state: 'enabled',
+    workspace_id: workspaceId,
+    workspace_generation: workspaceGeneration,
+    policy_sha256: payload.policy_sha256.toLowerCase(),
+    allowed_argv_prefix_count: payload.allowed_argv_prefix_count,
+    allowed_argv_prefixes_sha256: payload.allowed_argv_prefixes_sha256
+  });
+}
+
+function parseExecPolicyObservation(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID', 'Exec policy observation vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID', 'Exec policy observation không trả đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID', 'Exec policy observation không hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || payload.operation !== 'control_plane_exec_policy_observation'
+    || payload.execution !== 'exec_policy_inspected' || payload.runtime_mode !== 'packaged') {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID', 'Exec policy observation không đúng lane.');
+  }
+  if (payload.state === 'unavailable') {
+    if (Object.keys(payload).sort().join(',') !== 'execution,operation,reason,runtime_mode,state'
+      || !/^[A-Z0-9_]{3,96}$/.test(String(payload.reason || ''))) {
+      throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID', 'Exec policy unavailable receipt không hợp lệ.');
+    }
+    return Object.freeze({ state: 'unavailable', reason: payload.reason });
+  }
+  const expectedKeys = 'allowed_argv_prefix_count,allowed_argv_prefixes_sha256,authority_mode,enabled,execution,expires_at_ms,max_concurrent,max_output_bytes,max_timeout_ms,operation,policy_sha256,runtime_mode,state,workspace_generation,workspace_id';
+  if (Object.keys(payload).sort().join(',') !== expectedKeys
+    || !['enabled', 'disabled'].includes(payload.state)
+    || !['standing', 'expiring_legacy'].includes(payload.authority_mode)
+    || !WORKSPACE_ID_PATTERN.test(String(payload.workspace_id || ''))
+    || !WORKSPACE_GENERATION_PATTERN.test(String(payload.workspace_generation || ''))
+    || !SHA256_PATTERN.test(String(payload.policy_sha256 || '').toLowerCase())
+    || !Number.isSafeInteger(payload.allowed_argv_prefix_count) || payload.allowed_argv_prefix_count < 1
+    || !SHA256_PATTERN.test(String(payload.allowed_argv_prefixes_sha256 || '').toLowerCase())
+    || !Number.isSafeInteger(payload.max_timeout_ms) || !Number.isSafeInteger(payload.max_output_bytes)
+    || !Number.isSafeInteger(payload.max_concurrent)) {
+    throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID', 'Exec policy observation không đúng target hoặc allowlist.');
+  }
+  const currentStanding = payload.state === 'enabled' && payload.enabled === true
+    && payload.authority_mode === 'standing' && payload.expires_at_ms === null
+    && payload.allowed_argv_prefix_count === EXEC_ARGV_PREFIXES.length
+    && payload.allowed_argv_prefixes_sha256 === EXEC_PREFIXES_SHA256
+    && payload.max_timeout_ms === EXEC_POLICY_LIMITS.max_timeout_ms
+    && payload.max_output_bytes === EXEC_POLICY_LIMITS.max_output_bytes
+    && payload.max_concurrent === 2;
+  return Object.freeze({
+    state: currentStanding ? 'enabled' : 'not_current_standing',
+    enabled: payload.enabled === true,
+    workspace_id: payload.workspace_id,
+    workspace_generation: payload.workspace_generation,
+    policy_sha256: payload.policy_sha256.toLowerCase(),
+    allowed_argv_prefix_count: payload.allowed_argv_prefix_count,
+    allowed_argv_prefixes_sha256: payload.allowed_argv_prefixes_sha256
   });
 }
 
@@ -686,7 +975,7 @@ function parseWorkspaceReplacementResult(stdout) {
 }
 
 class ControlPlaneEnrollmentService {
-  constructor({ paths, runner = run, environment = process.env } = {}) {
+  constructor({ paths, runner = run, environment = process.env, experimentalWindowsSandbox = false } = {}) {
     if (!paths || typeof paths.runtimeMode !== 'function' || typeof paths.portablePython !== 'function'
       || typeof paths.controlPlaneNodeAgent !== 'function' || typeof paths.controlPlaneNodeConfigFile !== 'function'
       || typeof paths.controlPlaneWorkspaceRegistryFile !== 'function'
@@ -696,11 +985,13 @@ class ControlPlaneEnrollmentService {
     this.paths = paths;
     this.runner = runner;
     this.environment = environment;
+    this.experimentalWindowsSandbox = experimentalWindowsSandbox === true;
     // Electron's packaged appRoot is app.asar, a file. Child processes need
     // the physical installation directory for both cwd and --project-root.
     this.agentProjectRoot = paths.runtimeMode() === 'packaged'
       ? path.dirname(paths.executablePath())
       : paths.appRoot();
+    this.mxcSandboxProbeCache = new Map();
   }
 
   async request({ serverUrl, deviceIdentity } = {}) {
@@ -972,6 +1263,17 @@ class ControlPlaneEnrollmentService {
     // selected workspace will be read-only. A failure stops before the new
     // read policy is installed; it never leaves old write authority hidden.
     const before = await this.inspectStandingWorkspaceFilePolicies();
+    const beforeExec = await this.inspectLocalExecPolicy();
+    if (beforeExec.enabled === true
+      && (beforeExec.workspace_id !== normalizedWorkspaceId
+        || beforeExec.workspace_generation !== normalizedWorkspaceGeneration)) {
+      await this.runPackagedNodeAgent('disable-exec-policy', [
+        '--confirm-disable',
+        '--project-root', this.agentProjectRoot,
+        '--node', this.paths.executablePath(),
+        '--runtime-mode', 'packaged'
+      ]);
+    }
     if (before.approved_patch.enabled === true) {
       parsePatchPolicyDisableResult(await runAgent('disable-approved-patch-policy', [
         '--confirm-disable', ...runtime
@@ -1001,6 +1303,361 @@ class ControlPlaneEnrollmentService {
         workspace_generation: normalizedWorkspaceGeneration, file_read: fileRead, approved_patch: null,
         error_code: String(error?.code || 'CONTROL_PLANE_PATCH_POLICY_INSTALL_FAILED') });
     }
+  }
+
+  async runPackagedNodeAgent(operation, args = []) {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_AGENT_PACKAGED_REQUIRED', 'Node-agent authority chỉ chạy từ bản packaged.');
+    }
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_AGENT_RUNTIME_MISSING', label + ' đóng gói không sẵn sàng.');
+      }
+    }
+    try {
+      return await this.runner(python, [
+        '-I', agent, operation, ...args,
+        '--project-root', this.agentProjectRoot,
+        '--node', this.paths.executablePath(),
+        '--runtime-mode', 'packaged'
+      ], {
+        cwd: this.agentProjectRoot,
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: ENROLLMENT_TIMEOUT_MS
+      });
+    } catch (error) {
+      throw enrollmentError(
+        String(error?.code || 'CONTROL_PLANE_AGENT_FAILED'),
+        'Không thể hoàn tất ' + operation + ' bằng node-agent packaged.'
+      );
+    }
+  }
+
+  async inspectLocalExecPolicy() {
+    const result = await this.runPackagedNodeAgent('inspect-exec-policy');
+    return parseExecPolicyObservation(result?.stdout);
+  }
+
+  async inspectMxcWindowsSandbox({ resourcesRoot, canonicalRoot, binaryHash } = {}) {
+    if (this.experimentalWindowsSandbox !== true) return null;
+    const windowsRoot = String(this.environment.SystemRoot || this.environment.WINDIR || 'C:\\Windows');
+    const windowsSandboxExecutable = path.join(windowsRoot, 'System32', 'WindowsSandbox.exe');
+    if (process.platform !== 'win32' || !fs.existsSync(windowsSandboxExecutable)) return null;
+
+    let candidate;
+    try { candidate = verifyMxcWindowsSandboxCandidate(resourcesRoot); }
+    catch (error) {
+      return Object.freeze({
+        state: 'unavailable',
+        backend: 'windows_sandbox',
+        reason: String(error?.code || 'MXC_WSB_CANDIDATE_INVALID'),
+        binary_sha256: binaryHash,
+        release: `microsoft-mxc-source-${MXC_WSB_SOURCE_COMMIT.slice(0, 7)}-0.10.0-alpha-experimental`
+      });
+    }
+
+    const cacheKey = `${canonicalRoot}|${Object.values(candidate.hashes).join(':')}`;
+    const cached = this.mxcSandboxProbeCache.get(cacheKey);
+    if (cached && cached.expires_at_ms > Date.now()) return cached.result;
+    for (const [key, entry] of this.mxcSandboxProbeCache) {
+      if (!entry || entry.expires_at_ms <= Date.now()) this.mxcSandboxProbeCache.delete(key);
+    }
+
+    const python = this.paths.portablePython();
+    const packageRoot = path.join(resourcesRoot, 'coding-tools-mcp');
+    try {
+      if (!fs.statSync(python).isFile() || !fs.statSync(packageRoot).isDirectory()) throw new Error('missing');
+    } catch {
+      return Object.freeze({
+        state: 'unavailable',
+        backend: 'windows_sandbox',
+        reason: 'NESTED_PROCESS_PROBE_RUNTIME_MISSING',
+        binary_sha256: candidate.hashes['wxc-exec.exe'],
+        source_commit: candidate.source_commit,
+        release: `microsoft-mxc-source-${MXC_WSB_SOURCE_COMMIT.slice(0, 7)}-0.10.0-alpha-experimental`
+      });
+    }
+    const probeCode = [
+      'import json,sys;',
+      `sys.path.insert(0,${JSON.stringify(packageRoot)});`,
+      'from coding_tools_mcp.windows_mxc_state_aware import probe_mxc_windows_sandbox_child_process;',
+      `print(json.dumps(probe_mxc_windows_sandbox_child_process(${JSON.stringify(canonicalRoot)}),separators=(',',':')))`
+    ].join('');
+    let childProbeResult;
+    try {
+      childProbeResult = await this.runner(python, ['-B', '-I', '-c', probeCode], {
+        cwd: this.agentProjectRoot,
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: MXC_WINDOWS_SANDBOX_PROBE_TIMEOUT_MS
+      });
+    } catch (error) {
+      return Object.freeze({
+        state: 'unavailable',
+        backend: 'windows_sandbox',
+        reason: String(error?.code || 'MXC_WSB_CHILD_PROCESS_PROBE_FAILED'),
+        binary_sha256: candidate.hashes['wxc-exec.exe'],
+        source_commit: candidate.source_commit,
+        release: `microsoft-mxc-source-${MXC_WSB_SOURCE_COMMIT.slice(0, 7)}-0.10.0-alpha-experimental`
+      });
+    }
+    try {
+      const childProbe = parseMxcWindowsSandboxChildProcessProbe(childProbeResult?.stdout);
+      const observation = Object.freeze({
+        state: childProbe.available ? 'available' : 'unavailable',
+        backend: 'windows_sandbox',
+        child_process_spawn: childProbe.available,
+        reason: childProbe.available ? null : childProbe.reason,
+        binary_sha256: candidate.hashes['wxc-exec.exe'],
+        source_commit: candidate.source_commit,
+        release: `microsoft-mxc-source-${MXC_WSB_SOURCE_COMMIT.slice(0, 7)}-0.10.0-alpha-experimental`
+      });
+      if (childProbe.available) {
+        this.mxcSandboxProbeCache.set(cacheKey, {
+          expires_at_ms: Date.now() + (5 * 60_000),
+          result: observation
+        });
+      }
+      return observation;
+    } catch (error) {
+      return Object.freeze({
+        state: 'unavailable',
+        backend: 'windows_sandbox',
+        reason: String(error?.code || 'MXC_WSB_CHILD_PROCESS_PROBE_INVALID'),
+        binary_sha256: candidate.hashes['wxc-exec.exe'],
+        source_commit: candidate.source_commit,
+        release: `microsoft-mxc-source-${MXC_WSB_SOURCE_COMMIT.slice(0, 7)}-0.10.0-alpha-experimental`
+      });
+    }
+  }
+
+  async inspectMxcSandbox({ workspaceRoot } = {}) {
+    if (!['packaged', 'development'].includes(this.paths.runtimeMode())) {
+      return Object.freeze({ state: 'unavailable', reason: 'SUPPORTED_RUNTIME_REQUIRED' });
+    }
+    if (typeof workspaceRoot !== 'string' || !workspaceRoot.trim()) {
+      return Object.freeze({ state: 'unavailable', reason: 'WORKSPACE_SELECTION_REQUIRED' });
+    }
+    let canonicalRoot;
+    try { canonicalRoot = canonicalWorkspacePath(workspaceRoot); }
+    catch (error) {
+      return Object.freeze({ state: 'unavailable', reason: String(error?.code || 'WORKSPACE_SELECTION_INVALID') });
+    }
+    const resourcesRoot = typeof this.paths.resourcesRoot === 'function'
+      ? this.paths.resourcesRoot()
+      : path.join(path.dirname(this.paths.executablePath()), 'resources', 'resources');
+    const executable = path.join(resourcesRoot, 'tools', 'wxc-exec.exe');
+    let binaryHash;
+    try {
+      if (!fs.statSync(executable).isFile()) throw new Error('missing');
+      binaryHash = crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex');
+    } catch {
+      return Object.freeze({ state: 'unavailable', reason: 'MXC_EXECUTOR_MISSING' });
+    }
+    if (binaryHash !== MXC_EXEC_SHA256) {
+      return Object.freeze({ state: 'unavailable', reason: 'MXC_EXECUTOR_HASH_MISMATCH' });
+    }
+    const windowsSandboxProbe = await this.inspectMxcWindowsSandbox({
+      resourcesRoot,
+      canonicalRoot,
+      binaryHash
+    });
+    if (windowsSandboxProbe) return windowsSandboxProbe;
+    let result;
+    try {
+      result = await this.runner(executable, ['--experimental', '--probe'], {
+        cwd: this.agentProjectRoot,
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: MXC_BASE_CONTAINER_PROBE_TIMEOUT_MS
+      });
+    } catch (error) {
+      return Object.freeze({ state: 'unavailable', reason: String(error?.code || 'MXC_SANDBOX_PROBE_FAILED') });
+    }
+    let baseProbe;
+    try {
+      baseProbe = parseMxcSandboxProbe(result?.stdout);
+    } catch (error) {
+      return Object.freeze({ state: 'unavailable', reason: String(error?.code || 'MXC_SANDBOX_PROBE_INVALID') });
+    }
+    if (baseProbe.state !== 'available') {
+      return Object.freeze({ ...baseProbe, binary_sha256: binaryHash, release: 'microsoft-mxc-v0.8.0' });
+    }
+    const python = this.paths.portablePython();
+    const packageRoot = path.join(resourcesRoot, 'coding-tools-mcp');
+    try {
+      if (!fs.statSync(python).isFile() || !fs.statSync(packageRoot).isDirectory()) throw new Error('missing');
+    } catch {
+      return Object.freeze({
+        ...baseProbe,
+        state: 'unavailable',
+        reason: 'NESTED_PROCESS_PROBE_RUNTIME_MISSING',
+        binary_sha256: binaryHash,
+        release: 'microsoft-mxc-v0.8.0'
+      });
+    }
+    const probeCode = [
+      'import json,sys;',
+      `sys.path.insert(0,${JSON.stringify(packageRoot)});`,
+      'from coding_tools_mcp.windows_mxc_sandbox import probe_mxc_child_process;',
+      `print(json.dumps(probe_mxc_child_process(${JSON.stringify(canonicalRoot)}),separators=(',',':')))`
+    ].join('');
+    let childProbeResult;
+    try {
+      childProbeResult = await this.runner(python, ['-B', '-I', '-c', probeCode], {
+        cwd: this.agentProjectRoot,
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: MXC_CHILD_PROCESS_PROBE_TIMEOUT_MS
+      });
+    } catch (error) {
+      return Object.freeze({
+        ...baseProbe,
+        state: 'unavailable',
+        reason: String(error?.code || 'NESTED_PROCESS_PROBE_FAILED'),
+        binary_sha256: binaryHash,
+        release: 'microsoft-mxc-v0.8.0'
+      });
+    }
+    try {
+      const childProbe = parseMxcChildProcessProbe(childProbeResult?.stdout);
+      const wsbCandidate = process.platform === 'win32'
+        ? (() => { try { return verifyMxcWindowsSandboxCandidate(resourcesRoot); } catch { return null; } })()
+        : null;
+      const windowsSandboxExecutable = path.join(
+        String(this.environment.SystemRoot || this.environment.WINDIR || 'C:\\Windows'),
+        'System32',
+        'WindowsSandbox.exe'
+      );
+      const baseContainerRootPathFailure = new Set([
+        'WINDOWS_WORKSPACE_REALPATH_EPERM',
+        'WINDOWS_CWD_REALPATH_EPERM'
+      ]).has(childProbe.reason);
+      if (!childProbe.available && wsbCandidate && !fs.existsSync(windowsSandboxExecutable)
+        && baseContainerRootPathFailure) {
+        return Object.freeze({
+          ...baseProbe,
+          state: 'unavailable',
+          backend: 'windows_sandbox',
+          child_process_spawn: false,
+          reason: 'WINDOWS_SANDBOX_NOT_READY',
+          binary_sha256: wsbCandidate.hashes['wxc-exec.exe'],
+          source_commit: wsbCandidate.source_commit,
+          release: `microsoft-mxc-source-${MXC_WSB_SOURCE_COMMIT.slice(0, 7)}-0.10.0-alpha-experimental`
+        });
+      }
+      return Object.freeze({
+        ...baseProbe,
+        state: childProbe.available ? 'available' : 'unavailable',
+        child_process_spawn: childProbe.available,
+        reason: childProbe.available ? null : childProbe.reason,
+        binary_sha256: binaryHash,
+        release: 'microsoft-mxc-v0.8.0'
+      });
+    } catch (error) {
+      return Object.freeze({
+        ...baseProbe,
+        state: 'unavailable',
+        reason: String(error?.code || 'MXC_CHILD_PROCESS_PROBE_INVALID'),
+        binary_sha256: binaryHash,
+        release: 'microsoft-mxc-v0.8.0'
+      });
+    }
+  }
+
+  async inspectStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration } = {}) {
+    const normalizedWorkspaceId = centralWorkspaceId(workspaceId);
+    const normalizedWorkspaceGeneration = centralWorkspaceGeneration(workspaceGeneration);
+    const workspaceRoot = registeredWorkspacePath(
+      this.paths.controlPlaneWorkspaceRegistryFile(),
+      normalizedWorkspaceId,
+      normalizedWorkspaceGeneration
+    );
+    const policyResult = await this.inspectLocalExecPolicy().then(
+      (policy) => policy,
+      (error) => Object.freeze({
+        state: 'unavailable',
+        reason: String(error?.code || 'EXEC_POLICY_OBSERVATION_UNAVAILABLE')
+      })
+    );
+    const sandbox = await this.inspectMxcSandbox({ workspaceRoot });
+    const policy = policyResult;
+    return Object.freeze({ policy, sandbox });
+  }
+
+  async installStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration, replaceExisting = false } = {}) {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_PACKAGED_REQUIRED', 'Exec policy chỉ cài từ candidate packaged đã xác minh.');
+    }
+    const normalizedWorkspaceId = centralWorkspaceId(workspaceId);
+    const normalizedWorkspaceGeneration = centralWorkspaceGeneration(workspaceGeneration);
+    if (typeof replaceExisting !== 'boolean') {
+      throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_REQUEST_INVALID', 'Lựa chọn thay exec policy không hợp lệ.');
+    }
+    const workspace = (await this.listWorkspaces()).find((item) =>
+      item.workspace_id === normalizedWorkspaceId && item.workspace_generation === normalizedWorkspaceGeneration);
+    if (!workspace || workspace.capabilities.read !== true || workspace.capabilities.exec !== true) {
+      throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_WORKSPACE_NOT_CURRENT', 'Workspace đã chọn chưa đăng ký capability exec.');
+    }
+    const workspaceRoot = registeredWorkspacePath(
+      this.paths.controlPlaneWorkspaceRegistryFile(),
+      normalizedWorkspaceId,
+      normalizedWorkspaceGeneration
+    );
+    const shared = [
+      '--config', this.paths.controlPlaneNodeConfigFile(),
+      '--workspace-registry', this.paths.controlPlaneWorkspaceRegistryFile(),
+      '--workspace-id', normalizedWorkspaceId,
+      '--workspace-generation', normalizedWorkspaceGeneration
+    ];
+    const authorityResult = await this.runPackagedNodeAgent('inspect-policy-authority', shared);
+    const authority = parsePolicyAuthorityObservation(
+      authorityResult?.stdout, normalizedWorkspaceId, normalizedWorkspaceGeneration
+    );
+    if (authority.exec_enabled !== true || authority.exec_binding_count < 1) {
+      throw enrollmentError('CONTROL_PLANE_EXEC_NOT_ADMITTED', 'Ubuntu chưa bật sandboxed exec cho binding này.');
+    }
+    const sandbox = await this.inspectMxcSandbox({ workspaceRoot });
+    if (sandbox.state !== 'available') {
+      throw enrollmentError(
+        sandbox.reason || 'SANDBOX_UNAVAILABLE',
+        'Windows chưa vượt qua đầy đủ smoke-test filesystem và process con trên đúng workspace; exec policy chưa được cài.'
+      );
+    }
+    const current = await this.inspectLocalExecPolicy();
+    const runtime = [
+      '--project-root', this.agentProjectRoot,
+      '--node', this.paths.executablePath(),
+      '--runtime-mode', 'packaged'
+    ];
+    if (current.enabled === true) {
+      await this.runPackagedNodeAgent('disable-exec-policy', ['--confirm-disable', ...runtime]);
+    }
+    const installArgs = [
+      ...shared,
+      '--owner-id', authority.owner_id,
+      '--facade-schema-version', String(authority.facade_contract.schema_version),
+      '--facade-profile', authority.facade_contract.profile,
+      '--facade-sha256', authority.facade_contract.sha256,
+      ...EXEC_ARGV_PREFIXES.flatMap((prefix) => ['--allowed-argv-prefix', JSON.stringify(prefix)]),
+      '--max-timeout-ms', String(EXEC_POLICY_LIMITS.max_timeout_ms),
+      '--max-output-bytes', String(EXEC_POLICY_LIMITS.max_output_bytes),
+      '--confirm-install',
+      ...(replaceExisting ? ['--replace'] : []),
+      ...runtime
+    ];
+    const install = await this.runPackagedNodeAgent('install-exec-policy', installArgs);
+    const installed = parseExecPolicyInstallResult(install?.stdout, normalizedWorkspaceId, normalizedWorkspaceGeneration);
+    const observed = await this.inspectLocalExecPolicy();
+    if (observed.state !== 'enabled'
+      || observed.workspace_id !== normalizedWorkspaceId
+      || observed.workspace_generation !== normalizedWorkspaceGeneration
+      || observed.policy_sha256 !== installed.policy_sha256
+      || observed.allowed_argv_prefixes_sha256 !== EXEC_PREFIXES_SHA256) {
+      throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_OBSERVATION_MISMATCH', 'Exec policy sau cài không khớp workspace, generation hoặc allowlist.');
+    }
+    return Object.freeze({ ...installed, sandbox });
   }
 
   async inspectStandingWorkspaceFilePolicies() {
@@ -1237,6 +1894,10 @@ module.exports = {
   parseCredentialRotationResult,
   parseReadOnlyPolicyInstallResult,
   parsePolicyAuthorityObservation,
+  parseMxcSandboxProbe,
+  parseMxcChildProcessProbe,
+  parseMxcWindowsSandboxChildProcessProbe,
+  verifyMxcWindowsSandboxCandidate,
   parseStandingFilePolicyInstallResult,
   parseStandingFilePolicyObservation,
   parseWorkspaceRegistrationResult,

@@ -636,7 +636,10 @@ class Runtime(
         for session in sessions:
             session.refresh_status()
             if session.process.poll() is None:
+                session.sandbox_abort_on_cleanup = True
                 terminate_process_group(session.process, signal.SIGTERM)
+            if session.process.poll() is not None:
+                session.cleanup_sandbox_state()
             if session.managed_job_id and not session.resource_terminal_recorded:
                 self.execution_resource_governor.complete(
                     session.managed_job_id,
@@ -645,6 +648,11 @@ class Runtime(
                 )
                 session.resource_terminal_recorded = True
             session.drain_readers()
+        sandbox_manager = getattr(self, "_windows_mxc_sandbox_manager", None)
+        if sandbox_manager is not None and not sandbox_manager.close():
+            sys.stderr.write(
+                "Windows Sandbox teardown could not be confirmed; the next exec remains fail-closed.\n"
+            )
         shutil.rmtree(self.runtime_dir, ignore_errors=True)
         self.telemetry.finish()
 

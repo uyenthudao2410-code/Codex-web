@@ -6,7 +6,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Callable
 
 from .envutils import ENV_PREFIX
 from .errors import ToolFailure
@@ -352,6 +352,7 @@ class ExecSession:
     resource_terminal_recorded: bool = False
     timeout_at: float | None = None
     warnings: list[str] = field(default_factory=list)
+    cleanup_callback: Callable[[], None] | None = None
     # Keep a frozen head plus a rolling tail. This preserves startup warnings and
     # first/root-cause errors while still retaining the newest progress. stdout /
     # stderr remain the rolling-tail fields for compatibility with older call
@@ -381,8 +382,28 @@ class ExecSession:
     signal_name: str | None = None
     timed_out: bool = False
     terminating: bool = False
+    sandbox_abort_on_cleanup: bool = False
     pty_master_fd: int | None = None
     _stdin_closed: bool = False
+
+    def cleanup_sandbox_state(self) -> None:
+        """Run the optional per-command sandbox scratch cleanup once."""
+        with self.lock:
+            callback = self.cleanup_callback
+            self.cleanup_callback = None
+        if callback is not None:
+            try:
+                cleanup_result = callback()
+                if cleanup_result is False:
+                    with self.lock:
+                        self.warnings.append(
+                            "Sandbox cleanup could not be confirmed; automatic execution remains fail-closed."
+                        )
+            except Exception:  # noqa: BLE001 - scratch cleanup cannot replace the process receipt
+                with self.lock:
+                    self.warnings.append(
+                        "Sandbox cleanup failed; automatic execution remains fail-closed."
+                    )
 
     @property
     def retained_bytes(self) -> int:
@@ -754,12 +775,15 @@ def start_session_watchdog(session: ExecSession) -> None:
             pass
         else:
             session.refresh_status()
+            session.cleanup_sandbox_state()
             return
         if session.process.poll() is not None or session.timed_out:
             return
         session.timed_out = True
         terminate_process_group(session.process, signal.SIGTERM)
         session.refresh_status()
+        if session.process.poll() is not None:
+            session.cleanup_sandbox_state()
 
     threading.Thread(
         target=watchdog,

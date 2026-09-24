@@ -11,6 +11,7 @@ from coding_tools_mcp.processes import ExecSession
 from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.tool_results import make_tool_result
+from coding_tools_mcp.errors import ToolFailure
 
 
 class PatchFidelityTests(unittest.TestCase):
@@ -159,7 +160,11 @@ class ProtocolRegressionTests(unittest.TestCase):
 
 class CommandHandleMigrationTests(unittest.TestCase):
     def test_control_plane_structured_argv_requires_attested_bridge_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
+        try:
+            temporary_workspace = tempfile.TemporaryDirectory(dir=str(Path(__file__).resolve().anchor))
+        except OSError as error:
+            self.skipTest(f"The Windows drive root is not writable for the isolated sandbox fixture: {error}")
+        with temporary_workspace as temp:
             # The admission assertion is platform-neutral; use the explicit
             # dangerous fixture mode so Linux's standalone Landlock helper is
             # not part of this bridge-identity test.
@@ -181,15 +186,7 @@ class CommandHandleMigrationTests(unittest.TestCase):
                     "client_type": "electron",
                     "attestation_verified": True,
                 }
-                if sys.platform == "win32":
-                    with self.assertRaises(Exception) as sandbox_denied:
-                        runtime.exec_command({
-                            "cmd": sys.executable,
-                            "argv": [sys.executable, "--version"],
-                            "yield_time_ms": 1000,
-                        })
-                    self.assertEqual(getattr(sandbox_denied.exception, "code", ""), "SANDBOX_UNAVAILABLE")
-                else:
+                with patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False):
                     payload = runtime.exec_command({
                         "cmd": sys.executable,
                         "argv": [sys.executable, "-c", "print('bridge-argv-ok')"],
@@ -200,10 +197,15 @@ class CommandHandleMigrationTests(unittest.TestCase):
                     self.assertEqual(payload["status"], "exited")
                     self.assertEqual(payload["exit_code"], 0)
                     self.assertIn("bridge-argv-ok", payload["stdout"])
+                if sys.platform == "win32":
+                    self.assertTrue(any(
+                        "temporary system-drive junction" in str(warning)
+                        for warning in payload.get("warnings", [])
+                    ))
             finally:
                 runtime.close()
 
-    def test_control_plane_structured_argv_fails_closed_on_windows_without_os_sandbox(self) -> None:
+    def test_control_plane_structured_argv_fails_closed_when_mxc_preflight_is_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="dangerous")
             try:
@@ -214,6 +216,12 @@ class CommandHandleMigrationTests(unittest.TestCase):
                 }
                 with (
                     patch("coding_tools_mcp.exec_tools.os.name", "nt"),
+                    patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False),
+                    patch("coding_tools_mcp.exec_tools.build_mxc_invocation", side_effect=ToolFailure(
+                        "SANDBOX_UNAVAILABLE",
+                        "BaseContainer test fixture unavailable.",
+                        category="security",
+                    )),
                     patch("coding_tools_mcp.exec_tools.processes.spawn_process") as spawn,
                 ):
                     with self.assertRaises(Exception) as denied:
@@ -223,9 +231,6 @@ class CommandHandleMigrationTests(unittest.TestCase):
                             "yield_time_ms": 1000,
                         })
                 self.assertEqual(getattr(denied.exception, "code", ""), "SANDBOX_UNAVAILABLE")
-                self.assertEqual(denied.exception.details, {
-                    "platform": "nt", "workspace_cwd_is_sandbox": False,
-                })
                 spawn.assert_not_called()
             finally:
                 runtime.close()
