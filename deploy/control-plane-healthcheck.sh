@@ -22,8 +22,8 @@ if [[ "$BACKUP_DIR" != /* || -z "$HEALTH_URL" ]]; then
   printf 'control-plane healthcheck requires CONTROL_PLANE_BACKUP_DIR and CONTROL_PLANE_HEALTH_URL\n' >&2
   exit 2
 fi
-if [[ "$EXPECTED_ADMISSION" != "open" && "$EXPECTED_ADMISSION" != "recovery" ]]; then
-  printf 'control-plane healthcheck requires CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION=open|recovery\n' >&2
+if [[ "$EXPECTED_ADMISSION" != "open" && "$EXPECTED_ADMISSION" != "recovery" && "$EXPECTED_ADMISSION" != "scoped_pilot" ]]; then
+  printf 'control-plane healthcheck requires CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION=open|recovery|scoped_pilot\n' >&2
   exit 2
 fi
 

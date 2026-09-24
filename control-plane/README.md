@@ -298,10 +298,12 @@ subject value in a ticket, terminal history, or Git artifact.
 
 `CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION` is a required, observation-only
 healthcheck expectation. Set it to `recovery` while intake/dispatch is
-deliberately closed for migration or a canary; set it to `open` only after the
-separate readiness review explicitly opens admission. This variable never
+deliberately closed for migration, or to `scoped_pilot` while a bounded
+exact-target pilot is the intended admission state; set it to `open` only after
+the separate readiness review explicitly opens admission. This variable never
 changes admission. A healthcheck pass in `recovery` proves planned maintenance,
-not execution readiness.
+and a pass in `scoped_pilot` proves only that the selected pilot state is
+observed, not execution readiness.
 
 ## Private browser operator UI (source capability, not a live deployment claim)
 

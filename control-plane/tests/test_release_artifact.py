@@ -378,6 +378,64 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 self.assertEqual(recovery_healthcheck.returncode, 0)
                 recovery_status = json.loads((backup_directory / "last-healthcheck.json").read_text(encoding="utf-8"))
                 self.assertEqual(recovery_status["deployment"]["admission_mode"], "recovery")
+
+                status, principal = post_json(
+                    f"{primary_url}/v1/mcp-service-principals",
+                    {},
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                status, grant = post_json(
+                    f"{primary_url}/v1/mcp-service-grants",
+                    {
+                        "principal_id": principal["principal_id"],
+                        "expires_at_ms": int(time.time() * 1000) + 60_000,
+                        "scopes": [
+                            "control-plane.inventory",
+                            "control-plane.read",
+                            "control-plane.patch",
+                        ],
+                    },
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                self.assertIn("access_token", grant)
+                status, decision = post_json(
+                    f"{primary_url}/v1/scoped-pilot-decisions",
+                    {
+                        "principal_id": principal["principal_id"],
+                        "binding_id": binding["binding_id"],
+                        "expires_at_ms": int(time.time() * 1000) + 60_000,
+                        "reason": "Release healthcheck scoped pilot fixture",
+                    },
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                self.assertEqual(decision["binding_id"], binding["binding_id"])
+                status, scoped_pilot = post_json(
+                    f"{primary_url}/v1/maintenance/admission",
+                    {"mode": "scoped_pilot"},
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(scoped_pilot["admission_mode"], "scoped_pilot")
+                scoped_pilot_environment = {
+                    **environment,
+                    "CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION": "scoped_pilot",
+                }
+                scoped_pilot_healthcheck = subprocess.run(
+                    [str(release_root / "deploy" / "control-plane-healthcheck.sh")],
+                    env=scoped_pilot_environment,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(scoped_pilot_healthcheck.returncode, 0)
+                scoped_pilot_status = json.loads(
+                    (backup_directory / "last-healthcheck.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(scoped_pilot_status["deployment"]["admission_mode"], "scoped_pilot")
             finally:
                 process.terminate()
                 try:
