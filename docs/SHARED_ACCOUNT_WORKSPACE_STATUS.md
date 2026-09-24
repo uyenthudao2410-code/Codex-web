@@ -11,7 +11,7 @@ chung; nó quyết định ai có thể gọi Ubuntu Control Plane, nhưng khôn
 dẫn file và không chọn thư mục Windows. Các quyền local-folder binding và quyền
 thành viên Business là hai lớp riêng.
 
-## Checkpoint mới hơn — 24-09-2026, 12:35 +07
+## Checkpoint mới hơn — 24-09-2026, 13:31 +07
 
 Source `main @ 50cd0e86`, worktree dirty. Workspace của Coding Tools là thư mục
 Windows đã chọn trong app; ChatGPT Business workspace là tổ chức chứa thành viên
@@ -29,6 +29,10 @@ round-trip hỗ trợ space/quote/trailing slash/empty argument. Binary MXC vẫ
 Packaged Recovery Host smoke của r8 cũng **PASS**: user-data cô lập, descriptor
 bản cài giữ nguyên, Recovery Host/MCP ready, supervisor healthy và fail-closed
 trong owner/hash mismatch; không sửa scheduled task.
+
+Hai commit local hiện có: `a4becdb7` (source/candidate) và `3ca26a74` (runbook).
+Sau commit, worktree chỉ còn live drift của canonical ledger; delivery receipt,
+`--verify-index`, repository secrets và coding-tools history guard đều PASS.
 
 Ghi nhận lỗi canary r7: npm không khóa prefix nên đã chọn nhầm package root và
 bắt đầu script `npm test` của repo; timeout sau 30 giây đã dừng nó trong Windows
@@ -49,7 +53,16 @@ Theo [Secure MCP Tunnel docs](https://developers.openai.com/api/docs/guides/secu
 
 ChatGPT MCP OAuth là user authorization-code + PKCE. OpenAI nêu rõ ChatGPT không hỗ trợ client-credentials/service-account grants hoặc customer API keys cho OAuth MCP, còn tool `noauth` là anonymous; với write tools, [auth guidance](https://developers.openai.com/plugins/build/auth) khuyến nghị xác thực user. Repo có một lựa chọn riêng `private_tunnel_service`: một shared service principal/grant được tunnel-client đưa vào request cục bộ; nó không tạo user identity riêng cho từng thành viên. Đây là lựa chọn khớp với quyết định của chủ workspace (hai thành viên dùng chung service identity trong scope folder đã bind), nhưng cần giữ service grant hẹp và binding Windows exact.
 
-Ubuntu peer `svhome` online trên Tailscale và host-key khớp entry trusted theo IP hiện tại, nhưng Tailscale SSH từ chối user `admin` theo policy. Không đổi ACL hay thử user khác. ChatGPT connector UI cũng chưa đối chiếu được trong phiên này vì Computer Use retry vẫn trả `Codex auth token is unavailable`. Server snapshot gần nhất (23-09) còn schema 28, admission `recovery`, auth `legacy_context_grant`, chưa service grant/binding Windows write/exec; chưa có ChatGPT Business→Ubuntu→Windows canary. Chưa ghi/đổi/deploy/restart Ubuntu, chưa bật policy, commit hoặc push.
+Ubuntu peer `svhome` online trên Tailscale và host-key khớp entry trusted theo IP
+hiện tại, nhưng Tailscale SSH tiếp tục từ chối user `admin` theo policy. Local
+Tunnel MCP trên Windows liệt kê `aliases=[]`; admin profile `default` chỉ tham chiếu
+key từ environment nhưng value không hiện trong environment này. Đây **không** chứng
+minh Ubuntu tunnel offline. Không đổi ACL hay thử user khác. ChatGPT connector UI
+chưa được kiểm tra vì Computer Use trả `Codex auth token is unavailable`. Server
+snapshot gần nhất (23-09) còn schema 28, admission `recovery`, auth
+`legacy_context_grant`, chưa service grant/binding Windows write/exec; chưa có
+ChatGPT Business→Ubuntu→Windows canary. Chưa đọc/ghi/deploy/restart Ubuntu, chưa
+bật policy hoặc push.
 
 ## Checkpoint Windows Sandbox state-aware candidate — 24-09-2026
 
