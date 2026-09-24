@@ -134,7 +134,11 @@ by editing the example environment file):
    file outside the release/repository, never to chat, shell history, logs or
    the browser Console. Point only the Ubuntu Tunnel launcher at that file.
    Revoke an old grant after a replacement has been verified; grants expire
-   within 30 days and are not automatically renewed.
+   within 30 days. After the exact pilot is accepted, enable the bounded
+   authority-renewal service/timer with its protected operator environment.
+   It may extend only a still-live grant and decision, never create a bearer,
+   change a binding, or reopen admission; an expired/revoked record still
+   requires the operator runbook to provision a replacement.
 4. On the packaged Windows app, select/re-register the exact root with
    `read=true, write=true`. Replacing a read-only registration creates a new
    generation and retires its old bindings/tasks/policies. Create a new Ubuntu
@@ -669,6 +673,16 @@ only when every condition passes. A control plane intentionally held in
 `recovery`, a bad/missing package gate, or a backup older than 2 hours 15
 minutes exits non-zero for the user-unit journal; it does not restart anything
 or reopen admission.
+
+The optional `codex-control-plane-authority-renewal` service/timer keeps one
+configured shared service grant and one exact scoped-pilot decision inside
+their existing 30-day and 24-hour limits. It calls only the authenticated
+operator renewal routes and does not store or print the MCP bearer. The timer
+is intentionally disabled until `CONTROL_PLANE_AUTHORITY_RENEWAL_ENABLED=true`
+and the protected environment names the accepted grant and decision. If the
+target, binding, workspace generation, admission, or action reconciliation is
+not current, renewal fails closed; it never reopens admission or silently
+rebinds another Windows folder.
 
 Before an operator considers a separately authorized restore, inspect the
 completed snapshot by its receipt fingerprint:

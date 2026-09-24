@@ -197,6 +197,22 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(len(overview["scoped_pilot_decisions"]), 1)
         self.assertNotIn(grant["access_token"], json.dumps(overview))
         self.assertNotIn("token_digest", json.dumps(overview))
+        renewed_grant_expiry = self.server.store.clock() + 120_000
+        status, renewed_grant = self._post(
+            f"/v1/mcp-service-grants/{grant['grant_id']}/renew",
+            {"expires_at_ms": renewed_grant_expiry},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(renewed_grant["expires_at_ms"], renewed_grant_expiry)
+        renewed_decision_expiry = self.server.store.clock() + 120_000
+        status, renewed_decision = self._post(
+            f"/v1/scoped-pilot-decisions/{decision['decision_id']}/renew",
+            {"expires_at_ms": renewed_decision_expiry},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(renewed_decision["expires_at_ms"], renewed_decision_expiry)
         cookie, csrf = self._ui_login()
         status, forbidden, _ = self._request_with_headers(
             f"/v1/ui/scoped-pilot-decisions/{decision['decision_id']}/revoke",

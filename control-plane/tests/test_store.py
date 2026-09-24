@@ -468,6 +468,32 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.store.authenticate_mcp_service_token(access_token=expiring["access_token"])
 
+    def test_private_tunnel_service_grant_renewal_preserves_bearer_and_scopes(self) -> None:
+        service = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        grant = self.store.create_mcp_service_grant(
+            owner_id="owner_default", principal_id=service["principal_id"],
+            expires_at_ms=self.now + 60_000,
+            scopes=["control-plane.inventory", "control-plane.read", "control-plane.patch"],
+        )
+        renewed = self.store.renew_mcp_service_grant(
+            owner_id="owner_default", grant_id=grant["grant_id"], expires_at_ms=self.now + 120_000,
+        )
+        self.assertEqual(renewed["expires_at_ms"], self.now + 120_000)
+        self.assertEqual(renewed["scopes"], ["control-plane.inventory", "control-plane.patch", "control-plane.read"])
+        self.assertEqual(
+            self.store.authenticate_mcp_service_token(access_token=grant["access_token"])["expires_at_ms"],
+            self.now + 120_000,
+        )
+        with self.assertRaises(ValidationError):
+            self.store.renew_mcp_service_grant(
+                owner_id="owner_default", grant_id=grant["grant_id"], expires_at_ms=self.now + 30_000,
+            )
+        self.now += 120_000
+        with self.assertRaises(ConflictError):
+            self.store.renew_mcp_service_grant(
+                owner_id="owner_default", grant_id=grant["grant_id"], expires_at_ms=self.now + 60_000,
+            )
+
     def test_service_grant_scopes_are_immutable_and_invalid_scopes_fail_closed(self) -> None:
         service = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
         inventory = self.store.create_mcp_service_grant(
@@ -3367,6 +3393,36 @@ process.stdout.write(JSON.stringify(observation));
         delivered = self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read")
         self.assertEqual([row["action_id"] for row in delivered], [intent["action_id"]])
         self.assertEqual(self.store.action(owner_id="owner_default", action_id=old["action_id"])["delivery_state"], "queued")
+
+    def test_scoped_pilot_renewal_rechecks_target_and_preserves_decision(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Selected workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self._ready_node()
+        self.store.set_admission_mode(mode="recovery")
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+            reason="Renewal test for selected workspace",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        renewed = self.store.renew_scoped_pilot_decision(
+            owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 120_000,
+        )
+        self.assertEqual(renewed["expires_at_ms"], self.now + 120_000)
+        self.assertEqual(renewed["binding_id"], binding["binding_id"])
+        self.assertEqual(self.store.admission_status()["admission_mode"], "scoped_pilot")
+        with self.assertRaises(ValidationError):
+            self.store.renew_scoped_pilot_decision(
+                owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 30_000,
+            )
+        self.now += 120_000
+        with self.assertRaises(ConflictError):
+            self.store.renew_scoped_pilot_decision(
+                owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 60_000,
+            )
 
     def test_scoped_pilot_revocation_fences_queued_action_even_after_global_open(self) -> None:
         binding = self.store.create_binding(

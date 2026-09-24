@@ -1775,6 +1775,100 @@ class ControlPlaneStore:
             connection.execute("COMMIT")
         return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
 
+    def renew_scoped_pilot_decision(
+        self,
+        *,
+        owner_id: str,
+        decision_id: str,
+        expires_at_ms: int,
+    ) -> dict[str, Any]:
+        """Extend one current target decision without changing its scope.
+
+        Renewal is operator-only, bounded by the same 24-hour limit as initial
+        issuance, and never opens admission.  Expired or revoked decisions
+        require a fresh recovery-time decision instead of being resurrected.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        decision_id = _text(decision_id, "decision_id")
+        if isinstance(expires_at_ms, bool) or not isinstance(expires_at_ms, int):
+            raise ValidationError("scoped pilot expiry is invalid.")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT d.*, b.revoked_at_ms AS binding_revoked_at_ms,
+                       b.endpoint_id AS binding_endpoint_id,
+                       n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                       n.revoked_at_ms AS node_revoked_at_ms,
+                       nw.retired_at_ms AS workspace_retired_at_ms,
+                       p.owner_id AS principal_owner_id,
+                       p.revoked_at_ms AS principal_revoked_at_ms,
+                       p.principal_kind
+                FROM scoped_pilot_decisions AS d
+                JOIN bindings AS b ON b.binding_id = d.binding_id
+                JOIN nodes AS n ON n.device_id = d.device_id
+                JOIN node_workspaces AS nw
+                  ON nw.device_id = d.device_id
+                 AND nw.workspace_id = d.workspace_id
+                 AND nw.workspace_generation = d.workspace_generation
+                JOIN oauth_principals AS p ON p.principal_id = d.principal_id
+                WHERE d.decision_id = ?
+                """,
+                (decision_id,),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("scoped pilot decision does not exist.")
+            if row["owner_id"] != owner_id or row["node_owner_id"] != owner_id or row["principal_owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("scoped pilot decision is not owned by this account.")
+            now = self.clock()
+            if row["revoked_at_ms"] is not None or row["expires_at_ms"] <= now:
+                connection.execute("ROLLBACK")
+                raise ConflictError("expired or revoked scoped pilot decisions cannot be renewed.")
+            if (
+                row["principal_kind"] != "private_tunnel_service"
+                or row["principal_revoked_at_ms"] is not None
+                or row["binding_revoked_at_ms"] is not None
+                or row["node_revoked_at_ms"] is not None
+                or row["workspace_retired_at_ms"] is not None
+                or row["binding_endpoint_id"] != row["endpoint_id"]
+                or row["node_endpoint_id"] != row["endpoint_id"]
+            ):
+                connection.execute("ROLLBACK")
+                raise ConflictError("scoped pilot target is no longer current.")
+            if not row["expires_at_ms"] < expires_at_ms <= now + SCOPED_PILOT_MAX_TTL_MS:
+                connection.execute("ROLLBACK")
+                raise ValidationError("scoped pilot renewal must extend within 24 hours from now.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=str(row["device_id"]),
+                workspace_id=str(row["workspace_id"]),
+                workspace_generation=str(row["workspace_generation"]),
+            )
+            unresolved = connection.execute(
+                """SELECT COUNT(*) FROM actions WHERE device_id = ?
+                   AND delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')""",
+                (row["device_id"],),
+            ).fetchone()[0]
+            if unresolved:
+                connection.execute("ROLLBACK")
+                raise ConflictError("selected node has unresolved prior actions.")
+            connection.execute(
+                "UPDATE scoped_pilot_decisions SET expires_at_ms = ? WHERE decision_id = ?",
+                (expires_at_ms, decision_id),
+            )
+            self._event(
+                connection,
+                "scoped_pilot_decision",
+                decision_id,
+                "scoped_pilot_decision_renewed",
+                {"previous_expires_at_ms": row["expires_at_ms"], "expires_at_ms": expires_at_ms},
+            )
+            connection.execute("COMMIT")
+        return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
+
     def _admission_decision(
         self,
         connection: sqlite3.Connection,
@@ -5078,6 +5172,75 @@ class ControlPlaneStore:
             }
             for row in rows
         ]
+
+    def renew_mcp_service_grant(
+        self,
+        *,
+        owner_id: str,
+        grant_id: str,
+        expires_at_ms: int,
+    ) -> dict[str, Any]:
+        """Extend one live service grant without changing its bearer/scopes.
+
+        Renewal is operator-only and bounded by the same 30-day limit as
+        issuance. An expired or revoked grant cannot be resurrected; callers
+        must issue a new bearer and replace the protected tunnel header.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        grant_id = _text(grant_id, "grant_id")
+        if isinstance(expires_at_ms, bool) or not isinstance(expires_at_ms, int):
+            raise ValidationError("MCP service grant expiry is invalid.")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT g.*, p.owner_id AS principal_owner_id,
+                       p.revoked_at_ms AS principal_revoked_at_ms,
+                       p.principal_kind
+                FROM mcp_service_grants AS g
+                JOIN oauth_principals AS p ON p.principal_id = g.principal_id
+                WHERE g.grant_id = ?
+                """,
+                (grant_id,),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("MCP service grant does not exist.")
+            if row["owner_id"] != owner_id or row["principal_owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("MCP service grant is not owned by this account.")
+            now = self.clock()
+            if row["principal_kind"] != "private_tunnel_service" or row["principal_revoked_at_ms"] is not None:
+                connection.execute("ROLLBACK")
+                raise ConflictError("MCP service principal is no longer current.")
+            if row["revoked_at_ms"] is not None or row["expires_at_ms"] <= now:
+                connection.execute("ROLLBACK")
+                raise ConflictError("expired or revoked MCP service grants cannot be renewed.")
+            if not row["expires_at_ms"] < expires_at_ms <= now + MCP_SERVICE_GRANT_MAX_TTL_MS:
+                connection.execute("ROLLBACK")
+                raise ValidationError("MCP service grant renewal must extend within 30 days from now.")
+            connection.execute(
+                "UPDATE mcp_service_grants SET expires_at_ms = ? WHERE grant_id = ?",
+                (expires_at_ms, grant_id),
+            )
+            self._event(
+                connection,
+                "mcp_service_grant",
+                grant_id,
+                "mcp_service_grant_renewed",
+                {"previous_expires_at_ms": row["expires_at_ms"], "expires_at_ms": expires_at_ms},
+            )
+            connection.execute("COMMIT")
+        return {
+            "grant_id": grant_id,
+            "owner_id": owner_id,
+            "principal_id": row["principal_id"],
+            "scopes": list(_mcp_service_scopes(json.loads(row["scopes_json"]))),
+            "created_at_ms": row["created_at_ms"],
+            "expires_at_ms": expires_at_ms,
+            "revoked_at_ms": row["revoked_at_ms"],
+        }
 
     def revoke_mcp_service_grant(self, *, owner_id: str, grant_id: str) -> dict[str, Any]:
         """Revoke one bearer without altering the service principal or tasks."""

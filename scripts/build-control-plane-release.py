@@ -39,10 +39,13 @@ DEPLOY_FILES = (
     "codex-control-plane-backup.timer.example",
     "codex-control-plane-healthcheck.service.example",
     "codex-control-plane-healthcheck.timer.example",
+    "codex-control-plane-authority-renewal.service.example",
+    "codex-control-plane-authority-renewal.timer.example",
     "control-plane-launcher.sh",
     "control-plane-mcp-tunnel-launcher.sh",
     "control-plane-backup.sh",
     "control-plane-healthcheck.sh",
+    "control-plane-authority-renewal.py",
     "control-plane-verify-release.py",
     "prepare-control-plane-activation.py",
     "control-plane.env.example",
@@ -70,6 +73,9 @@ REQUIRED_RELEASE_FILES = frozenset(
         "deploy/codex-control-plane-backup.timer.example",
         "deploy/codex-control-plane-healthcheck.service.example",
         "deploy/codex-control-plane-healthcheck.timer.example",
+        "deploy/codex-control-plane-authority-renewal.service.example",
+        "deploy/codex-control-plane-authority-renewal.timer.example",
+        "deploy/control-plane-authority-renewal.py",
         "deploy/control-plane-launcher.sh",
         "deploy/control-plane-mcp-tunnel-launcher.sh",
         "deploy/control-plane-backup.sh",
@@ -319,8 +325,10 @@ credential, session, backup, or private environment file.
    `python3 deploy/prepare-control-plane-activation.py --release-dir <release>
    --env-file <control-plane.env> --drop-in <10-immutable-release.conf>
    --check-only`, then repeat without `--check-only` after reviewing the
-   receipt. This helper does not restart anything. Install the six
-   unit/timer examples from `deploy/` as user units. They only
+   receipt. This helper does not restart anything. Install the eight
+   unit/timer examples from `deploy/` as user units (the authority-renewal
+   pair is optional and must remain disabled until its protected IDs are
+   populated). They only
    execute `~/.local/lib/codex-control-plane/current/deploy/...`; `current` must
    be an operator-controlled symlink to exactly one verified release directory.
 

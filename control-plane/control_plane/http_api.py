@@ -1563,6 +1563,15 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     owner_id=self._operator(), grant_id=mcp_service_grant_revoke_match.group(1),
                 ))
                 return
+            mcp_service_grant_renew_match = re.fullmatch(r"/v1/mcp-service-grants/([^/]+)/renew", self.path)
+            if mcp_service_grant_renew_match:
+                if set(body) != {"expires_at_ms"}:
+                    raise ValidationError("MCP service grant renewal payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.renew_mcp_service_grant(
+                    owner_id=self._operator(), grant_id=mcp_service_grant_renew_match.group(1),
+                    expires_at_ms=self._field(body, "expires_at_ms"),
+                ))
+                return
             mcp_service_principal_revoke_match = re.fullmatch(r"/v1/mcp-service-principals/([^/]+)/revoke", self.path)
             if mcp_service_principal_revoke_match:
                 if body:
@@ -1577,6 +1586,15 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     raise ValidationError("scoped pilot decision revocation payload is invalid.")
                 self._json(HTTPStatus.OK, self.server.store.revoke_scoped_pilot_decision(
                     owner_id=self._operator(), decision_id=scoped_pilot_revoke_match.group(1),
+                ))
+                return
+            scoped_pilot_renew_match = re.fullmatch(r"/v1/scoped-pilot-decisions/([^/]+)/renew", self.path)
+            if scoped_pilot_renew_match:
+                if set(body) != {"expires_at_ms"}:
+                    raise ValidationError("scoped pilot renewal payload is invalid.")
+                self._json(HTTPStatus.OK, self.server.store.renew_scoped_pilot_decision(
+                    owner_id=self._operator(), decision_id=scoped_pilot_renew_match.group(1),
+                    expires_at_ms=self._field(body, "expires_at_ms"),
                 ))
                 return
             if self.path == "/v1/enrollment-requests":
