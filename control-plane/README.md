@@ -102,14 +102,19 @@ the private browser Console can only close admission or revoke a grant or
 decision. A revoked/expired decision stops new intake and polling, not an
 already-dispatched Windows effect. Restore candidates force `recovery`.
 
-The current Windows Command Center source can install standing file-read and
+The packaged Windows Command Center can install standing file-read and
 exact-patch policies for the locally selected registered workspace generation
-after an authenticated node obtains the current facade contract from Ubuntu.
-It does not install an exec policy. `cwd` and an argv prefix do not sandbox a
-Windows process; do not set `CONTROL_PLANE_MCP_SERVICE_EXEC_ENABLED=true` or
-claim automatic command confinement for this candidate. Source/focused tests
-are not evidence that the Ubuntu service or installed Windows app has been
-updated or that ChatGPT completed an end-to-end file mutation.
+after an authenticated node obtains the current facade contract from Ubuntu. It
+also has a fail-closed exec-policy installer: it requires the exact registered
+workspace/generation, central `exec_enabled` authority and a passing
+workspace-bound Windows Sandbox child-process probe before installing and
+re-observing the local policy. Exec confinement comes from the Windows Sandbox
+VM's exact read-write workspace share, read-only toolchain shares and guest
+network lockdown—not from `cwd` or an argv prefix. Never enable the service
+exec flag or claim live command confinement from source or dev-candidate proof
+alone. The current deployed state remains exec-disabled until the exact
+packaged Windows runtime, Ubuntu grant/binding and local policy are all
+independently observed.
 
 For a controlled source-candidate rollout, keep this order (none is performed
 by editing the example environment file):
@@ -145,9 +150,13 @@ by editing the example environment file):
    start a new conversation, and perform one selected-target inventory/read,
    one exact existing-file patch, receipt readback and stop/replay canary. Do
    not claim completion from `node.ready` or `workspace_accessed=false` alone.
-   Keep exec disabled until Windows process isolation or a separately accepted
-   fixed-command policy has its own proof. Closing admission or revoking the
-   decision blocks new intake/poll but cannot undo in-flight effects.
+7. Enable service `EXEC_ENABLED` and install Windows exec policy only after the
+   exact packaged runtime has passed its workspace-bound Sandbox canary, the
+   same workspace generation has central `exec_enabled` binding authority, and
+   the installed policy readback matches its allowlist fingerprint. Candidate
+   `r8` has packaged Node/npm proof only; it is not an installed/live exec
+   acceptance. Closing admission or revoking the decision blocks new intake/poll
+   but cannot undo in-flight effects.
 
 In OAuth mode the dedicated MCP listener alone serves
 `GET /.well-known/oauth-protected-resource`; every other GET route remains
