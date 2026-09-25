@@ -103,6 +103,13 @@ class AuthorityRenewalTests(unittest.TestCase):
             {"enabled": False, "state": "disabled"},
         )
 
+    def test_oneshot_renewal_timer_repeats_after_service_completion(self) -> None:
+        timer = (ROOT / "deploy" / "codex-control-plane-authority-renewal.timer.example").read_text(encoding="utf-8")
+        self.assertIn("OnActiveSec=5min", timer)
+        self.assertIn("OnUnitInactiveSec=15min", timer)
+        self.assertNotIn("OnBootSec=5min", timer)
+        self.assertNotIn("OnUnitActiveSec=15min", timer)
+
     def test_live_authority_outside_seconds_windows_is_not_renewed(self) -> None:
         def outside_window_opener(request, timeout=0):
             path = urlparse(request.full_url).path

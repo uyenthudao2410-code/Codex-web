@@ -2,8 +2,8 @@
 Description=Schedule bounded Coding Tools shared-service authority renewal
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=15min
+OnActiveSec=5min
+OnUnitInactiveSec=15min
 Persistent=true
 RandomizedDelaySec=1min
 Unit=codex-control-plane-authority-renewal.service

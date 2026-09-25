@@ -700,6 +700,11 @@ and the protected environment names the accepted grant and decision. If the
 target, binding, workspace generation, admission, or action reconciliation is
 not current, renewal fails closed; it never reopens admission or silently
 rebinds another Windows folder.
+The oneshot schedule runs five minutes after timer activation, then 15 minutes
+after each service completion. After installing or replacing the timer, confirm
+`systemctl --user list-timers codex-control-plane-authority-renewal.timer` shows
+a next elapse time; an enabled timer with no next elapse is not a running
+renewal schedule.
 
 Before an operator considers a separately authorized restore, inspect the
 completed snapshot by its receipt fingerprint:
