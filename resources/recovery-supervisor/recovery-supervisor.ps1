@@ -163,10 +163,15 @@ function Get-ControlPlaneAgentPaths($M) {
 }
 function Get-ControlPlaneStandingPolicyCandidates($M) {
   @(
-    [pscustomobject]@{lane='file_read';path=(Join-Path ([string]$M.data_root) 'control-plane-file-read-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_relative_paths','max_bytes','max_lines','authority_mode')},
-    [pscustomobject]@{lane='approved_patch';path=(Join-Path ([string]$M.data_root) 'control-plane-approved-patch-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_relative_paths','max_patch_bytes','max_file_bytes','validation_profile','authority_mode')},
+    [pscustomobject]@{lane='file_read';path=(Join-Path ([string]$M.data_root) 'control-plane-file-read-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_relative_prefixes','max_bytes','max_lines','authority_mode')},
+    [pscustomobject]@{lane='approved_patch';path=(Join-Path ([string]$M.data_root) 'control-plane-approved-patch-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_relative_prefixes','max_patch_bytes','max_file_bytes','validation_profile','authority_mode')},
     [pscustomobject]@{lane='exec';path=(Join-Path ([string]$M.data_root) 'control-plane-exec-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_argv_prefixes','max_timeout_ms','max_output_bytes','max_concurrent','authority_mode')}
   )
+}
+function Get-ControlPlaneStandingPolicySchema([string]$Lane) {
+  if($Lane-in@('file_read','approved_patch')){return 3}
+  if($Lane-eq'exec'){return 2}
+  0
 }
 function Test-ControlPlanePropertySet($Object,$Expected) {
   if($Object -isnot [PSCustomObject]){return $false}
@@ -232,7 +237,7 @@ function Get-ControlPlaneAgentSpec($M) {
   foreach($candidate in @(Get-ControlPlaneStandingPolicyCandidates $M)) {
     if(-not(Test-Path -LiteralPath ([string]$candidate.path) -PathType Leaf)){continue}
     try{$policy=Read-BoundedJson ([string]$candidate.path) $MaxJsonBytes -Required}catch{$candidateStates+=@('standing_policy_invalid');continue}
-    if(-not(Test-ControlPlanePropertySet $policy $candidate.fields)-or[int]$policy.schema_version-ne2-or$policy.enabled-ne$true-or[string]$policy.authority_mode-ne'standing'-or$null-ne$policy.expires_at_ms-or$null-eq$policy.facade_contract){$candidateStates+=@('standing_policy_invalid');continue}
+    $expectedSchema=Get-ControlPlaneStandingPolicySchema ([string]$candidate.lane);if($expectedSchema-lt1-or-not(Test-ControlPlanePropertySet $policy $candidate.fields)-or[int]$policy.schema_version-ne$expectedSchema-or$policy.enabled-ne$true-or[string]$policy.authority_mode-ne'standing'-or$null-ne$policy.expires_at_ms-or$null-eq$policy.facade_contract){$candidateStates+=@('standing_policy_invalid');continue}
     $policyOrigin=Get-ControlPlaneOrigin ([string]$policy.server_origin)
     if($null-eq$policyOrigin-or$policyOrigin-ne$origin-or[string]$policy.device_id-ne$deviceId-or[string]$policy.endpoint_id-ne$endpointId){$candidateStates+=@('policy_config_mismatch');continue}
     $workspaceState=Test-ControlPlaneWorkspaceRegistration $workspaceRegistryPath $policy

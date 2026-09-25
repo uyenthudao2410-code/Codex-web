@@ -81,6 +81,8 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
     ['standing-policy-expired', {}, {}, { expires_at_ms: Date.now() - 1000 }, 'file_read', 'heartbeat_only', 'current', true],
     ['standing-approved-patch-only', {}, {}, {}, 'approved_patch', 'eligible', 'current'],
     ['standing-exec-only', {}, {}, {}, 'exec', 'eligible', 'current'],
+    ['standing-file-read-schema-mismatch', {}, {}, { schema_version: 2 }, 'file_read', 'heartbeat_only', 'current', true],
+    ['standing-approved-patch-schema-mismatch', {}, {}, { schema_version: 2 }, 'approved_patch', 'heartbeat_only', 'current', true],
     ['workspace-registry-missing', {}, {}, {}, 'file_read', 'heartbeat_only', 'missing', true],
     ['workspace-registration-stale', {}, {}, {}, 'file_read', 'heartbeat_only', 'empty', true],
     ['development-mode', {}, {}, {}, 'file_read', 'eligible', 'current', false, 'development']
@@ -102,17 +104,17 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
     });
     if (standingPatch !== null) {
       const common = {
-        schema_version: 2, enabled: true, authority_mode: 'standing',
+        schema_version: standingLane === 'exec' ? 2 : 3, enabled: true, authority_mode: 'standing',
         server_origin: 'http://100.116.112.22:8765', owner_id: 'fixture-owner',
         device_id: 'fixture-device', endpoint_id: 'fixture-endpoint',
         workspace_id: 'workspace-fixture-0001', workspace_generation: 'generation-fixture-0001',
         expires_at_ms: null, facade_contract: { schema_version: 1, profile: 'fixture', sha256: 'a'.repeat(64) }
       };
       const policy = standingLane === 'approved_patch'
-        ? { ...common, allowed_relative_paths: ['fixture.txt'], max_patch_bytes: 1024, max_file_bytes: 4096, validation_profile: 'targeted' }
+        ? { ...common, allowed_relative_prefixes: ['fixture.txt'], max_patch_bytes: 1024, max_file_bytes: 4096, validation_profile: 'targeted' }
         : standingLane === 'exec'
           ? { ...common, allowed_argv_prefixes: [['git']], max_timeout_ms: 5000, max_output_bytes: 1024, max_concurrent: 1 }
-          : { ...common, allowed_relative_paths: ['fixture.txt'], max_bytes: 1024, max_lines: 10 };
+          : { ...common, allowed_relative_prefixes: ['fixture.txt'], max_bytes: 1024, max_lines: 10 };
       writeJson(path.join(dataRoot, `control-plane-${standingLane === 'approved_patch' ? 'approved-patch' : standingLane === 'exec' ? 'exec' : 'file-read'}-policy.json`), {
         ...policy, ...standingPatch
       });
@@ -165,7 +167,7 @@ $MaxJsonBytes=65536
 $parseTokens=$null;$parseErrors=$null
 $parsed=[Management.Automation.Language.Parser]::ParseFile($env:WEBCODEX_TEST_SUPERVISOR_SCRIPT,[ref]$parseTokens,[ref]$parseErrors)
 if($parseErrors.Count-ne0){throw 'Supervisor PowerShell parser rejected the source.'}
-foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Test-AbsoluteSafePath','Get-OptionalProperty','Get-ManifestPath','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneStandingPolicyCandidates','Get-ControlPlaneWorkspaceRegistryPath','Resolve-ControlPlaneNodePath','Get-ControlPlaneAgentPaths','Test-ControlPlanePropertySet','Test-ControlPlaneNodeCredential','Test-ControlPlaneWorkspaceRegistration','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Get-ControlPlaneAgentArguments','Stop-ControlPlaneAgentForReplacement','New-State','Invoke-ControlPlaneReadOnlyAgent')){
+foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Test-AbsoluteSafePath','Get-OptionalProperty','Get-ManifestPath','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneStandingPolicyCandidates','Get-ControlPlaneStandingPolicySchema','Get-ControlPlaneWorkspaceRegistryPath','Resolve-ControlPlaneNodePath','Get-ControlPlaneAgentPaths','Test-ControlPlanePropertySet','Test-ControlPlaneNodeCredential','Test-ControlPlaneWorkspaceRegistration','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Get-ControlPlaneAgentArguments','Stop-ControlPlaneAgentForReplacement','New-State','Invoke-ControlPlaneReadOnlyAgent')){
   $definition=$parsed.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name-eq$helperName},$true)
   if($null-eq$definition){throw 'Required pure supervisor helper missing.'}
   . ([scriptblock]::Create($definition.Extent.Text))
