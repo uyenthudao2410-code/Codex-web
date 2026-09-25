@@ -2,7 +2,9 @@
 
 ## Current desktop checkpoint — 25-09-2026, W1 source implementation verified
 
-The reviewed source baseline is `main @ 2b04eec5`. The Electron desktop changes
+The retired-page/UTF-8 source change was committed as
+`main @ b7d5f5ad` (`Retire embedded ChatGPT page and harden bridges`); its
+delivery snapshot was recorded in `fb295859`. The Electron desktop changes
 remove the embedded ChatGPT view and app access to its dedicated session,
 conversation monitor, download capture, DOM observer/journal, and related IPC.
 Existing per-profile browser data is not opened, migrated or deleted by these
