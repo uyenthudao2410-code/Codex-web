@@ -253,6 +253,14 @@ test('bounded file-read rejects sensitive content and any receipt policy/digest 
 
   const good = normaliseFileReadResult(safeResult(admission), admission);
   assert.equal(good.file.content, 'line one\nline two\n');
+  assert.equal(good.runtime_identity.server_instance_id, '_server-control-plane-0001');
+
+  const invalidIdentity = safeResult(admission);
+  invalidIdentity.runtime_identity.server_instance_id = 'invalid identity';
+  assert.throws(
+    () => normaliseFileReadResult(invalidIdentity, admission),
+    { code: 'CONTROL_PLANE_FILE_READ_RESULT_IDENTITY_INVALID' }
+  );
 
   const secret = safeResult(admission, 'token = sk-example-secret-value-123456789\n');
   assert.throws(
