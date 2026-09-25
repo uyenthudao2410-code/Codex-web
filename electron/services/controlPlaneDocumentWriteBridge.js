@@ -38,6 +38,7 @@ const MAX_TITLE_BYTES = 256;
 const MAX_RESULT_BYTES = 256 * 1024;
 const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/;
 const ACTION_IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/;
+const RUNTIME_ID_RE = /^[A-Za-z0-9_.:@-]{1,256}$/;
 const TASK_ID_RE = /^task_[a-f0-9]{32}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const TARGET_EXTENSIONS = new Set(['.docx', '.md', '.txt']);
@@ -296,9 +297,9 @@ function normaliseDocumentWriteResult(value, admission) {
     || value.policy_sha256.toLowerCase() !== admission.policy_sha256
     || canonicalContract(value.facade_contract) !== canonicalContract(admission.facade_contract)
     || !value.runtime_identity || typeof value.runtime_identity !== 'object'
-    || !IDENTIFIER_RE.test(text(value.runtime_identity.activation_epoch_id))
-    || !IDENTIFIER_RE.test(text(value.runtime_identity.process_instance_id))
-    || !IDENTIFIER_RE.test(text(value.runtime_identity.server_instance_id))
+    || !RUNTIME_ID_RE.test(text(value.runtime_identity.activation_epoch_id))
+    || !RUNTIME_ID_RE.test(text(value.runtime_identity.process_instance_id))
+    || !RUNTIME_ID_RE.test(text(value.runtime_identity.server_instance_id))
     || !SHA256_RE.test(text(value.runtime_identity.tool_contract_sha256).toLowerCase())
     || !value.result || typeof value.result !== 'object' || Array.isArray(value.result)
     || value.result.target !== admission.target

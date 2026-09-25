@@ -134,7 +134,7 @@ function safeResult(admitted) {
     runtime_identity: {
       activation_epoch_id: 'activation-control-plane-0001',
       process_instance_id: 'process-control-plane-0001',
-      server_instance_id: 'server-control-plane-0001',
+      server_instance_id: '_server-control-plane-0001',
       tool_contract_sha256: 'd'.repeat(64)
     },
     ...output,

@@ -221,7 +221,7 @@ test('document receipt normalization is digest-only and rejects path/identity dr
     runtime_identity: {
       activation_epoch_id: 'activation-document-write-0001',
       process_instance_id: 'process-document-write-0001',
-      server_instance_id: 'server-document-write-0001',
+      server_instance_id: '_server-document-write-0001',
       tool_contract_sha256: '2'.repeat(64)
     }
   };

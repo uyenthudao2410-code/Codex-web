@@ -28,6 +28,7 @@ const MAX_ALLOWED_PREFIXES = 32;
 const MAX_CONCURRENT = 4;
 const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/;
 const ACTION_IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/;
+const RUNTIME_ID_RE = /^[A-Za-z0-9_.:@-]{1,256}$/;
 const TASK_ID_RE = /^task_[a-f0-9]{32}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ORCHESTRATION_ID_RE = /^[a-f0-9]{32}$/;
@@ -388,9 +389,9 @@ function normaliseExecResult(value, admission) {
   }
   const runtimeIdentity = value.runtime_identity;
   if (!runtimeIdentity || typeof runtimeIdentity !== 'object' || Array.isArray(runtimeIdentity)
-    || !IDENTIFIER_RE.test(text(runtimeIdentity.activation_epoch_id))
-    || !IDENTIFIER_RE.test(text(runtimeIdentity.process_instance_id))
-    || !IDENTIFIER_RE.test(text(runtimeIdentity.server_instance_id))
+    || !RUNTIME_ID_RE.test(text(runtimeIdentity.activation_epoch_id))
+    || !RUNTIME_ID_RE.test(text(runtimeIdentity.process_instance_id))
+    || !RUNTIME_ID_RE.test(text(runtimeIdentity.server_instance_id))
     || !SHA256_RE.test(text(runtimeIdentity.tool_contract_sha256).toLowerCase())) {
     throw bridgeError('CONTROL_PLANE_EXEC_RESULT_IDENTITY_INVALID');
   }
