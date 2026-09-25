@@ -6,6 +6,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const {
   buildTunnelProcessEnvironment,
+  tunnelRuntimeEnvironment,
   CODEX_APP_SERVER_COMMAND_ENV,
   CODEX_APP_SERVER_CMD_ENV,
   CODEX_APP_SERVER_ARGS_ENV,
@@ -16,6 +17,32 @@ const root = path.resolve(__dirname, '..');
 const portablePython = path.join(root, 'resources', 'native-python', 'python.exe');
 const pythonw = path.join(root, 'resources', 'native-python', 'pythonw.exe');
 const launcher = path.join(root, 'resources', 'tunnel-client', 'codex_app_server_launcher.py');
+
+test('tunnel environment inherits only OS needs and its two explicit service credential handles', () => {
+  const env = tunnelRuntimeEnvironment({
+    PATH: 'C:\\Windows\\System32',
+    SYSTEMROOT: 'C:\\Windows',
+    USERPROFILE: 'C:\\Users\\Operator',
+    CODEX_HOME: 'C:\\Users\\Operator\\.codex',
+    CONTROL_PLANE_API_KEY: 'approved-runtime-key-handle',
+    MCP_RUNTIME_HEADER_VALUE: 'approved-local-mcp-header-handle',
+    OPENAI_API_KEY: 'unrelated-account-key',
+    CONTROL_PLANE_OPERATOR_TOKEN: 'privileged-operator-token',
+    MCP_DISCOVERY_ATTESTATION_VALUE: 'ambient-attestation-must-not-pass',
+    GITHUB_TOKEN: 'unrelated-source-control-token',
+    NODE_OPTIONS: '--require arbitrary-startup-code',
+    HTTPS_PROXY: 'https://user:password@proxy.example.test:8443'
+  });
+
+  assert.deepEqual(env, {
+    PATH: 'C:\\Windows\\System32',
+    SYSTEMROOT: 'C:\\Windows',
+    USERPROFILE: 'C:\\Users\\Operator',
+    CODEX_HOME: 'C:\\Users\\Operator\\.codex',
+    CONTROL_PLANE_API_KEY: 'approved-runtime-key-handle',
+    MCP_RUNTIME_HEADER_VALUE: 'approved-local-mcp-header-handle'
+  });
+});
 
 test('Windows tunnel children use the bundled hidden Codex app-server bridge', () => {
   const env = buildTunnelProcessEnvironment({
@@ -28,7 +55,8 @@ test('Windows tunnel children use the bundled hidden Codex app-server bridge', (
   });
 
   if (process.platform !== 'win32') {
-    assert.equal(env[CODEX_APP_SERVER_COMMAND_ENV], 'ambient-shell-command-must-not-win');
+    assert.equal(env[CODEX_APP_SERVER_COMMAND_ENV], undefined);
+    assert.equal(env.PATH, process.env.PATH);
     return;
   }
   assert.equal(env[CODEX_APP_SERVER_COMMAND_ENV], '');

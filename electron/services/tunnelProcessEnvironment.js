@@ -5,6 +5,24 @@ const CODEX_APP_SERVER_COMMAND_ENV = 'TUNNEL_CLIENT_CODEX_APP_SERVER_COMMAND';
 const CODEX_APP_SERVER_CMD_ENV = 'TUNNEL_CLIENT_CODEX_APP_SERVER_CMD';
 const CODEX_APP_SERVER_ARGS_ENV = 'TUNNEL_CLIENT_CODEX_APP_SERVER_ARGS';
 const CODEX_APP_SERVER_CWD_ENV = 'TUNNEL_CLIENT_CODEX_APP_SERVER_CWD';
+const TUNNEL_RUNTIME_ENVIRONMENT_KEYS = Object.freeze([
+  'APPDATA', 'COMSPEC', 'CODEX_HOME', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA',
+  'NUMBER_OF_PROCESSORS', 'OS', 'PATH', 'PATHEXT', 'PROCESSOR_ARCHITECTURE',
+  'PROCESSOR_IDENTIFIER', 'PROCESSOR_LEVEL', 'PROCESSOR_REVISION', 'SYSTEMDRIVE',
+  'SYSTEMROOT', 'TEMP', 'TMP', 'USERDOMAIN', 'USERDOMAIN_ROAMINGPROFILE',
+  'USERNAME', 'USERPROFILE', 'WINDIR',
+  // Only these two service credentials are passed as explicit secret handles
+  // by TunnelService.start. All ambient API/session/account secrets are dropped.
+  'CONTROL_PLANE_API_KEY', 'MCP_RUNTIME_HEADER_VALUE'
+]);
+
+function tunnelRuntimeEnvironment(sourceEnv = process.env) {
+  const env = {};
+  for (const key of TUNNEL_RUNTIME_ENVIRONMENT_KEYS) {
+    if (typeof sourceEnv?.[key] === 'string') env[key] = sourceEnv[key];
+  }
+  return env;
+}
 
 function requiredFile(file, code, message) {
   const resolved = path.resolve(String(file || ''));
@@ -15,7 +33,7 @@ function requiredFile(file, code, message) {
 }
 
 function buildTunnelProcessEnvironment(paths, sourceEnv = process.env) {
-  const env = { ...sourceEnv };
+  const env = tunnelRuntimeEnvironment(sourceEnv);
   if (process.platform !== 'win32') return env;
 
   // Lightweight test/embedding path objects may intentionally omit the
@@ -55,6 +73,7 @@ function buildTunnelProcessEnvironment(paths, sourceEnv = process.env) {
 
 module.exports = {
   buildTunnelProcessEnvironment,
+  tunnelRuntimeEnvironment,
   CODEX_APP_SERVER_COMMAND_ENV,
   CODEX_APP_SERVER_CMD_ENV,
   CODEX_APP_SERVER_ARGS_ENV,

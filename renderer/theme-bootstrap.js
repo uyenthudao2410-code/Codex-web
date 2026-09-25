@@ -83,7 +83,6 @@
       openExternal: fail,
       installPython: fail,
       detectProxy: fail,
-      clearChatSession: fail,
       onProgress: noopSubscription,
       onLog: noopSubscription,
       onStatus: noopSubscription,

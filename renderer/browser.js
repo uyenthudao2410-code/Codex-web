@@ -43,26 +43,6 @@ function progressForTask(task, status) {
   return null;
 }
 
-function renderChatState(state) {
-  if (!state) return;
-  $('#backButton').disabled = !state.canGoBack;
-  $('#forwardButton').disabled = !state.canGoForward;
-  const hasDocument = Boolean(String(state.url || '').trim());
-  const pending = Boolean(state.loading) || (!state.error && !hasDocument);
-  const element = $('#pageState');
-  element.classList.toggle('loading', pending);
-  element.classList.toggle('ready', !pending && !state.error);
-  element.classList.toggle('error', Boolean(state.error));
-  element.querySelector('span').textContent = state.error
-    ? `Tải thất bại: ${state.error}`
-    : pending ? (hasDocument ? 'Đang chuyển trang…' : 'Đang mở ChatGPT…') : 'ChatGPT đã sẵn sàng';
-  const loadingStage = $('.loading-stage');
-  if (loadingStage) {
-    loadingStage.hidden = !pending;
-    loadingStage.setAttribute('aria-hidden', String(!pending));
-  }
-}
-
 function renderServiceState(state) {
   const staleSignal = !state || state.signalStale === true || state.telemetryAvailable === false;
   const current = staleSignal && lastRuntimeState
@@ -155,6 +135,29 @@ function renderWorkspaceHealth() {
   button.title = !activeWorkspace ? 'Chưa chọn workspace'
     : uncertain ? 'Không thể xác nhận workspace khi telemetry gián đoạn'
       : synced ? 'Workspace đã đồng bộ với MCP' : 'Workspace đang chờ đồng bộ với MCP';
+  renderExecutorSummary();
+}
+
+function renderExecutorSummary() {
+  const state = lastRuntimeState;
+  const runtime = $('#executorRuntimeState');
+  const route = $('#executorPolicyState');
+  if (!runtime || !route) return;
+  const stale = !state || state.signalStale === true || state.telemetryAvailable === false;
+  if (stale) {
+    runtime.textContent = 'Chưa xác minh telemetry runtime';
+    route.textContent = 'Chưa xác minh quyền theo từng thao tác';
+  } else {
+    runtime.textContent = state.componentsReady === true
+      ? 'Các process cục bộ sẵn sàng'
+      : 'Đang chờ process cục bộ';
+    const central = state.executionRole === 'central_executor';
+    const routeReady = central ? state.centralConnected === true : state.tunnelRunning === true;
+    route.textContent = routeReady
+      ? 'Đã kết nối route; quyền và receipt vẫn kiểm tra riêng'
+      : 'Chưa xác minh kết nối route hoặc authority';
+  }
+  $('#executorWorkspaceState').textContent = activeWorkspace || 'Chưa chọn thư mục làm việc';
 }
 
 async function refreshStatus() {
@@ -294,18 +297,13 @@ async function switchWorkspace(workspace, showProgress = true) {
   }
 }
 
-async function navigate(action) {
-  try { unwrap(await api.navigate(action)); }
-  catch (error) { renderChatState({ error: error.message }); }
-}
-
 function renderPanelVisibility(payload) {
   const button = $('#panelToggleButton');
   if (!button) return;
   button.classList.toggle('active', Boolean(payload?.visible));
   button.title = payload?.visible
     ? 'Ẩn bảng điều khiển điều phối'
-    : 'Hiện bảng điều khiển điều phối bên cạnh ChatGPT';
+    : 'Hiện bảng điều khiển điều phối';
 }
 
 async function togglePanel() {
@@ -317,10 +315,6 @@ async function togglePanel() {
   }
 }
 
-$('#backButton').onclick = () => navigate('back');
-$('#forwardButton').onclick = () => navigate('forward');
-$('#reloadButton').onclick = () => navigate('reload');
-$('#homeButton').onclick = () => navigate('home');
 $('#workspaceHealthButton').onclick = (event) => {
   event.stopPropagation();
   const popover = $('#workspaceHealthPopover');
@@ -338,13 +332,16 @@ document.addEventListener('click', (event) => {
   }
 });
 $('#managerButton').onclick = () => api.openManager();
-$('#resetSessionButton').onclick = async () => {
-  if (!window.confirm('Xóa session đăng nhập ChatGPT riêng của app và đăng nhập lại? Bạn sẽ phải đăng nhập lại trong cửa sổ tích hợp.')) return;
+$('#openChatGPTButton').onclick = async () => {
+  const button = $('#openChatGPTButton');
+  button.disabled = true;
   try {
-    unwrap(await api.clearChatSession());
-    $('#switchState').textContent = 'Đã xóa session, đang mở lại ChatGPT…';
+    unwrap(await api.openChatGPT());
+    $('#executorNotice').textContent = 'Đã mở trang cài đặt kết nối ChatGPT trong trình duyệt mặc định.';
   } catch (error) {
-    $('#switchState').textContent = error.message;
+    $('#executorNotice').textContent = error.message;
+  } finally {
+    button.disabled = false;
   }
 };
 $('#deviceState').onclick = () => api.openManager();
@@ -384,24 +381,16 @@ $('#addWorkspace').onclick = async () => {
   }
 };
 
-api.onChatState(renderChatState);
 api.onHeartbeat(renderServiceState);
 api.onPanelVisibility(renderPanelVisibility);
 api.panelVisibility().then((result) => renderPanelVisibility(unwrap(result))).catch(() => {});
 $('#panelToggleButton').onclick = () => togglePanel();
-api.onDownload((item) => {
-  const node = $('#downloadState');
-  if (item.status === 'completed') node.textContent = `Đã lưu: ${baseName(item.path)}`;
-  else if (item.status === 'progressing') node.textContent = `Tệp đính kèm ${item.totalBytes ? Math.round((item.receivedBytes / item.totalBytes) * 100) : 0}%`;
-  else if (item.error) node.textContent = item.error;
-});
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'hidden') {
     void refreshTask(true);
     void refreshWorkspace(true);
   }
 });
-api.chatStatus().then((result) => renderChatState(unwrap(result))).catch(() => {});
 refreshStatus();
 refreshWorkspace(true).finally(() => setTimeout(pollWorkspace, workspacePollDelay()));
 refreshTask(true).finally(() => setTimeout(pollTask, taskPollDelay()));

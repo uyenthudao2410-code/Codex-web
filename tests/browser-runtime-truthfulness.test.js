@@ -167,7 +167,7 @@ test('main handoff forwards the selected RUN with Electron identity and rejects 
   let handler;
   const calls = [];
   const responseResult = { structuredContent: { recorded: true } };
-  fragment('electron/main.js', "  secureHandle('panel:handoff'", "  secureHandle('chat:clear-session'", {
+  fragment('electron/main.js', "  secureHandle('panel:handoff'", "  secureHandle('dialog:workspace'", {
     secureHandle: (_name, callback) => { handler = callback; },
     invokeSafely: async (callback) => {
       try { return { ok: true, data: await callback() }; }

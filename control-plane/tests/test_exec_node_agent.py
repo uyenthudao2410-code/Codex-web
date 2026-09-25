@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import tempfile
 import time
 import unittest
@@ -88,7 +89,7 @@ class BoundedRunnerTests(unittest.TestCase):
 
     def test_success_and_output_caps(self) -> None:
         result, error = _run_bounded_exec(
-            argv=["python3", "-c", "print('hello-exec')"], cwd_path=self.root,
+            argv=[sys.executable, "-c", "print('hello-exec')"], cwd_path=self.root,
             timeout_ms=10000, max_output_bytes=32768)
         self.assertIsNone(error)
         assert result is not None
@@ -97,7 +98,7 @@ class BoundedRunnerTests(unittest.TestCase):
 
     def test_timeout_reports_typed_uncertainty_or_timeout(self) -> None:
         result, error = _run_bounded_exec(
-            argv=["python3", "-c", "import time; time.sleep(30)"], cwd_path=self.root,
+            argv=[sys.executable, "-c", "import time; time.sleep(30)"], cwd_path=self.root,
             timeout_ms=5000, max_output_bytes=32768)
         # Either a timed-out result or a typed cleanup-uncertain error; never silent.
         self.assertTrue((result is not None and result.get("timed_out")) or error is not None)
@@ -110,7 +111,7 @@ class BoundedRunnerTests(unittest.TestCase):
             return calls["n"] >= 3
 
         result, error = _run_bounded_exec(
-            argv=["python3", "-c", "import time; time.sleep(30)"], cwd_path=self.root,
+            argv=[sys.executable, "-c", "import time; time.sleep(30)"], cwd_path=self.root,
             timeout_ms=60000, max_output_bytes=32768, stop_check=_stop_check)
         self.assertIsNone(error)
         assert result is not None
@@ -119,7 +120,7 @@ class BoundedRunnerTests(unittest.TestCase):
     def test_shell_is_never_used(self) -> None:
         # If shell were used, echo would expand; with shell=False the literal runs.
         result, error = _run_bounded_exec(
-            argv=["python3", "-c", "import sys; sys.stdout.write(';rm')"], cwd_path=self.root,
+            argv=[sys.executable, "-c", "import sys; sys.stdout.write(';rm')"], cwd_path=self.root,
             timeout_ms=10000, max_output_bytes=32768)
         self.assertIsNone(error)
         assert result is not None

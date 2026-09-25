@@ -2,19 +2,26 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { Readable } = require('node:stream');
 
 const {
   normalisedResult,
+  readRequest,
   runDevelopmentFileReadBridge
 } = require('../control_plane/recovery_file_read_bridge.cjs');
 const {
   BRIDGE_CLIENT_ID,
   BRIDGE_CLIENT_TYPE,
+  admitFileReadBridgeRequest,
   digest,
   fileContentDigest,
   normaliseFileReadResult
 } = require('../../electron/services/controlPlaneFileReadBridge');
-const { RPC_ACTIONS } = require('../../electron/services/recoveryIpc');
+const { RPC_ACTIONS, RecoveryIpcServer, RecoveryIpcClient, loadRecoveryDescriptor } = require('../../electron/services/recoveryIpc');
+const { createRuntimePaths } = require('../../electron/services/runtimePaths');
 
 const descriptor = Object.freeze({
   installation_id: 'a'.repeat(64),
@@ -147,4 +154,54 @@ test('file-read bridge refuses installation mismatch before it opens Recovery IP
     { code: 'RECOVERY_HOST_INSTALLATION_MISMATCH' }
   );
   assert.equal(called, false);
+});
+
+test('file-read request survives stdin JSON and real Recovery IPC without shape drift', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'cp-file-read-ipc-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const appRoot = path.resolve(__dirname, '../..');
+  const paths = createRuntimePaths({ dataRoot: directory, appRoot, resourcesRoot: path.join(appRoot, 'resources'), runtimeMode: 'development' });
+  const observed = [];
+  let effects = 0;
+  const policy = {
+    ...request,
+    schema_version: 1,
+    enabled: true,
+    allowed_relative_paths: ['fixture.txt'],
+    policy_sha256: 'c'.repeat(64)
+  };
+  const server = new RecoveryIpcServer({
+    paths,
+    instanceId: 'file-read-real-ipc-test',
+    startedAt: new Date().toISOString(),
+    log: { warn() {} },
+    handlers: {
+      'runtime.control_plane_bounded_file_read': async (value) => {
+        observed.push(value);
+        admitFileReadBridgeRequest(policy, value);
+        effects += 1;
+        return safeResult();
+      }
+    }
+  });
+  const liveDescriptor = await server.start();
+  t.after(() => server.stop());
+  const dependencies = {
+    createDevelopmentPaths: () => paths,
+    RecoveryIpcClient,
+    loadRecoveryDescriptor,
+    fileReadBridge: { normaliseFileReadResult }
+  };
+  const parsed = await readRequest(Readable.from([Buffer.from(JSON.stringify(request), 'utf8')]));
+  const result = await runDevelopmentFileReadBridge(parsed, { appRoot, dependencies });
+  assert.deepEqual(observed, [request]);
+  assert.equal(result.file_accessed, true);
+  assert.equal(result.installation_id, liveDescriptor.installation_id);
+  assert.equal(effects, 1);
+  for (const invalid of [{ ...request, max_lines: '20' }, { ...request, extra: 'untrusted' }, [request]]) {
+    await assert.rejects(runDevelopmentFileReadBridge(invalid, { appRoot, dependencies }), {
+      code: 'CONTROL_PLANE_FILE_READ_REQUEST_INVALID'
+    });
+  }
+  assert.equal(effects, 1, 'malformed requests must fail before any local effect');
 });

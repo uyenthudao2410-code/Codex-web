@@ -1,5 +1,63 @@
 # Current Project State — Tools-Codex-web
 
+## Current desktop checkpoint — 25-09-2026, W1 source implementation verified
+
+The reviewed source baseline is `main @ 2b04eec5`. The Electron desktop changes
+remove the embedded ChatGPT view and app access to its dedicated session,
+conversation monitor, download capture, DOM observer/journal, and related IPC.
+Existing per-profile browser data is not opened, migrated or deleted by these
+source changes. The Executor Hub is a local manager window with a user-clicked
+link to ChatGPT's official system browser; local workspace/task/panel controls
+remain.
+
+This checkpoint proves source plus focused local tests, not a released or live activation.
+The running Windows candidate was observed in `dist/windows-candidate-mxc-wsb-cbe1774-r9`
+and has not loaded the current source. Local workspace capabilities were last
+read as `read=true`, `write=true`, `exec=false`, without an installed exec
+policy. The OpenAI account remains blocked per the user's supplied email and
+must not be used for connection canaries while the block is in effect. The last
+Ubuntu SSH attempt was denied by the Tailscale ACL; current server health,
+receipts, and policy therefore remain unverified. Source-side W1 removes the
+Electron-owned ChatGPT page, its observation/consent/download wiring and its
+credential IPC; only a user-clicked, fixed OpenAI settings link remains. Legacy
+per-profile Chromium data has not been read or deleted. Focused validation on
+25-09: **117/117 Node tests PASS** across UI, Control Center, Recovery Host and
+accepted-code activation; **53/53 focused Python bridge tests PASS**. The later
+full `npm run test:all` on this Windows host returned **Node 1019/1019 PASS**,
+source-root clean and repository secret check PASS, but Python `1183 passed,
+5 skipped, 4 failed`. Three continuation cases fail while removing their
+temporary directories (`WinError 32`/`WinError 5`); the remaining Windows MXC
+integration case fails when the sandboxed npm script cannot spawn
+`C:\Windows\System32\cmd.exe` (`ENOENT`). This suite therefore fails overall.
+The executor stays read/write only: `exec=false` and no exec policy exists.
+An unpacked dev candidate `policy-w1-c-20260925` has now built and passed
+packaged Recovery smoke; its EXE and `app.asar` SHA-256 are
+`CCE18196E2348EAFB5AB6795D696E55D85E8B000584AC5218F5D85B462F32231` and
+`A5BD1AE882E4C0CB5060B69320E478277BE5C50CEC183B0EC7E245B9C8F6D720`.
+Before it, two unique dev-build destinations stopped at Windows
+`EBUSY` while updating the embedded asar hash; both incomplete candidates were
+preserved. Candidate C has not been installed or activated.
+
+Candidate `policy-w1-c-20260925` built successfully as an unsigned,
+development-only unpacked Windows candidate. The builder's exact-resource
+afterPack verification passed; hashes of six changed Electron/renderer files
+inside `app.asar` match source; forbidden page-observation strings are absent;
+the isolated packaged Recovery smoke passed with 18 required resources, all
+eight smart-v3 tools, healthy Recovery Host/supervisor and no Scheduled Task
+mutation. Candidate r9 remains the running process, so this proves packaged
+source, not that the replacement is active.
+
+The `test:all` failures remain separate open gates; the candidate has not been
+installed or activated. The ChatGPT Business account is still reported as
+disabled, SSH to Ubuntu was last rejected by the Tailscale ACL, production
+action `act_048df93488874a70aa97a7ee18ccbd03` remains unreconciled/unknown, and
+live ChatGPT→Ubuntu→Windows read/patch/exec remains unverified. Preserve the
+current `exec=false` fail-closed state.
+
+Keep prior dated checkpoints below as chronology. They do not supersede this
+checkpoint or constitute current runtime, account, connector, release, or
+end-to-end proof.
+
 > Checkpoint Windows MXC / shared tunnel — 24-09-2026, 13:31 +07: branch
 > `main @ 3ca26a74`. Local commits `a4becdb7` (feature) and `3ca26a74` (rollout
 > gate docs) are present; no push. Worktree has only live drift in the canonical

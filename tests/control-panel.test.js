@@ -8,15 +8,14 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const {
   panelInset,
   panelBounds,
-  chatBounds,
   PANEL_WIDTH,
   PANEL_WIDTH_RATIO,
   PANEL_MIN_WIDTH,
   PANEL_MAX_WIDTH,
-  MIN_CHAT_WIDTH
+  MIN_EXECUTOR_WIDTH
 } = require('../electron/services/panelLayout');
 
-test('panel layout keeps chat usable and shrinks gracefully on narrow windows', () => {
+test('panel layout preserves executor space and shrinks gracefully on narrow windows', () => {
   assert.equal(PANEL_WIDTH, 420);
   assert.equal(PANEL_WIDTH_RATIO, 0.35);
   assert.equal(PANEL_MIN_WIDTH, 360);
@@ -25,29 +24,24 @@ test('panel layout keeps chat usable and shrinks gracefully on narrow windows', 
   assert.equal(panelInset(1360, true), 476);
   assert.equal(panelInset(1920, true), 672);
   assert.equal(panelInset(2560, true), PANEL_MAX_WIDTH);
-  assert.equal(panelInset(900, true), 900 - MIN_CHAT_WIDTH);
+  assert.equal(panelInset(900, true), 900 - MIN_EXECUTOR_WIDTH);
   assert.equal(panelInset(400, true), 0);
-  assert.equal(panelInset(1200, true, { panelWidth: 500, minChatWidth: 600 }), 500);
+  assert.equal(panelInset(1200, true, { panelWidth: 500, minExecutorWidth: 600 }), 500);
 
   const bounds = panelBounds(1360, 900, 112, true);
   assert.deepEqual(bounds, { x: 884, y: 112, width: 476, height: 900 - 112 });
   assert.equal(panelBounds(1360, 900, 112, false), null);
 
-  const chat = chatBounds(1360, 900, 112, true);
-  assert.deepEqual(chat, { x: 0, y: 112, width: 884, height: 900 - 112 });
-  const chatClosed = chatBounds(1360, 900, 112, false);
-  assert.deepEqual(chatClosed, { x: 0, y: 112, width: 1360, height: 900 - 112 });
 });
 
-test('chat view can be inset by the control panel without changing the toolbar height', () => {
-  const controller = read('electron/chatViewController.js');
-  assert.match(controller, /setRightInset/);
-  assert.match(controller, /this\.rightInset = 0/);
-  assert.match(controller, /width: Math\.max\(0, width - this\.rightInset\)/);
+test('executor home can host the control panel without embedding or observing ChatGPT', () => {
+  const html = read('renderer/browser.html');
+  assert.match(html, /id="openChatGPTButton"/);
+  assert.match(html, /class="executor-stage"/);
   const main = read('electron/main.js');
-  assert.match(main, /toolbarHeight: 112/);
-  assert.match(main, /panelInset\(width, panelVisible\)/);
   assert.match(main, /panelBounds\(width, height, TOOLBAR_HEIGHT, panelVisible\)/);
+  assert.match(main, /function createPanelView\(\)[\s\S]*new WebContentsView/);
+  assert.doesNotMatch(main, /new ChatViewController|executeJavaScript/);
 });
 
 test('main process exposes Execution Control Center IPC through MCP control plane', () => {
@@ -356,20 +350,15 @@ test('browser toolbar offers the control panel toggle', () => {
   assert.match(css, /manager-button\.active/);
 });
 
-test('browser loading placeholder follows the authoritative chat state', () => {
+test('executor overview reports workspace and live route without treating it as an action receipt', () => {
   const html = read('renderer/browser.html');
-  assert.match(html, /<main class="loading-stage">/);
+  assert.match(html, /<main class="executor-stage">/);
+  assert.match(html, /id="executorPolicyState"/);
   const browser = read('renderer/browser.js');
-  const start = browser.indexOf('function renderChatState(state)');
-  const end = browser.indexOf('function renderServiceState(state)');
-  assert.ok(start >= 0 && end > start, 'renderChatState must remain a bounded renderer function');
-  const renderChatState = browser.slice(start, end);
-  assert.match(renderChatState, /const hasDocument = Boolean\(String\(state\.url \|\| ''\)\.trim\(\)\);/);
-  assert.match(renderChatState, /const pending = Boolean\(state\.loading\) \|\| \(!state\.error && !hasDocument\);/);
-  assert.match(renderChatState, /const loadingStage = \$\('\.loading-stage'\);/);
-  assert.match(renderChatState, /loadingStage\.hidden = !pending;/);
-  assert.match(renderChatState, /loadingStage\.setAttribute\('aria-hidden', String\(!pending\)\);/);
-  assert.doesNotMatch(renderChatState, /classList\.toggle\('ready', !state\.loading && !state\.error\)/);
+  assert.match(browser, /function renderExecutorSummary\(\)/);
+  assert.match(browser, /Chưa xác minh telemetry runtime/);
+  assert.match(browser, /quyền và receipt vẫn kiểm tra riêng/);
+  assert.doesNotMatch(browser, /fullyReady\s*\?[^:]*Sẵn sàng nhận việc/);
 });
 
 test('panel CSP permits inline styles but rejects inline scripts', () => {

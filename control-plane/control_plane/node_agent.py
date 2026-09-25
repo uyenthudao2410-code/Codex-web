@@ -4261,9 +4261,8 @@ def recovery_read_only_bridge(args: argparse.Namespace, project_root: Path, requ
             command,
             cwd=project_root,
             env=environment,
-            input=json.dumps(request, separators=(",", ":")),
+            input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=args.timeout_seconds,
             check=False,
         )
@@ -4272,8 +4271,8 @@ def recovery_read_only_bridge(args: argparse.Namespace, project_root: Path, requ
     except OSError:
         return None, "CONTROL_PLANE_BRIDGE_UNAVAILABLE"
     try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError:
+        payload = json.loads(completed.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "CONTROL_PLANE_BRIDGE_RESULT_INVALID"
     if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
         result = payload.get("result")
@@ -4290,6 +4289,8 @@ def recovery_file_read_bridge(args: argparse.Namespace, project_root: Path, requ
     This must remain a sibling of the metadata bridge rather than sharing a
     generic subprocess adapter.  A packaging omission or a response shape
     drift then fails this capability closed without changing the old lane.
+    Pipes carry UTF-8 JSON bytes, never Windows' locale-dependent text mode.
+    Stderr remains diagnostic bytes and cannot corrupt the receipt decoder.
     """
 
     bridge = Path(__file__).with_name("recovery_file_read_bridge.cjs")
@@ -4301,9 +4302,8 @@ def recovery_file_read_bridge(args: argparse.Namespace, project_root: Path, requ
             command,
             cwd=project_root,
             env=environment,
-            input=json.dumps(request, separators=(",", ":")),
+            input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=args.timeout_seconds,
             check=False,
         )
@@ -4312,8 +4312,8 @@ def recovery_file_read_bridge(args: argparse.Namespace, project_root: Path, requ
     except OSError:
         return None, "CONTROL_PLANE_FILE_READ_UNAVAILABLE"
     try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError:
+        payload = json.loads(completed.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "CONTROL_PLANE_FILE_READ_RESULT_INVALID"
     if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
         result = payload.get("result")
@@ -4345,9 +4345,8 @@ def recovery_approved_patch_bridge(
             command,
             cwd=project_root,
             env=environment,
-            input=json.dumps(request, separators=(",", ":")),
+            input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=args.timeout_seconds,
             check=False,
         )
@@ -4356,8 +4355,8 @@ def recovery_approved_patch_bridge(
     except OSError:
         return None, "CONTROL_PLANE_APPROVED_PATCH_UNAVAILABLE"
     try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError:
+        payload = json.loads(completed.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "CONTROL_PLANE_APPROVED_PATCH_RESULT_INVALID"
     if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
         result = payload.get("result")
@@ -4392,9 +4391,8 @@ def recovery_exec_bridge(
             command,
             cwd=project_root,
             env=environment,
-            input=json.dumps(request, separators=(",", ":")),
+            input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=args.timeout_seconds,
             check=False,
         )
@@ -4403,8 +4401,8 @@ def recovery_exec_bridge(
     except OSError:
         return None, "CONTROL_PLANE_EXEC_UNAVAILABLE"
     try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError:
+        payload = json.loads(completed.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "CONTROL_PLANE_EXEC_RESULT_INVALID"
     if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
         result = payload.get("result")
@@ -4439,9 +4437,8 @@ def recovery_document_write_bridge(
             command,
             cwd=project_root,
             env=environment,
-            input=json.dumps(request, separators=(",", ":")),
+            input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=args.timeout_seconds,
             check=False,
         )
@@ -4450,8 +4447,8 @@ def recovery_document_write_bridge(
     except OSError:
         return None, "CONTROL_PLANE_DOCUMENT_WRITE_UNAVAILABLE"
     try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError:
+        payload = json.loads(completed.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID"
     if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
         result = payload.get("result")

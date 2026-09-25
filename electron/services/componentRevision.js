@@ -72,8 +72,6 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/preload.js',
       'electron/panelPreload.js',
       'electron/browserPreload.js',
-      'electron/chatViewController.js',
-      'electron/services/chatEvaluationJournal.js',
       'electron/services/uiPerformanceMetrics.js'
     ]),
     directories: Object.freeze([

@@ -1,12 +1,12 @@
 # Tools-Codex-web — Coding Tools MCP Execution Hub
 
-> Desktop app Windows biến ChatGPT thành trợ lý coding làm việc trực tiếp với repository trên máy bạn qua MCP: quản lý workspace, đọc/sửa code, chạy lệnh/test/build, thao tác Git, xử lý tài liệu, tải file đính kèm, điều phối model theo độ khó và lưu toàn bộ evidence vận hành.
+> Desktop app Windows quản lý máy chạy Coding Tools MCP: workspace, quyền đọc/sửa/chạy lệnh, tiến trình và evidence. ChatGPT kết nối qua MCP/Tunnel được hỗ trợ trong trình duyệt hoặc ứng dụng chính thức; Execution Hub không nhúng hay quan sát trang, DOM, nội dung hoặc session đăng nhập ChatGPT.
 
 > **Nguồn trạng thái hiện tại:** [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md). File có ngày dưới `docs/research/` là evidence/plan lịch sử, không dùng để ghi đè source, test hoặc trạng thái vận hành mới hơn.
 
 | | |
 |---|---|
-| **Phiên bản desktop** | `coding-tools-mcp 1.0.0` |
+| **Phiên bản desktop** | `coding-tools-mcp 1.0.7` |
 | **Repository** | `uyenthudao2410-code/Tools-Codex-web` |
 | **Nền tảng** | Windows + Electron |
 | **MCP runtime** | `Coding Tools MCP` (Python, `resources/coding-tools-mcp`) |
@@ -25,7 +25,7 @@
 7. [Codex App Server Bridge & Review plane](#7-codex-app-server-bridge--review-plane)
 8. [Task state, EOCL, command session](#8-task-state-eocl-command-session)
 9. [Document Workflow](#9-document-workflow)
-10. [Download & lưu file đính kèm](#10-download--lưu-file-đính-kèm)
+10. [Mở ChatGPT và chuyển tệp có kiểm soát](#10-mở-chatgpt-và-chuyển-tệp-có-kiểm-soát)
 11. [Ledger evidence & archival](#11-ledger-evidence--archival)
 12. [Permission & Tool Mode](#12-permission--tool-mode)
 13. [Cài đặt, chạy, test, build](#13-cài-đặt-chạy-test-build)
@@ -50,12 +50,12 @@ Khi kết nối qua MCP, ChatGPT có thể:
 - lưu trạng thái task để tiếp tục qua nhiều lượt chat (kể cả sang cửa sổ chat mới qua handoff capsule);
 - tạo/đọc tài liệu Word, PDF, Markdown, text theo workflow chuyên dụng;
 - xem ảnh trong workspace;
-- nhận file bạn tải trong khung ChatGPT — app tự lưu vào workspace để agent dùng ngay;
+- quản lý file qua hộp thoại workspace local; không tự kéo attachment từ trang ChatGPT;
 - điều phối model phù hợp độ khó tác vụ (Mini/Luna/Terra/Sol, fail-closed về deterministic);
 - dùng Codex App Server như reviewer/worker độc lập ở chế độ chỉ đọc;
 - giữ mọi thao tác trong ranh giới workspace và policy đã cấu hình.
 
-Đây là bản tùy biến phát triển từ WebCodex; trọng tâm desktop hiện tại là **Execution Hub + Coding Tools MCP + ChatGPT/Codex Desktop + evidence-gated model routing**.
+Đây là bản tùy biến phát triển từ WebCodex; trọng tâm desktop hiện tại là **Execution Hub + Coding Tools MCP + các MCP client được hỗ trợ + evidence-gated model routing**.
 
 ---
 
@@ -66,7 +66,7 @@ Khi kết nối qua MCP, ChatGPT có thể:
 | Màn hình | File | Chức năng |
 |---|---|---|
 | Trang chính / onboarding | `renderer/index.html` + `app.js` | Chọn workspace, cấu hình OpenAI Tunnel (Tunnel ID + Runtime Key), triển khai dịch vụ, checklist hướng dẫn 5 bước, thẻ trạng thái (workspace/MCP/tunnel), quản lý thư mục ủy quyền bổ sung |
-| Khung ChatGPT | `renderer/browser.html` + `browser.js` | Webview ChatGPT + thanh trạng thái download, badge trạng thái task/workspace, nút `＋ Thư mục ủy quyền` |
+| Executor Hub | `renderer/browser.html` + `browser.js` | Trạng thái runtime, route, task và workspace; mở trang thiết lập connector trong trình duyệt hệ thống theo thao tác người dùng |
 | Execution Control Center | `renderer/panel.html`, `token-dashboard.html`, `control-center.js` | Realtime: objective/tiến độ/command đang chạy, run/wave/mode/base HEAD, event audit, proofs, delegations, MCP+Tunnel health, ChatWeb/Codex online + cursor/lag, controller lease/fencing/write authority, `SAFE TO ROTATE CHATWEB`, resume summary; điều khiển pause/resume/stop, **Ghi capsule handoff (≤8 KB)**, manual controller transfer có xác nhận, **Copy Codex MCP config** |
 | Styles/theme | `styles.css`, `dashboard.css`, `panel.css`, `control-center.css`, day/night background | Giao diện sáng/tối, font Plus Jakarta Sans |
 
@@ -76,15 +76,14 @@ Dữ liệu Control Center lấy từ endpoint `GET /__control/orchestration` c�
 
 | Service | Chức năng |
 |---|---|
-| `main.js`, `chatViewController.js` | Vòng đời cửa sổ, session webview riêng cho chat |
-| `services/downloadService.js` | Tự động lưu file đính kèm từ ChatGPT vào workspace (xem §10) |
+| `main.js`, `browserPreload.js` | Vòng đời Execution Hub, Control Center và IPC allowlist; không tạo phiên WebView ChatGPT |
 | `services/recoveryHost.js`, `fullCleanActivation.js`, `recoveryHostLauncher.js` | Recovery Host supervisor, full-clean activation/restart, activation epoch + connector ACK |
 | `services/tunnelService.js`, `proxyService.js`, `hubProxyGateway.js` | OpenAI Tunnel lifecycle, loopback gateway cho Codex Desktop stdio proxy |
 | `services/secretStore.js`, `settingsStore.js`, `config.js`, `deviceIdentity.js` | Secrets (Electron SecretStore, real MCP bearer không rời app), settings, device identity |
 | `services/codexDesktopConfig.js` | Sinh TOML thin-proxy cho Codex Desktop (chỉ loopback port + gateway token, không chứa bearer) |
 | `services/runtimeOrchestrator.js`, `nativeService.js`, `commandRunner.js` | Điều phối MCP runtime (Python bundled), native runtime, chạy command |
 | `services/healthService.js`, `mcpSemanticHealth.js`, `connectorAttestation.js` | Health check, attestation managed-tunnel, stale-schema detection |
-| `services/tokenMeasurement.js`, `uiPerformanceMetrics.js`, `chatEvaluationJournal.js` | Đo token theo turn, hiệu năng UI, journal đánh giá |
+| `services/tokenMeasurement.js`, `uiPerformanceMetrics.js` | Token theo nguồn usage có provenance; số đo thiếu hiển thị unknown |
 
 ### Coding Tools MCP (`resources/coding-tools-mcp/`)
 
@@ -217,31 +216,13 @@ EOCL: `PREFLIGHT → READY → ROUTED → EXECUTING → PROVING → ACCEPTING �
 
 ---
 
-## 10. Download & lưu file đính kèm
+## 10. Mở ChatGPT và chuyển tệp có kiểm soát
 
-Khi bạn tải file trong khung ChatGPT của app (ví dụ ChatGPT xuất báo cáo, ảnh, tài liệu), Electron tự động lưu file vào máy qua `DownloadService` (`electron/services/downloadService.js` + sự kiện `will-download` của session chat).
+Execution Hub mở trang thiết lập connector ChatGPT trong trình duyệt mặc định khi bạn nhấn nút. Hội thoại, đăng nhập, cookie và tải tệp diễn ra trong trình duyệt hoặc ứng dụng chính thức; Coding Tools MCP chỉ nhận lời gọi MCP và dữ liệu cần cho đúng thao tác được yêu cầu.
 
-### File được lưu ở đâu?
+Tệp muốn đưa vào repository được chọn qua hộp thoại hoặc thao tác của hệ điều hành vào workspace đã cấp quyền. App không tự tải, đồng bộ toàn hội thoại, hay tự lưu attachment từ phiên ChatGPT vào thư mục dự án. Hãy rà soát file và quyền trước khi yêu cầu MCP đọc hoặc sửa.
 
-> **Mặc định: thư mục gốc của workspace đang chọn.** Không có folder download riêng của app — file nằm ngay trong workspace nên Coding Tools MCP/agent thấy và dùng được ngay trong ranh giới đã ủy quyền.
-
-- Tên file trùng sẽ tự đánh số: `báo cáo.docx`, `báo cáo (1).docx`, `báo cáo (2).docx`, ...
-- Tên file được sanitize: ký tự `<>:"/\|?*`, ký tự điều khiển và dấu `.`/khoảng trắng cuối tên bị thay bằng `_`, tối đa 180 ký tự.
-- **Chưa chọn workspace hợp lệ → download bị hủy** kèm thông báo lỗi (phải chọn workspace trước).
-
-### Hiển thị nơi lưu trữ
-
-- Badge `#downloadState` trên khung chat hiện tiến độ theo % (`T?p d�nh k�m ...%` — chuỗi đang lỗi font, xem lưu ý dưới) và khi xong hiện `Da luu: <tên file>`.
-- Payload đầy đủ gồm **đường dẫn tuyệt đối `path`**, `size`, **`sha256`**, `durationMs` được gửi qua IPC `chat:download` và ghi log (`ChatGPT 附件已自动保存到工作区`).
-- Muốn biết file nằm ở đâu: lấy tên file trên badge + ghép với workspace đang chọn (xem ở sidebar hoặc `workspace_context`).
-
-### Lưu ý
-
-- File tải về nằm trong workspace nên sẽ xuất hiện trong Git status — thêm vào `.gitignore` của project nếu không muốn commit file đính kèm.
-- Chỉ file từ session chat của app mới được auto-save; download từ trình duyệt ngoài không liên quan.
-- Thông báo tiến độ/hiển thị hiện lẫn tiếng Việt không dấu và chuỗi log tiếng Trung — dự kiến chuẩn hóa i18n trong bản sau (không ảnh hưởng chức năng lưu file và hash).
-
----
+Khi tool trả nội dung file, đó là kết quả của một lời gọi MCP có phạm vi, không phải app đọc ngược trang ChatGPT. Nội dung nhạy cảm tiếp tục bị chặn bởi chính sách local.
 
 ## 11. Ledger evidence & archival
 
@@ -363,10 +344,10 @@ PID lưu trong runtime state có thể bị OS cấp lại cho app khác. Census
 ```text
 Tools-Codex-web/
 ├─ electron/                     # main process, orchestrator
-│  ├─ main.js, chatViewController.js, preload(s)
-│  └─ services/                  # download, recovery-host, tunnel, secrets,
+│  ├─ main.js, browserPreload.js, panelPreload.js
+│  └─ services/                  # recovery-host, tunnel, secrets,
 │                                # health, token-measure, codex-config, ...
-├─ renderer/                     # UI: index, browser (chat), panel,
+├─ renderer/                     # UI: index, executor hub, panel,
 │                                # token-dashboard, control-center
 ├─ resources/
 │  ├─ coding-tools-mcp/          # Python MCP runtime (server.py + mixins) + tests

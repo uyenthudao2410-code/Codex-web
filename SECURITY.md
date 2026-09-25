@@ -4,7 +4,7 @@ Tools-Codex-web is a local Windows desktop execution bridge that lets authentica
 
 ## Supported version
 
-The current desktop package is `coding-tools-mcp 1.0.0`. Security fixes should target the currently maintained `1.0.x` line unless a release note states otherwise.
+The current desktop package is `coding-tools-mcp 1.0.7`. Security fixes should target the currently maintained `1.0.x` line unless a release note states otherwise.
 
 ## Trust and authority model
 
@@ -14,6 +14,8 @@ The current desktop package is `coding-tools-mcp 1.0.0`. Security fixes should t
 - Semantic controller authority and repository write lease are separate. Controller transfer does not silently grant mutation rights.
 - Codex App Server and OpenCode are secondary candidate/review/provider lanes. Provider availability, telemetry, or route selection does not grant independent authoritative write access to the primary checkout.
 - `execution_route=auto` is currently fail-closed to deterministic while representative accepted paired evidence is insufficient.
+
+The Desktop Execution Hub does not embed the ChatGPT website or receive its page, cookies, DOM, prompts, or response bodies. A user click may open a fixed, allowlisted ChatGPT settings URL in the system browser; account sign-in and connector interaction stay there. Historical app-profile browser data is not accessed by the Executor Hub source and is not deleted automatically.
 
 ## Workspace and command boundary
 
@@ -45,7 +47,7 @@ Run `npm run check:repository-secrets` before delivery. It rejects the establish
 
 ## Durable orchestration evidence
 
-`.coding-tools/orchestration/ledger.sqlite3` is the canonical local causal audit source for runs, waves, authority, delegations, proof lineage, observations and acceptance. Host-turn correlation should remain content-free (`turn_id`, `trace_id`, `span_id`) rather than persisting full ChatGPT prompts/responses.
+`.coding-tools/orchestration/ledger.sqlite3` is the canonical local causal audit source for runs, waves, authority, delegations, proof lineage, observations and acceptance. Missing host-turn or provider-usage data remains unknown; do not recreate that evidence by observing or scraping the ChatGPT page, or by storing prompt/response bodies.
 
 ## LSP and provider boundaries
 

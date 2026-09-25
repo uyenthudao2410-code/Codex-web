@@ -2,29 +2,17 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('browserAssistant', {
   openManager: () => ipcRenderer.invoke('manager:open'),
-  navigate: (action) => ipcRenderer.invoke('chat:navigate', action),
-  clearChatSession: () => ipcRenderer.invoke('chat:clear-session'),
-  chatStatus: () => ipcRenderer.invoke('chat:status'),
+  openChatGPT: () => ipcRenderer.invoke('shell:open', 'chatgpt-connectors'),
   lightweightStatus: () => ipcRenderer.invoke('app:lightweight-snapshot'),
   liveOrchestration: () => ipcRenderer.invoke('panel:live-control'),
   workspaceHub: () => ipcRenderer.invoke('workspace:hub'),
   switchWorkspace: (workspace) => ipcRenderer.invoke('workspace:switch', workspace),
   chooseAndSwitchWorkspace: () => ipcRenderer.invoke('workspace:choose-and-switch'),
   chooseAuthorizedRoot: () => ipcRenderer.invoke('workspace:choose-authorized-root'),
-  onChatState: (listener) => {
-    const wrapped = (_event, payload) => listener(payload);
-    ipcRenderer.on('chat:state', wrapped);
-    return () => ipcRenderer.removeListener('chat:state', wrapped);
-  },
   onHeartbeat: (listener) => {
     const wrapped = (_event, payload) => listener(payload);
     ipcRenderer.on('runtime:heartbeat', wrapped);
     return () => ipcRenderer.removeListener('runtime:heartbeat', wrapped);
-  },
-  onDownload: (listener) => {
-    const wrapped = (_event, payload) => listener(payload);
-    ipcRenderer.on('chat:download', wrapped);
-    return () => ipcRenderer.removeListener('chat:download', wrapped);
   },
   taskState: () => ipcRenderer.invoke('task-state:read'),
   pauseTask: () => ipcRenderer.invoke('task-state:pause'),

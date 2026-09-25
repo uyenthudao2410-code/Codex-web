@@ -2,7 +2,7 @@ const PANEL_WIDTH = 420;
 const PANEL_WIDTH_RATIO = 0.35;
 const PANEL_MIN_WIDTH = 360;
 const PANEL_MAX_WIDTH = 750;
-const MIN_CHAT_WIDTH = 560;
+const MIN_EXECUTOR_WIDTH = 560;
 
 function targetPanelWidth(width, options = {}) {
   const explicitWidth = Number(options.panelWidth);
@@ -13,9 +13,9 @@ function targetPanelWidth(width, options = {}) {
 
 function panelInset(width, visible, options = {}) {
   const panelWidth = targetPanelWidth(width, options);
-  const minChatWidth = Number(options.minChatWidth) || MIN_CHAT_WIDTH;
+  const minExecutorWidth = Number(options.minExecutorWidth) || MIN_EXECUTOR_WIDTH;
   if (!visible) return 0;
-  return Math.min(panelWidth, Math.max(0, Math.floor(width) - minChatWidth));
+  return Math.min(panelWidth, Math.max(0, Math.floor(width) - minExecutorWidth));
 }
 
 function panelBounds(width, height, toolbarHeight, visible, options = {}) {
@@ -29,24 +29,13 @@ function panelBounds(width, height, toolbarHeight, visible, options = {}) {
   };
 }
 
-function chatBounds(width, height, toolbarHeight, visible, options = {}) {
-  const inset = panelInset(width, visible, options);
-  return {
-    x: 0,
-    y: toolbarHeight,
-    width: Math.max(0, Math.floor(width) - inset),
-    height: Math.max(0, Math.floor(height) - toolbarHeight)
-  };
-}
-
 module.exports = {
   PANEL_WIDTH,
   PANEL_WIDTH_RATIO,
   PANEL_MIN_WIDTH,
   PANEL_MAX_WIDTH,
-  MIN_CHAT_WIDTH,
+  MIN_EXECUTOR_WIDTH,
   targetPanelWidth,
   panelInset,
-  panelBounds,
-  chatBounds
+  panelBounds
 };

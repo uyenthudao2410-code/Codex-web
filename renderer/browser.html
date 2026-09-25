@@ -12,22 +12,14 @@
 <body>
   <header class="browser-toolbar">
     <div class="toolbar-main">
-      <div class="nav-actions">
-        <button id="backButton" class="icon-button" title="Lùi" disabled>←</button>
-        <button id="forwardButton" class="icon-button" title="Tiến" disabled>→</button>
-        <button id="reloadButton" class="icon-button" title="Làm mới">↻</button>
-        <button id="homeButton" class="home-button"><span class="logo-mark">AI</span><b>ChatGPT</b></button>
-      </div>
-      <div class="page-state" id="pageState"><i></i><span>Đang chuẩn bị ChatGPT…</span></div>
+      <div class="hub-brand"><span class="logo-mark">CT</span><b>Coding Tools MCP</b></div>
       <div class="service-state">
-        <span id="downloadState" class="download-state"></span>
         <button id="deviceState" class="device-state-button" title="Thiết bị hiện tại"><i></i><span id="deviceStateName">Thiết bị</span></button>
         <span id="mcpState"><i></i>MCP</span>
         <span id="tunnelState"><i></i>Tunnel</span>
         <span id="recoveryTunnelState" data-state="not_configured" title="Tunnel cứu hộ: Chưa cấu hình"><i></i>Cứu hộ</span>
         <span id="gitState" title="Git: chưa có dữ liệu"><i></i><span id="gitStateText">Git</span></span>
-        <button id="panelToggleButton" class="manager-button" title="Hiện/ẩn bảng điều khiển điều phối bên cạnh ChatGPT">Bảng điều khiển</button>
-        <button id="resetSessionButton" class="manager-button" title="Xóa session đăng nhập ChatGPT riêng của app và đăng nhập lại">Đăng nhập lại</button>
+        <button id="panelToggleButton" class="manager-button" title="Hiện hoặc ẩn bảng điều khiển">Bảng điều khiển</button>
         <button id="managerButton" class="manager-button">Cài đặt</button>
       </div>
     </div>
@@ -54,8 +46,19 @@
       <button id="addWorkspace" class="add-workspace">＋ Thêm workspace</button>
     </div>
   </header>
-  <main class="loading-stage">
-    <div class="loading-card"><div class="spinner"></div><h1>Đang mở ChatGPT</h1><p>Trang chat và quyền truy cập workspace cục bộ được cách ly an toàn.</p></div>
+  <main class="executor-stage">
+    <section class="executor-card" aria-labelledby="executorTitle">
+      <span class="executor-kicker">MÔI TRƯỜNG MÁY CỤC BỘ</span>
+      <h1 id="executorTitle">Coding Tools Control Center</h1>
+      <p>ChatGPT mở trong trình duyệt chính thức. Cửa sổ này quản lý máy, workspace và trạng thái công cụ.</p>
+      <dl class="executor-facts">
+        <div><dt>Runtime</dt><dd id="executorRuntimeState">Đang kiểm tra trạng thái</dd></div>
+        <div><dt>Workspace</dt><dd id="executorWorkspaceState">Chưa xác minh</dd></div>
+        <div><dt>Quyền tác vụ</dt><dd id="executorPolicyState">Xác minh riêng theo thao tác và receipt</dd></div>
+      </dl>
+      <button id="openChatGPTButton" class="external-open-button">Mở cài đặt kết nối ChatGPT</button>
+      <p id="executorNotice" class="executor-notice" role="status" aria-live="polite">Mở ChatGPT là thao tác riêng của bạn; ứng dụng này không đọc trang hoặc session của trình duyệt.</p>
+    </section>
   </main>
   <script src="browser.js"></script>
 </body>

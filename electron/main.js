@@ -8,9 +8,6 @@ const { SettingsStore } = require('./services/settingsStore');
 const { SecretStore } = require('./services/secretStore');
 const { LogService } = require('./services/logService');
 const { EnvironmentService, pythonStatus } = require('./services/environmentService');
-const { ChatViewController } = require('./chatViewController');
-const { ChatEvaluationJournal } = require('./services/chatEvaluationJournal');
-const { buildExact: buildExactTokenMeasurement } = require('./services/tokenMeasurement');
 const { run } = require('./services/commandRunner');
 const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
@@ -46,7 +43,6 @@ configureElectronUserDataPath(app, { argv: process.argv, recoveryHostMode });
 
 let chatWindow;
 let managerWindow;
-let chatController;
 let orchestrator;
 let recoveryHostConnectionError = null;
 let forceQuit = false;
@@ -66,7 +62,6 @@ const settings = new SettingsStore(runtimePaths);
 const secrets = new SecretStore(runtimePaths);
 const log = new LogService(runtimePaths);
 const environment = new EnvironmentService(runtimePaths);
-const chatEvaluationJournal = new ChatEvaluationJournal();
 const controlPlaneEnrollment = new ControlPlaneEnrollmentService({
   paths: runtimePaths,
   experimentalWindowsSandbox: runtimePaths.runtimeMode() === 'packaged'
@@ -662,134 +657,10 @@ async function panelP5A0Control(action) {
   return result;
 }
 
-async function recordHostObservationSpan(event) {
-  if (!event || event.event_type !== 'host_turn_span' || !event.run_id || !event.wave_id || !event.trace_id || !event.turn_id) return false;
-  const current = settings.load();
-  const token = secrets.get('mcpAuthToken');
-  if (!token) return false;
-  const request = {
-    jsonrpc: '2.0',
-    id: `host-observation-${Date.now()}`,
-    method: 'tools/call',
-    params: {
-      name: 'task_control',
-      arguments: {
-        action: 'observation',
-        run_id: event.run_id,
-        wave_id: event.wave_id,
-        observation_span: {
-          span_id: event.span_id,
-          stage: 'report_visible',
-          source: 'electron_chatgpt_dom',
-          measurement: event.measurement,
-          clock_domain: event.clock_domain,
-          start_ms: event.start_ms,
-          end_ms: event.end_ms,
-          observer_plane: 'electron_chatgpt_dom',
-          trace_id: event.trace_id,
-          turn_id: event.turn_id
-        }
-      },
-      _meta: {
-        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
-        'io.modelcontextprotocol/clientCapabilities': {},
-        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-host-observer', version: app.getVersion() }
-      }
-    }
-  };
-  const response = await httpRequestJson({
-    port: current.mcpPort,
-    path: '/mcp',
-    method: 'POST',
-    token,
-    body: request,
-    headers: {
-      'MCP-Protocol-Version': '2026-07-28',
-      'Mcp-Method': 'tools/call',
-      'Mcp-Name': 'task_control',
-      'X-Coding-Tools-Client-Id': 'electron-host-observer',
-      'X-Coding-Tools-Client-Type': 'electron'
-    },
-    timeout: 5000
-  });
-  if (response?.error || response?.result?.isError) throw new Error(response?.error?.message || response?.result?.structuredContent?.error?.message || 'MCP rejected host observation.');
-  return true;
-}
-
-async function recordControllerUsageReceipt(event) {
-  if (!event || event.event_type !== 'controller_usage' || !event.run_id || !event.wave_id) return false;
-  // Single validation authority: the shared token measurement contract
-  // enforces exact-integer counters, relations and identity shape.
-  const measured = buildExactTokenMeasurement({
-    turn_id: event.turn_id,
-    trace_id: event.trace_id,
-    input_tokens: event.input_tokens,
-    cached_input_tokens: event.cached_input_tokens,
-    output_tokens: event.output_tokens,
-    reasoning_output_tokens: event.reasoning_output_tokens,
-    model_id: event.model_id,
-    accounting_profile: event.accounting_profile,
-    source: event.source
-  });
-  if (!measured) return false;
-  const current = settings.load();
-  const token = secrets.get('mcpAuthToken');
-  if (!token) return false;
-  const controllerUsage = {
-    schema_version: 1,
-    run_id: event.run_id,
-    wave_id: event.wave_id,
-    turn_id: event.turn_id,
-    trace_id: event.trace_id,
-    accounting_profile: event.accounting_profile || 'openai_compatible',
-    provider_id: event.provider_id || 'openai',
-    ...(event.model_id ? { model_id: event.model_id } : {}),
-    source: event.source || 'client_reported',
-    input_tokens: event.input_tokens,
-    cached_input_tokens: event.cached_input_tokens,
-    output_tokens: event.output_tokens,
-    reasoning_output_tokens: event.reasoning_output_tokens
-  };
-  const request = {
-    jsonrpc: '2.0',
-    id: `controller-usage-${Date.now()}`,
-    method: 'tools/call',
-    params: {
-      name: 'task_control',
-      arguments: { action: 'audit', run_id: event.run_id, wave_id: event.wave_id, limit: 1 },
-      _meta: {
-        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
-        'io.modelcontextprotocol/clientCapabilities': {},
-        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-chatweb-usage-bridge', version: app.getVersion() },
-        'io.coding-tools/controllerUsage': controllerUsage
-      }
-    }
-  };
-  const response = await httpRequestJson({
-    port: current.mcpPort,
-    path: '/mcp',
-    method: 'POST',
-    token,
-    body: request,
-    headers: {
-      'MCP-Protocol-Version': '2026-07-28',
-      'Mcp-Method': 'tools/call',
-      'Mcp-Name': 'task_control',
-      'X-Coding-Tools-Client-Id': 'chatweb',
-      'X-Coding-Tools-Client-Type': 'chatweb'
-    },
-    timeout: 5000
-  });
-  if (response?.error || response?.result?.isError) {
-    throw new Error(response?.error?.message || response?.result?.structuredContent?.error?.message || 'MCP rejected ChatWeb controller usage.');
-  }
-  return true;
-}
 
 function layoutViews() {
   if (!chatWindow || chatWindow.isDestroyed()) return;
   const [width, height] = chatWindow.getContentSize();
-  if (chatController) chatController.setRightInset(panelInset(width, panelVisible));
   if (panelView && !panelView.webContents.isDestroyed()) {
     const bounds = panelBounds(width, height, TOOLBAR_HEIGHT, panelVisible);
     panelView.setBounds(bounds || { x: width, y: TOOLBAR_HEIGHT, width: 0, height: Math.max(0, height - TOOLBAR_HEIGHT) });
@@ -897,56 +768,9 @@ function createChatWindow() {
   openingWindow.once('ready-to-show', () => revealOpeningWindow());
   chatWindow.loadFile(path.join(__dirname, '..', 'renderer', 'browser.html'));
 
-  chatController = new ChatViewController({
-    window: chatWindow,
-    log,
-    settings,
-    toolbarHeight: 112,
-    onState: (payload) => {
-      if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('chat:state', payload);
-    },
-    onDownload: (payload) => {
-      if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('chat:download', payload);
-    },
-    onEvaluation: async (events) => {
-      const workspace = String(settings.load().workspace || '').trim();
-      if (!workspace) return;
-      let correlated = [];
-      try {
-        const productSessionEvents = chatEvaluationJournal.attachProductSession(
-          workspace,
-          events,
-          chatController?.getState()?.url
-        );
-        chatEvaluationJournal.stagePendingTurns(workspace, productSessionEvents);
-        chatEvaluationJournal.stagePendingContinuationConsents(workspace, productSessionEvents);
-        correlated = chatEvaluationJournal.attachExplicitBindings(workspace, productSessionEvents);
-        chatEvaluationJournal.append(workspace, correlated);
-      } catch (error) {
-        log.warn('Không thể ghi host-visible evaluation telemetry', { error: safeMessage(error) });
-        return;
-      }
-      for (const event of correlated.filter((item) => ['host_turn_span', 'controller_usage'].includes(item?.event_type))) {
-        try {
-          if (event.run_id && event.wave_id && event.event_type === 'host_turn_span') await recordHostObservationSpan(event);
-          if (event.run_id && event.wave_id && event.event_type === 'controller_usage') await recordControllerUsageReceipt(event);
-        } catch (error) {
-          log.warn('Không thể ghi ChatWeb host/controller telemetry vào EOCL ledger', {
-            event_type: event.event_type,
-            error: safeMessage(error)
-          });
-        } finally {
-          chatEvaluationJournal.finalizeCorrelation(workspace, event);
-        }
-      }
-    }
-  });
-  chatController.mount();
   chatWindow.on('resize', () => layoutViews());
 
   chatWindow.on('closed', () => {
-    if (chatController) chatController.dispose();
-    chatController = null;
     destroyPanelView();
     panelVisible = false;
     uiWindowReady = false;
@@ -1343,8 +1167,6 @@ function registerIpc() {
     return true;
   }));
   secureHandle('manager:open', () => invokeSafely(async () => { openManagerWindow(); return true; }));
-  secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));
-  secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
   secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
   secureHandle('panel:visibility', () => invokeSafely(async () => ({ visible: panelVisible })));
   secureHandle('panel:live-control', (event) => invokeSafely(async () => {
@@ -1464,11 +1286,6 @@ function registerIpc() {
     if (response && response.error) throw new Error(response.error.message || 'MCP từ chối thao tác handoff.');
     return (response && response.result) || null;
   }));
-  secureHandle('chat:clear-session', () => invokeSafely(async () => {
-    if (!chatController) throw new Error('Trang ChatGPT chưa được khởi tạo.');
-    await chatController.clearSession();
-    return true;
-  }));
   secureHandle('dialog:workspace', () => invokeSafely(async () => {
     const result = await dialog.showOpenDialog(managerWindow || chatWindow, { properties: ['openDirectory', 'createDirectory'] });
     return result.canceled ? '' : result.filePaths[0];
@@ -1550,14 +1367,6 @@ function registerIpc() {
   secureHandle('shell:open', (_event, target) => invokeSafely(async () => {
     const allowed = new Set(['chatgpt-connectors', 'openai-tunnels', 'openai-runtime-keys', 'tunnel-ui', 'coding-tools-source']);
     if (!allowed.has(target)) throw new Error('Không được phép mở địa chỉ này.');
-    if (target === 'chatgpt-connectors' && chatController) {
-      await chatController.openUrl('https://chatgpt.com/#settings/Connectors');
-      if (chatWindow && !chatWindow.isDestroyed()) {
-        chatWindow.show();
-        chatWindow.focus();
-      }
-      return true;
-    }
     const current = settings.load();
     const urls = {
       'chatgpt-connectors': 'https://chatgpt.com/#settings/Connectors',

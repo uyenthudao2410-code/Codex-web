@@ -2858,40 +2858,6 @@ function bindEvents() {
     try { unwrap(await api.regenerateMcpToken()); toast('Token xác thực đã được tạo lại', 'Có hiệu lực sau khi triển khai lại.'); }
     catch (error) { toast('Tạo thất bại', error.message, 'error'); }
   });
-  $('#clearChatSession').addEventListener('click', async () => {
-    if (!confirm('Thao tác này sẽ đăng xuất ChatGPT tích hợp và xóa Cookie cũng như bộ nhớ đệm web do trợ lý này lưu. Bạn có muốn tiếp tục?')) return;
-    try {
-      unwrap(await api.clearChatSession());
-      toast('Dữ liệu đăng nhập ChatGPT đã được xóa', 'Bạn có thể đăng nhập lại sau khi quay lại cửa sổ chat chính.');
-    } catch (error) { toast('Xóa thất bại', error.message, 'error'); }
-  });
-  $('#pythonInstall').addEventListener('click', async () => {
-    setBusy(true, true);
-    try { unwrap(await api.installPython()); toast('Cài đặt Python hoàn tất', 'Vui lòng kiểm tra lại môi trường.'); await refreshSnapshot(); }
-    catch (error) { toast('Cài đặt thất bại', error.message, 'error'); }
-    finally { setBusy(false); }
-  });
-  $('#proxyModeSelect').addEventListener('change', () => { renderProxyControls(); renderDeploySummary(); });
-  $('#proxyDetect').addEventListener('click', async () => {
-    try {
-      await saveSettings(false);
-      const result = unwrap(await api.detectProxy());
-      toast(result.reachable ? 'Tuyến đường mạng khả dụng' : 'Không phát hiện thấy tuyến đường khả dụng', result.resolvedUrl || (result.reachable ? 'Hiện đang sử dụng kết nối trực tiếp.' : 'Vui lòng kiểm tra cài đặt mạng hoặc proxy thủ công.'), result.reachable ? 'success' : 'error');
-      await refreshSnapshot({ forceForms: true });
-    } catch (error) { toast('Kiểm tra proxy thất bại', error.message, 'error'); }
-  });
-  ['#tunnelIdInput', '#proxyUrlInput', '#runtimeKeyInput'].forEach((selector) => $(selector).addEventListener('input', renderDeploySummary));
-
-  $('#themeToggle').addEventListener('click', async () => {
-    const next = document.body.dataset.theme === 'light' ? 'dark' : 'light';
-    applyTheme(next);
-    await savePreference('theme', next);
-  });
-  $('#themeSelect').addEventListener('change', async () => {
-    const next = $('#themeSelect').value;
-    applyTheme(next);
-    await savePreference('theme', next);
-  });
   $('#startWithWindowsToggle').addEventListener('change', () => savePreference('startWithWindows', $('#startWithWindowsToggle').checked));
   $('#keepRunningToggle').addEventListener('change', () => savePreference('keepRunningOnClose', $('#keepRunningToggle').checked));
   $('#autoStartToggle').addEventListener('change', () => savePreference('autoStartServices', $('#autoStartToggle').checked));

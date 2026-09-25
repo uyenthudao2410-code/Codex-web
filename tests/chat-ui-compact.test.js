@@ -11,7 +11,7 @@ test('0.3.3 keeps the top chrome height unchanged and exposes quick authorized-r
   const browserHtml = read('renderer/browser.html');
   const main = read('electron/main.js');
   assert.match(browserCss, /\.browser-toolbar\{[^}]*height:112px/);
-  assert.match(main, /toolbarHeight:\s*112/);
+  assert.match(main, /const TOOLBAR_HEIGHT = 112/);
   assert.match(browserCss, /\.workspace-health-popover\{position:absolute/);
   assert.match(browserHtml, /id="workspaceHealthPopover"/);
   assert.match(browserHtml, /id="deviceState"/);
@@ -20,28 +20,31 @@ test('0.3.3 keeps the top chrome height unchanged and exposes quick authorized-r
   assert.match(browserHtml, /id="addWorkspace"/);
 });
 
-test('embedded ChatGPT compacts repeated tool call records without deleting their content', () => {
-  const controller = read('electron/chatViewController.js');
-  assert.match(controller, /scheduleChatUiEnhancements/);
-  assert.match(controller, /suspendChatUiEnhancements/);
-  assert.match(controller, /mcp-tool-call-hidden/);
-  assert.match(controller, /Công cụ ×/);
-  assert.match(controller, /data-testid\^=\\?"conversation-turn-/);
-  assert.match(controller, /MutationObserver/);
-  assert.match(controller, /scheduleStableRefresh\(1800\)/);
-  assert.match(controller, /document\.querySelector\('main'\) \|\| document\.body/);
-  assert.doesNotMatch(controller, /observe\(document\.documentElement/);
-  assert.doesNotMatch(controller, /scheduleAttachmentCapture/);
-  assert.doesNotMatch(controller, /mcpAutoSaved/);
-  assert.doesNotMatch(controller, /__mcpAttachmentObserver/);
+test('executor hub opens the official ChatGPT page in the system browser without a webview', () => {
+  const html = read('renderer/browser.html');
+  const preload = read('electron/browserPreload.js');
+  const main = read('electron/main.js');
+  assert.match(html, /id="openChatGPTButton"/);
+  assert.match(html, /ChatGPT mở trong trình duyệt chính thức/);
+  assert.match(preload, /openChatGPT: \(\) => ipcRenderer\.invoke\('shell:open', 'chatgpt-connectors'\)/);
+  assert.match(main, /'chatgpt-connectors': 'https:\/\/chatgpt\.com\/\#settings\/Connectors'/);
+  assert.match(main, /shell\.openExternal\(urls\[target\]\)/);
+  assert.equal(fs.existsSync(path.join(root, 'electron/chatViewController.js')), false);
+  assert.equal(fs.existsSync(path.join(root, 'electron/services/chatEvaluationJournal.js')), false);
+  assert.equal(fs.existsSync(path.join(root, 'electron/services/chatConversationAccess.js')), false);
+  assert.match(main, /function createPanelView\(\)[\s\S]*?new WebContentsView/);
+  assert.doesNotMatch(main, /new ChatViewController|executeJavaScript/);
+  assert.doesNotMatch(preload, /chat:navigate|chat:status|chat:clear-session|chat:state|chat:download/);
+  assert.doesNotMatch(`${html}\n${main}`, /chatgpt\.com\/backend-api|persist:chatgpt-session/);
 });
 
-test('workspace manager exposes extra authorized roots without changing the chat top bar', () => {
+test('workspace manager exposes extra authorized roots alongside the external ChatGPT handoff', () => {
   const html = read('renderer/index.html');
   const app = read('renderer/app.js');
   assert.match(html, /id="authorizedRootsList"/);
   assert.match(html, /id="addAuthorizedRoot"/);
   assert.match(app, /updateAuthorizedRoots/);
+  assert.match(read('renderer/browser.html'), /id="addAuthorizedRootQuick"/);
 });
 
 test('central workspace receipts remain successful when a later UI refresh is unavailable', () => {
