@@ -1,60 +1,23 @@
 # Current Project State — Tools-Codex-web
 
-## Current desktop checkpoint — 25-09-2026, W1 source implementation verified
+## Current desktop checkpoint — 25-09-2026, local W1 implementation
 
-The retired-page/UTF-8 source change was committed as
-`main @ b7d5f5ad` (`Retire embedded ChatGPT page and harden bridges`); its
-delivery snapshot was recorded in `fb295859`. The Electron desktop changes
-remove the embedded ChatGPT view and app access to its dedicated session,
-conversation monitor, download capture, DOM observer/journal, and related IPC.
-Existing per-profile browser data is not opened, migrated or deleted by these
-source changes. The Executor Hub is a local manager window with a user-clicked
-link to ChatGPT's official system browser; local workspace/task/panel controls
-remain.
+Source commit: `b7d5f5ad` (`Retire embedded ChatGPT page and harden bridges`). Delivery evidence was recorded in `fb295859`; the maintained checkpoint is `main @ 01c7aaf6`.
 
-This checkpoint proves source plus focused local tests, not a released or live activation.
-The running Windows candidate was observed in `dist/windows-candidate-mxc-wsb-cbe1774-r9`
-and has not loaded the current source. Local workspace capabilities were last
-read as `read=true`, `write=true`, `exec=false`, without an installed exec
-policy. The OpenAI account remains blocked per the user's supplied email and
-must not be used for connection canaries while the block is in effect. The last
-Ubuntu SSH attempt was denied by the Tailscale ACL; current server health,
-receipts, and policy therefore remain unverified. Source-side W1 removes the
-Electron-owned ChatGPT page, its observation/consent/download wiring and its
-credential IPC; only a user-clicked, fixed OpenAI settings link remains. Legacy
-per-profile Chromium data has not been read or deleted. Focused validation on
-25-09: **117/117 Node tests PASS** across UI, Control Center, Recovery Host and
-accepted-code activation; **53/53 focused Python bridge tests PASS**. The later
-full `npm run test:all` on this Windows host returned **Node 1019/1019 PASS**,
-source-root clean and repository secret check PASS, but Python `1183 passed,
-5 skipped, 4 failed`. Three continuation cases fail while removing their
-temporary directories (`WinError 32`/`WinError 5`); the remaining Windows MXC
-integration case fails when the sandboxed npm script cannot spawn
-`C:\Windows\System32\cmd.exe` (`ENOENT`). This suite therefore fails overall.
-The executor stays read/write only: `exec=false` and no exec policy exists.
-An unpacked dev candidate `policy-w1-c-20260925` has now built and passed
-packaged Recovery smoke; its EXE and `app.asar` SHA-256 are
-`CCE18196E2348EAFB5AB6795D696E55D85E8B000584AC5218F5D85B462F32231` and
-`A5BD1AE882E4C0CB5060B69320E478277BE5C50CEC183B0EC7E245B9C8F6D720`.
-Before it, two unique dev-build destinations stopped at Windows
-`EBUSY` while updating the embedded asar hash; both incomplete candidates were
-preserved. Candidate C has not been installed or activated.
+The Electron Executor Hub no longer embeds the ChatGPT web page or owns a ChatGPT browser session, DOM/response observer, conversation monitor, consent reader, or attachment downloader. A user-clicked button opens the connector settings in the system browser. Data from the former app-owned browser partition has not been migrated or deleted. The existing MCP/Tailscale service itself was not changed.
 
-Candidate `policy-w1-c-20260925` built successfully as an unsigned,
-development-only unpacked Windows candidate. The builder's exact-resource
-afterPack verification passed; hashes of six changed Electron/renderer files
-inside `app.asar` match source; forbidden page-observation strings are absent;
-the isolated packaged Recovery smoke passed with 18 required resources, all
-eight smart-v3 tools, healthy Recovery Host/supervisor and no Scheduled Task
-mutation. Candidate r9 remains the running process, so this proves packaged
-source, not that the replacement is active.
+The r9 process is still running the old unpacked candidate at `E:\DEV\Codex-web\dist\windows-candidate-mxc-wsb-cbe1774-r9\win-unpacked`; it has not loaded W1. The new candidate `policy-w1-c-20260925` is unpacked/dev-only, unsigned, and not installed. Builder exact-resource validation and isolated Recovery smoke pass; six modified Electron/renderer files in `app.asar` hash-match the source. Recovery Host, all 8 smart-v3 tools, and supervisor passed the smoke; production descriptor and Scheduled Task remained unchanged.
 
-The `test:all` failures remain separate open gates; the candidate has not been
-installed or activated. The ChatGPT Business account is still reported as
-disabled, SSH to Ubuntu was last rejected by the Tailscale ACL, production
-action `act_048df93488874a70aa97a7ee18ccbd03` remains unreconciled/unknown, and
-live ChatGPT→Ubuntu→Windows read/patch/exec remains unverified. Preserve the
-current `exec=false` fail-closed state.
+Validation on this checkout:
+
+- Focused W1/Recovery Node tests: **117/117 PASS**.
+- Focused control-plane bridge/execution Python tests: **53/53 PASS**.
+- Full `npm test`: **1019/1019 PASS**; source-root cleanliness and repository secret scan PASS.
+- Full `npm run test:all`: Node passed, Python reported **1183 PASS, 5 SKIP, 4 FAIL**. Three continuation tests failed while Windows removed temporary directories (WinError 32/5); the Windows MXC npm-script test failed to spawn `C:\Windows\System32\cmd.exe` (ENOENT). The latter failure reproduced in isolation after confirming that the sandbox config includes System32 read-only. A trial adding SystemDrive did not change the failure and was reverted. Therefore **exec remains off**; no sandbox boundary was loosened.
+
+Current live gates: the OpenAI account is still reported disabled; SSH to Ubuntu was last denied by the Tailscale ACL and was not retried in this checkpoint; the prior production file-read action `act_048df93488874a70aa97a7ee18ccbd03` is still `unknown/reconcile_required`. Current Ubuntu package/health, account recovery, strict real connector discovery, and live read/patch/exec receipts remain unverified. The Windows workspace registry still records read/write enabled and exec disabled, with no exec policy file. Do not characterize the local candidate smoke as installed/live acceptance.
+
+Windows pytest teardown also left four small scratch directories under `E:\Caches\Temp`; one contains a 3,592-byte synthetic `.coding-tools/performance.json`. Windows had reported sharing violations while automatically removing them. They were left intact after the test processes exited; no user workspace files were targeted.
 
 Keep prior dated checkpoints below as chronology. They do not supersede this
 checkpoint or constitute current runtime, account, connector, release, or
