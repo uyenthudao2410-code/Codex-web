@@ -28,6 +28,7 @@ const MAX_ALLOWED_PATHS = 32;
 const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/;
 const ACTION_IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
+const RUNTIME_ID_RE = /^[A-Za-z0-9_.:@-]{1,256}$/;
 
 const SENSITIVE_DIRECTORY_NAMES = new Set([
   '.git', '.ssh', '.aws', '.gnupg', 'secret', 'secrets', 'credential', 'credentials'
@@ -430,7 +431,7 @@ function normaliseFileReadResult(value, admission) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_RESULT_ENVELOPE_INVALID', 'control-plane file-read result is invalid.');
   }
   for (const field of ['activation_epoch_id', 'process_instance_id', 'server_instance_id']) {
-    if (!IDENTIFIER_RE.test(text(identity[field]))) {
+    if (!RUNTIME_ID_RE.test(text(identity[field]))) {
       throw bridgeError('CONTROL_PLANE_FILE_READ_RESULT_IDENTITY_INVALID', 'runtime identity is invalid.');
     }
   }
