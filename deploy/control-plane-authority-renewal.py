@@ -162,7 +162,7 @@ def renew_authority(
         "grant": {"expires_at_ms": grant["expires_at_ms"], "renewed": False},
         "decision": {"expires_at_ms": decision["expires_at_ms"], "renewed": False},
     }
-    if int(grant["expires_at_ms"]) - now <= grant_window:
+    if int(grant["expires_at_ms"]) - now <= grant_window * 1000:
         grant_target = min(
             now + grant_ttl * 1000,
             now + MAX_GRANT_TTL_SECONDS * 1000 - 1000,
@@ -178,7 +178,7 @@ def renew_authority(
         result["grant"] = {"expires_at_ms": renewed["expires_at_ms"], "renewed": True}
     # Recovery is an intentional maintenance state.  Never reopen it from a
     # timer, and never renew a pilot while its admission is not selected.
-    if mode == "scoped_pilot" and int(decision["expires_at_ms"]) - now <= pilot_window:
+    if mode == "scoped_pilot" and int(decision["expires_at_ms"]) - now <= pilot_window * 1000:
         pilot_target = min(
             now + pilot_ttl * 1000,
             now + MAX_PILOT_TTL_SECONDS * 1000 - 1000,

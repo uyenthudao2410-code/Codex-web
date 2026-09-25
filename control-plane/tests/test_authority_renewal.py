@@ -43,8 +43,8 @@ class AuthorityRenewalTests(unittest.TestCase):
             "CONTROL_PLANE_SCOPED_PILOT_DECISION_ID": self.decision_id,
             "CONTROL_PLANE_AUTHORITY_GRANT_TTL_SECONDS": "3600",
             "CONTROL_PLANE_AUTHORITY_PILOT_TTL_SECONDS": "1800",
-            "CONTROL_PLANE_AUTHORITY_GRANT_WINDOW_SECONDS": "7200",
-            "CONTROL_PLANE_AUTHORITY_PILOT_WINDOW_SECONDS": "7200",
+            "CONTROL_PLANE_AUTHORITY_GRANT_WINDOW_SECONDS": "25200",
+            "CONTROL_PLANE_AUTHORITY_PILOT_WINDOW_SECONDS": "25200",
         }
 
     def opener(self, request, timeout=0):
@@ -54,11 +54,11 @@ class AuthorityRenewalTests(unittest.TestCase):
         self.calls.append((method, path, payload))
         if path == "/v1/mcp-service-grants":
             return _Response({"mcp_service_grants": [{
-                "grant_id": self.grant_id, "expires_at_ms": self.now + 1_000, "revoked_at_ms": None,
+                "grant_id": self.grant_id, "expires_at_ms": self.now + 6 * 60 * 60 * 1000, "revoked_at_ms": None,
             }]})
         if path == "/v1/scoped-pilot-decisions":
             return _Response({"scoped_pilot_decisions": [{
-                "decision_id": self.decision_id, "expires_at_ms": self.now + 1_000, "revoked_at_ms": None,
+                "decision_id": self.decision_id, "expires_at_ms": self.now + 6 * 60 * 60 * 1000, "revoked_at_ms": None,
             }]})
         if path == "/v1/maintenance/admission":
             return _Response({"admission_mode": "scoped_pilot"})
@@ -102,6 +102,35 @@ class AuthorityRenewalTests(unittest.TestCase):
             MODULE.renew_authority(environment={"CONTROL_PLANE_AUTHORITY_RENEWAL_ENABLED": "false"}),
             {"enabled": False, "state": "disabled"},
         )
+
+    def test_live_authority_outside_seconds_windows_is_not_renewed(self) -> None:
+        def outside_window_opener(request, timeout=0):
+            path = urlparse(request.full_url).path
+            method = request.method
+            payload = None if request.data is None else json.loads(request.data.decode("utf-8"))
+            self.calls.append((method, path, payload))
+            if path == "/v1/mcp-service-grants":
+                return _Response({"mcp_service_grants": [{
+                    "grant_id": self.grant_id,
+                    "expires_at_ms": self.now + 8 * 60 * 60 * 1000,
+                    "revoked_at_ms": None,
+                }]})
+            if path == "/v1/scoped-pilot-decisions":
+                return _Response({"scoped_pilot_decisions": [{
+                    "decision_id": self.decision_id,
+                    "expires_at_ms": self.now + 8 * 60 * 60 * 1000,
+                    "revoked_at_ms": None,
+                }]})
+            if path == "/v1/maintenance/admission":
+                return _Response({"admission_mode": "scoped_pilot"})
+            raise AssertionError(path)
+
+        result = MODULE.renew_authority(
+            environment=self.environment, opener=outside_window_opener, now_ms=self.now,
+        )
+        self.assertFalse(result["grant"]["renewed"])
+        self.assertFalse(result["decision"]["renewed"])
+        self.assertFalse(any(path.endswith("/renew") for _method, path, _payload in self.calls))
 
 
 if __name__ == "__main__":
