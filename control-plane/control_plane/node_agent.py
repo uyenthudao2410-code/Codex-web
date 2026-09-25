@@ -1169,6 +1169,15 @@ def runtime_readiness(status: dict[str, str]) -> tuple[str, str]:
         return "degraded", "runtime_admission_pending"
     if status.get("error_code") not in {None, "none"}:
         return "degraded", "runtime_error_present"
+    if status.get("execution_role") == "central_executor":
+        central_status_reason = status.get("central_status_reason")
+        if (
+            status.get("central_connected") != "true"
+            or status.get("authority_ready") != "true"
+            or central_status_reason not in {None, "", "none"}
+        ):
+            return "degraded", "central_route_unproven"
+        return "ready", "strict_central_route"
     if (
         status.get("connector_state") == "CURRENT_ACKNOWLEDGED"
         and status.get("connector_rediscovered") == "true"

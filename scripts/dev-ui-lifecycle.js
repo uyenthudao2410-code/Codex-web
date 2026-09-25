@@ -1202,6 +1202,14 @@ async function statusLifecycle(deps) {
     ? runtime.codeRevision.codingMcp
     : {};
   const booleanStatus = (value) => typeof value === 'boolean' ? String(value) : 'unknown';
+  const executionRole = String(runtime?.executionRole || '').trim().toLowerCase() || 'unknown';
+  const centralConnected = booleanStatus(runtime?.centralConnected);
+  const authorityReady = booleanStatus(runtime?.authorityReady);
+  const centralStatusReason = runtime?.centralStatusReason == null
+    ? 'none'
+    : /^[A-Z0-9_]{3,96}$/.test(String(runtime.centralStatusReason))
+      ? String(runtime.centralStatusReason)
+      : 'unknown';
   const connectorRediscovered = booleanStatus(runtime?.connectorRediscovered);
   const snapshotAgeMs = Number.isFinite(runtime?.snapshotAgeMs) ? String(runtime.snapshotAgeMs) : 'none';
   deps.output([
@@ -1228,6 +1236,10 @@ async function statusLifecycle(deps) {
     `runtime_signal_stale=${booleanStatus(runtime?.signalStale)}`,
     `runtime_snapshot_source=${String(runtime?.snapshotSource || '') || 'none'}`,
     `runtime_snapshot_age_ms=${snapshotAgeMs}`,
+    `execution_role=${executionRole}`,
+    `central_connected=${centralConnected}`,
+    `authority_ready=${authorityReady}`,
+    `central_status_reason=${centralStatusReason}`,
     `connector_state=${connectorState}`,
     `connector_rediscovered=${connectorRediscovered}`,
     `connector_rediscovered_at=${connectorRediscoveredAt}`,

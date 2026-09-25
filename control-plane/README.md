@@ -559,6 +559,13 @@ session, backup, or real environment file. Creating it does not change the
   `quarantined_unknown` disposition, receipt/evidence digests, timestamp and an
   audit event. It does **not** alter receipts or delivery state, settle the
   action, permit redelivery, or claim that a workspace was untouched or read.
+  A later pilot may proceed past this unresolved action only for the same
+  private-tunnel service principal and exact binding/workspace generation,
+  when the durable records prove one bounded file-read intent, exactly one
+  attempt, the same quarantined `unknown` receipt and evidence digest, and an
+  empty local handle. Health and backup projections continue to count it as
+  unresolved. Generic metadata actions, another principal/target, any receipt
+  or intent drift, and unobserved dispatches still block a new pilot.
   A separate operator-only
   `POST /v1/action-dispositions/quarantine-historical-unobserved-dispatch`
   (and same-origin browser route) handles one narrower legacy case: an expired

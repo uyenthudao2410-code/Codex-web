@@ -1711,11 +1711,15 @@ class ControlPlaneStore:
                 workspace_id=str(target["workspace_id"]),
                 workspace_generation=str(target["workspace_generation"]),
             )
-            unresolved = connection.execute(
-                """SELECT COUNT(*) FROM actions WHERE device_id = ?
-                   AND delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')""",
-                (target["device_id"],),
-            ).fetchone()[0]
+            unresolved = self._blocking_unresolved_action_count_for_pilot(
+                connection,
+                device_id=str(target["device_id"]),
+                owner_id=owner_id,
+                principal_id=principal_id,
+                binding_id=binding_id,
+                workspace_id=str(target["workspace_id"]),
+                workspace_generation=str(target["workspace_generation"]),
+            )
             if unresolved:
                 raise ConflictError("selected node has unresolved prior actions.")
             connection.execute(
@@ -1752,6 +1756,224 @@ class ControlPlaneStore:
                 (owner_id,),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def _quarantined_file_read_unknown_matches_pilot_target(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        action: sqlite3.Row,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+    ) -> bool:
+        """Allow a new pilot past only an audited unknown read on that target.
+
+        This does not settle or hide the action. It is a narrow continuity rule
+        for one immutable bounded file-read intent after the owner has already
+        quarantined its unknown receipt. Every unresolved action outside this
+        exact same-principal, same-generation read remains admission-blocking.
+        """
+
+        if (
+            action["owner_id"] != owner_id
+            or action["binding_id"] != binding_id
+            or action["workspace_id"] != workspace_id
+            or action["workspace_generation"] != workspace_generation
+            or action["tool_name"] != "workspace_context"
+            or action["delivery_state"] != "reconcile_required"
+        ):
+            return False
+        try:
+            arguments = json.loads(str(action["arguments_json"]))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return False
+        if not isinstance(arguments, dict) or set(arguments) != {
+            "operation", "path", "start_line", "max_lines", "max_bytes",
+        } or arguments.get("operation") != "read_file":
+            return False
+        try:
+            if _bounded_file_read_path(arguments.get("path")) != arguments.get("path"):
+                return False
+            if _bounded_file_read_limits(
+                start_line=arguments.get("start_line"),
+                max_lines=arguments.get("max_lines"),
+                max_bytes=arguments.get("max_bytes"),
+            ) != (arguments.get("start_line"), arguments.get("max_lines"), arguments.get("max_bytes")):
+                return False
+        except (TypeError, ValueError, ValidationError):
+            return False
+
+        intent = connection.execute(
+            """
+            SELECT * FROM mcp_file_read_intents
+            WHERE action_id = ?
+            """,
+            (action["action_id"],),
+        ).fetchone()
+        if (
+            intent is None
+            or intent["owner_id"] != owner_id
+            or intent["principal_id"] != principal_id
+            or intent["binding_id"] != binding_id
+        ):
+            return False
+        task_link = connection.execute(
+            "SELECT task_id FROM mcp_task_action_links WHERE action_id = ?",
+            (action["action_id"],),
+        ).fetchone()
+        facade_contract = {
+            "schema_version": intent["facade_schema_version"],
+            "profile": intent["facade_profile"],
+            "sha256": intent["facade_contract_sha256"],
+        }
+        expected_intent = {
+            "kind": "mcp_facade_bounded_file_read_v1",
+            "principal_id": principal_id,
+            "binding_id": binding_id,
+            "task_id": task_link["task_id"] if task_link is not None else None,
+            "path": arguments["path"],
+            "start_line": arguments["start_line"],
+            "max_lines": arguments["max_lines"],
+            "max_bytes": arguments["max_bytes"],
+            "idempotency_key": intent["idempotency_key"],
+            "facade_contract": facade_contract,
+        }
+        expected_intent_digest = _digest(expected_intent)
+        if (
+            expected_intent_digest != intent["intent_digest"]
+            or action["admission_reference"] != f"mcp_file_read:{expected_intent_digest}"
+        ):
+            return False
+        action_immutable = {
+            "request_id": action["request_id"],
+            "context_id": action["context_id"],
+            "binding_id": action["binding_id"],
+            "principal_id": principal_id,
+            "device_id": action["device_id"],
+            "endpoint_id": action["endpoint_id"],
+            "workspace_id": action["workspace_id"],
+            "workspace_generation": action["workspace_generation"],
+            "tool_name": action["tool_name"],
+            "arguments": arguments,
+            "idempotency_key": action["idempotency_key"],
+            "admission_reference": action["admission_reference"],
+            "expires_at_ms": action["expires_at_ms"],
+            "facade_contract": facade_contract,
+        }
+        if action["action_digest"] != _digest(action_immutable):
+            return False
+
+        reconciliation = connection.execute(
+            "SELECT * FROM action_reconciliations WHERE action_id = ?",
+            (action["action_id"],),
+        ).fetchone()
+        receipt = connection.execute(
+            """
+            SELECT receipt_id, local_handle, receipt_state, payload_json,
+                   receipt_digest, received_at_ms
+            FROM receipts WHERE action_id = ?
+            ORDER BY received_at_ms DESC, receipt_id DESC LIMIT 1
+            """,
+            (action["action_id"],),
+        ).fetchone()
+        attempts = connection.execute(
+            "SELECT attempt_id FROM delivery_attempts WHERE action_id = ? ORDER BY attempt_number",
+            (action["action_id"],),
+        ).fetchall()
+        if (
+            reconciliation is None
+            or reconciliation["owner_id"] != owner_id
+            or reconciliation["device_id"] != action["device_id"]
+            or reconciliation["disposition"] != "quarantined_unknown"
+            or reconciliation["declaration"] != QUARANTINE_UNKNOWN_DECLARATION
+            or receipt is None
+            or receipt["receipt_state"] != "unknown"
+            or receipt["local_handle"] != ""
+            or receipt["receipt_id"] != reconciliation["receipt_id"]
+            or receipt["receipt_digest"] != reconciliation["receipt_digest"]
+            or receipt["received_at_ms"] != reconciliation["receipt_received_at_ms"]
+            or len(attempts) != 1
+        ):
+            return False
+        receipt_attempts = connection.execute(
+            """
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN attempt_id = ? THEN 1 ELSE 0 END) AS matches
+            FROM delivery_attempts WHERE action_id = ?
+            """,
+            (attempts[0]["attempt_id"], action["action_id"]),
+        ).fetchone()
+        if int(receipt_attempts["total"] or 0) != 1 or int(receipt_attempts["matches"] or 0) != 1:
+            return False
+        try:
+            receipt_payload = json.loads(str(receipt["payload_json"]))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return False
+        if (
+            isinstance(receipt_payload, dict)
+            and receipt_payload.get("schema_version") == 1
+            and receipt_payload.get("operation_kind") == "control_plane_bounded_file_read"
+            and receipt_payload.get("code") == "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN"
+        ) is not True:
+            return False
+        expected_receipt_digest = _digest({
+            "attempt_id": attempts[0]["attempt_id"],
+            "receipt_state": receipt["receipt_state"],
+            "local_handle": receipt["local_handle"],
+            "payload": receipt_payload,
+        })
+        if receipt["receipt_digest"] != expected_receipt_digest:
+            return False
+        expected_evidence_digest = _digest({
+            "schema_version": 1,
+            "action_id": action["action_id"],
+            "owner_id": owner_id,
+            "device_id": action["device_id"],
+            "tool_name": action["tool_name"],
+            "delivery_state": action["delivery_state"],
+            "latest_receipt_id": receipt["receipt_id"],
+            "latest_receipt_state": receipt["receipt_state"],
+            "latest_receipt_digest": receipt["receipt_digest"],
+            "latest_receipt_received_at_ms": receipt["received_at_ms"],
+            "delivery_attempt_count": 1,
+        })
+        return reconciliation["evidence_digest"] == expected_evidence_digest
+
+    def _blocking_unresolved_action_count_for_pilot(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        device_id: str,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+    ) -> int:
+        actions = connection.execute(
+            """
+            SELECT * FROM actions
+            WHERE device_id = ?
+              AND delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
+            ORDER BY created_at_ms, action_id
+            """,
+            (device_id,),
+        ).fetchall()
+        return sum(
+            1
+            for action in actions
+            if not self._quarantined_file_read_unknown_matches_pilot_target(
+                connection,
+                action=action,
+                owner_id=owner_id,
+                principal_id=principal_id,
+                binding_id=binding_id,
+                workspace_id=workspace_id,
+                workspace_generation=workspace_generation,
+            )
+        )
 
     def revoke_scoped_pilot_decision(self, *, owner_id: str, decision_id: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
@@ -1847,11 +2069,15 @@ class ControlPlaneStore:
                 workspace_id=str(row["workspace_id"]),
                 workspace_generation=str(row["workspace_generation"]),
             )
-            unresolved = connection.execute(
-                """SELECT COUNT(*) FROM actions WHERE device_id = ?
-                   AND delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')""",
-                (row["device_id"],),
-            ).fetchone()[0]
+            unresolved = self._blocking_unresolved_action_count_for_pilot(
+                connection,
+                device_id=str(row["device_id"]),
+                owner_id=owner_id,
+                principal_id=str(row["principal_id"]),
+                binding_id=str(row["binding_id"]),
+                workspace_id=str(row["workspace_id"]),
+                workspace_generation=str(row["workspace_generation"]),
+            )
             if unresolved:
                 connection.execute("ROLLBACK")
                 raise ConflictError("selected node has unresolved prior actions.")

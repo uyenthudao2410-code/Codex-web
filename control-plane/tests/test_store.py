@@ -136,6 +136,47 @@ class ControlPlaneStoreTests(unittest.TestCase):
             readiness="ready",
         )
 
+    def _quarantine_service_file_read_unknown(self, *, local_handle: str = "") -> tuple[dict, dict, dict]:
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Canary workspace",
+        )
+        principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self._ready_node()
+        self.store.set_admission_mode(mode="recovery")
+        initial = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+            reason="Initial bounded-read canary",
+        )
+        self.store.set_admission_mode(mode="scoped_pilot")
+        intent = self.store.request_mcp_bounded_file_read(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], path="README.md", start_line=1,
+            max_lines=5, max_bytes=1024, idempotency_key="quarantined-file-read-001",
+            facade_contract=FACADE_CONTRACT,
+        )
+        action = self.store.action(owner_id="owner_default", action_id=intent["action_id"])
+        self.assertEqual(action["scoped_pilot_decision_id"], initial["decision_id"])
+        delivery = self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read")[0]
+        self.store.record_receipt(
+            device_id="device-alpha", action_id=intent["action_id"],
+            attempt_id=delivery["attempt_id"], receipt_state="unknown",
+            local_handle=local_handle,
+            payload={
+                "schema_version": 1,
+                "operation_kind": "control_plane_bounded_file_read",
+                "code": "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN",
+                "diagnostic_code": "CONTROL_PLANE_FILE_READ_AGENT_EXCEPTION",
+            },
+        )
+        self.store.quarantine_historical_unknown_actions(
+            owner_id="owner_default", device_id="device-alpha",
+            action_ids=[intent["action_id"]],
+            declaration="HISTORICAL_READ_ONLY_UNKNOWN_EFFECT",
+        )
+        return binding, principal, action
+
     def test_node_policy_observation_is_compact_and_does_not_replace_on_legacy_heartbeat(self) -> None:
         policy = {
             "state": "enabled",
@@ -954,6 +995,14 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(health["unresolved_action_count"], 1)
         self.assertEqual(health["quarantined_unknown_action_count"], 1)
         self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
+        service_principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=service_principal["principal_id"],
+                binding_id=self.store.action(owner_id="owner_default", action_id=action["action_id"])["binding_id"],
+                expires_at_ms=self.now + 120_000,
+                reason="Generic workspace context unknown must remain blocking",
+            )
 
         snapshot_path = Path(self.tempdir.name) / "quarantined-unknown.sqlite3"
         snapshot = self.store.backup_to(snapshot_path)
@@ -3104,6 +3153,37 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "connector_current_sha=sha-a connector_ack_sha=sha-a error_code=none"
         )
         self.assertEqual(runtime_readiness(strict), ("ready", "strict_current_process_discovery"))
+        central_executor = parse_dev_ui_status(
+            "DEV_UI STATUS state=CURRENT host=available installation=current instance=runtime-central "
+            "execution_role=central_executor central_connected=true authority_ready=true central_status_reason=none "
+            "mcp_update_pending=false mcp_running_revision=sha-central mcp_disk_revision=sha-central "
+            "components_ready=true fully_ready=true runtime_update_incomplete=false "
+            "runtime_telemetry_available=true runtime_signal_stale=false "
+            "connector_state=CHANGED_NEEDS_DISCOVERY connector_rediscovered=false connector_rediscovered_at=none "
+            "connector_freshness_mode=none connector_refresh_required=true connector_ack_pending=false "
+            "connector_current_sha=sha-current connector_ack_sha=none error_code=none"
+        )
+        self.assertEqual(runtime_readiness(central_executor), ("ready", "strict_central_route"))
+        central_projection = runtime_heartbeat_projection(central_executor, {
+            "observation_schema_version": 1,
+            "observation_kind": "mcp_identity_read_only",
+            "mcp_ready": True,
+            "identity_current": True,
+            "mcp_process_instance_id": "coding-mcp-process-central-0001",
+            "mcp_server_instance_id": "coding-mcp-server-central-0001",
+            "activation_epoch_id": "activation-epoch-central-0001",
+            "current_activation_epoch_id": "activation-epoch-central-0001",
+            "tool_contract_sha256": "c" * 64,
+        })
+        self.assertEqual(central_projection["readiness"], "ready")
+        self.assertEqual(central_projection["runtime_instance_id"], "coding-mcp-process-central-0001")
+        self.assertEqual(central_projection["contract_version"], "sha256:" + "c" * 64)
+        central_unavailable = dict(central_executor, central_connected="false")
+        self.assertEqual(runtime_readiness(central_unavailable), ("degraded", "central_route_unproven"))
+        central_policy_pending = dict(central_executor, authority_ready="false")
+        self.assertEqual(runtime_readiness(central_policy_pending), ("degraded", "central_route_unproven"))
+        central_error = dict(central_executor, central_status_reason="CENTRAL_AUTHORITY_STALE")
+        self.assertEqual(runtime_readiness(central_error), ("degraded", "central_route_unproven"))
         projection = runtime_heartbeat_projection(strict)
         self.assertEqual(projection["readiness"], "degraded")
         self.assertEqual(projection["reason"], "runtime_identity_unproven")
@@ -3519,6 +3599,88 @@ process.stdout.write(JSON.stringify(observation));
                 owner_id="owner_default", principal_id=principal["principal_id"],
                 binding_id=context["binding_id"], expires_at_ms=self.now + 120_000,
                 reason="Unknown old effect must block selected node",
+            )
+
+    def test_scoped_pilot_resumes_after_exact_quarantined_file_read_without_settling_history(self) -> None:
+        binding, principal, old_action = self._quarantine_service_file_read_unknown()
+        self.store.set_admission_mode(mode="recovery")
+        other_principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=other_principal["principal_id"],
+                binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+                reason="A quarantined file read cannot authorize another service principal",
+            )
+
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+            reason="Resume exact selected binding after audited bounded-read unknown",
+        )
+
+        old_observation = self.store.action_observation(
+            owner_id="owner_default", action_id=old_action["action_id"],
+        )
+        self.assertEqual(decision["binding_id"], binding["binding_id"])
+        self.assertEqual(old_observation["delivery_state"], "reconcile_required")
+        self.assertEqual(old_observation["receipts"][-1]["receipt_state"], "unknown")
+        self.assertEqual(old_observation["reconciliation"]["disposition"], "quarantined_unknown")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        health = self.store.health()
+        self.assertEqual(health["unresolved_action_count"], 1)
+        self.assertEqual(health["quarantined_unknown_action_count"], 1)
+        self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
+
+        self.store.set_admission_mode(mode="scoped_pilot")
+        renewed = self.store.renew_scoped_pilot_decision(
+            owner_id="owner_default", decision_id=decision["decision_id"],
+            expires_at_ms=self.now + 120_000,
+        )
+        self.assertEqual(renewed["binding_id"], binding["binding_id"])
+
+    def test_scoped_pilot_stays_blocked_for_quarantined_file_read_with_local_handle(self) -> None:
+        binding, principal, _action = self._quarantine_service_file_read_unknown(
+            local_handle="local-handle-must-remain-blocking",
+        )
+        self.store.set_admission_mode(mode="recovery")
+
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+                reason="A quarantined file read with a local handle remains blocking",
+            )
+
+    def test_scoped_pilot_stays_blocked_when_quarantined_file_read_evidence_digest_drifts(self) -> None:
+        binding, principal, action = self._quarantine_service_file_read_unknown()
+        self.store.set_admission_mode(mode="recovery")
+        with self.store._connection() as connection:
+            connection.execute(
+                "UPDATE action_reconciliations SET evidence_digest = ? WHERE action_id = ?",
+                ("0" * 64, action["action_id"]),
+            )
+
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+                reason="Tampered quarantine evidence cannot clear the pilot gate",
+            )
+
+    def test_scoped_pilot_stays_blocked_when_quarantined_file_read_action_digest_drifts(self) -> None:
+        binding, principal, action = self._quarantine_service_file_read_unknown()
+        self.store.set_admission_mode(mode="recovery")
+        with self.store._connection() as connection:
+            connection.execute(
+                "UPDATE actions SET action_digest = ? WHERE action_id = ?",
+                ("0" * 64, action["action_id"]),
+            )
+
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
+                reason="Drifted immutable action cannot clear the pilot gate",
             )
 
     def test_scoped_pilot_exec_is_pinned_to_task_and_exact_target(self) -> None:

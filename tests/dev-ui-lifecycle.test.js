@@ -886,6 +886,25 @@ test('dev:refresh exits successfully after exact process refresh while connector
   assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*mcp=ready tunnel=ready admission=closed fully_ready=false connector=pending connector_state=CHANGED_NEEDS_DISCOVERY/);
 });
 
+test('dev:status exposes role-aware central readiness without exposing raw status errors', async () => {
+  const fixture = harness(observation('CURRENT'));
+  fixture.deps.runtimeSnapshot = async () => ({
+    executionRole: 'central_executor',
+    centralConnected: true,
+    authorityReady: true,
+    centralStatusReason: null,
+    connectorRediscovered: false,
+    connectorRefreshRequired: true
+  });
+
+  await runLifecycle('status', fixture.deps);
+
+  const line = fixture.lines.at(-1);
+  assert.match(line, /execution_role=central_executor/);
+  assert.match(line, /central_connected=true authority_ready=true central_status_reason=none/);
+  assert.match(line, /connector_rediscovered=false connector_rediscovered_at=none/);
+});
+
 test('central-executor refresh accepts route proof without inventing a Coding Tunnel', () => {
   const epoch = 'activation-central-refresh-0001';
   const runtime = {
