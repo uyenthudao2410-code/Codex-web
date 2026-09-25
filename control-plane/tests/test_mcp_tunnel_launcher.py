@@ -37,6 +37,7 @@ class McpTunnelLauncherTests(unittest.TestCase):
         self.environment = {
             "PATH": os.defpath,
             "LC_ALL": "C",
+            "XDG_STATE_HOME": str(self.directory / "state"),
             "CONTROL_PLANE_TUNNEL_CLIENT": str(self.client),
             "CONTROL_PLANE_TUNNEL_PROFILE": "ubuntu-root-mcp-fixture",
             "CONTROL_PLANE_TUNNEL_ID": "tunnel_fixture_12345",
@@ -178,6 +179,47 @@ class McpTunnelLauncherTests(unittest.TestCase):
                 result = self.run_launcher(CONTROL_PLANE_TUNNEL_CLIENT=str(client))
                 self.assertEqual(result.returncode, 2)
                 self.assertEqual(result.stdout, "")
+
+    def test_account_deactivated_stops_client_and_records_exact_tunnel_marker(self) -> None:
+        self.client.write_text(
+            "#!/usr/bin/env python3\n"
+            "import sys, time\n"
+            "for _ in range(3):\n"
+            " sys.stderr.write('poll failed status=401 account_deactivated\\n')\n"
+            " sys.stderr.flush()\n"
+            " time.sleep(0.05)\n"
+            "while True: time.sleep(0.1)\n",
+            encoding="utf-8",
+        )
+        self.client.chmod(0o700)
+
+        result = self.run_launcher()
+
+        marker = self.directory / "state" / "codex-control-plane" / "tunnel-credential-dead"
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(marker.is_file())
+        self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+        self.assertIn("tunnel_id=tunnel_fixture_12345", marker.read_text(encoding="utf-8"))
+        self.assertIn("account_deactivated", result.stderr)
+        self.assertIn("no further retries", result.stderr)
+
+    def test_dead_credential_marker_blocks_only_its_tunnel_id(self) -> None:
+        marker = self.directory / "state" / "codex-control-plane" / "tunnel-credential-dead"
+        marker.parent.mkdir(parents=True, mode=0o700)
+        marker.write_text(
+            "tunnel_id=tunnel_fixture_12345\nfirst_seen=2026-09-25T00:00:00Z\nsource=test\n",
+            encoding="utf-8",
+        )
+        marker.chmod(0o600)
+
+        blocked = self.run_launcher()
+        self.assertEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertEqual(blocked.stdout, "")
+        self.assertIn("Refusing to start", blocked.stderr)
+
+        replacement = self.run_launcher(CONTROL_PLANE_TUNNEL_ID="tunnel_fixture_replacement")
+        self.assertEqual(replacement.returncode, 0, replacement.stderr)
+        self.assertTrue(json.loads(replacement.stdout)["argv"])
 
 
 class McpTunnelDeploymentTemplateTests(unittest.TestCase):

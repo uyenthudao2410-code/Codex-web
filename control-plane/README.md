@@ -210,6 +210,14 @@ executor. The later systemd service only uses the protected profile. Record
 the selected binary version/checksum and the content-free `doctor` result in
 the deployment receipt; do not paste its credential-bearing profile anywhere.
 
+The Ubuntu tunnel launcher treats repeated HTTP 401 `account_deactivated`
+poll failures as a permanent credential failure. After three consecutive
+signals it records a mode-0600 marker keyed to that exact Tunnel ID, stops the
+client, and exits successfully so systemd does not retry the locked
+credential. Restarting the same tunnel remains blocked; an operator must
+restore that account or configure a separately allowed Tunnel ID and profile.
+The launcher never switches accounts or credentials automatically.
+
 Do not activate this service against a Windows Tunnel ID. First stop/fence the
 old owner through the approved cutover procedure, then initialize one new or
 explicitly transferred Ubuntu profile. A live `tunnel-client` health/ready

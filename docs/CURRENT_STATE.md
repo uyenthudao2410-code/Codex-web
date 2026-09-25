@@ -1,6 +1,24 @@
 # Current Project State — Tools-Codex-web
 
-## Current desktop checkpoint — 25-09-2026, local W1 implementation
+## Live operational checkpoint — 25-09-2026, personal tunnel and dev handoff
+
+This is the newest live recapture. The desktop snapshot below is retained as the earlier W1 baseline and is no longer the current runtime state.
+
+The Ubuntu Secure MCP Tunnel now runs profile `ubuntu-root-mcp-2` with tunnel `tunnel_6ab62006b6708191b007d1c6e4a136cf` (`svhome`). The service is enabled and active; `/healthz` and `/readyz` return `live` and `ready`. Runtime API key metadata remains in its owner-only file. The fail-fast launcher is live in Ubuntu release commit `f31683823dd49eddea4f7a8dca883fa72246002e`; its source mirror and regression tests are now present in this Windows checkout. After tunnel restart there were no 401 or `account_deactivated` messages and no systemd crash restarts. Running `doctor` while the service already owns its health port reports only `health_listener` bind conflict; direct live/ready checks pass. The client emitted one OAuth metadata warning because this private service mode intentionally does not advertise OAuth metadata.
+
+The Ubuntu Control Plane remains healthy at schema 28 with SQLite `ok`, and the exact package-health verifier passes. A verified pre-reconciliation snapshot was taken. Historical action `act_048df93488874a70aa97a7ee18ccbd03` remains `reconcile_required` with an `unknown` receipt; an audited `quarantined_unknown` disposition was added without settling, rewriting, or retrying the action. A fresh automatic backup and healthcheck both pass; 12 actions remain unresolved in total, with 0 unquarantined.
+
+The expired private service grant was replaced with a 24-hour grant for the same service principal and exact scopes `control-plane.inventory`, `control-plane.read`, and `control-plane.patch`. The protected authorization file is owner `svhome`, mode `0600`. A local loopback `tools/list` authenticated successfully and returned the eight Smart-v3 tools. Server admission remains `scoped_pilot`, with no live pilot decision.
+
+Windows has switched from packaged R9 to the **development checkout** through the Recovery Supervisor and a successful full-clean refresh. The active development UI and MCP revisions match disk; `npm run dev:status` reports `fully_ready=true`. The same selected folder remains `E:\DEV\Codex-web`, with `read=true`, `write=true`, and `exec=false`; file-read and patch policies remain enabled for its exact workspace generation. R9 is retained on disk, and its previous supervisor manifest is backed up at `E:\Caches\Temp\codex-web-dev-handoff-20260925-153202\recovery-supervisor-manifest.json` for rollback.
+
+The Windows connector gate is still open: the runtime reports `CHANGED_NEEDS_DISCOVERY`, `connector_rediscovered=false`, and the Ubuntu node heartbeat is `degraded` with runtime/contract identity unreported. The Ubuntu action and read-only-intent counts did not increase during the new tunnel rollout, so no ChatGPT-side tool invocation is yet proven; the direct loopback `tools/list` check is backend evidence only.
+
+The active ChatGPT account is personal. Its personal plugin directory does not contain `Ubuntu Control Plane`; a draft MCP app form is prepared with tunnel `svhome` and “No authentication” (the tunnel client supplies the protected server grant). The warning checkbox and Create action have not been submitted. A one-time user confirmation is still required before saving this persistent personal connector.
+
+Remaining gates: confirm/create the personal MCP app, run a real ChatGPT `workspace_context` call through the new tunnel, prove strict connector discovery and a fresh ready node/binding, issue a bounded pilot, and complete isolated read and patch canaries. Exec remains off until its Windows sandbox checks pass. No installer build, official release, or push has occurred in this recapture.
+
+## Historical desktop baseline — 25-09-2026, before live recapture
 
 Source commit: `b7d5f5ad` (`Retire embedded ChatGPT page and harden bridges`). Delivery evidence was recorded in `fb295859`; the maintained checkpoint is `main @ 01c7aaf6`.
 

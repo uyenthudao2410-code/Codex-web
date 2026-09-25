@@ -2,7 +2,7 @@
 
 Ngày lập: **25-09-2026**, múi giờ **Asia/Saigon (+07)**. Phạm vi: `E:\DEV\Codex-web`, Windows Execution Hub + Coding Tools MCP + Ubuntu Control Plane.
 
-**Trạng thái tài liệu: kế hoạch để duyệt, không phải chứng nhận tuân thủ hay biên bản hoàn tất triển khai.** Trong lượt lập kế hoạch chỉ tạo tài liệu; giữ nguyên các sửa đổi source và runtime evidence đã có. Không đăng nhập/thử tài khoản bị khóa, không thay quyền, không restart/deploy/commit/push.
+**Trạng thái tài liệu: kế hoạch sống có ghi nhận triển khai và các gate còn mở; không phải chứng nhận tuân thủ hay tuyên bố hoàn tất.** Baseline và lịch sử bên dưới giữ nguyên theo thời điểm quan sát; dùng mục cập nhật mới nhất để biết trạng thái hiện tại.
 
 ## 1. Quyết định kiến trúc đề xuất
 
@@ -67,6 +67,17 @@ Các số test trên là **kết quả lịch sử của lượt sửa**, không
 - App r9 trên Windows vẫn chạy source cũ; chưa cài/chuyển runtime. Candidate C chưa thay thế tiến trình đó và chưa chạy live ChatGPT connector.
 - W3 auth/user identity, Ubuntu readback hiện tại, đối soát production unknown action, live read/patch/exec, xác nhận quyền từ connector thật và release vẫn là gate mở.
 - Local Consent/Task API độc lập được giữ trong repository; local consent HTTP không bị xóa. Thiếu accounting vẫn là unknown và không thể trở thành execution receipt/authority.
+
+### Live update — 25-09-2026, sau khi thay Secure MCP Tunnel
+
+- Tailscale SSH đã được xác nhận bằng đúng user `svhome` (UID 1000). Ubuntu checkout/release đang ở commit `f31683823dd49eddea4f7a8dca883fa72246002e`; commit này chỉ thêm watchdog fail-fast cho `account_deactivated` trong tunnel launcher.
+- Windows source mirror của watchdog đã được thêm tại `deploy/control-plane-mcp-tunnel-launcher.sh`; 2 focused tests bao phủ stop sau ba lần `account_deactivated` liên tiếp, marker chỉ chặn đúng Tunnel ID, và Tunnel ID khác gỡ guard. `control-plane/tests/test_mcp_tunnel_launcher.py` đạt **14/14 PASS** dưới WSL; `bash -n` PASS. Runtime Ubuntu vẫn dùng bản đã triển khai `f3168382`.
+- Ubuntu Secure MCP Tunnel đang chạy `ubuntu-root-mcp-2` / `tunnel_6ab62006b6708191b007d1c6e4a136cf`. Metadata read-only trả tên `svhome`; tunnel được gắn một Platform organization và một ChatGPT workspace. Service được restart sau khi thay private MCP grant; `/healthz=live`, `/readyz=ready`, 0 lỗi 401/account_deactivated, 0 tự động crash-restart. Có một cảnh báo OAuth discovery vì `private_tunnel_service` không quảng bá OAuth metadata; doctor cũng xác nhận metadata OAuth không được quảng bá. Lần chạy doctor khi daemon đang hoạt động không PASS do cổng health đã bị daemon chiếm, nên kiểm tra live/ready là bằng chứng vận hành hiện tại.
+- Control Plane schema 28/SQLite `ok`. Snapshot pre-quarantine được tạo; action cũ `workspace_context/read_file` vẫn unknown/reconcile_required, chỉ được gắn disposition `quarantined_unknown` bằng API operator. Backup mới và healthcheck PASS; unresolved=12, unquarantined=0. Không có retry hay receipt hoàn tất giả.
+- Grant private service hiện hành được cấp lại với scope inventory/read/patch và key file mode 0600. Internal loopback MCP `tools/list` trả đủ tám tool; đây chưa phải invocation từ ChatGPT.
+- Windows Recovery Supervisor hiện trỏ tới `E:\DEV\Codex-web` ở `development`. `npm run dev:refresh` đã handoff packaged R9 và tạo epoch `activation-mugpzshz-6036430526715dcae09c2516758152c5`; `npm run dev:status` báo UI current, source revisions khớp, `fully_ready=true`. Runtime connector freshness còn `CHANGED_NEEDS_DISCOVERY`; Ubuntu node vẫn `degraded`/runtime identity `unreported`.
+- ChatGPT hiện được kiểm tra ở tài khoản **personal** theo xác nhận mới nhất của người dùng. Personal plugins directory chưa có ứng dụng `Ubuntu Control Plane`. Form cá nhân đã được chuẩn bị với tunnel mới và “No authentication”, nhưng ô cảnh báo và nút Create chưa được xác nhận/bấm. Chưa có MCP invocation thật từ ChatGPT; chưa có pilot sống hoặc read/patch canary. `exec` tiếp tục tắt.
+- Browser UI preparation did not create an account, issue an OpenAI key, or save the app. The remaining connector save step requires the user’s explicit action-time confirmation because ChatGPT displays a persistent-access warning for the MCP server.
 
 ### 2.3 Hai kết luận cần sửa cách hiểu
 
