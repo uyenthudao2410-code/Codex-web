@@ -118,7 +118,7 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(app, /confirmReplace:\s*true/);
   assert.match(app, /generation cũ đã bị fence/);
   assert.match(app, /Do not call switchWorkspace,[\s\S]*updateAuthorizedRoots/);
-  assert.match(app, /account OAuth chọn target và tạo authority riêng/);
+  assert.match(app, /cấp target cho kết nối ChatGPT \(OAuth hoặc service principal của tunnel\) và cài policy local/);
   assert.match(preload, /registerControlPlaneWorkspace:\s*\(request\)\s*=>\s*ipcRenderer\.invoke\('control-plane:register-workspace', request\)/);
   assert.match(preload, /listControlPlaneWorkspaces:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('control-plane:list-workspaces'\)/);
   assert.match(preload, /installControlPlaneReadOnlyPolicyAssignment:\s*\(request\)\s*=>\s*ipcRenderer\.invoke\('control-plane:install-read-only-policy-assignment', request\)/);

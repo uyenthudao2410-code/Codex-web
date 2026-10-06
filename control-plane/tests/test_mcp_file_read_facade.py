@@ -133,6 +133,92 @@ class McpFileReadFacadeTests(unittest.TestCase):
             "response_sha256": response_sha256,
         }
 
+    def test_workspace_context_schema_requires_the_arguments_for_each_operation(self) -> None:
+        self.assertEqual(self.facade.contract["schema_version"], 27)
+        by_name = {tool["name"]: tool for tool in self.facade.contract["tools"]}
+        schema = by_name["workspace_context"]["inputSchema"]
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(schema["required"], ["operation"])
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(schema["properties"]["operation"]["enum"], [
+            "inventory", "task_open", "task_list", "task_close", "read_file", "read_status",
+        ])
+        branches = {
+            branch["properties"]["operation"]["enum"][0]: branch
+            for branch in schema["oneOf"]
+        }
+        expected_fields = {
+            "inventory": ({"operation"}, {"operation"}),
+            "task_open": (
+                {"operation", "binding_id", "label", "idempotency_key"},
+                {"operation", "binding_id", "label", "idempotency_key"},
+            ),
+            "task_list": ({"operation"}, {"operation"}),
+            "task_close": ({"operation", "task_id"}, {"operation", "task_id"}),
+            "read_file": (
+                {"operation", "binding_id", "path", "idempotency_key", "expected_facade_contract"},
+                {
+                    "operation", "binding_id", "path", "idempotency_key", "expected_facade_contract",
+                    "task_id", "start_line", "max_lines", "max_bytes",
+                },
+            ),
+            "read_status": ({"operation", "action_id"}, {"operation", "action_id"}),
+        }
+        self.assertEqual(set(branches), set(expected_fields))
+        for operation, (required, fields) in expected_fields.items():
+            with self.subTest(operation=operation):
+                branch = branches[operation]
+                self.assertEqual(set(branch["required"]), required)
+                self.assertEqual(set(branch["properties"]), fields)
+                self.assertFalse(branch["additionalProperties"])
+        self.assertIn("task_open and read_file", schema["properties"]["idempotency_key"]["description"])
+        listed = self.facade.handle(
+            {"jsonrpc": "2.0", "id": "workspace-context-schema", "method": "tools/list", "params": {}},
+            owner_id=self.owner_id,
+            principal_id=self.principal["principal_id"],
+            granted_context_id=None,
+        )
+        assert listed is not None
+        advertised = next(tool for tool in listed["result"]["tools"] if tool["name"] == "workspace_context")
+        self.assertEqual(advertised["inputSchema"], schema)
+
+    def test_reported_incomplete_shapes_fail_before_creating_tasks_or_actions(self) -> None:
+        malformed = (
+            {
+                "operation": "task_open",
+                "binding_id": self.binding["binding_id"],
+                "label": "missing idempotency key",
+            },
+            {
+                "operation": "task_open",
+                "binding_id": self.binding["binding_id"],
+                "label": "unexpected contract",
+                "idempotency_key": "task-open-invalid-01",
+                "expected_facade_contract": {
+                    key: self.facade.contract[key] for key in ("schema_version", "profile", "sha256")
+                },
+            },
+            {
+                "operation": "read_file",
+                "binding_id": self.binding["binding_id"],
+                "path": "fixture.txt",
+                "bounds": {"start_line": 1, "max_lines": 10},
+                "idempotency_key": "read-file-invalid-01",
+            },
+            {"operation": "task_close"},
+            {"operation": "read_status"},
+        )
+        for arguments in malformed:
+            with self.subTest(arguments=arguments):
+                response = self.call(arguments)
+                self.assertIn("error", response)
+                self.assertEqual(response["error"]["code"], -32602)
+                self.assertEqual(response["error"]["data"]["code"], "VALIDATION_ERROR")
+
+        listed = self.call({"operation": "task_list"})
+        self.assertEqual(listed["result"]["structuredContent"]["tasks"], [])
+        self.assertEqual(self.store.list_action_lifecycle(owner_id=self.owner_id), [])
+
     def test_file_read_is_account_scoped_and_delivered_only_to_the_new_lane(self) -> None:
         queued = self.call(self.read_arguments())
         result = queued["result"]["structuredContent"]

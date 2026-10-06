@@ -6,10 +6,34 @@ Trong app Coding Tools, workspace được chọn/đăng ký là **thư mục d�
 Windows** (ví dụ `E:\DEV\Codex-web`), gắn với `workspace_id` và generation của
 node. Đây là thư mục duy nhất được cấp quyền ghi trong Windows Sandbox.
 
-**ChatGPT Business workspace** là tổ chức chứa thành viên và connector dùng
-chung; nó quyết định ai có thể gọi Ubuntu Control Plane, nhưng không phải đường
-dẫn file và không chọn thư mục Windows. Các quyền local-folder binding và quyền
-thành viên Business là hai lớp riêng.
+Kết nối/plugin ChatGPT là một lớp riêng với workspace Windows. Không cần nhập
+Organization ID hoặc ChatGPT Workspace ID vào `workspace_context` để chọn
+project local. Ở các lần kiểm tra 26–27/09/2026, kết nối ChatGPT Plus cá nhân
+hiện có đã trả `inventory` và `task_list`; đây là bằng chứng cho đúng kết nối và
+hai operation đó. [OpenAI Developer Mode docs](https://developers.openai.com/api/docs/guides/developer-mode)
+hiện liệt kê Plus cá nhân là đủ
+điều kiện dùng MCP đầy đủ trên web; khả năng cụ thể vẫn phụ thuộc Developer Mode,
+app đã thêm vào cuộc trò chuyện, rollout và cấu hình phía Control Plane. Không
+cần Business workspace chỉ để dùng Plus cá nhân. Organization ID trên OpenAI
+Platform là phạm vi quản trị riêng, không phải `workspace_id` hoặc `binding_id`
+của Coding Tools.
+
+## Đính chính luồng cá nhân — 26-09-2026
+
+Nếu `Ubuntu Control Plane` đã gọi được `workspace_context(inventory)` trong
+ChatGPT cá nhân, giữ nguyên kết nối đó. Không yêu cầu người dùng tìm Organization
+ID / ChatGPT Workspace ID để tiếp tục kiểm tra task hoặc đọc file. Những ID này
+không thuộc payload `workspace_context`; yêu cầu scope của công cụ quản trị
+tunnel không được suy rộng thành điều kiện sử dụng Control Plane.
+
+Luồng `private_tunnel_service` dùng một service principal do chủ hệ thống cấp,
+không nhận diện từng người ChatGPT. Chế độ này không yêu cầu OAuth từng người,
+nhưng cũng không bỏ grant, binding, policy, sandbox hay receipt. Nếu triển khai
+dùng OAuth thì giữ OAuth; không đổi authentication chỉ vì gói ChatGPT là Plus.
+Xem [hướng dẫn cá nhân](../control-plane/README.md#personal-chatgpt-plus--pro-reuse-the-existing-connection)
+và [trạng thái hiện hành](CURRENT_STATE.md) trước khi sử dụng các snapshot cũ
+bên dưới. Các checkpoint 23–24/09 giữ nguyên theo thời điểm quan sát; chúng
+không chứng minh tình trạng tài khoản hoặc runtime ngày 26/09.
 
 ## Checkpoint mới hơn — 24-09-2026, 13:31 +07
 

@@ -56,7 +56,7 @@ class McpTaskSessionTests(unittest.TestCase):
     def _principal(self, *, owner_id: str, subject: str) -> dict:
         return self.store.link_oauth_principal(owner_id=owner_id, issuer=ISSUER, subject=subject)
 
-    def _facade(self, schema_version: int = 15, profile: str = "control-plane-oauth-bounded-file-read-v3") -> dict:
+    def _facade(self, schema_version: int = 27, profile: str = "control-plane-oauth-bounded-file-read-v3") -> dict:
         return {"schema_version": schema_version, "profile": profile, "sha256": "a" * 64}
 
     def test_two_tasks_pin_different_targets_and_cross_use_is_rejected(self) -> None:
@@ -286,7 +286,7 @@ class McpTaskSessionTests(unittest.TestCase):
             patch_sha256=patch_sha,
             validation_profile="targeted",
             idempotency_key="accept-perm-key-006",
-            facade_contract=self._facade(schema_version=16, profile="control-plane-oauth-permission-request-v3"),
+            facade_contract=self._facade(schema_version=28, profile="control-plane-oauth-permission-request-v3"),
             task_id=task["task_id"],
         )
         self.assertEqual(permission["task_id"], task["task_id"])
@@ -297,7 +297,7 @@ class McpTaskSessionTests(unittest.TestCase):
             permission_request_id=permission["permission_request_id"],
             patch_envelope=envelope,
             idempotency_key="accept-patch-key-007",
-            facade_contract=self._facade(schema_version=17, profile="control-plane-oauth-approved-patch-v3"),
+            facade_contract=self._facade(schema_version=29, profile="control-plane-oauth-approved-patch-v3"),
             task_id=task["task_id"],
         )
         # No receipt yet: acceptance must fail closed.
@@ -437,7 +437,7 @@ class McpTaskFacadeTests(unittest.TestCase):
         return response
 
     def test_task_open_list_close_span_read_without_retarget(self) -> None:
-        self.assertEqual(self.facade.contract["schema_version"], 17)
+        self.assertEqual(self.facade.contract["schema_version"], 29)
         opened = self._call({"operation": "task_open", "binding_id": self.binding["binding_id"], "label": "Chat A", "idempotency_key": "task-open-chat-a-0001"})
         task_id = opened["result"]["structuredContent"]["task"]["task_id"]
         self.assertTrue(task_id.startswith("task_"))
@@ -475,6 +475,20 @@ class McpTaskFacadeTests(unittest.TestCase):
             by_name["task_control"]["_meta"]["control_plane"]["implemented_operations"],
             ["task_observe", "writer_claim", "writer_release"],
         )
+        schema = by_name["task_control"]["inputSchema"]
+        branches = {
+            branch["properties"]["operation"]["enum"][0]: branch
+            for branch in schema["oneOf"]
+        }
+        self.assertEqual(set(branches), {"task_observe", "writer_claim", "writer_release"})
+        for operation in ("task_observe", "writer_claim"):
+            self.assertEqual(set(branches[operation]["required"]), {"operation", "task_id"})
+            self.assertEqual(set(branches[operation]["properties"]), {"operation", "task_id"})
+        self.assertEqual(
+            set(branches["writer_release"]["properties"]),
+            {"operation", "task_id", "reason"},
+        )
+        self.assertEqual(set(branches["writer_release"]["required"]), {"operation", "task_id"})
         opened = self._call({
             "operation": "task_open",
             "binding_id": self.binding["binding_id"],
@@ -482,6 +496,11 @@ class McpTaskFacadeTests(unittest.TestCase):
             "idempotency_key": "task-control-open-0001",
         })
         task_id = opened["result"]["structuredContent"]["task"]["task_id"]
+        claimed_with_reason = self._call(
+            {"operation": "writer_claim", "task_id": task_id, "reason": "not allowed here"},
+            tool="task_control",
+        )
+        self.assertEqual(claimed_with_reason["error"]["code"], -32602)
         claimed = self._call(
             {"operation": "writer_claim", "task_id": task_id},
             tool="task_control",
@@ -555,7 +574,7 @@ class McpTaskFacadeTests(unittest.TestCase):
             key: facade.contract[key]
             for key in ("schema_version", "profile", "sha256")
         }
-        self.assertEqual(contract["schema_version"], 19)
+        self.assertEqual(contract["schema_version"], 31)
         self.assertEqual(contract["profile"], "control-plane-oauth-standing-write-v1")
         listed = facade.handle(
             {"jsonrpc": "2.0", "id": "standing-tools-001", "method": "tools/list", "params": {}},

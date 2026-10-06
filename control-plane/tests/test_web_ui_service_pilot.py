@@ -10,8 +10,8 @@ class PrivateTunnelServiceConsoleTests(unittest.TestCase):
         html = WEB_UI_HTML.decode("utf-8")
         javascript = WEB_UI_JAVASCRIPT.decode("utf-8")
 
-        self.assertIn("Hai thành viên dùng chung một service principal", html)
-        self.assertIn("không xác định thành viên nào đã gọi", html)
+        self.assertIn("Mỗi lời gọi qua tunnel dùng cùng một service principal", html)
+        self.assertIn("không xác định người ChatGPT nào đã gọi", html)
         self.assertIn("workspace đã chọn trong app Windows", html)
         for element_id in (
             "mcp-service-principals-body",
@@ -23,6 +23,22 @@ class PrivateTunnelServiceConsoleTests(unittest.TestCase):
             self.assertIn(f"'{element_id}'", javascript)
         self.assertIn("private_tunnel_service", javascript)
         self.assertIn("central scoped_pilot — local effect chưa được chứng minh", javascript)
+
+    def test_personal_chatgpt_guidance_separates_connection_from_admin_scope(self) -> None:
+        html = WEB_UI_HTML.decode("utf-8")
+        javascript = WEB_UI_JAVASCRIPT.decode("utf-8")
+
+        self.assertIn('<h2 id="service-pilot-title">ChatGPT qua private tunnel</h2>', html)
+        self.assertIn("target: 'ChatGPT qua private tunnel'", javascript)
+        self.assertNotIn("ChatGPT Business qua private tunnel", html + javascript)
+        self.assertIn('<details id="personal-tunnel-help">', html)
+        self.assertIn("Dùng với ChatGPT Plus / Pro cá nhân", html)
+        self.assertIn("dùng lại kết nối đó", html)
+        self.assertIn("Không cần tạo tunnel khác hay nhập Organization ID / ChatGPT Workspace ID vào Control Plane", html)
+        self.assertIn("Thiết lập tunnel trên OpenAI Platform là bước quản trị riêng", html)
+        self.assertIn("không phải ChatGPT Workspace ID", html)
+        self.assertIn("Inventory chỉ kiểm tra metadata", html)
+        self.assertIn("Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh", html)
 
     def test_browser_only_revokes_service_grant_and_pilot_with_csrf(self) -> None:
         html = WEB_UI_HTML.decode("utf-8")

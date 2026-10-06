@@ -75,8 +75,17 @@ WEB_UI_HTML = """<!doctype html>
       </div>
 
       <section class="panel" aria-labelledby="service-pilot-title">
-        <h2 id="service-pilot-title">ChatGPT Business qua private tunnel</h2>
-        <p class="muted">Hai thành viên dùng chung một service principal của tunnel; Control Plane không xác định thành viên nào đã gọi. Đây không phải OAuth đăng nhập từng người. Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh; binding, quyết định pilot, admission và policy tại Windows vẫn là các cửa kiểm tra riêng.</p>
+        <h2 id="service-pilot-title">ChatGPT qua private tunnel</h2>
+        <p class="muted">Mỗi lời gọi qua tunnel dùng cùng một service principal; Control Plane không xác định người ChatGPT nào đã gọi. Luồng này không yêu cầu thành viên ChatGPT Business và không phải OAuth đăng nhập từng người. Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh; binding, quyết định pilot, admission và policy tại Windows vẫn là các cửa kiểm tra riêng.</p>
+        <details id="personal-tunnel-help">
+          <summary>Dùng với ChatGPT Plus / Pro cá nhân</summary>
+          <ol>
+            <li>Nếu Ubuntu Control Plane đã gọi được inventory trong ChatGPT, dùng lại kết nối đó. Không cần tạo tunnel khác hay nhập Organization ID / ChatGPT Workspace ID vào Control Plane.</li>
+            <li>Nếu chưa kết nối: bật Developer mode trong Settings → Security and login của ChatGPT, mở Plugins, thêm kết nối Tunnel và chọn tunnel đã được cấp cho tài khoản.</li>
+            <li>Sau khi server đổi schema, làm mới công cụ của plugin và thử lại trong cuộc trò chuyện có bật Ubuntu Control Plane. Inventory chỉ kiểm tra metadata; đọc file cần một yêu cầu riêng và receipt hoàn tất.</li>
+          </ol>
+          <p class="muted">Thiết lập tunnel trên OpenAI Platform là bước quản trị riêng, có quyền và phạm vi tài khoản riêng. Workspace ở bảng dưới là thư mục dự án do Windows node đăng ký, không phải ChatGPT Workspace ID. Không gửi token, API key hay grant vào cuộc trò chuyện.</p>
+        </details>
         <p id="service-pilot-next-action" class="notice" aria-live="polite">Đang đọc cấu hình service và pilot.</p>
         <h3>Service principals</h3>
         <div class="table-wrap"><table><thead><tr><th>Principal opaque</th><th>Trạng thái</th><th>Tạo lúc</th><th>Thu hồi lúc</th></tr></thead><tbody id="mcp-service-principals-body"></tbody></table></div>
@@ -471,7 +480,7 @@ WEB_UI_JAVASCRIPT = """(() => {
         { name: '2. Node đăng ký root local', state: currentRegistrations.length ? `${currentRegistrations.length} root current` : 'chưa có root', target: 'Workspace đã đăng ký' },
         { name: '3. Tạo binding (chọn root)', state: (data.bindings || []).length ? `${data.bindings.length} binding` : 'chưa có binding', target: 'Workspace đã đăng ký' },
       ];
-      if (mcpAuthenticationMode === 'private_tunnel_service') steps.push({ name: '4. Tunnel grant + pilot exact-target', state: !activeGrant ? 'chưa có grant còn hạn' : !currentPilot ? 'chưa có decision current' : admissionMode !== 'scoped_pilot' ? 'decision current; admission chưa mở' : 'central scoped_pilot; cần kiểm chứng tunnel/local', target: 'ChatGPT Business qua private tunnel' });
+      if (mcpAuthenticationMode === 'private_tunnel_service') steps.push({ name: '4. Tunnel grant + pilot exact-target', state: !activeGrant ? 'chưa có grant còn hạn' : !currentPilot ? 'chưa có decision current' : admissionMode !== 'scoped_pilot' ? 'decision current; admission chưa mở' : 'central scoped_pilot; cần kiểm chứng tunnel/local', target: 'ChatGPT qua private tunnel' });
       steps.push({ name: `${steps.length + 1}. Cài policy workspace tại app Windows`, state: 'chỉ local policy cho workspace đã chọn mới cấp quyền file/lệnh; central observation không thay thế kiểm chứng', target: 'Windows nodes' });
       steps.push({ name: `${steps.length + 1}. Mở task ghim đích`, state: openTasks.length ? `${openTasks.length} task mở; chưa chứng minh effect` : 'chưa có task mở', target: 'Phiên công việc đa đích' });
       steps.push({ name: `${steps.length + 1}. Canary + receipt`, state: 'đọc, patch và exec cần receipt/proof riêng trước khi kết luận end-to-end', target: 'Action và receipt' });

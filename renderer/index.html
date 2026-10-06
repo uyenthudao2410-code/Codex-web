@@ -29,7 +29,7 @@
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
         <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
-        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Thiết lập hệ thống</span></button>
+        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
       </nav>
 
       <div class="sidebar-runtime">
@@ -627,7 +627,7 @@
           <nav class="setup-navigation" aria-label="Các phần thiết lập hệ thống">
             <button class="setup-section-link" data-nav="deploy"><b>1. Máy chủ & tài khoản</b><small id="settingsConnectionSummary">Đang kiểm tra</small></button>
             <button class="setup-section-link" data-nav="workspace"><b>2. Thư mục & quyền</b><small id="settingsWorkspaceSummary">Đang kiểm tra</small></button>
-            <button class="setup-section-link" data-nav="settings"><b>Tùy chọn ứng dụng</b><small id="settingsAppSummary">Giao diện & chạy nền</small></button>
+            <button class="setup-section-link" data-nav="settings"><b>Ứng dụng</b><small id="settingsAppSummary">Giao diện & chạy nền</small></button>
           </nav>
 
           <details class="setup-support">
@@ -651,6 +651,8 @@
                 <label class="field" for="controlPlaneServerUrl"><span>Địa chỉ máy chủ Ubuntu</span></label>
                 <div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" aria-describedby="controlPlaneEnrollmentStatus" placeholder="https://ten-may-chu.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu kết nối</button></div>
                 <p id="controlPlaneEnrollmentStatus" class="setup-field-help" role="status" aria-live="polite">Nhập địa chỉ HTTPS của Ubuntu. Không cần API key hay Tunnel trên Windows.</p>
+                <p id="personalChatGptConnectionHelp" class="setup-field-help">ChatGPT cá nhân: nếu Ubuntu Control Plane đã hiện trong mục Apps, hãy dùng lại kết nối đó; không cần nhập Organization ID hoặc ChatGPT Workspace ID ở đây. Khả năng thêm connector mới và quyền từng thao tác tùy theo tài khoản ChatGPT và policy Ubuntu.</p>
+                <button class="secondary-button" type="button" data-nav="guide">Cách dùng trong ChatGPT Plus</button>
                 <div class="setup-server-admin">
                   <h3>Quản trị chung trên Ubuntu</h3>
                   <p>Mở cùng địa chỉ máy chủ từ bất kỳ máy nào truy cập được mạng riêng / Tailnet. Đăng nhập operator trong trình duyệt để xem các máy, duyệt kết nối và quản lý quyền. Trang “Máy này” chỉ điều khiển Windows hiện tại.</p>
@@ -763,8 +765,8 @@
         </section>
 
         <section class="page" data-page-view="guide">
-          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN CẤU HÌNH CHATGPT</span><h2>Tạo MCP trong giao diện Web</h2><p>Hoàn thành theo đúng thứ tự. Tên lối vào có thể hơi khác tùy gói tài khoản hoặc workspace.</p></div><button class="primary-button" data-direct-only data-open="chatgpt-connectors">Mở Cài đặt Trình kết nối ChatGPT</button></div>
-          <article id="centralExecutorGuide" class="panel notice blue-notice" hidden><b>Central executor: không tạo Tunnel hoặc Runtime API Key tại Windows</b><p>Ubuntu là nơi giữ root MCP, Tunnel và credential OpenAI. Hoàn tất pairing, liên kết tài khoản OAuth và chọn root cục bộ được cấp; chờ route evidence xác nhận trước khi chạy action. Không dùng trang này để tạo connector OpenAI trên máy executor.</p></article>
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN CẤU HÌNH CHATGPT</span><h2 id="guideSectionTitle">Tạo MCP trong giao diện Web</h2><p id="guideSectionSubtitle">Hoàn thành theo đúng thứ tự. Tên lối vào có thể hơi khác tùy gói tài khoản hoặc workspace.</p></div><button class="primary-button" data-direct-only data-open="chatgpt-connectors">Mở Cài đặt Trình kết nối ChatGPT</button></div>
+          <article id="centralExecutorGuide" class="panel notice blue-notice" hidden><b>Dùng kết nối Ubuntu Control Plane hiện có trong ChatGPT Plus cá nhân</b><p>Trên ChatGPT web, mở một chat, nhấn <code>+</code> → Developer mode/Apps và chọn Ubuntu Control Plane. Bắt đầu chỉ-đọc bằng <code>workspace_context</code> với operation <code>inventory</code>; xác nhận đúng node/workspace, presence online, readiness ready và policy enabled trước khi thử thao tác khác. Nếu danh sách tool cũ, mở chi tiết app trong ChatGPT Settings → Apps/Plugins và bấm Refresh. Quy trình này không cần gói Business, Organization ID, ChatGPT Workspace ID hoặc cài Codex Desktop để gọi app từ ChatGPT web; quyền đọc, ghi và chạy lệnh vẫn do capability/policy Ubuntu quyết định.</p></article>
           <div class="guide-layout" data-direct-only>
             <div class="guide-steps">
               <article class="guide-step" data-guide-step="tunnel"><div class="step-number">1</div><div class="step-content"><div class="step-heading"><h3>Tạo Tunnel trên OpenAI Platform</h3><label><input type="checkbox" data-guide-check="tunnel">Đã hoàn thành</label></div><p>Mở trang quản lý Tunnels, tạo Tunnel dành riêng cho Coding Tools MCP, sau đó sao chép mã định danh <code>tunnel_...</code>.</p><div class="mock-browser"><div class="mock-bar"><i></i><i></i><i></i><span>platform.openai.com / Tunnels</span></div><div class="mock-content"><span class="mock-label">Tunnel name</span><div class="mock-row"><b>Coding Tools MCP</b><em>Active</em></div><span class="mock-label">Tunnel ID</span><code>tunnel_••••••••••••</code></div></div><button class="secondary-button" data-open="openai-tunnels">Mở trang Tunnels</button></div></article>
@@ -819,12 +821,30 @@
         </section>
 
         <section class="page" data-page-view="settings">
-          <div class="section-header"><div><span class="section-kicker">CẤU HÌNH TÙY CHỌN</span><h2>Cài đặt ứng dụng</h2><p>Điều khiển giao diện, hành vi khởi động và quản lý chứng thư.</p></div></div>
-          <div class="two-column">
-            <article class="panel settings-list"><div class="panel-title"><h3>Ứng dụng</h3><span class="settings-save-hint" id="settingsPreferenceHint" role="status" aria-live="polite">Mỗi thay đổi được lưu riêng.</span></div><label class="setting-row"><span><b>Chủ đề giao diện</b><small>Chọn sáng hoặc tối. Không thay đổi quyền hay kết nối.</small></span><span class="setting-control"><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select><small class="setting-save-state" data-setting-state="theme">Đã lưu</small></span></label><div class="setting-row"><span><b>Chế độ công cụ</b><small>Luôn dùng smart-v3 gồm 8 công cụ; không cần cấu hình thêm.</small></span><span class="security-chip">smart-v3</span></div><label class="setting-row"><span><b>Mở sau khi đăng nhập Windows</b><small>Chỉ áp dụng cho bản cài đặt; bản development không ghi startup.</small></span><span class="setting-control"><input id="startWithWindowsToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="startWithWindows">Đã lưu</small></span></label><label class="setting-row"><span><b>Tự chuẩn bị kết nối khi mở ứng dụng</b><small>Không cấp thêm quyền; chỉ khởi động phần đã được cấu hình.</small></span><span class="setting-control"><input id="autoStartToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="autoStartServices">Đã lưu</small></span></label><label class="setting-row"><span><b>Tiếp tục chạy khi đóng cửa sổ</b><small>Đóng cửa sổ chỉ ẩn ứng dụng; không hứa chạy khi Windows đăng xuất.</small></span><span class="setting-control"><input id="keepRunningToggle" class="toggle" type="checkbox" checked><small class="setting-save-state" data-setting-state="keepRunningOnClose">Đã lưu</small></span></label><label class="setting-row"><span><b>Báo tiến độ nhiệm vụ dài sau</b><small>Chỉ điều chỉnh thời điểm báo tiến độ cho ChatGPT, không đổi quyền thực thi.</small></span><span class="setting-control"><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select><small class="setting-save-state" data-setting-state="progressReportSeconds">Đã lưu</small></span></label></article>
-            <article class="panel settings-list"><div class="panel-title"><h3>Bảo mật & hỗ trợ</h3></div><div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div><div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div><div class="setting-row"><span><b>Dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div></article>
+          <div class="section-header"><div><span class="section-kicker">TÙY CHỌN ỨNG DỤNG</span><h2>Cài đặt ứng dụng</h2><p>Điều khiển giao diện và hành vi khởi động.</p></div></div>
+          <div class="settings-page-stack">
+            <article class="panel settings-list settings-primary-list">
+              <div class="panel-title"><h3>Thường dùng</h3><span class="settings-save-hint" id="settingsPreferenceHint" role="status" aria-live="polite">Mỗi thay đổi được lưu riêng.</span></div>
+              <label class="setting-row"><span><b>Chủ đề giao diện</b><small>Chọn sáng hoặc tối. Không thay đổi quyền hay kết nối.</small></span><span class="setting-control"><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select><small class="setting-save-state" data-setting-state="theme">Đã lưu</small></span></label>
+              <label class="setting-row"><span><b>Mở cùng Windows</b><small>Chỉ áp dụng cho bản cài đặt; bản development không ghi startup.</small></span><span class="setting-control"><input id="startWithWindowsToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="startWithWindows">Đã lưu</small></span></label>
+              <label class="setting-row"><span><b>Tự khởi động dịch vụ đã cấu hình</b><small>Chỉ khởi động phần đã thiết lập; không cấp thêm quyền.</small></span><span class="setting-control"><input id="autoStartToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="autoStartServices">Đã lưu</small></span></label>
+              <label class="setting-row"><span><b>Giữ ứng dụng chạy nền khi đóng cửa sổ</b><small>Không giữ chạy khi Windows đăng xuất.</small></span><span class="setting-control"><input id="keepRunningToggle" class="toggle" type="checkbox" checked><small class="setting-save-state" data-setting-state="keepRunningOnClose">Đã lưu</small></span></label>
+            </article>
+            <details class="setup-support settings-advanced">
+              <summary>Nâng cao & hỗ trợ<small>Thông tin ứng dụng, bảo mật và tùy chọn ít dùng</small></summary>
+              <div class="settings-advanced-content">
+                <article class="panel settings-list">
+                  <div class="panel-title"><h3>Thông tin và bảo mật</h3></div>
+                  <div class="setting-row"><span><b>Chế độ công cụ</b><small>Ứng dụng luôn dùng smart-v3; không cần cấu hình.</small></span><span class="security-chip">smart-v3</span></div>
+                  <label class="setting-row"><span><b>Thời gian báo tiến độ</b><small>Chỉ đổi thời điểm báo tiến độ cho ChatGPT, không đổi quyền.</small></span><span class="setting-control"><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select><small class="setting-save-state" data-setting-state="progressReportSeconds">Đã lưu</small></span></label>
+                  <div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div>
+                  <div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div>
+                  <div class="setting-row"><span><b>Dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div>
+                </article>
+                <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
+              </div>
+            </details>
           </div>
-          <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
         </section>
       </div>
     </main>

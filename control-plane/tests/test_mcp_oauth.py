@@ -45,6 +45,22 @@ WRITE_SCOPE = "control-plane.patch"
 
 
 class PrivateTunnelServiceConfigurationTests(unittest.TestCase):
+    def test_personal_tunnel_needs_service_identity_not_openai_account_ids(self) -> None:
+        # OpenAI transport provisioning is separate from the local service
+        # contract. No plan, organization or ChatGPT workspace ID is supplied.
+        env = {
+            "CONTROL_PLANE_MCP_AUTH_MODE": MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE,
+            "CONTROL_PLANE_MCP_SERVICE_PRINCIPAL_ID": "svcprn_" + "a" * 32,
+            "CONTROL_PLANE_MCP_SERVICE_SCOPE": SCOPE,
+        }
+        config = private_service_configuration_from_environment(env)
+        self.assertIsNotNone(config)
+        self.assertIsNone(oauth_configuration_from_environment(env))
+        self.assertEqual(config.verified_scopes, frozenset({SCOPE}))
+        self.assertFalse(config.file_read_enabled)
+        self.assertFalse(config.standing_write_enabled)
+        self.assertFalse(config.exec_enabled)
+
     def test_explicit_shared_service_mode_is_distinct_from_oauth_and_legacy(self) -> None:
         env = {
             "CONTROL_PLANE_MCP_AUTH_MODE": MCP_AUTH_MODE_PRIVATE_TUNNEL_SERVICE,
@@ -967,6 +983,87 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
         stale = self.store.list_account_targets(owner_id="owner-a")[0]
         self.assertEqual(stale["presence_state"], "offline")
         self.assertEqual(stale["heartbeat_age_ms"], self.store.heartbeat_max_age_ms + 1)
+
+    def test_account_target_inventory_reports_policy_expiry_from_the_read_clock(self) -> None:
+        binding = self._target(owner_id="owner-a", suffix="policy-expiry")
+        self.store.heartbeat(
+            device_id=binding["device_id"],
+            endpoint_id=binding["endpoint_id"],
+            runtime_instance_id="runtime-policy-expiry-0001",
+            mcp_server_instance_id="mcp-policy-expiry-0001",
+            activation_epoch="epoch-policy-expiry-0001",
+            contract_version="smart-v3-policy-expiry",
+            readiness="ready",
+            policy_observation={
+                "state": "enabled",
+                "expires_at_ms": self.now + 1_000,
+                "policy_sha256": "a" * 64,
+                "reason": "",
+            },
+        )
+
+        current = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(current["policy_state"], "enabled")
+        self.assertEqual(current["policy_observed_at_ms"], current["last_seen_at_ms"])
+
+        self.now += 1_000
+        expired = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(expired["policy_state"], "expired_or_disabled")
+
+    def test_account_target_inventory_fails_closed_after_heartbeat_without_policy_observation(self) -> None:
+        binding = self._target(owner_id="owner-a", suffix="policy-stale")
+        self.store.heartbeat(
+            device_id=binding["device_id"],
+            endpoint_id=binding["endpoint_id"],
+            runtime_instance_id="runtime-policy-stale-0001",
+            mcp_server_instance_id="mcp-policy-stale-0001",
+            activation_epoch="epoch-policy-stale-0001",
+            contract_version="smart-v3-policy-stale",
+            readiness="ready",
+            policy_observation={
+                "state": "enabled",
+                "expires_at_ms": self.now + 60_000,
+                "policy_sha256": "b" * 64,
+                "reason": "",
+            },
+        )
+        self.now += 1
+        self.store.heartbeat(
+            device_id=binding["device_id"],
+            endpoint_id=binding["endpoint_id"],
+            runtime_instance_id="runtime-policy-stale-0002",
+            mcp_server_instance_id="mcp-policy-stale-0002",
+            activation_epoch="epoch-policy-stale-0002",
+            contract_version="smart-v3-policy-stale",
+            readiness="ready",
+        )
+
+        target = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(target["policy_state"], "unobserved")
+        self.assertNotEqual(target["policy_observed_at_ms"], target["last_seen_at_ms"])
+
+    def test_account_target_inventory_does_not_treat_policy_from_offline_node_as_current(self) -> None:
+        binding = self._target(owner_id="owner-a", suffix="policy-offline")
+        self.store.heartbeat(
+            device_id=binding["device_id"],
+            endpoint_id=binding["endpoint_id"],
+            runtime_instance_id="runtime-policy-offline-0001",
+            mcp_server_instance_id="mcp-policy-offline-0001",
+            activation_epoch="epoch-policy-offline-0001",
+            contract_version="smart-v3-policy-offline",
+            readiness="ready",
+            policy_observation={
+                "state": "enabled",
+                "expires_at_ms": self.now + 60_000,
+                "policy_sha256": "c" * 64,
+                "reason": "",
+            },
+        )
+        self.now += self.store.heartbeat_max_age_ms + 1
+
+        target = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(target["presence_state"], "offline")
+        self.assertEqual(target["policy_state"], "unobserved")
 
 
 class OAuthMcpHttpTests(unittest.TestCase):

@@ -1,8 +1,501 @@
 # Current Project State — Tools-Codex-web
 
-## Live operational checkpoint — 25-09-2026, personal tunnel and selected Windows workspace
+## Follow-up agent recovery and personal ChatGPT connection — 2026-09-27 05:57 +07
 
-This is the latest live recapture. Older desktop states below are retained as history, not as current runtime evidence.
+At main @ 5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb with the existing dirty
+worktree preserved, the user authorized local recovery. The installed
+development manifest initially expected Control Plane agent SHA-256
+8d1a5873…; both the checkout file and installed-path file were
+bcd59fe1…. The first Supervisor reinstall updated the manifest but exposed a
+second defect: it retained an unrecorded old agent solely because executable,
+script and arguments matched. That process held the node-agent lock, so newly
+spawned agents exited before writing telemetry.
+
+resources/recovery-supervisor/recovery-supervisor.ps1 now retains an agent
+only when the manifest/path identity, supervisor-recorded PID and fresh
+credential-free telemetry agree. After stopping the verified old agent, it
+removes the lock only if the file still has the exact stopped PID and instance
+ID. The focused Recovery Supervisor suite passes 17/17. After reinstalling the
+updated Supervisor, its scheduled task is Running, Supervisor state is
+healthy, and the agent is PID 33100 with fresh telemetry. The current heartbeat
+is not successful: last_heartbeat_state=failed,
+last_error_code=CONTROL_PLANE_TRANSPORT_UNAVAILABLE.
+
+The credential-free GET /healthz probe to the configured endpoint failed at
+DNS resolution (NameResolutionFailure, no HTTP status). The endpoint uses a
+.ts.net hostname; the existing Tailscale Windows service is present and
+Running/Automatic, but tailscale status --json reports BackendState=NoState,
+Self.Online=false, and zero online peers. The existing local
+tunnel-client runtimes list --json also returns aliases=[]. This describes
+only local tunnel-client runtimes, not remote Platform tunnel associations.
+The user has been asked before any attempt to bring the PC onto its tailnet.
+
+The app source already contains the personal ChatGPT guidance (no Organization
+ID or ChatGPT Workspace ID entry in Desktop Settings, OAuth not mandatory) and
+the parameterized workspace_context schema/test changes. Current UI-focused
+tests pass 32/32 and node --check renderer/app.js passes; these are source
+proof only. Official OpenAI developer documentation states that ChatGPT Plus
+and Pro support developer-mode MCP tools, including read and write tools, and
+that a Secure MCP Tunnel must be associated with the target ChatGPT workspace;
+personal accounts use their personal Platform organization. The Desktop UI
+does not need to ask the user to type those opaque IDs, but the Platform
+association and tunnel access remain separate prerequisites. See the [Secure
+MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
+and [Connect and test your plugin](https://developers.openai.com/plugins/deploy/connect-chatgpt).
+
+Local activation remains blocked independently of the tailnet:
+dev:status reports UI STALE, update_pending=true, MCP stopped,
+fully_ready=false, and LOCAL_EXECUTOR_NOT_READY. Full-clean status reports
+Recovery Host current_for_full_clean=false, capability unavailable and
+admission closed; read-only preflight returns
+ACTIVATION_SOURCE_CHECKPOINT_REQUIRED. The current tool inventory exposes
+neither Ubuntu workspace_context nor EOCL task_control, so no accepted
+source checkpoint, connector rediscovery, or live UI activation can be
+produced from this session. No remote workspace file was read, no shell/remote
+command was run through Ubuntu, and no ChatGPT, tunnel association, permission,
+or policy setting was changed. No commit, push, Ubuntu deployment, or release
+occurred.
+
+Next actions: after explicit approval, connect the existing Tailscale client
+and verify fresh heartbeat/route evidence; separately expose the official
+task_control acceptance surface and obtain source-proof acceptance for the
+exact checkout before attempting full-clean activation. Only then verify the
+Desktop Settings in the live UI, rediscover the ChatGPT Plus MCP schema, and
+consider the previously authorized bounded read-only canary. Keep exec
+disabled.
+
+## Follow-up verification — 27-09-2026, 04:04 +07
+
+At `main @ 5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb` (14 commits ahead of
+`origin/main`), the existing personal ChatGPT Plus conversation completed the
+user-approved read-only sequence `workspace_context(inventory)` at
+04:04:15.219 +07 and `workspace_context(task_list)` at 04:04:16.339 +07. The
+target remains `DESKTOP-63643J4 - Codex-web` / `DESKTOP-63643J4`, with binding,
+node and workspace `active`, dispatch `dispatchable`, and no blockers, but
+presence is `offline` and readiness is `degraded`. Reported capabilities remain
+read/write true and exec false. The inventory says `workspace_accessed=false`
+and `execution=no_local_execution`; task_list contains two closed historical
+tasks and zero open tasks. Neither operation returned an error.
+
+The latest `last_seen_at_ms` is still `1790412959469` (2026-09-26 15:55:59.469
++07); heartbeat age at the query was `43696614` ms. Local authenticated route
+evidence observed the same heartbeat at `1790412959338`, only 131 ms before the
+server timestamp. Policy was last observed at that same old heartbeat and had
+expiry `1790413018929` (15:56:58.929 +07); thus the response's `policy_state`
+`enabled` is stale, not proof of currently effective policy.
+
+Fresh local read-only checks show Recovery Supervisor and Recovery Host
+`healthy`, while the Control Plane agent is `integrity_unproven`, has no
+supervisor-recorded PID, and diagnostics return `AGENT_NOT_RECORDED`. The
+connected-agent lock points to a live PID, but the credential-free
+`control-plane-connected-agent-status.json` telemetry file is absent. The
+installed development manifest expects `node_agent.py` SHA-256
+`8d1a5873b47a328291e74bf5699e7833c2dbc51dd3e031325b072966cfac9326`; the
+current checked-out file is `bcd59fe18f581446df8fd767b59a623eede187b3fba5345525e7d5329726bf3a`.
+Python and Node hashes still match the manifest. This confirms the manifest /
+source mismatch that prevents the Supervisor from attesting the current agent;
+it does not by itself prove why the live process stopped producing heartbeats.
+
+The development UI remains `STALE` with `update_pending=true`; MCP is stopped,
+`central_connected=false`, and `fully_ready=false`. Settings and facade changes
+in the dirty worktree have therefore not been verified in the live desktop or
+against the Ubuntu service. Local source tests previously passed, but no schema
+rediscovery or correctly shaped remote `task_open` / `read_file` call has been
+made. The Settings status presentation now distinguishes
+`LOCAL_EXECUTOR_NOT_READY` and stale heartbeat from a pairing task, so an
+operator is not prompted to pair again for those conditions. The focused
+`node --test tests/settings-redesign.test.js tests/control-center-manager.test.js`
+passed **32/32**; `node --check renderer/app.js` and `git diff --check` passed.
+This remains source-only because the running UI was not refreshed. The earlier
+`task_open(binding_id,label)` example omitted the required
+`idempotency_key`; the reported `read_file(bounds={...})` shape also omits the
+required exact facade contract and puts bounds in the wrong envelope. These
+examples can explain `INVALID_ARGUMENT` and do not independently prove a
+server-side schema mismatch. Exact earlier `task_close` / `read_status`
+envelopes and the live client schema remain unavailable.
+
+No task was created, no workspace file was read, and no remote command,
+permission/policy change, source activation, restart, commit, push, or deploy
+occurred. The next live steps remain separately gated: refresh/restart the
+same-user Recovery Supervisor/agent so it can attest the current source and
+emit heartbeat telemetry, then refresh the development UI/MCP. User approval
+for both operations is still pending. After activation, recapture the local
+agent diagnostics and the two read-only Plus operations; test a task or file
+operation only under separate authorization and after live schema rediscovery.
+
+## Follow-up verification — 27-09-2026, 01:49 +07
+
+Source checkout remains `E:\DEV\Codex-web`, branch `main`, HEAD
+`5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb` (14 commits ahead of
+`origin/main`). Existing changes under `.coding-tools` and the uncommitted
+Control Plane, renderer, tests and documentation are preserved.
+
+The focused Settings/UI tests passed **31/31**; `node --check renderer/app.js`
+and `git diff --check` passed. The cross-surface MCP batch
+`python3 -m unittest discover -s control-plane/tests -p 'test_mcp*.py' -q`
+passed **122/122 in Ubuntu WSL**. The same batch on Windows had five OAuth
+credential-fixture errors caused by POSIX permission-bit and symlink-privilege
+semantics, plus 12 POSIX-only skips; rerunning `test_mcp_oauth.py` in WSL passed
+**38/38**, and the complete WSL batch is the authoritative clean result. These
+prove local source behavior only, not that Ubuntu has received the source or
+that ChatGPT has rediscovered its schema.
+
+At approximately 01:37 +07, `npm run dev:status` still reports UI `STALE`,
+`update_pending=true`, running revision
+`47382735d956033389331b0c7cec3ba1b5d9e2af90fdc5771cc8ef41d3cc0579`, disk
+revision `3c1043e4b5a12a95d6868d2be2397de5319d9dc22fb4b35b213d6dd0b42bfff3`,
+MCP `stopped`, `fully_ready=false`, `central_connected=false`, and
+`LOCAL_EXECUTOR_NOT_READY`. The Recovery Supervisor and Control Plane agent
+are healthy/running. Recovery Host is current for full-clean, state `READY`,
+but `admission_open=false`. `node scripts/full-clean-activation.js --preflight`
+still fails closed with `ACTIVATION_SOURCE_CHECKPOINT_REQUIRED`; the local
+accepted-code profile has `active_checkpoint_id=null` and no `closure_input`.
+No activation, restart, or acceptance-file/ledger edit was attempted.
+
+The immutable Backup-API census at `2026-09-26T18:40:18.765Z` reports ledger
+integrity `ok`, zero foreign-key violations, and
+`mutated_canonical_ledger=false`; its contextual projection has zero relevant
+RUNs, 17 ordinary active runs classified as stale candidates, no projection
+drift, and no unexplained active runs. It does not supply an accepted source
+checkpoint. This Codex tool context exposes neither Ubuntu `workspace_context`
+nor EOCL `task_control`, so no new remote query or EOCL acceptance was possible
+in this pass. The latest user-approved personal Plus `inventory`/`task_list`
+receipts remain the 01:25 +07 snapshot above, not a current live heartbeat.
+
+**Next gate:** expose/refresh the supported Coding Tools MCP `task_control`
+surface and obtain official source-proof acceptance for the exact current
+checkout. Then rerun full-clean preflight; only a passing result and an
+owner-approved maintenance window can authorize activation. Separately, the
+Ubuntu facade/schema changes require an authorized rollout and ChatGPT schema
+rediscovery before a correctly shaped `task_open`/`read_file` canary. No
+Ubuntu deployment, task creation, file read, permission change, commit, or push
+occurred in this verification.
+
+## Desktop, Plus and Settings checkpoint — 27-09-2026, 01:26 +07
+
+At `main @ 5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb`, the current read-only
+`npm run dev:status` at `2026-09-27T01:02:18.175+07:00` reports the
+development UI `STALE` with
+`update_pending=true`; the running UI revision is
+`47382735d956033389331b0c7cec3ba1b5d9e2af90fdc5771cc8ef41d3cc0579`, while the
+disk revision is `4570540ed882697147eeb73c2a78e923159179afcea3ada741c94ea61bf5e6cb`.
+The Coding Tools MCP is `stopped`, `fully_ready=false`, and the central
+connector is unavailable (`central_connected=false`, `authority_ready=false`,
+`LOCAL_EXECUTOR_NOT_READY`) with no rediscovery receipt. The Recovery
+Supervisor and Control Plane agent report `healthy` / `running`. A fresh
+`node scripts/full-clean-activation.js --status` reports Recovery Host PID
+`25044`, instance `b5cfec497b573d79cc3bdd5a7a1a337f`, current for full-clean
+status with matching running/disk revisions, and `READY`; activation epoch
+`activation-muhumymh-404840e2be6e4fbc68533f3fa515d572` still has
+`admission_open=false`. A fresh
+`node scripts/full-clean-activation.js --preflight` fails closed with
+`ACTIVATION_SOURCE_CHECKPOINT_REQUIRED`; do not bypass this using direct ledger
+or activation-file edits. The current Codex tool/resource inventory still
+exposes no `workspace_context` or EOCL `task_control` surface.
+
+At 00:26:38.216 and 00:26:39.259 +07, the user-approved ChatGPT Plus
+conversation again completed only `workspace_context(inventory)` followed by
+`workspace_context(task_list)`. The target remains `DESKTOP-63643J4 -
+Codex-web` / `DESKTOP-63643J4` / `bind_5a2b112661cf421aaf68f42b1828b172`;
+binding, node and workspace are `active`, but presence is `offline`, readiness
+is `degraded`, dispatch is `dispatchable` with no listed blockers, and reported
+capabilities are read/write true, exec false. The inventory still says policy
+`enabled`, but its observation time is 15:55:59.469 +07 and expiry 15:56:58.929
++07, about 8h30m before this query; it is stale and does not establish an
+effective current policy. The task list contains two closed historical tasks
+and zero open tasks. No task was created, no workspace file was read, and no
+permission or runtime state was changed. OpenAI's current developer-mode
+guidance lists Plus personal accounts as eligible for full MCP on the web; no
+Organization ID or ChatGPT Workspace ID is required by these two operations.
+This plan-level eligibility does not make this offline/degraded target ready
+for a file-read test.
+
+The query-only Backup-API lifecycle census at 00:43:50.721 +07 on 27-09-2026
+reports `integrity_check=["ok"]`, zero foreign-key rows, and
+`mutated_canonical_ledger=false`. Its contextual projection has zero relevant
+RUNs and zero unprojected historical acceptances; the ledger has 17 ordinary
+active RUNs, all classified `THRESHOLD_SENSITIVE_STALE_CANDIDATE`, with zero
+unexplained active RUNs, zero unbound live-resource residues, and
+`projection_drift=false`. The local accepted-code activation profile still has
+`active_checkpoint_id=null` and no `closure_input`. The census is read-only
+evidence; it neither resolves those stale candidates nor supplies the exact
+accepted source checkpoint required by activation.
+
+Settings source changes remain inactive in the running desktop. The latest
+copy refinement for personal ChatGPT now directs users to reuse Ubuntu Control
+Plane if it already appears in ChatGPT Apps, avoids requesting OpenAI IDs, and
+qualifies connector availability and per-tool authority. Its focused
+`node --test tests/settings-redesign.test.js` result is **15/15 passed**. No
+restart, activation, Ubuntu deployment, policy change, commit or push occurred.
+
+Fresh repeat at 00:50:56.712 and 00:50:57.767 +07 on 27-09-2026 returned the
+same target and task state. The inventory reported `heartbeat_age_ms=32098039`
+and the same policy observation/expiry timestamps, so `policy_state=enabled`
+is still stale (the expiry was about 8h54m before the query). `task_list` again
+returned the same two closed tasks and zero open tasks. Both operations
+succeeded; no workspace access or local execution occurred.
+
+At about 01:01 +07, the focused current-worktree proof rerun passed: Python
+`test_mcp_file_read_facade.py` (4 tests) and `test_mcp_task_sessions.py` (12
+tests), plus `node --test tests/settings-redesign.test.js
+tests/control-center-manager.test.js` (30 tests). These are source/UI test
+results only; they do not prove EOCL acceptance, connector schema rediscovery,
+Ubuntu deployment, or activation of the Settings changes in the running UI.
+
+Follow-up at 01:17 +07 clarifies the central Settings target row: granted
+read/write/exec capabilities, active binding/workspace dispatchability, node
+presence and runtime readiness are now shown as separate facts. The active
+status explanation warns that dispatchability does not prove the node is online,
+runtime-ready, or covered by a current policy. Focused Node validation now
+passes **31/31** across `settings-redesign.test.js` and
+`control-center-manager.test.js`; `node --check renderer/app.js` and
+`git diff --check` also pass. This is unaccepted source/UI proof only; no
+activation or restart occurred.
+
+Fresh Windows recapture at 01:19 +07 reports UI `STALE`, running revision
+`47382735d956033389331b0c7cec3ba1b5d9e2af90fdc5771cc8ef41d3cc0579`, disk
+revision `3c1043e4b5a12a95d6868d2be2397de5319d9dc22fb4b35b213d6dd0b42bfff3`,
+and `update_pending=true`. Coding Tools MCP remains `stopped` with
+`fully_ready=false`, `central_connected=false`, `authority_ready=false`, and
+`LOCAL_EXECUTOR_NOT_READY`. The Recovery Supervisor and Control Plane agent are
+healthy/running at 01:20 +07. A new read-only full-clean preflight still fails
+closed with `ACTIVATION_SOURCE_CHECKPOINT_REQUIRED`; no activation/restart was
+attempted.
+
+At 01:25:05.729 and 01:25:06.772 +07, the user-approved query in the existing
+personal ChatGPT Plus conversation completed `workspace_context(inventory)` and
+then `workspace_context(task_list)`. The same target remains binding/node/
+workspace `active`, presence `offline`, readiness `degraded`, and dispatchable
+with no blockers; capabilities remain read/write true and exec false. The
+heartbeat age is 34,147,030 ms. `policy_state=enabled` is stale: the reported
+policy observation was at 15:55:59.469 +07 and expiry at 15:56:58.929 +07,
+about 9h28m before this query. Task-list returned two historical tasks, both
+closed, and zero open tasks. The receipt reports `workspace_accessed=false` and
+`execution=no_local_execution`; no task or permission was changed. A transient
+UI status mentioned creating a safe read task, so the response was stopped;
+the completed receipts contain only the two authorized operations and show no
+open task. No file-read, write, or exec test was attempted. This personal Plus
+connection worked without any Organization ID or ChatGPT Workspace ID.
+
+## Personal Plus read-only check and operation-schema repair — 26-09-2026
+
+The user-approved check in the existing ChatGPT Plus conversation used only
+`workspace_context inventory` followed by `workspace_context task_list`. Both
+operations succeeded at 23:57:16.183 and 23:57:17.415 +07 on 26-09-2026. The
+inventory returned `DESKTOP-63643J4 - Codex-web` on node `DESKTOP-63643J4`, with
+binding, node and workspace all `active`; presence was `offline`, readiness
+`degraded`, dispatch `dispatchable`, and blockers empty. Capabilities were
+read/write true and exec false; contract version was `unreported`. The snapshot
+said policy `enabled`, but its `policy_observed_at_ms` was 15:55:59.469 +07 and
+`policy_expires_at_ms` was 15:56:58.929 +07—about eight hours before this query.
+Treat the enabled value as stale evidence, not proof of an effective current
+policy. `task_list` returned two historical tasks, both closed, and zero open
+tasks. This check created no task, accessed no workspace file, ran no command,
+and changed no permission. Neither operation required an Organization ID or
+ChatGPT Workspace ID in the payload; this proves only the two operations on this
+configured personal connection, not file-read or plan-wide Plus eligibility.
+
+Source inspection found a concrete parameter-contract defect in the uncommitted
+facade work: `workspace_context` advertised every operation's fields together
+but required only `operation`, while the parser correctly required exact
+operation-specific fields. `task_control` similarly advertised `reason` for
+`writer_claim`, which its fail-closed parser rejects. The local correction now
+publishes JSON Schema `oneOf` branches with exact required/allowed fields for
+each operation; parser authorization and execution behavior are unchanged.
+The bounded-read OAuth facade is schema version 27 in this uncommitted source;
+the private-tunnel service facade is version 32. The live response reported
+`schema_version=20` without a profile or exact facade contract, so its number
+cannot safely be compared with either source profile and does not establish
+schema drift. The exact earlier failed argument envelopes and loaded tool
+schema are unavailable; the root cause of those remote `INVALID_ARGUMENT`
+responses therefore remains unconfirmed. The per-operation schema is a
+source-side correction candidate, not a proven remote fix.
+
+The reported reproductions also do not establish a valid remote failure under
+the current source contract: `task_open(binding_id,label)` omits required
+`idempotency_key`; adding `expected_facade_contract` to `task_open` is an
+unsupported extra field; and the reported `read_file(bounds={...})` envelope
+does not match the required top-level bounds plus current facade contract.
+Those request-shape errors can explain `INVALID_ARGUMENT` without a server
+defect. A fresh target-bound retest must use the refreshed live schema and
+server-issued, correctly owned task/action IDs. The latest explicit approval
+covered only inventory and task_list, so no such retest was attempted.
+
+The legacy schema builder also had a separate publication bug: it constructed
+the schema but did not return it, allowing `tools/list` to expose
+`inputSchema: null` on that path. The local source now returns the constructed
+schema. The focused HTTP API schema assertion and bridge test passed after that
+repair; the Windows-process-only test now skips explicitly when run under WSL.
+The full Control Plane suite was not rerun after these focused corrections, and
+none of them is proof that the Ubuntu service has received the source update.
+
+Focused proof: `test_mcp_file_read_facade.py` plus
+`test_mcp_task_sessions.py`: **16 passed, 11 subtests passed**. The additional
+facade/OAuth/UI regression batch: **63 passed, 49 subtests passed, 5 failed**;
+all five failures were OAuth-credential fixtures using POSIX owner-only mode
+semantics or symlink creation blocked by Windows (`WinError 1314`). These are
+environment incompatibilities, not source passes. The Settings/manager Node
+tests passed **30/30**. A separate ad-hoc JSON Schema Draft 2020-12 check
+validated all **32 emitted tool schemas** and classified **5 valid** and **5
+intentionally invalid** sample inputs correctly; this check is not a committed
+regression test. No live connector schema refresh was run.
+
+Read-only Windows status at 23:22 +07 reports UI `STALE`,
+`update_pending=true`, running revision
+`47382735d956033389331b0c7cec3ba1b5d9e2af90fdc5771cc8ef41d3cc0579`, disk
+revision `abdedcd9fdba5a4edd032e8b31ca3db6a8ad2fbbf06cefd8b49bc8846b5eef8a`,
+MCP `stopped`, `fully_ready=false`, `central_connected=false`,
+`authority_ready=false`, and `LOCAL_EXECUTOR_NOT_READY`. Recovery Supervisor
+and its control-plane agent are healthy/running; Recovery Host is current for
+full-clean status with its epoch `READY` but `admission_open=false`. No
+activation or restart was run, so the desktop Settings source changes are not
+proven active in the running UI.
+
+The approved remote query is not a live deployment receipt. No Ubuntu source or
+policy was changed and this Codex client does not expose Ubuntu `workspace_context`
+or EOCL `task_control`; no deploy, refresh, task creation, file read, commit or
+push occurred. OpenAI's current Developer Mode guide explicitly lists Plus as
+eligible for full MCP client support on the web. That is account-level
+eligibility, not proof that this connector currently exposes every operation:
+the observed Plus connection has only completed inventory and task-list, and
+the target is offline/degraded. MCP 2025-11-25 declares tool inputs as JSON Schema
+2020-12, matching the new `oneOf` shape. See [ChatGPT Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode)
+and the [MCP 2025-11-25 tools schema](https://modelcontextprotocol.io/specification/2025-11-25/server/tools).
+
+Next: after the owner-authorized Ubuntu source/policy rollout, inspect the live
+tool schema/hash and refresh the existing personal ChatGPT connection. Require
+presence `online` and readiness `ready` before any target-bound canary. A new
+approval is required before `task_open` or queued `read_file`; neither was
+included in the inventory/task-list consent. Full-clean activation of the local
+desktop UI is a separate gated step and must not be inferred from these tests.
+
+## Personal ChatGPT correction and Windows recapture — 26-09-2026, 19:38 +07
+
+The Control Plane `private_tunnel_service` auth mode is not Business-only.
+Correction to this checkpoint: the cited OpenAI availability page does not list
+Plus; it explicitly documents Pro read/fetch and full MCP for Business,
+Enterprise and Edu. The existing Plus connection did return inventory and
+task_list in the later read-only check above, but that result is specific to
+this configured connection and does not establish Plus-wide eligibility.
+**Superseded on 27-09-2026:** the current [OpenAI Developer Mode guide](https://developers.openai.com/api/docs/guides/developer-mode)
+explicitly lists Plus as eligible for full MCP client support on the web. This
+confirms plan-level eligibility, but does not prove that this configured app
+exposes parameterized reads or that the current Ubuntu target is ready.
+Control Plane's
+`private_tunnel_service` configuration requires its own service principal and
+grant, not an OpenAI Organization ID or ChatGPT Workspace ID. Those Platform
+administration scopes must not be confused with this product's Windows
+workspace/binding IDs. An existing ChatGPT connection that returns inventory
+should be reused; local Windows tunnel aliases do not describe Ubuntu's tunnel.
+See the [personal connection guide](../control-plane/README.md#personal-chatgpt-plus--pro-reuse-the-existing-connection)
+for the separate transport, service identity and local-policy boundaries.
+
+At `main @ 5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb`, the uncommitted source
+correction removes Business-only/two-member wording from the Ubuntu Console
+and Windows policy confirmation, removes mandatory-OAuth wording from central
+onboarding, and adds compact personal-account guidance. It does not change
+authentication, grant scopes, admission, policy, sandboxing or execution rights.
+Pre-existing facade/schema, settings and `.coding-tools` changes are preserved.
+Focused validation: **30/30** Node settings/manager tests, renderer JavaScript
+syntax, and **8 Python tests + 3 subtests** for Console guidance, service-mode
+configuration, protected asset serving and embedded JavaScript syntax pass.
+These are source tests, not a real personal-account ChatGPT canary.
+
+Read-only Windows status at 19:32 reported UI `CURRENT`; after the renderer
+correction, 19:38 correctly reports `STALE` / `update_pending=true`. Both
+snapshots report Coding MCP `stopped`, `fully_ready=false`,
+`central_connected=false`, `authority_ready=false`, and
+`LOCAL_EXECUTOR_NOT_READY`. Recovery Host remains source-current; its observed
+epoch is `READY` with `admission_open=false`. Full-clean preflight still returns
+`ACTIVATION_SOURCE_CHECKPOINT_REQUIRED`. This is an activation/acceptance gate,
+not a ChatGPT subscription or missing organization-ID failure.
+
+No Ubuntu deployment, service restart, account/tunnel mutation, commit or push
+was performed. This Codex session still lacks callable `task_control` and
+Ubuntu `workspace_context`; it cannot certify a new remote invocation or
+manufacture the accepted-code closure. Remaining order: official exact-source
+acceptance and authorized runtime activation; authorized Ubuntu schema rollout
+and matching local policy if the facade changes; refresh the existing personal
+ChatGPT plugin; then task/read/status/close canary with valid arguments and a
+completed receipt. Write and exec require separate proof; exec stays disabled
+until its packaged sandbox and policy gates pass. Do not request Business
+membership or OpenAI IDs as a substitute for those missing proofs.
+
+## Live operational checkpoint — 26-09-2026, Windows MCP stopped; activation gated
+
+This checkpoint supersedes the 25-09 Ubuntu/selected-workspace snapshot for the
+Windows runtime state below. The Ubuntu Control Plane was not queried again in
+this pass; its most recent repository checkpoint remains 25-09, and the
+operator-reported 26-09 target status is not a substitute for a fresh remote
+health or ChatGPT-client receipt.
+
+Source checkout: `E:\DEV\Codex-web`, branch `main`, HEAD
+`5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb`, 14 commits ahead of `origin/main`.
+At entry to this recapture, the only dirty paths were pre-existing runtime
+evidence under `.coding-tools`: `orchestration/ledger.sqlite3`,
+`orchestration/task-context-workspaces.json`, and `performance.json`. This
+checkpoint adds an uncommitted documentation-only change to
+`docs/CURRENT_STATE.md`; all four paths are preserved, with no code changes.
+
+At 2026-09-26 07:16 +07, read-only `npm run dev:status` reported the Electron UI
+`CURRENT` at its disk revision, but `mcp_revision_state=stopped`,
+`mcp_running_revision=none`, `components_ready=false`, `fully_ready=false`,
+`runtime_update_incomplete=true`, and
+`central_status_reason=LOCAL_EXECUTOR_NOT_READY`. Recovery Supervisor status at
+07:16 +07 was `healthy`, Scheduled Task `Running`, with its Control Plane agent
+`running`. This is a Windows Coding Tools MCP readiness failure; it does not
+contradict the separate Ubuntu target/node inventory being online.
+
+Read-only `node scripts/full-clean-activation.js --preflight` returned
+`ACTIVATION_SOURCE_CHECKPOINT_REQUIRED`. No activation, restart, policy change,
+or MCP process replacement was attempted. The current tool surface does not
+expose `task_control`/EOCL acceptance actions.
+
+A subsequent read-only `node scripts/full-clean-activation.js --status` confirms
+the Recovery Host is not the missing component: `current_for_full_clean=true`,
+`full_clean_capability_available=true`, and its running/disk revisions match
+(`25d446dc53b76ad61df9400b19644c85e63cbd2abc39b1eb7e44c528a2cd8248`). Its
+epoch is `READY` with `admission_open=false`. The profile's version-2
+`accepted-code-activation.json` has `active_checkpoint_id=null` and no
+`closure_input` (last updated `2026-09-21T13:00:32.905Z`), confirming the
+preflight blocker is the absent accepted source closure, not Recovery Host
+availability. The file was read only.
+
+An immutable Gate-0 lifecycle census was captured at
+`2026-09-26T00:18:16.684Z` using the SQLite Backup API; it reports ledger schema
+12, integrity `ok`, zero foreign-key violations, and
+`mutated_canonical_ledger=false`. Snapshot SHA-256 is
+`0dbd5add22eca323e8cee46395cc993302d4f75dd2369e864245d3b6faa91b85`; logical
+SHA-256 is
+`5672e6065c72cb15f67b890a020c0b1b8e07a9dfcba20dc1683c94b90b4e3403`.
+There are 17 ordinary active RUNs, all classified
+`THRESHOLD_SENSITIVE_STALE_CANDIDATE`; six P5 experiment anchors; zero
+`AWAITING_ACCEPTANCE` RUNs, zero unexplained active runs, zero unbound live
+resource residues, zero stale background-operation residues, and
+`projection_drift=false`. The contextual task projection has no relevant
+current run and no unprojected historical acceptance. These counts do not
+authorize reconciling stale RUNs or synthesizing an acceptance closure.
+
+The local Windows tunnel-client inventory returned `aliases=[]`. This only
+describes runtimes managed by the local Windows tunnel-client; it is not a
+health result for Ubuntu's separate `ubuntu-root-mcp-2` runtime.
+
+**Next action:** an authorized owner must use the supported Control Center / EOCL
+path to create or locate a source-proof RUN/WAVE for this exact HEAD, review its
+receipts, and accept/checkpoint the exact proof/worktree state, including this
+uncommitted documentation delta under the normal fingerprint rules. Then set
+`FULL_CLEAN_SOURCE_CHECKPOINT_JSON` from that official five-field closure and
+rerun preflight. If no eligible closure can be produced, stop and retain the
+preflight blocker; never edit activation/acceptance files or the canonical
+ledger by hand. Only a passing preflight plus an owner-approved maintenance
+window permits `--execute`. After activation, require strict readiness and
+current-process real-ChatGPT discovery before acknowledging the connector or
+claiming end-to-end Read/Write.
+
+## Previous live operational checkpoint — 25-09-2026, personal tunnel and selected Windows workspace
+
+This was the latest Ubuntu/selected-workspace recapture at that time. Older
+desktop states below are retained as history, not as current runtime evidence.
 
 Ubuntu `svhome` still runs Secure MCP Tunnel profile `ubuntu-root-mcp-2` / tunnel `tunnel_6ab62006b6708191b007d1c6e4a136cf`. The tunnel unit remains enabled/active with `/healthz=live`, `/readyz=ready`, `NRestarts=0`, and no `401` or `account_deactivated` since its current start. Control Plane release `7dec4b6e684c975ef40e949b1e06eab3c67b5811` is running with matching package fingerprint, schema 28, and SQLite integrity `ok`; admission is `scoped_pilot`.
 

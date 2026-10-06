@@ -3848,6 +3848,29 @@ class ControlPlaneStore:
                     if last_seen_at_ms + self.heartbeat_max_age_ms >= int(now)
                     else "offline"
                 )
+            policy_state = row["policy_state"]
+            policy_expires_at_ms = row["policy_expires_at_ms"]
+            policy_observed_at_ms = row["policy_observed_at_ms"]
+            if policy_state == "enabled":
+                if (
+                    presence_state != "online"
+                    or not isinstance(last_seen_at_ms, int)
+                    or isinstance(last_seen_at_ms, bool)
+                    or last_seen_at_ms <= 0
+                    or not isinstance(policy_observed_at_ms, int)
+                    or isinstance(policy_observed_at_ms, bool)
+                    or policy_observed_at_ms <= 0
+                    or policy_observed_at_ms != last_seen_at_ms
+                ):
+                    # A stale heartbeat or newer heartbeat without a policy
+                    # observation must not inherit an older "enabled" label.
+                    policy_state = "unobserved"
+                elif (
+                    not isinstance(policy_expires_at_ms, int)
+                    or isinstance(policy_expires_at_ms, bool)
+                    or policy_expires_at_ms <= int(now)
+                ):
+                    policy_state = "expired_or_disabled"
             targets.append(
                 {
                     "binding_id": row["binding_id"],
@@ -3873,9 +3896,9 @@ class ControlPlaneStore:
                     "heartbeat_age_ms": heartbeat_age_ms,
                     "readiness": row["readiness"],
                     "contract_version": row["contract_version"],
-                    "policy_state": row["policy_state"],
-                    "policy_expires_at_ms": row["policy_expires_at_ms"],
-                    "policy_observed_at_ms": row["policy_observed_at_ms"],
+                    "policy_state": policy_state,
+                    "policy_expires_at_ms": policy_expires_at_ms,
+                    "policy_observed_at_ms": policy_observed_at_ms,
                 }
             )
         return targets

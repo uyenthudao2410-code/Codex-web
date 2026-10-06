@@ -6,7 +6,7 @@ function createPreviewApi() {
     mcpPort: 18766, healthPort: 18082, proxyMode: 'auto', proxyUrl: '', tunnelId: 'tunnel_demo',
     recoveryMcpPort: 18767, recoveryHealthPort: 18083, recoveryTunnelId: '',
     controlPlaneServerUrl: '',
-    theme: 'light', startWithWindows: false, progressReportSeconds: 90, keepRunningOnClose: true, autoStartServices: false, firstRunCompleted: true, guideProgress: {}, authorizedRoots: []
+    theme: document.body.dataset.theme === 'dark' ? 'dark' : 'light', startWithWindows: false, progressReportSeconds: 90, keepRunningOnClose: true, autoStartServices: false, firstRunCompleted: true, guideProgress: {}, authorizedRoots: []
   };
   const snapshot = {
     settings: previewSettings,
@@ -62,12 +62,12 @@ const pageMeta = {
   deploy: ['KẾT NỐI', 'Kết nối máy chủ', 'Kết nối Ubuntu hoặc cấu hình direct legacy trong phần nâng cao.'],
   workspace: ['THƯ MỤC & QUYỀN', 'Thư mục & quyền', 'Chọn đường dẫn local và xem rõ quyền đọc, ghi, chạy đang được áp dụng.'],
   task: ['TASKS & PROOF', 'Tasks & Proof', 'Theo dõi durable task state, kiểm thử, proof, lịch sử và hiệu năng.'],
-  system: ['THIẾT LẬP HỆ THỐNG', 'Thiết lập hệ thống', 'Máy chủ, tài khoản, thư mục và tùy chọn ứng dụng trong cùng một nơi.'],
+  system: ['CÀI ĐẶT', 'Cài đặt', 'Kết nối Ubuntu, thư mục, quyền và tùy chọn ứng dụng trong cùng một nơi.'],
   build: ['BUILD & XÁC MINH', 'Xác minh & Build', 'Tự động nhận diện dự án, thực thi kiểm thử và build, đồng thời kiểm tra sản phẩm đầu ra.'],
   health: ['CHẨN ĐOÁN & SỬA CHỮA', 'Chẩn đoán & Sửa chữa', 'Kiểm tra môi trường vận hành và tự động sửa chữa các sự cố an toàn.'],
   guide: ['HƯỚNG DẪN CẤU HÌNH', 'Hướng dẫn Kết nối', 'Hoàn thành các bước kết nối OpenAI Tunnel và ChatGPT Web.'],
   logs: ['CHẨN ĐOÁN', 'Nhật ký Vận hành', 'Xem thông tin chẩn đoán của môi trường portable, MCP và Tunnel.'],
-  settings: ['CẤU HÌNH TÙY CHỌN', 'Cài đặt Trợ lý', 'Quản lý giao diện, hành vi khởi động, phản hồi nhiệm vụ và chứng thư cục bộ.']
+  settings: ['TÙY CHỌN ỨNG DỤNG', 'Cài đặt ứng dụng', 'Điều khiển giao diện và hành vi khởi động.']
 };
 
 const state = {
@@ -218,6 +218,86 @@ function centralDispatchableTargetForLocalWorkspace() {
   return matchingEntries.length === 1 ? matches[0] : null;
 }
 
+function centralTargetReadiness(status, target) {
+  if (status?.fresh !== true) {
+    return {
+      ready: false,
+      state: 'status_stale',
+      title: 'Chưa xác minh trạng thái Ubuntu',
+      detail: 'Chưa có trạng thái Ubuntu mới. Kiểm tra lại target; không tạo binding mới chỉ vì lần đọc trước đã cũ.'
+    };
+  }
+  if (status.state !== 'active') {
+    const detail = authorityStatusPresentation(status).detail;
+    return {
+      ready: false,
+      state: status.state || 'unknown',
+      title: authorityStatusPresentation(status).label,
+      detail
+    };
+  }
+  if (!(Number(status.dispatchable_target_count || 0) > 0)) {
+    return {
+      ready: false,
+      state: 'no_dispatchable_target',
+      title: 'Chưa có target khả dụng',
+      detail: 'Ubuntu chưa báo target nào có binding và workspace còn hiệu lực.'
+    };
+  }
+  if (!target) {
+    return {
+      ready: false,
+      state: 'workspace_target_mismatch',
+      title: 'Target chưa khớp workspace này',
+      detail: 'Có target trên Ubuntu nhưng chưa khớp duy nhất với workspace đã đăng ký. Làm mới danh sách workspace và trạng thái liên kết trước khi thao tác.'
+    };
+  }
+  if (target.dispatch_state !== 'dispatchable') {
+    return {
+      ready: false,
+      state: 'target_blocked',
+      title: 'Target Ubuntu đang bị chặn',
+      detail: 'Binding hoặc workspace không còn dispatchable; kiểm tra chi tiết trên Ubuntu.'
+    };
+  }
+  if (target.presence_state !== 'online') {
+    return {
+      ready: false,
+      state: target.presence_state === 'offline' ? 'offline' : 'presence_unknown',
+      title: target.presence_state === 'offline' ? 'Máy Ubuntu đang ngoại tuyến' : 'Chưa xác minh heartbeat Ubuntu',
+      detail: target.presence_state === 'offline'
+        ? 'Heartbeat Ubuntu đã quá hạn. Kiểm tra node-agent/heartbeat; binding còn hiệu lực không có nghĩa máy đang online.'
+        : 'Ubuntu chưa có heartbeat xác nhận online; chưa thể coi target là sẵn sàng.'
+    };
+  }
+  if (target.readiness !== 'ready') {
+    const labels = {
+      degraded: ['runtime_degraded', 'Runtime Ubuntu chưa sẵn sàng', 'Heartbeat gần đây báo runtime degraded; kiểm tra trạng thái runtime trên máy Ubuntu.'],
+      blocked: ['runtime_blocked', 'Runtime Ubuntu đang bị chặn', 'Heartbeat báo runtime blocked; xử lý blocker trên máy Ubuntu trước.'],
+      unknown: ['runtime_unknown', 'Chưa xác minh runtime Ubuntu', 'Ubuntu chưa báo runtime readiness hiện hành.']
+    };
+    const [state, title, detail] = labels[target.readiness] || labels.unknown;
+    return { ready: false, state, title, detail };
+  }
+  if (target.policy_state !== 'enabled') {
+    const labels = {
+      expired_or_disabled: ['policy_expired', 'Policy Ubuntu hết hạn hoặc đã tắt', 'Policy không còn enabled; làm mới policy qua Ubuntu trước khi thử thao tác.'],
+      unobserved: ['policy_unobserved', 'Policy Ubuntu chưa được xác minh', 'Policy chưa được quan sát cùng heartbeat mới nhất; làm mới heartbeat/policy trên Ubuntu.'],
+      unavailable: ['policy_unavailable', 'Policy Ubuntu không khả dụng', 'Ubuntu chưa đọc được policy hiện hành; kiểm tra node-agent và policy cục bộ.']
+    };
+    const [state, title, detail] = labels[target.policy_state] || [
+      'policy_unknown', 'Chưa xác minh policy Ubuntu', 'Chưa có bằng chứng policy hiện hành; giữ trạng thái chưa sẵn sàng.'
+    ];
+    return { ready: false, state, title, detail };
+  }
+  return {
+    ready: true,
+    state: 'ready',
+    title: 'Target Ubuntu đã sẵn sàng',
+    detail: 'Ubuntu online, runtime ready và policy được xác nhận enabled. Quyền đọc/ghi/chạy lệnh vẫn được xét riêng theo capability.'
+  };
+}
+
 function centralWorkspaceCapabilitiesFromUi() {
   const preset = state.centralWorkspacePreset || 'read';
   if (preset !== 'custom') return { ...CENTRAL_WORKSPACE_PRESETS[preset].capabilities };
@@ -244,6 +324,20 @@ function centralRoutePresentation(status = {}) {
       state: 'connected',
       label: 'Đã sẵn sàng qua Ubuntu',
       detail: 'Route trung tâm và policy action cục bộ đã được xác minh.'
+    };
+  }
+  if (reason === 'LOCAL_EXECUTOR_NOT_READY') {
+    return {
+      state: 'warning',
+      label: 'Runtime Windows chưa sẵn sàng',
+      detail: 'Target Ubuntu có thể vẫn đang liên kết. Kiểm tra MCP/agent và Recovery Host trên Windows; không gửi pairing lại hoặc tạo target mới.'
+    };
+  }
+  if (reason === 'CENTRAL_ROUTE_EVIDENCE_STALE') {
+    return {
+      state: 'warning',
+      label: 'Heartbeat Ubuntu đã cũ',
+      detail: 'Chưa có heartbeat mới để xác minh route và policy. Giữ thao tác khóa, kiểm tra agent/mạng trên Windows; không pairing lại chỉ vì receipt đã cũ.'
     };
   }
   if (status.runtimeRunning !== true) {
@@ -685,6 +779,9 @@ function renderCentralExecutorMode(snapshot) {
   const central = isCentralExecutor(settings);
   const development = central && centralSetupRuntimeBlocked(centralSetupGuidance(snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus));
   const route = centralRoutePresentation(snapshot?.status || {});
+  const targetReadiness = central
+    ? centralTargetReadiness(state.centralAuthorityStatus, centralDispatchableTargetForLocalWorkspace())
+    : null;
   document.body.dataset.executionRole = central ? 'central-executor' : 'direct-legacy';
   $$('[data-direct-only]').forEach((element) => { element.hidden = central; });
   const notice = $('#centralExecutorNotice');
@@ -692,6 +789,8 @@ function renderCentralExecutorMode(snapshot) {
   const deployTitle = $('#deploySectionTitle');
   const deploySubtitle = $('#deploySectionSubtitle');
   const guide = $('#centralExecutorGuide');
+  const guideSectionTitle = $('#guideSectionTitle');
+  const guideSectionSubtitle = $('#guideSectionSubtitle');
   const pairingInput = $('#controlPlaneServerUrl');
   const pairingButton = $('#requestControlPlaneEnrollment');
   const pairingStatus = $('#controlPlaneEnrollmentStatus');
@@ -725,6 +824,12 @@ function renderCentralExecutorMode(snapshot) {
   if (deploySubtitle) deploySubtitle.textContent = central
     ? 'Chỉ nhập địa chỉ Ubuntu và theo dõi trạng thái pairing. Máy này không cần API key hoặc Tunnel.'
     : 'Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.';
+  if (guideSectionTitle) guideSectionTitle.textContent = central
+    ? 'Dùng Ubuntu Control Plane trong ChatGPT Plus'
+    : 'Tạo MCP trong giao diện Web';
+  if (guideSectionSubtitle) guideSectionSubtitle.textContent = central
+    ? 'Mở app Ubuntu Control Plane đã kết nối trong ChatGPT cá nhân; không cần cấu hình Organization ID hay cài Codex Desktop để gọi app.'
+    : 'Hoàn thành theo đúng thứ tự. Tên lối vào có thể hơi khác tùy gói tài khoản hoặc workspace.';
   if (!central) {
     state.centralWorkspaceCandidate = '';
     state.centralPolicyReceipt = null;
@@ -737,11 +842,13 @@ function renderCentralExecutorMode(snapshot) {
   if (activationStatus && central) {
     activationStatus.textContent = retryable
       ? 'Chuyển vai trò đã được lưu nhưng activation chưa hoàn tất hoặc đã hết hạn. Hoàn thành pairing và liên kết tài khoản bên dưới, rồi bấm thử lại. Quyền thực thi vẫn đóng.'
-      : snapshot?.status?.fullyReady === true && state.centralAuthorityStatus?.fresh === true && state.centralAuthorityStatus?.state === 'active'
+      : snapshot?.status?.fullyReady === true && snapshot?.status?.authorityReady === true && targetReadiness?.ready === true
         ? 'Runtime local và target được Ubuntu cấp đã sẵn sàng trong phạm vi quyền hiện tại.'
-        : snapshot?.status?.fullyReady === true
-          ? 'Runtime local đã sẵn sàng; tài khoản vẫn chưa có target dispatchable trên máy này.'
-        : 'Đang xác minh executor; hãy hoàn thành pairing và liên kết tài khoản bên dưới. Đã chuyển vai trò không đồng nghĩa đã có kết nối hoặc quyền chạy.';
+        : snapshot?.status?.fullyReady === true && targetReadiness?.ready !== true
+          ? `Runtime local đã sẵn sàng; ${targetReadiness?.detail || 'chưa xác minh target Ubuntu'}`
+          : snapshot?.status?.fullyReady === true && snapshot?.status?.authorityReady !== true
+            ? `Runtime local đã sẵn sàng; ${route.detail}`
+          : 'Đang xác minh executor; hãy hoàn thành pairing và liên kết tài khoản bên dưới. Đã chuyển vai trò không đồng nghĩa đã có kết nối hoặc quyền chạy.';
   }
   if (noticeText && central) {
     noticeText.textContent = `Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. ${route.label}: ${route.detail}`;
@@ -950,10 +1057,16 @@ function renderSetupState(snapshot) {
   const guidance = central ? centralSetupGuidance(snapshot, state.centralEnrollmentStatus, state.centralAuthorityStatus) : null;
   const authorityStatus = state.centralAuthorityStatus;
   const currentTarget = central ? centralDispatchableTargetForLocalWorkspace() : null;
-  const accountTargetReady = authorityStatus?.fresh === true
-    && authorityStatus?.state === 'active'
-    && Number(authorityStatus?.dispatchable_target_count || 0) > 0
-    && Boolean(currentTarget);
+  const targetReadiness = central ? centralTargetReadiness(authorityStatus, currentTarget) : null;
+  const accountTargetReady = central && targetReadiness.ready;
+  const centralRoute = central ? centralRoutePresentation(status) : null;
+  const setupBlocker = central && accountTargetReady && status.authorityReady !== true
+    ? { title: centralRoute.label, detail: centralRoute.detail }
+    : targetReadiness;
+  const routeNeedsRefresh = central && accountTargetReady && status.authorityReady !== true;
+  const authorityNeedsOperator = central && authorityStatus?.fresh === true
+    && (authorityStatus.state !== 'active' && authorityStatus.state !== 'unknown'
+      || authorityStatus.state === 'active' && !(Number(authorityStatus.dispatchable_target_count || 0) > 0));
   const readOnlyTarget = central && currentTarget?.capabilities?.read === true
     && currentTarget.capabilities.write !== true
     && currentTarget.capabilities.exec !== true;
@@ -963,7 +1076,7 @@ function renderSetupState(snapshot) {
   // The local runtime can be healthy before an account has selected a
   // binding. Settings must not call that state “ready to receive work”.
   const fullyReady = central
-    ? workspaceReady && status.fullyReady === true && accountTargetReady
+    ? workspaceReady && status.fullyReady === true && authorityReady
     : workspaceReady && status.fullyReady === true;
   const accessStepTitle = $('#setupStepAccount b');
   if (accessStepTitle) accessStepTitle.textContent = central ? 'Liên kết & quyền' : 'Kiểm tra kết nối';
@@ -977,7 +1090,7 @@ function renderSetupState(snapshot) {
         ? 'Chưa đọc được inventory · cần tải lại'
         : 'Chưa chọn thư mục'],
     ['setupStepAccount', authorityReady, central
-      ? (accountTargetReady ? 'Đã có target được cấp' : authorityStatus?.state === 'no_binding' ? 'Chưa có liên kết tài khoản' : 'Chờ Ubuntu xác nhận target')
+      ? (accountTargetReady ? 'Target online · runtime ready · policy enabled' : setupBlocker.detail)
       : (status.tunnelRunning === true ? 'Tunnel đã phản hồi' : 'Chờ Tunnel phản hồi')],
     ['setupStepVerify', fullyReady, fullyReady
       ? (central ? (readOnlyTarget ? 'Sẵn sàng kiểm tra trạng thái · target chỉ xem' : 'Runtime và target đã sẵn sàng') : 'Sẵn sàng nhận việc')
@@ -1023,13 +1136,17 @@ function renderSetupState(snapshot) {
         ? 'Chưa xác minh được inventory workspace'
         : !workspaceReady
           ? 'Chưa chọn thư mục làm việc'
+          : central && !authorityReady
+            ? setupBlocker.title
         : 'Cần hoàn tất một bước thiết lập';
   if (summaryText) summaryText.textContent = fullyReady
     ? (central
       ? `${readOnlyTarget ? 'Sẵn sàng kiểm tra trạng thái với target chỉ xem. ' : 'Runtime, pairing và target đã được xác nhận. '}Quyền đọc file, sửa file và chạy lệnh từ ChatGPT cần policy và receipt riêng.`
       : 'Sẵn sàng không có nghĩa đã nghiệm thu bản phát hành; bằng chứng ChatGPT vẫn được hiển thị riêng.')
     : central
-      ? 'Cấu hình đã lưu. Không cần nhập context ID, token hoặc JSON để tiếp tục.'
+      ? connectionReady && workspaceReady && !authorityReady
+        ? setupBlocker.detail
+        : 'Cấu hình đã lưu. Không cần nhập context ID, token hoặc JSON để tiếp tục.'
       : 'Bạn có thể đóng cửa sổ; dữ liệu đã lưu sẽ xuất hiện lại khi mở Cài đặt.';
   if (badge) {
     badge.textContent = fullyReady ? (readOnlyTarget ? 'SẴN SÀNG · CHỈ XEM' : 'SẴN SÀNG') : 'ĐANG CHỜ';
@@ -1046,8 +1163,10 @@ function renderSetupState(snapshot) {
         ? `Không đọc được inventory workspace (${state.centralWorkspaceInventoryError || 'lỗi chưa rõ'}). Bấm tải lại; không đăng ký lại chỉ vì lỗi đọc.`
         : !workspaceReady
           ? 'Chọn một thư mục trước khi cấp quyền.'
-        : !authorityReady
-            ? (central ? 'Chờ target được liên kết và local policy hợp lệ; không tự tạo quyền.' : 'Chờ route/policy hợp lệ; không tự tạo quyền.')
+        : central && !authorityReady
+          ? setupBlocker.detail
+          : !authorityReady
+            ? 'Chờ route/policy hợp lệ; không tự tạo quyền.'
             : 'Kiểm tra lại snapshot runtime hiện tại.';
   }
   if (action) {
@@ -1056,11 +1175,13 @@ function renderSetupState(snapshot) {
       : central && !connectionReady
         ? guidance.actionLabel
       : inventoryUnknown
-        ? 'Tải lại inventory'
+          ? 'Tải lại inventory'
         : !workspaceReady
           ? 'Chọn thư mục'
           : central && !authorityReady
-            ? 'Mở quản trị & liên kết tài khoản'
+            ? routeNeedsRefresh
+              ? 'Kiểm tra kết nối Ubuntu'
+              : authorityNeedsOperator ? 'Mở quản trị & liên kết tài khoản' : 'Kiểm tra trạng thái Ubuntu'
             : 'Kiểm tra lại';
     action.dataset.setupAction = fullyReady
       ? 'overview'
@@ -1071,7 +1192,9 @@ function renderSetupState(snapshot) {
           : !workspaceReady
             ? 'workspace'
           : central && !authorityReady
-            ? 'account'
+            ? routeNeedsRefresh
+              ? 'check-connection'
+              : authorityNeedsOperator ? 'account' : 'authority-refresh'
             : 'refresh';
   }
 }
@@ -1080,6 +1203,11 @@ async function handleSetupPrimaryAction() {
   const action = $('#setupPrimaryAction')?.dataset.setupAction;
   if (action === 'check-connection') {
     await refreshSystemSetup();
+    return;
+  }
+  if (action === 'authority-refresh') {
+    await reconcileControlPlaneAuthorityStatus({ quiet: false });
+    await refreshControlPlaneWorkspaces({ quiet: true });
     return;
   }
   if (action === 'workspace-refresh') {
@@ -1128,8 +1256,8 @@ function navigate(page) {
   if (isCentralExecutor(state.snapshot?.settings)) {
     if (page === 'guide') {
       eyebrow = 'CENTRAL EXECUTOR';
-      title = 'Hướng dẫn pairing với Ubuntu';
-      subtitle = 'Theo dõi route evidence và policy action; connector OpenAI chỉ được quản lý tại server Ubuntu.';
+      title = 'Dùng Ubuntu Control Plane trong ChatGPT Plus';
+      subtitle = 'Dùng kết nối Ubuntu sẵn có trong Apps; kiểm tra inventory trước, rồi xác nhận trạng thái và quyền riêng.';
     }
   }
   $('#pageEyebrow').textContent = eyebrow;
@@ -1544,15 +1672,14 @@ function renderSnapshot(snapshot, options = {}) {
   const { central, route: centralRoute } = renderCentralExecutorMode(snapshot);
   const localRuntimeReady = status.fullyReady === true;
   const currentTarget = central ? centralDispatchableTargetForLocalWorkspace() : null;
-  const accountTargetReady = central
-    && state.centralAuthorityStatus?.fresh === true
-    && state.centralAuthorityStatus?.state === 'active'
-    && Number(state.centralAuthorityStatus?.dispatchable_target_count || 0) > 0
-    && Boolean(currentTarget);
+  const targetReadiness = central ? centralTargetReadiness(state.centralAuthorityStatus, currentTarget) : null;
+  const accountTargetReady = central && targetReadiness.ready;
   const readOnlyTarget = currentTarget?.capabilities?.read === true
     && currentTarget.capabilities.write !== true
     && currentTarget.capabilities.exec !== true;
-  const ready = central ? localRuntimeReady && accountTargetReady : localRuntimeReady;
+  const ready = central
+    ? localRuntimeReady && status.authorityReady === true && accountTargetReady
+    : localRuntimeReady;
   renderRecoveryTunnelSettings(snapshot);
   renderDevice(snapshot);
   renderRuntimeSourceStatus(snapshot);
@@ -1561,7 +1688,11 @@ function renderSnapshot(snapshot, options = {}) {
     || status.activationEpoch?.update_incomplete === true
     || status.activationEpoch?.state === 'UPDATE_INCOMPLETE';
   $('#sideRuntimeText').textContent = central
-    ? (ready ? (readOnlyTarget ? 'Ubuntu đã nối · target chỉ xem' : 'Runtime và target Ubuntu sẵn sàng') : localRuntimeReady ? 'Runtime local sẵn sàng · chờ target' : `${centralRoute.label}`)
+    ? (ready
+      ? (readOnlyTarget ? 'Ubuntu đã nối · target chỉ xem' : 'Runtime và target Ubuntu sẵn sàng')
+      : localRuntimeReady
+        ? accountTargetReady ? centralRoute.label : targetReadiness.title
+        : `${centralRoute.label}`)
     : (ready
       ? 'Dịch vụ sẵn sàng'
       : activationIncomplete
@@ -1593,18 +1724,26 @@ function renderSnapshot(snapshot, options = {}) {
   renderAuthorizedRoots(settings.authorizedRoots || []);
 
   $('#heroBadge').textContent = central
-    ? (ready ? (readOnlyTarget ? 'Ubuntu đã nối · target chỉ xem' : 'Runtime và target Ubuntu sẵn sàng') : localRuntimeReady ? 'CENTRAL EXECUTOR · chờ liên kết target' : `CENTRAL EXECUTOR · ${centralRoute.label}`)
+    ? (ready
+      ? (readOnlyTarget ? 'Ubuntu đã nối · target chỉ xem' : 'Runtime và target Ubuntu sẵn sàng')
+      : localRuntimeReady
+        ? `CENTRAL EXECUTOR · ${accountTargetReady ? centralRoute.label : targetReadiness.title}`
+        : `CENTRAL EXECUTOR · ${centralRoute.label}`)
     : (ready ? 'Tất cả dịch vụ đang hoạt động bình thường' : activationIncomplete ? 'UPDATE_INCOMPLETE · đang đồng bộ runtime' : 'Chưa hoàn tất triển khai');
   $('#heroTitle').textContent = central
-    ? (ready ? 'Máy thực thi được Ubuntu quản lý' : localRuntimeReady ? 'Runtime local đã sẵn sàng, còn chờ target' : 'Máy thực thi được Ubuntu quản lý')
+    ? (ready
+      ? 'Máy thực thi được Ubuntu quản lý'
+      : localRuntimeReady
+        ? accountTargetReady ? centralRoute.label : targetReadiness.title
+        : 'Máy thực thi được Ubuntu quản lý')
     : (ready ? 'Workspace lập trình web đã sẵn sàng' : 'Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn');
   $('#heroText').textContent = central
-    ? `Không cần Runtime API Key hoặc OpenAI Tunnel tại máy này. ${centralRoute.detail}${ready ? ' Khả năng đọc file, sửa file và chạy lệnh từ ChatGPT cần xác minh riêng.' : ''}${localRuntimeReady && !accountTargetReady ? ' Runtime local có thể sống nhưng chưa có binding/target được cấp cho tài khoản.' : ''}`
+    ? `Không cần Runtime API Key hoặc OpenAI Tunnel tại máy này. ${centralRoute.detail}${ready ? ' Khả năng đọc file, sửa file và chạy lệnh từ ChatGPT cần xác minh riêng.' : ''}${localRuntimeReady && !accountTargetReady ? ` ${targetReadiness.detail}` : ''}${localRuntimeReady && accountTargetReady && status.authorityReady !== true ? ` ${centralRoute.detail}` : ''}`
     : (ready
       ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
       : 'Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.');
   $('#heroStartButton').textContent = ready ? 'Triển khai lại' : (central ? 'Mở kết nối Ubuntu' : 'Bắt đầu triển khai');
-  $('#topStartButton').textContent = central ? 'Thiết lập hệ thống' : ready ? 'Triển khai lại' : 'Khởi động nhanh';
+  $('#topStartButton').textContent = central ? 'Mở Cài đặt' : ready ? 'Triển khai lại' : 'Khởi động nhanh';
   renderSetupState(snapshot);
 
   $('#runtimeKeyHint').textContent = central ? 'Không dùng tại central executor; Ubuntu giữ credential.' : (secrets.runtimeApiKey ? 'Đã lưu bằng kho lưu trữ an toàn Windows' : 'Chưa lưu');
@@ -1785,7 +1924,7 @@ function authorityStatusPresentation(status) {
   switch (status.state) {
     case 'pending_operator_approval': return { state: 'waiting', label: 'Chờ Ubuntu duyệt máy', detail: 'Enrollment mới chỉ xác minh identity; chưa có liên kết tài khoản hoặc quyền chạy.' };
     case 'no_binding': return { state: 'waiting', label: 'Chưa có liên kết tài khoản', detail: status.workspace_count ? 'Workspace local đã đăng ký, nhưng tài khoản chưa chọn target cho máy này.' : 'Hãy đăng ký workspace local trước, sau đó chọn target từ tài khoản ChatGPT.' };
-    case 'active': return { state: 'connected', label: 'Đã có target được cấp', detail: `${count} target có thể được chọn theo binding và generation hiện tại.` };
+    case 'active': return { state: 'connected', label: 'Đã có target được cấp', detail: `${count} target có liên kết/thư mục còn hiệu lực. Điều này không xác nhận máy online, runtime sẵn sàng hoặc policy còn hạn.` };
     case 'binding_revoked': return { state: 'error', label: 'Binding đã bị thu hồi', detail: 'Ubuntu vẫn giữ lịch sử để tránh failover âm thầm; cần liên kết target mới.' };
     case 'workspace_missing': return { state: 'error', label: 'Workspace chưa được đăng ký', detail: 'Binding còn tồn tại nhưng workspace hiện tại chưa có registration hợp lệ trên máy này.' };
     case 'workspace_retired': return { state: 'error', label: 'Workspace đã ngừng dùng', detail: 'Generation cũ đã bị fence; không tự đổi sang thư mục khác.' };
@@ -1793,6 +1932,35 @@ function authorityStatusPresentation(status) {
     case 'blocked': return { state: 'warning', label: 'Target đã có nhưng đang bị chặn', detail: 'Xem chi tiết target và blocker; trạng thái này không chứng minh có thể chạy task.' };
     default: return { state: 'unknown', label: 'Chưa xác định', detail: 'Ubuntu trả về trạng thái chưa được UI diễn giải.' };
   }
+}
+
+function authorityTargetPresentation(target) {
+  const capabilities = [
+    ['read', 'Đọc'],
+    ['write', 'Ghi'],
+    ['exec', 'Chạy lệnh']
+  ].filter(([name]) => target.capabilities?.[name] === true).map(([, label]) => label).join('/') || 'Chưa cấp quyền';
+  const dispatch = target.dispatch_state === 'dispatchable'
+    ? 'liên kết/thư mục còn hiệu lực'
+    : 'liên kết/thư mục bị chặn';
+  const presence = {
+    online: 'máy đang online',
+    offline: 'máy ngoại tuyến',
+    unknown: 'tình trạng máy chưa xác định'
+  }[target.presence_state] || 'tình trạng máy chưa xác định';
+  const readiness = {
+    ready: 'runtime báo sẵn sàng',
+    degraded: 'runtime chưa sẵn sàng đầy đủ',
+    blocked: 'runtime bị chặn',
+    unknown: 'runtime chưa xác định'
+  }[target.readiness] || 'runtime chưa xác định';
+  const policy = {
+    enabled: 'policy đang bật',
+    expired_or_disabled: 'policy hết hạn hoặc đã tắt',
+    unobserved: 'policy chưa được xác minh cùng heartbeat mới nhất',
+    unavailable: 'policy không khả dụng'
+  }[target.policy_state] || 'policy chưa xác định';
+  return `${capabilities} · ${dispatch} · ${presence} · ${readiness} · ${policy}`;
 }
 
 function renderCentralAuthorityStatus(central) {
@@ -1821,8 +1989,7 @@ function renderCentralAuthorityStatus(central) {
       const label = document.createElement('b');
       label.textContent = `${target.node_display_name} · ${target.workspace_display_name}`;
       const meta = document.createElement('small');
-      const capabilities = ['read', 'write', 'exec'].filter((name) => target.capabilities?.[name] === true).join('/') || 'none';
-      meta.textContent = `${capabilities} · ${target.dispatch_state === 'dispatchable' ? 'được cấp' : 'bị chặn'} · ${target.presence_state}`;
+      meta.textContent = authorityTargetPresentation(target);
       row.append(label, meta);
       targets.append(row);
     }
@@ -2026,7 +2193,7 @@ async function requestControlPlaneEnrollment() {
       state.snapshot.settings.controlPlaneServerUrl = receipt.server_origin;
       if (field) field.value = receipt.server_origin;
     }
-    toast('Đã gửi yêu cầu pairing', 'Ubuntu phải duyệt identity; sau đó account OAuth chọn target và tạo authority riêng trước khi máy này được chạy.', 'success');
+    toast('Đã gửi yêu cầu pairing', 'Ubuntu phải duyệt identity; sau đó cấp target cho kết nối ChatGPT (OAuth hoặc service principal của tunnel) và cài policy local trước khi máy này được chạy.', 'success');
     await refreshSnapshot({ forceForms: false });
     await reconcileControlPlaneEnrollment({ quiet: true });
     await reconcileControlPlaneAuthorityStatus({ quiet: true });
@@ -2271,7 +2438,7 @@ async function installControlPlaneExecPolicy(workspace) {
     const accepted = window.confirm(
       `Bật chạy lệnh tự động cho toàn bộ workspace “${workspace.display_name}” trên máy này? `
         + 'Sau lần xác nhận cài policy này, các lệnh được phép sẽ không hỏi duyệt từng lần. '
-        + 'Cả hai thành viên ChatGPT Business dùng chung policy của node này; không phân biệt người gọi. '
+        + 'Mọi lời gọi được cấp quyền vào workspace này đều dùng cùng policy của node; service principal của tunnel không phân biệt người ChatGPT gọi. '
         + 'Chỉ cho phép git, node, npm, npx, python và python3; process bị sandbox giới hạn trong workspace, không có network, tối đa 5 phút/64 KiB. '
         + 'Policy đứng không hết hạn và sẽ thay policy exec local của workspace trước đó.'
     );
@@ -2734,6 +2901,15 @@ function renderLogs() {
   output.scrollTop = output.scrollHeight;
 }
 
+function bindThemePreferenceControl() {
+  const control = $('#themeSelect');
+  control?.addEventListener('change', async () => {
+    const theme = control.value;
+    applyTheme(theme);
+    await savePreference('theme', theme);
+  });
+}
+
 function bindEvents() {
   $('#closeManager')?.addEventListener('click', () => api.closeManager());
   $$('.nav-item').forEach((button) => button.addEventListener('click', () => navigate(button.dataset.page)));
@@ -2858,6 +3034,7 @@ function bindEvents() {
     try { unwrap(await api.regenerateMcpToken()); toast('Token xác thực đã được tạo lại', 'Có hiệu lực sau khi triển khai lại.'); }
     catch (error) { toast('Tạo thất bại', error.message, 'error'); }
   });
+  bindThemePreferenceControl();
   $('#startWithWindowsToggle').addEventListener('change', () => savePreference('startWithWindows', $('#startWithWindowsToggle').checked));
   $('#keepRunningToggle').addEventListener('change', () => savePreference('keepRunningOnClose', $('#keepRunningToggle').checked));
   $('#autoStartToggle').addEventListener('change', () => savePreference('autoStartServices', $('#autoStartToggle').checked));

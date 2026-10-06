@@ -692,7 +692,7 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
             listed_tools["agent_workflow"]["_meta"]["control_plane"]["capability_state"],
             "standing_write",
         )
-        self.assertEqual(contract["schema_version"], 19)
+        self.assertEqual(contract["schema_version"], 31)
         self.assertEqual(contract["profile"], "control-plane-oauth-standing-write-v1")
 
         policy = _install_approved_patch_policy_values(

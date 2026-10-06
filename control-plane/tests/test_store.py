@@ -2684,6 +2684,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
         request.assert_not_called()
         self.assertTrue(lock_path.exists())
 
+    @unittest.skipUnless(os.name == "nt", "Windows process APIs are only available on Windows")
     def test_windows_invalid_parameter_process_probe_is_confirmed_dead(self) -> None:
         missing_process = OSError(errno.EINVAL, "The parameter is incorrect")
         missing_process.winerror = 87
@@ -3791,7 +3792,7 @@ process.stdout.write(JSON.stringify(observation));
             "response_sha256": "e" * 64,
         }
         args = SimpleNamespace(timeout_seconds=20)
-        completed = SimpleNamespace(returncode=0, stdout=json.dumps({"ok": True, "result": raw_result}))
+        completed = SimpleNamespace(returncode=0, stdout=json.dumps({"ok": True, "result": raw_result}).encode("utf-8"))
         with mock.patch("control_plane.node_agent._adapter_command", return_value=(["node"], {})), \
              mock.patch("control_plane.node_agent.subprocess.run", return_value=completed):
             result, error = recovery_read_only_bridge(args, Path.cwd(), request)

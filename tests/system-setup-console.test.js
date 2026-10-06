@@ -205,7 +205,7 @@ test('central setup source preserves a single enrollment request and opens opera
   assert.match(app, /await openControlPlaneConsole\(\)/);
 });
 
-function centralSetupReadyFixture(capabilities) {
+function centralSetupReadyFixture(capabilities, targetReadiness = null, statusOverrides = {}) {
   const source = read('renderer/app.js');
   const start = source.indexOf('function renderSetupState(snapshot)');
   const end = source.indexOf('\nasync function handleSetupPrimaryAction()', start);
@@ -225,7 +225,10 @@ function centralSetupReadyFixture(capabilities) {
     }
     return elements.get(id);
   };
-  const target = { capabilities };
+  const target = {
+    capabilities, dispatch_state: 'dispatchable', presence_state: 'online',
+    readiness: 'ready', policy_state: 'enabled'
+  };
   const context = {
     state: {
       centralWorkspaceInventoryStatus: 'loaded',
@@ -236,13 +239,15 @@ function centralSetupReadyFixture(capabilities) {
     isCentralExecutor: () => true,
     centralWorkspaceEntries: () => [{ workspace_id: 'workspace-1', capabilities }],
     centralDispatchableTargetForLocalWorkspace: () => target,
+    centralTargetReadiness: () => targetReadiness || ({ ready: true, state: 'ready', title: 'Target Ubuntu đã sẵn sàng', detail: 'Ubuntu online, runtime ready và policy được xác nhận enabled.' }),
+    centralRoutePresentation: () => ({ label: 'Runtime Windows chưa sẵn sàng', detail: 'Local executor chưa xác nhận route.' }),
     centralWorkspaceSummary: () => 'Codex-web',
     centralSetupGuidance: () => ({ title: 'Đã kết nối', detail: 'Đã xác nhận', action: 'workspace', actionLabel: 'Mở thư mục' })
   };
   vm.runInNewContext(source.slice(start, end), context);
   context.renderSetupState({
     settings: { executionRole: 'central_executor' },
-    status: { centralConnected: true, authorityReady: true, fullyReady: true },
+    status: { centralConnected: true, authorityReady: true, fullyReady: true, ...statusOverrides },
     environment: {}
   });
   return { element };
@@ -261,6 +266,51 @@ test('central setup does not turn registered write and exec capabilities into Ch
   assert.equal(fixture.element('setupSummaryBadge').textContent, 'SẴN SÀNG');
   assert.match(fixture.element('setupSummaryText').textContent, /Quyền đọc file, sửa file và chạy lệnh từ ChatGPT cần policy và receipt riêng/);
   assert.doesNotMatch(fixture.element('setupStepVerify').small.textContent, /Sẵn sàng nhận việc/);
+});
+
+test('central setup does not label an assigned but offline target ready and offers a status refresh', () => {
+  const fixture = centralSetupReadyFixture(
+    { read: true, write: true, exec: false },
+    { ready: false, state: 'offline', title: 'Máy Ubuntu đang ngoại tuyến', detail: 'Heartbeat Ubuntu đã quá hạn.' }
+  );
+  assert.equal(fixture.element('setupSummaryBadge').textContent, 'ĐANG CHỜ');
+  assert.equal(fixture.element('setupSummaryTitle').textContent, 'Máy Ubuntu đang ngoại tuyến');
+  assert.equal(fixture.element('setupPrimaryAction').textContent, 'Kiểm tra trạng thái Ubuntu');
+  assert.equal(fixture.element('setupPrimaryAction').dataset.setupAction, 'authority-refresh');
+});
+
+test('central setup requires the local Ubuntu route in addition to a healthy account target', () => {
+  const fixture = centralSetupReadyFixture(
+    { read: true, write: true, exec: false },
+    { ready: true, state: 'ready', title: 'Target Ubuntu đã sẵn sàng', detail: 'Target đã online.' },
+    { authorityReady: false }
+  );
+  assert.equal(fixture.element('setupSummaryBadge').textContent, 'ĐANG CHỜ');
+  assert.equal(fixture.element('setupSummaryTitle').textContent, 'Runtime Windows chưa sẵn sàng');
+  assert.equal(fixture.element('setupPrimaryAction').textContent, 'Kiểm tra kết nối Ubuntu');
+  assert.equal(fixture.element('setupPrimaryAction').dataset.setupAction, 'check-connection');
+  assert.match(fixture.element('setupSummaryText').textContent, /Local executor chưa xác nhận route/);
+});
+
+test('refreshing an unhealthy assigned target is read-only and does not open account-linking console', async () => {
+  const source = read('renderer/app.js');
+  const start = source.indexOf('async function handleSetupPrimaryAction()');
+  const end = source.indexOf('\nfunction navigate(', start);
+  assert.ok(start >= 0 && end > start, 'setup action handler must exist');
+  const calls = [];
+  const context = {
+    $: () => ({ dataset: { setupAction: 'authority-refresh' } }),
+    reconcileControlPlaneAuthorityStatus: async (options) => { calls.push(['authority', options]); },
+    refreshControlPlaneWorkspaces: async (options) => { calls.push(['workspaces', options]); },
+    openControlPlaneConsole: async () => { calls.push(['operator-console']); }
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  await context.handleSetupPrimaryAction();
+
+  assert.deepEqual(calls.map(([name, options]) => [name, options.quiet]), [
+    ['authority', false],
+    ['workspaces', true]
+  ]);
 });
 
 function navigationHarness() {

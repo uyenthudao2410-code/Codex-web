@@ -35,7 +35,7 @@ class McpFaultMatrixTests(unittest.TestCase):
             display_name="Fault workspace")
         self.principal = self.store.link_oauth_principal(
             owner_id=self.owner_id, issuer=ISSUER, subject="provider-subject-fault-owner")
-        self.contract = {"schema_version": 18, "profile": "control-plane-oauth-bounded-exec-v2",
+        self.contract = {"schema_version": 30, "profile": "control-plane-oauth-bounded-exec-v2",
                          "sha256": "a" * 64}
 
     def _heartbeat(self) -> None:

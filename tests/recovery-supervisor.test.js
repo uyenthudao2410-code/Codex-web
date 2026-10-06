@@ -167,13 +167,21 @@ $MaxJsonBytes=65536
 $parseTokens=$null;$parseErrors=$null
 $parsed=[Management.Automation.Language.Parser]::ParseFile($env:WEBCODEX_TEST_SUPERVISOR_SCRIPT,[ref]$parseTokens,[ref]$parseErrors)
 if($parseErrors.Count-ne0){throw 'Supervisor PowerShell parser rejected the source.'}
-foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Test-AbsoluteSafePath','Get-OptionalProperty','Get-ManifestPath','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneStandingPolicyCandidates','Get-ControlPlaneStandingPolicySchema','Get-ControlPlaneWorkspaceRegistryPath','Resolve-ControlPlaneNodePath','Get-ControlPlaneAgentPaths','Test-ControlPlanePropertySet','Test-ControlPlaneNodeCredential','Test-ControlPlaneWorkspaceRegistration','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Get-ControlPlaneAgentArguments','Stop-ControlPlaneAgentForReplacement','New-State','Invoke-ControlPlaneReadOnlyAgent')){
+foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Test-AbsoluteSafePath','Get-OptionalProperty','Convert-ToUtc','Test-ProcessAlive','Get-ConnectedAgentDiagnostics','Get-ManifestPath','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneStandingPolicyCandidates','Get-ControlPlaneStandingPolicySchema','Get-ControlPlaneWorkspaceRegistryPath','Resolve-ControlPlaneNodePath','Get-ControlPlaneAgentPaths','Test-ControlPlanePropertySet','Test-ControlPlaneNodeCredential','Test-ControlPlaneWorkspaceRegistration','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Get-ControlPlaneAgentArguments','Stop-ControlPlaneAgentForReplacement','New-State','Invoke-ControlPlaneReadOnlyAgent')){
   $definition=$parsed.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name-eq$helperName},$true)
   if($null-eq$definition){throw 'Required pure supervisor helper missing.'}
   . ([scriptblock]::Create($definition.Extent.Text))
 }
+foreach($helperName in @('Test-ControlPlaneAgentCurrent','Remove-ControlPlaneAgentLockAfterStop')){
+  $definition=$parsed.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name-eq$helperName},$true)
+  if($null-eq$definition){throw 'Required agent replacement helper missing.'}
+  . ([scriptblock]::Create($definition.Extent.Text))
+}
 $inputFixture=[IO.File]::ReadAllText($env:WEBCODEX_TEST_SUPERVISOR_FIXTURE)|ConvertFrom-Json
 $TaskName='WebMCP Recovery Supervisor'
+$ConnectedAgentStatusFileName='control-plane-connected-agent-status.json'
+$MaxConnectedAgentStatusBytes=16384
+$ConnectedAgentStatusFreshnessMs=120000
 $ManifestPath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'state-manifest.json'
 $StatePath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'state-status.json'
 [IO.File]::WriteAllText($ManifestPath,($inputFixture.fixtures[0].manifest|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
@@ -182,6 +190,44 @@ $resetState=New-State $inputFixture.fixtures[0].manifest $StatePath
 $stateIdentityReset=[pscustomobject]@{agent_pid=$resetState.control_plane_agent_pid;agent_state=$resetState.control_plane_agent_state;agent_started_at=$resetState.control_plane_agent_last_started_at}
 $results=@(foreach($fixture in $inputFixture.fixtures){$spec=Get-ControlPlaneAgentSpec $fixture.manifest;[pscustomobject]@{name=$fixture.name;eligible=$spec.eligible;state=$spec.state}})
 $originResults=@(foreach($value in $inputFixture.origins){[pscustomobject]@{value=$value;origin=(Get-ControlPlaneOrigin $value)}})
+$diagManifest=$inputFixture.fixtures[0].manifest
+$diagProcess=Get-Process -Id $PID -ErrorAction Stop
+$diagStarted=[DateTimeOffset]($diagProcess.StartTime.ToUniversalTime())
+$diagStartedMs=$diagStarted.ToUnixTimeMilliseconds()
+$diagNowMs=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+$diagAgentStatus=[pscustomobject]@{control_plane_agent_pid=[int]$PID;control_plane_agent_last_started_at=$diagStarted.ToString('o')}
+$diagReport=[ordered]@{schema_version=1;kind='control_plane_connected_agent_status';agent_pid=[int]$PID;agent_instance_id=([Guid]::NewGuid().ToString('N'));agent_started_at_ms=$diagStartedMs;updated_at_ms=$diagNowMs;last_attempt_at_ms=[Math]::Max($diagStartedMs,$diagNowMs-1000);last_iteration=1;last_iteration_state='completed';last_heartbeat_state='succeeded';last_heartbeat_at_ms=[Math]::Max($diagStartedMs,$diagNowMs-1000);last_error_scope=$null;last_error_code=$null}
+$diagPath=Join-Path ([string]$diagManifest.data_root) 'control-plane-connected-agent-status.json'
+[IO.File]::WriteAllText($diagPath,($diagReport|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$diagFresh=Get-ConnectedAgentDiagnostics ([string]$diagManifest.data_root) $diagAgentStatus
+$freshAgentDecision=Test-ControlPlaneAgentCurrent ([int]$PID) $diagAgentStatus ([string]$diagManifest.data_root) $true $false
+$changedManifestDecision=Test-ControlPlaneAgentCurrent ([int]$PID) $diagAgentStatus ([string]$diagManifest.data_root) $true $true
+$unrecordedAgentStatus=[pscustomobject]@{control_plane_agent_pid=[int]$PID+1;control_plane_agent_last_started_at=$diagStarted.ToString('o')}
+$unrecordedAgentDecision=Test-ControlPlaneAgentCurrent ([int]$PID) $unrecordedAgentStatus ([string]$diagManifest.data_root) $true $false
+$lockInstanceId='a'*32
+$lockExactPath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'agent-lock-exact.json'
+[IO.File]::WriteAllText($lockExactPath,(@{schema_version=1;instance_id=$lockInstanceId;pid=[int]$PID}|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$lockExactRemoved=Remove-ControlPlaneAgentLockAfterStop $lockExactPath ([int]$PID) $lockInstanceId
+$lockChangedInstancePath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'agent-lock-changed-instance.json'
+[IO.File]::WriteAllText($lockChangedInstancePath,(@{schema_version=1;instance_id=('b'*32);pid=[int]$PID}|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$lockChangedInstanceRemoved=Remove-ControlPlaneAgentLockAfterStop $lockChangedInstancePath ([int]$PID) $lockInstanceId
+$lockChangedPidPath=Join-Path (Split-Path -Parent $env:WEBCODEX_TEST_SUPERVISOR_FIXTURE) 'agent-lock-changed-pid.json'
+[IO.File]::WriteAllText($lockChangedPidPath,(@{schema_version=1;instance_id=$lockInstanceId;pid=([int]$PID+1)}|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$lockChangedPidRemoved=Remove-ControlPlaneAgentLockAfterStop $lockChangedPidPath ([int]$PID) $lockInstanceId
+$ConnectedAgentStatusFreshnessMs=1
+$diagReport.updated_at_ms=[Math]::Max($diagStartedMs+1,$diagNowMs-180000)
+$diagReport.last_attempt_at_ms=[Math]::Max($diagStartedMs,$diagReport.updated_at_ms-1000)
+$diagReport.last_iteration_state='degraded';$diagReport.last_heartbeat_state='failed';$diagReport.last_heartbeat_at_ms=[Math]::Max($diagStartedMs,$diagReport.updated_at_ms-1000);$diagReport.last_error_scope='heartbeat';$diagReport.last_error_code='CONTROL_PLANE_TRANSPORT_UNAVAILABLE'
+[IO.File]::WriteAllText($diagPath,($diagReport|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$diagStale=Get-ConnectedAgentDiagnostics ([string]$diagManifest.data_root) $diagAgentStatus
+$diagReport.schema_version='1'
+[IO.File]::WriteAllText($diagPath,($diagReport|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$diagMalformed=Get-ConnectedAgentDiagnostics ([string]$diagManifest.data_root) $diagAgentStatus
+$diagReport.schema_version=1
+$diagReport.agent_pid=[int]$PID+1
+[IO.File]::WriteAllText($diagPath,($diagReport|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$diagMismatch=Get-ConnectedAgentDiagnostics ([string]$diagManifest.data_root) $diagAgentStatus
+$diagnosticResults=[pscustomobject]@{fresh=$diagFresh;stale=$diagStale;malformed=$diagMalformed;mismatch=$diagMismatch}
  $argumentResults=@(foreach($fixture in @($inputFixture.fixtures[0],$inputFixture.fixtures[-1])){$arguments=Get-ControlPlaneAgentArguments $fixture.manifest ([pscustomobject]@{agent_path='agent.py';config_path='config.json';workspace_registry_path='workspaces.json';node_path=[string]$fixture.manifest.control_plane_node_path});[pscustomobject]@{mode=[string]$fixture.manifest.mode;runtime_mode=[string]$arguments[12];node=[string]$arguments[10];executable=[string]$fixture.manifest.executable;data_root_flag=($arguments -contains '--data-root')}})
 # New-State uses an OrderedDictionary, not a JSON PSCustomObject. Retain the
 # first child PID across polls instead of launching an agent on every cycle.
@@ -194,7 +240,16 @@ $fixtureState=Invoke-ControlPlaneReadOnlyAgent $inputFixture.fixtures[0].manifes
 $firstAgentState=$fixtureState.control_plane_agent_state
 $fixtureState=Invoke-ControlPlaneReadOnlyAgent $inputFixture.fixtures[0].manifest $fixtureState
 $agentCycle=[pscustomobject]@{first_state=$firstAgentState;second_state=$fixtureState.control_plane_agent_state;starts=$script:fixtureStartCount;pid=$fixtureState.control_plane_agent_pid}
-[pscustomobject]@{cases=$results;origins=$originResults;agent_arguments=$argumentResults;agent_cycle=$agentCycle;state_identity_reset=$stateIdentityReset}|ConvertTo-Json -Depth 5 -Compress
+$agentReplacement=[pscustomobject]@{
+  fresh_current=$freshAgentDecision
+  changed_manifest=$changedManifestDecision
+  unrecorded=$unrecordedAgentDecision
+  exact_lock_removed=$lockExactRemoved
+  exact_lock_absent=(-not(Test-Path -LiteralPath $lockExactPath))
+  changed_instance_preserved=((-not$lockChangedInstanceRemoved)-and(Test-Path -LiteralPath $lockChangedInstancePath))
+  changed_pid_preserved=((-not$lockChangedPidRemoved)-and(Test-Path -LiteralPath $lockChangedPidPath))
+}
+[pscustomobject]@{cases=$results;origins=$originResults;agent_arguments=$argumentResults;agent_cycle=$agentCycle;state_identity_reset=$stateIdentityReset;connected_agent_diagnostics=$diagnosticResults;agent_replacement=$agentReplacement}|ConvertTo-Json -Depth 5 -Compress
 `;
   const result = spawnSync(process.platform === 'win32' ? 'powershell.exe' : 'pwsh', [
     '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')
@@ -213,13 +268,33 @@ $agentCycle=[pscustomobject]@{first_state=$firstAgentState;second_state=$fixture
   const observed = JSON.parse(result.stdout.trim());
   assert.deepEqual(observed.cases, cases.map(([name, , , , , state]) => ({ name, eligible: ['eligible', 'heartbeat_only'].includes(state), state })));
   assert.deepEqual(observed.origins, origins.map(([value, origin]) => ({ value, origin })));
-   assert.deepEqual(observed.agent_arguments, [
-     { mode: 'packaged', runtime_mode: 'packaged', node: process.execPath, executable: process.execPath, data_root_flag: false },
-     { mode: 'development', runtime_mode: 'development', node: process.execPath, executable: path.join(temp, 'development', 'electron.exe'), data_root_flag: true }
-   ]);
-   assert.notEqual(observed.agent_arguments[1].node, observed.agent_arguments[1].executable);
+  assert.deepEqual(observed.agent_arguments, [
+    { mode: 'packaged', runtime_mode: 'packaged', node: process.execPath, executable: process.execPath, data_root_flag: false },
+    { mode: 'development', runtime_mode: 'development', node: process.execPath, executable: path.join(temp, 'development', 'electron.exe'), data_root_flag: true }
+  ]);
+  assert.notEqual(observed.agent_arguments[1].node, observed.agent_arguments[1].executable);
   assert.deepEqual(observed.agent_cycle, { first_state: 'started', second_state: 'running', starts: 1, pid: 123 });
   assert.deepEqual(observed.state_identity_reset, { agent_pid: null, agent_state: 'not_checked', agent_started_at: null });
+  assert.equal(observed.connected_agent_diagnostics.fresh.available, true);
+  assert.equal(observed.connected_agent_diagnostics.fresh.report_freshness, 'fresh');
+  assert.equal(observed.connected_agent_diagnostics.fresh.last_heartbeat_state, 'succeeded');
+  assert.equal(observed.connected_agent_diagnostics.stale.available, true);
+  assert.equal(observed.connected_agent_diagnostics.stale.report_freshness, 'stale');
+  assert.equal(observed.connected_agent_diagnostics.stale.last_error_scope, 'heartbeat');
+  assert.equal(observed.connected_agent_diagnostics.stale.last_error_code, 'CONTROL_PLANE_TRANSPORT_UNAVAILABLE');
+  assert.equal(observed.connected_agent_diagnostics.malformed.available, false);
+  assert.equal(observed.connected_agent_diagnostics.malformed.reason_code, 'AGENT_TELEMETRY_INVALID');
+  assert.equal(observed.connected_agent_diagnostics.mismatch.available, false);
+  assert.equal(observed.connected_agent_diagnostics.mismatch.reason_code, 'AGENT_TELEMETRY_IDENTITY_MISMATCH');
+  assert.deepEqual(observed.agent_replacement, {
+    fresh_current: true,
+    changed_manifest: false,
+    unrecorded: false,
+    exact_lock_removed: true,
+    exact_lock_absent: true,
+    changed_instance_preserved: true,
+    changed_pid_preserved: true
+  });
 });
 
 if (process.platform !== 'win32') test('Recovery Supervisor runtime tests require Windows', { skip: true }, () => {});

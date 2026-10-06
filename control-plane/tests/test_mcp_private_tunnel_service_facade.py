@@ -47,7 +47,7 @@ class PrivateTunnelServiceFacadeTests(unittest.TestCase):
 
     def test_discovery_advertises_account_lanes_without_oauth_identity(self) -> None:
         contract = self.facade.contract
-        self.assertEqual(contract["schema_version"], 20)
+        self.assertEqual(contract["schema_version"], 32)
         self.assertEqual(contract["profile"], "control-plane-private-tunnel-service-v1")
         oauth_contract = tool_contract(
             oauth_scopes=(READ_SCOPE,), oauth_file_read_enabled=True,
@@ -155,7 +155,7 @@ class PrivateTunnelServiceFacadeTests(unittest.TestCase):
     def test_legacy_contract_is_unchanged(self) -> None:
         legacy = ControlPlaneMcpFacade(self.store)
         self.assertEqual(legacy.contract, tool_contract())
-        self.assertEqual(legacy.contract["schema_version"], 6)
+        self.assertEqual(legacy.contract["schema_version"], 8)
         self.assertEqual(legacy._access_scope, "server_issued_context_grant")
         self.assertEqual(legacy.contract["tools"][0]["_meta"]["control_plane"]["implemented_operations"],
                          ["status", "request_read_only"])

@@ -59,7 +59,7 @@ class McpExecCentralTests(unittest.TestCase):
         return response
 
     def test_contract_advertises_exec_and_control(self) -> None:
-        self.assertEqual(self.facade.contract["schema_version"], 18)
+        self.assertEqual(self.facade.contract["schema_version"], 30)
         by_name = {tool["name"]: tool for tool in self.facade.contract["tools"]}
         self.assertEqual(by_name["exec_command"]["_meta"]["control_plane"]["implemented_operations"], ["exec_run", "exec_status"])
         self.assertEqual(by_name["command_control"]["_meta"]["control_plane"]["implemented_operations"], ["exec_output", "exec_stop"])

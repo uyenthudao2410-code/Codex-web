@@ -49,36 +49,39 @@ SUPPORTED_MCP_PROTOCOL_VERSIONS = (STATELESS_MCP_PROTOCOL_VERSION, *LEGACY_MCP_P
 # OAuth account-inventory contract is a distinct revision because it has a
 # different authority boundary and cannot be accepted by a local read-only
 # policy issued for the context-scoped pilot.
-FACADE_SCHEMA_VERSION = 6
-FACADE_PROFILE = "control-plane-scoped-read-only-relay-v5"
+FACADE_SCHEMA_VERSION = 8
+FACADE_PROFILE = "control-plane-scoped-read-only-relay-v6"
 OAUTH_FACADE_SCHEMA_VERSION = 7
 OAUTH_FACADE_PROFILE = "control-plane-oauth-account-inventory-v1"
 # This is deliberately a distinct contract from OAuth inventory.  Turning on
 # the candidate-only bounded-file relay changes authority and must force a
 # client to rediscover the exact tool surface rather than silently treating an
 # inventory contract as a file-access contract.
-OAUTH_FILE_READ_FACADE_SCHEMA_VERSION = 15
+# The workspace_context argument schema is shared by every file-read-enabled
+# account profile. Advance each affected schema version when it changes because
+# the full contract hash is bound into node-local policy.
+OAUTH_FILE_READ_FACADE_SCHEMA_VERSION = 27
 OAUTH_FILE_READ_FACADE_PROFILE = "control-plane-oauth-bounded-file-read-v3"
 # Permission requests are a separate candidate profile.  They do not make a
 # write relay available: they only record an exact owner-reviewed patch scope
 # for a future local bridge to revalidate.
-OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION = 16
+OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION = 28
 OAUTH_PERMISSION_REQUEST_FACADE_PROFILE = "control-plane-oauth-permission-request-v3"
 # An approved patch is a distinct public surface from permission review.  A
 # client must rediscover it and obtain the dedicated OAuth write scope before
 # it can queue any local mutation candidate.
-OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION = 17
+OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION = 29
 OAUTH_APPROVED_PATCH_FACADE_PROFILE = "control-plane-oauth-approved-patch-v3"
 # Standing write is a distinct discovery contract: it removes the central
 # owner-review record but still requires the OAuth write scope and local policy.
-OAUTH_STANDING_WRITE_FACADE_SCHEMA_VERSION = 19
+OAUTH_STANDING_WRITE_FACADE_SCHEMA_VERSION = 31
 OAUTH_STANDING_WRITE_FACADE_PROFILE = "control-plane-oauth-standing-write-v1"
 # Bounded exec is a separate candidate on top of the patch lane. It reuses the
 # same write scope and task pinning but requires its own rediscovery because
 # argv execution changes authority again.
-OAUTH_EXEC_FACADE_SCHEMA_VERSION = 18
+OAUTH_EXEC_FACADE_SCHEMA_VERSION = 30
 OAUTH_EXEC_FACADE_PROFILE = "control-plane-oauth-bounded-exec-v2"
-PRIVATE_TUNNEL_SERVICE_FACADE_SCHEMA_VERSION = 20
+PRIVATE_TUNNEL_SERVICE_FACADE_SCHEMA_VERSION = 32
 PRIVATE_TUNNEL_SERVICE_FACADE_PROFILE = "control-plane-private-tunnel-service-v1"
 PRIVATE_TUNNEL_SERVICE_AUTH_KIND = "private_tunnel_service"
 FILE_READ_MAX_BYTES = 16 * 1024
@@ -93,6 +96,36 @@ PUBLIC_TOOL_NAMES = (
     "request_permissions",
     "view_image",
 )
+
+
+def _operation_union_input_schema(
+    properties: dict[str, Any],
+    variants: dict[str, tuple[tuple[str, ...], tuple[str, ...]]],
+) -> dict[str, Any]:
+    """Publish exact per-operation fields; the server parser remains fail-closed.
+
+    Each variant maps to (allowed fields, required fields), excluding
+    ``operation``.
+    """
+    operation_schema = properties["operation"]
+    branches = []
+    for operation, (allowed_fields, required_fields) in variants.items():
+        branches.append({
+            "type": "object",
+            "required": ["operation", *required_fields],
+            "additionalProperties": False,
+            "properties": {
+                "operation": {**operation_schema, "enum": [operation]},
+                **{field: properties[field] for field in allowed_fields},
+            },
+        })
+    return {
+        "type": "object",
+        "required": ["operation"],
+        "additionalProperties": False,
+        "properties": properties,
+        "oneOf": branches,
+    }
 
 
 def _canonical_json(value: Any) -> str:
@@ -131,73 +164,80 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
             },
         }
     if oauth_enabled:
-        return {
-            "type": "object",
-            "required": ["operation"],
-            "additionalProperties": False,
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["inventory", "task_open", "task_list", "task_close", "read_file", "read_status"],
-                    "description": "inventory lists account targets and lifecycle state only; dispatch_state/dispatch_blockers explain revoked, retired, missing or dispatchable targets. task_open/task_list/task_close manage one durable server-issued task handle pinned to an explicit binding. read_file queues one bounded local file read for an explicit binding, optionally linked to a task. read_status observes only that OAuth principal's own bounded-file action.",
-                },
-                "binding_id": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 128,
-                    "description": "Required for read_file and task_open. Exact opaque target from inventory; display names and last-used targets are never accepted.",
-                },
-                "task_id": {
-                    "type": "string",
-                    "pattern": "^task_[a-f0-9]{32}$",
-                    "description": "Optional for read_file; required for task_close. Server-issued durable task handle. It never changes target: a second chat/task gets its own handle.",
-                },
-                "label": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 120,
-                    "description": "Required for task_open. Short human label for the Console task list; never a target selector.",
-                },
-                "idempotency_key": {
-                    "type": "string",
-                    "minLength": 8,
-                    "maxLength": 256,
-                    "description": "Required for task_open; retries with the same key and exact target/label return the same task handle.",
-                },
-                "path": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512,
-                    "description": "Required for read_file. Exact normalized relative POSIX path admitted by the Windows local policy.",
-                },
-                "start_line": {"type": "integer", "minimum": 1, "maximum": 1_000_000},
-                "max_lines": {"type": "integer", "minimum": 1, "maximum": FILE_READ_MAX_LINES},
-                "max_bytes": {"type": "integer", "minimum": 1, "maximum": FILE_READ_MAX_BYTES},
-                "idempotency_key": {
-                    "type": "string",
-                    "minLength": 8,
-                    "maxLength": 256,
-                    "description": "Required for read_file; it replays only the exact same target, path and bounds.",
-                },
-                "expected_facade_contract": {
-                    "type": "object",
-                    "required": ["schema_version", "profile", "sha256"],
-                    "additionalProperties": False,
-                    "properties": {
-                        "schema_version": {"type": "integer", "minimum": 1},
-                        "profile": {"type": "string", "minLength": 3, "maxLength": 128},
-                        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-                    },
-                },
-                "action_id": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 128,
-                    "description": "Required for read_status. Only actions created by this OAuth principal may be observed.",
+        properties = {
+            "operation": {
+                "type": "string",
+                "enum": ["inventory", "task_open", "task_list", "task_close", "read_file", "read_status"],
+                "description": "Select exactly one operation. Each operation has a distinct set of required and optional arguments.",
+            },
+            "binding_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 128,
+                "description": "Required for read_file and task_open. Exact opaque target from inventory; display names and last-used targets are never accepted.",
+            },
+            "task_id": {
+                "type": "string",
+                "pattern": "^task_[a-f0-9]{32}$",
+                "description": "Optional for read_file; required for task_close. Server-issued durable task handle. It never changes target: a second chat/task gets its own handle.",
+            },
+            "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "description": "Required for task_open. Short human label for the Console task list; never a target selector.",
+            },
+            "idempotency_key": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 256,
+                "description": "Required for task_open and read_file; retries replay only the same exact intent.",
+            },
+            "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "description": "Required for read_file. Exact normalized relative POSIX path admitted by the Windows local policy.",
+            },
+            "start_line": {"type": "integer", "minimum": 1, "maximum": 1_000_000},
+            "max_lines": {"type": "integer", "minimum": 1, "maximum": FILE_READ_MAX_LINES},
+            "max_bytes": {"type": "integer", "minimum": 1, "maximum": FILE_READ_MAX_BYTES},
+            "expected_facade_contract": {
+                "type": "object",
+                "required": ["schema_version", "profile", "sha256"],
+                "additionalProperties": False,
+                "properties": {
+                    "schema_version": {"type": "integer", "minimum": 1},
+                    "profile": {"type": "string", "minLength": 3, "maxLength": 128},
+                    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
                 },
             },
+            "action_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 128,
+                "description": "Required for read_status. Only actions created by this OAuth principal may be observed.",
+            },
         }
-    return {
+
+        return _operation_union_input_schema(properties, {
+            "inventory": ((), ()),
+            "task_open": (
+                ("binding_id", "label", "idempotency_key"),
+                ("binding_id", "label", "idempotency_key"),
+            ),
+            "task_list": ((), ()),
+            "task_close": (("task_id",), ("task_id",)),
+            "read_file": (
+                (
+                    "binding_id", "path", "start_line", "max_lines", "max_bytes",
+                    "idempotency_key", "expected_facade_contract", "task_id",
+                ),
+                ("binding_id", "path", "idempotency_key", "expected_facade_contract"),
+            ),
+            "read_status": (("action_id",), ("action_id",)),
+        })
+    schema = {
         "type": "object",
         "required": ["context_id"],
         "additionalProperties": False,
@@ -243,6 +283,7 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
             },
         },
     }
+    return schema
 
 
 def _service_auth_description(value: str) -> str:
@@ -261,32 +302,32 @@ def _task_control_input_schema(*, enabled: bool) -> dict[str, Any]:
 
     if not enabled:
         return _unavailable_tool_input_schema()
-    return {
-        "type": "object",
-        "required": ["operation"],
-        "additionalProperties": False,
-        "properties": {
-            "operation": {
-                "type": "string",
-                "enum": ["task_observe", "writer_claim", "writer_release"],
-                "description": (
-                    "Observe one task or claim/release its workspace writer lease. "
-                    "A lease serializes mutations from same-account chats; it never grants OS authority."
-                ),
-            },
-            "task_id": {
-                "type": "string",
-                "pattern": "^task_[a-f0-9]{32}$",
-                "description": "Exact server-issued durable task handle.",
-            },
-            "reason": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 64,
-                "description": "Optional handoff/release reason; it is audit metadata only.",
-            },
+    properties = {
+        "operation": {
+            "type": "string",
+            "enum": ["task_observe", "writer_claim", "writer_release"],
+            "description": (
+                "Observe one task or claim/release its workspace writer lease. "
+                "A lease serializes mutations from same-account chats; it never grants OS authority."
+            ),
+        },
+        "task_id": {
+            "type": "string",
+            "pattern": "^task_[a-f0-9]{32}$",
+            "description": "Exact server-issued durable task handle.",
+        },
+        "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Optional only for writer_release; audit metadata only.",
         },
     }
+    return _operation_union_input_schema(properties, {
+        "task_observe": (("task_id",), ("task_id",)),
+        "writer_claim": (("task_id",), ("task_id",)),
+        "writer_release": (("task_id", "reason"), ("task_id",)),
+    })
 
 
 def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
@@ -294,72 +335,80 @@ def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
 
     if not enabled:
         return _unavailable_tool_input_schema()
-    return {
-        "type": "object",
-        "required": ["operation"],
-        "additionalProperties": False,
-        "properties": {
-            "operation": {
-                "type": "string",
-                "enum": ["request_patch", "status"],
-                "description": "request_patch records one immutable proposed patch scope for owner review. It never queues, writes, runs, or locally approves anything. status observes only the caller's own request.",
-            },
-            "task_id": {
-                "type": "string",
-                "pattern": "^task_[a-f0-9]{32}$",
-                "description": "Optional for request_patch. When present it must be a live task pinned to the same binding so later reads/patches stay on one target.",
-            },
-            "binding_id": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 128,
-                "description": "Required for request_patch. Exact opaque target from account inventory.",
-            },
-            "path": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 512,
-                "description": "Required for request_patch. Exact relative path; never an absolute Windows path.",
-            },
-            "preimage_sha256": {
-                "type": "string",
-                "pattern": "^[a-f0-9]{64}$",
-                "description": "Required for request_patch. Digest of the file version the future patch must revalidate.",
-            },
-            "patch_sha256": {
-                "type": "string",
-                "pattern": "^[a-f0-9]{64}$",
-                "description": "Required for request_patch. Digest of an independently supplied future patch; patch text is never stored here.",
-            },
-            "validation_profile": {
-                "type": "string",
-                "enum": [MCP_PATCH_PERMISSION_VALIDATION_PROFILE],
-                "description": "Required for request_patch. Fixed local validation profile; a future bridge still decides whether it can run it.",
-            },
-            "idempotency_key": {
-                "type": "string",
-                "minLength": 8,
-                "maxLength": 256,
-                "description": "Required for request_patch. It replays only the exact immutable proposed scope.",
-            },
-            "expected_facade_contract": {
-                "type": "object",
-                "required": ["schema_version", "profile", "sha256"],
-                "additionalProperties": False,
-                "properties": {
-                    "schema_version": {"type": "integer", "minimum": 1},
-                    "profile": {"type": "string", "minLength": 3, "maxLength": 128},
-                    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-                },
-            },
-            "permission_request_id": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 128,
-                "description": "Required for status. Only a request created by the authenticated OAuth principal may be observed.",
+    properties = {
+        "operation": {
+            "type": "string",
+            "enum": ["request_patch", "status"],
+            "description": "request_patch records one immutable proposed patch scope for owner review. It never queues, writes, runs, or locally approves anything. status observes only the caller's own request.",
+        },
+        "task_id": {
+            "type": "string",
+            "pattern": "^task_[a-f0-9]{32}$",
+            "description": "Optional for request_patch. When present it must be a live task pinned to the same binding so later reads/patches stay on one target.",
+        },
+        "binding_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "description": "Required for request_patch. Exact opaque target from account inventory.",
+        },
+        "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Required for request_patch. Exact relative path; never an absolute Windows path.",
+        },
+        "preimage_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Required for request_patch. Digest of the file version the future patch must revalidate.",
+        },
+        "patch_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Required for request_patch. Digest of an independently supplied future patch; patch text is never stored here.",
+        },
+        "validation_profile": {
+            "type": "string",
+            "enum": [MCP_PATCH_PERMISSION_VALIDATION_PROFILE],
+            "description": "Required for request_patch. Fixed local validation profile; a future bridge still decides whether it can run it.",
+        },
+        "idempotency_key": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256,
+            "description": "Required for request_patch. It replays only the exact immutable proposed scope.",
+        },
+        "expected_facade_contract": {
+            "type": "object",
+            "required": ["schema_version", "profile", "sha256"],
+            "additionalProperties": False,
+            "properties": {
+                "schema_version": {"type": "integer", "minimum": 1},
+                "profile": {"type": "string", "minLength": 3, "maxLength": 128},
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
             },
         },
+        "permission_request_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "description": "Required for status. Only a request created by the authenticated OAuth principal may be observed.",
+        },
     }
+    return _operation_union_input_schema(properties, {
+        "request_patch": (
+            (
+                "binding_id", "path", "preimage_sha256", "patch_sha256",
+                "validation_profile", "idempotency_key", "expected_facade_contract", "task_id",
+            ),
+            (
+                "binding_id", "path", "preimage_sha256", "patch_sha256",
+                "validation_profile", "idempotency_key", "expected_facade_contract",
+            ),
+        ),
+        "status": (("permission_request_id",), ("permission_request_id",)),
+    })
 
 
 def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> dict[str, Any]:
@@ -368,87 +417,34 @@ def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> di
     if not enabled:
         return _unavailable_tool_input_schema()
     if standing:
-        return {
-            "type": "object",
-            "required": ["operation"],
-            "additionalProperties": False,
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["apply_patch", "patch_status"],
-                    "description": "apply_patch queues one exact Write Exact File envelope under the selected workspace's standing local policy. It does not require a per-patch owner approval; patch_status observes only the caller's own action.",
-                },
-                "binding_id": {
-                    "type": "string", "minLength": 3, "maxLength": 128,
-                    "description": "Required for apply_patch. Exact opaque target from account inventory.",
-                },
-                "task_id": {
-                    "type": "string", "pattern": "^task_[a-f0-9]{32}$",
-                    "description": "Required for apply_patch. The task pins the target and writer lease across ChatGPT clients.",
-                },
-                "path": {
-                    "type": "string", "minLength": 1, "maxLength": 512,
-                    "description": "Required for apply_patch. Relative path inside the selected local workspace policy.",
-                },
-                "preimage_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-                "patch_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-                "validation_profile": {"type": "string", "enum": ["targeted"]},
-                "patch_envelope": {
-                    "type": "string", "minLength": 1, "maxLength": MCP_APPROVED_PATCH_MAX_BYTES,
-                    "description": "Required for apply_patch. Exact UTF-8 Write Exact File envelope; the node rechecks preimage, postimage and local policy.",
-                },
-                "idempotency_key": {
-                    "type": "string", "minLength": 8, "maxLength": 256,
-                    "description": "Required for apply_patch; retrying the exact request replays the same action.",
-                },
-                "expected_facade_contract": {
-                    "type": "object",
-                    "required": ["schema_version", "profile", "sha256"],
-                    "additionalProperties": False,
-                    "properties": {
-                        "schema_version": {"type": "integer", "minimum": 1},
-                        "profile": {"type": "string", "minLength": 3, "maxLength": 128},
-                        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-                    },
-                },
-                "action_id": {
-                    "type": "string", "minLength": 3, "maxLength": 128,
-                    "description": "Required for patch_status. Only an action created by the authenticated OAuth principal may be observed.",
-                },
-            },
-        }
-    return {
-        "type": "object",
-        "required": ["operation"],
-        "additionalProperties": False,
-        "properties": {
+        properties = {
             "operation": {
                 "type": "string",
                 "enum": ["apply_patch", "patch_status"],
-                "description": "apply_patch queues exactly one owner-approved Write Exact File envelope for local Windows policy admission. patch_status observes only the caller's own action. Neither operation accepts command text or a filesystem root.",
+                "description": "apply_patch queues one exact Write Exact File envelope under the selected workspace's standing local policy. It does not require a per-patch owner approval; patch_status observes only the caller's own action.",
+            },
+            "binding_id": {
+                "type": "string", "minLength": 3, "maxLength": 128,
+                "description": "Required for apply_patch. Exact opaque target from account inventory.",
             },
             "task_id": {
-                "type": "string",
-                "pattern": "^task_[a-f0-9]{32}$",
-                "description": "Optional for apply_patch. When the permission request was opened under a task, the same handle must be presented so the action stays on that task's target.",
+                "type": "string", "pattern": "^task_[a-f0-9]{32}$",
+                "description": "Required for apply_patch. The task pins the target and writer lease across ChatGPT clients.",
             },
-            "permission_request_id": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 128,
-                "description": "Required for apply_patch. Exact approved owner-review record; it can be consumed by one action only.",
+            "path": {
+                "type": "string", "minLength": 1, "maxLength": 512,
+                "description": "Required for apply_patch. Relative path inside the selected local workspace policy.",
             },
+            "preimage_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "patch_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "validation_profile": {"type": "string", "enum": ["targeted"]},
             "patch_envelope": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": MCP_APPROVED_PATCH_MAX_BYTES,
-                "description": "Required for apply_patch. One exact Coding Tools Write Exact File envelope whose UTF-8 SHA-256 matches the reviewed patch digest.",
+                "type": "string", "minLength": 1, "maxLength": MCP_APPROVED_PATCH_MAX_BYTES,
+                "description": "Required for apply_patch. Exact UTF-8 Write Exact File envelope; the node rechecks preimage, postimage and local policy.",
             },
             "idempotency_key": {
-                "type": "string",
-                "minLength": 8,
-                "maxLength": 256,
-                "description": "Required for apply_patch; it can replay only the same approved patch bytes and target.",
+                "type": "string", "minLength": 8, "maxLength": 256,
+                "description": "Required for apply_patch; retrying the exact request replays the same action.",
             },
             "expected_facade_contract": {
                 "type": "object",
@@ -461,13 +457,72 @@ def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> di
                 },
             },
             "action_id": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 128,
+                "type": "string", "minLength": 3, "maxLength": 128,
                 "description": "Required for patch_status. Only an action created by the authenticated OAuth principal may be observed.",
             },
+        }
+        apply_fields = (
+            "binding_id", "task_id", "path", "preimage_sha256", "patch_sha256",
+            "validation_profile", "patch_envelope", "idempotency_key", "expected_facade_contract",
+        )
+        return _operation_union_input_schema(properties, {
+            "apply_patch": (apply_fields, apply_fields),
+            "patch_status": (("action_id",), ("action_id",)),
+        })
+
+    properties = {
+        "operation": {
+            "type": "string",
+            "enum": ["apply_patch", "patch_status"],
+            "description": "apply_patch queues exactly one owner-approved Write Exact File envelope for local Windows policy admission. patch_status observes only the caller's own action. Neither operation accepts command text or a filesystem root.",
+        },
+        "task_id": {
+            "type": "string",
+            "pattern": "^task_[a-f0-9]{32}$",
+            "description": "Optional for apply_patch. When the permission request was opened under a task, the same handle must be presented so the action stays on that task's target.",
+        },
+        "permission_request_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "description": "Required for apply_patch. Exact approved owner-review record; it can be consumed by one action only.",
+        },
+        "patch_envelope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": MCP_APPROVED_PATCH_MAX_BYTES,
+            "description": "Required for apply_patch. One exact Coding Tools Write Exact File envelope whose UTF-8 SHA-256 matches the reviewed patch digest.",
+        },
+        "idempotency_key": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256,
+            "description": "Required for apply_patch; it can replay only the same approved patch bytes and target.",
+        },
+        "expected_facade_contract": {
+            "type": "object",
+            "required": ["schema_version", "profile", "sha256"],
+            "additionalProperties": False,
+            "properties": {
+                "schema_version": {"type": "integer", "minimum": 1},
+                "profile": {"type": "string", "minLength": 3, "maxLength": 128},
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            },
+        },
+        "action_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "description": "Required for patch_status. Only an action created by the authenticated OAuth principal may be observed.",
         },
     }
+    required_apply_fields = (
+        "permission_request_id", "patch_envelope", "idempotency_key", "expected_facade_contract",
+    )
+    return _operation_union_input_schema(properties, {
+        "apply_patch": (("task_id", *required_apply_fields), required_apply_fields),
+        "patch_status": (("action_id",), ("action_id",)),
+    })
 
 
 def _unavailable_tool_input_schema() -> dict[str, Any]:
@@ -491,11 +546,7 @@ def _exec_input_schema(*, enabled: bool) -> dict[str, Any]:
 
     if not enabled:
         return _unavailable_tool_input_schema()
-    return {
-        "type": "object",
-        "required": ["operation"],
-        "additionalProperties": False,
-        "properties": {
+    properties = {
             "operation": {
                 "type": "string",
                 "enum": ["exec_run", "exec_status"],
@@ -538,8 +589,16 @@ def _exec_input_schema(*, enabled: bool) -> dict[str, Any]:
                 "type": "string", "minLength": 3, "maxLength": 128,
                 "description": "Required for exec_status. Only an action created by the authenticated OAuth principal may be observed.",
             },
-        },
     }
+    exec_run_fields = (
+        "binding_id", "task_id", "argv", "cwd", "timeout_ms", "max_output_bytes",
+        "idempotency_key", "expected_facade_contract",
+    )
+    exec_run_required = ("binding_id", "argv", "idempotency_key", "expected_facade_contract")
+    return _operation_union_input_schema(properties, {
+        "exec_run": (exec_run_fields, exec_run_required),
+        "exec_status": (("action_id",), ("action_id",)),
+    })
 
 
 def _exec_control_input_schema(*, enabled: bool) -> dict[str, Any]:
@@ -547,11 +606,7 @@ def _exec_control_input_schema(*, enabled: bool) -> dict[str, Any]:
 
     if not enabled:
         return _unavailable_tool_input_schema()
-    return {
-        "type": "object",
-        "required": ["operation"],
-        "additionalProperties": False,
-        "properties": {
+    properties = {
             "operation": {
                 "type": "string",
                 "enum": ["exec_output", "exec_stop"],
@@ -563,8 +618,11 @@ def _exec_control_input_schema(*, enabled: bool) -> dict[str, Any]:
             },
             "cursor": {"type": "integer", "minimum": 0, "maximum": 10000000},
             "max_bytes": {"type": "integer", "minimum": 1, "maximum": 65536},
-        },
     }
+    return _operation_union_input_schema(properties, {
+        "exec_output": (("action_id", "cursor", "max_bytes"), ("action_id",)),
+        "exec_stop": (("action_id",), ("action_id",)),
+    })
 
 
 def _artifact_input_schema(*, enabled: bool, kind: str, write_enabled: bool = False) -> dict[str, Any]:
@@ -576,11 +634,7 @@ def _artifact_input_schema(*, enabled: bool, kind: str, write_enabled: bool = Fa
     status_op = "doc_status" if kind == "document" else "image_status"
     write_ops = {"doc_create", "doc_convert"} if kind == "document" and write_enabled else set()
     operations = [read_op, status_op, *sorted(write_ops)]
-    return {
-        "type": "object",
-        "required": ["operation"],
-        "additionalProperties": False,
-        "properties": {
+    properties = {
             "operation": {
                 "type": "string", "enum": operations,
                 "description": (
@@ -618,8 +672,29 @@ def _artifact_input_schema(*, enabled: bool, kind: str, write_enabled: bool = Fa
             },
             "action_id": {"type": "string", "minLength": 3, "maxLength": 128,
                           "description": "Required for status. Only the caller's own action may be observed."},
-        },
     }
+    read_fields = ("binding_id", "path", "idempotency_key", "expected_facade_contract", "task_id")
+    read_required = ("binding_id", "path", "idempotency_key", "expected_facade_contract")
+    variants: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+        read_op: (read_fields, read_required),
+        status_op: (("action_id",), ("action_id",)),
+    }
+    if write_ops:
+        variants["doc_create"] = (
+            (
+                "binding_id", "task_id", "target", "content", "title", "overwrite",
+                "idempotency_key", "expected_facade_contract",
+            ),
+            ("binding_id", "task_id", "target", "content", "idempotency_key", "expected_facade_contract"),
+        )
+        variants["doc_convert"] = (
+            (
+                "binding_id", "task_id", "source", "target", "overwrite",
+                "idempotency_key", "expected_facade_contract",
+            ),
+            ("binding_id", "task_id", "source", "target", "idempotency_key", "expected_facade_contract"),
+        )
+    return _operation_union_input_schema(properties, variants)
 
 
 def _tool_description(

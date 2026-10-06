@@ -74,9 +74,10 @@ There are three explicit MCP authentication modes:
   header. The default OAuth surface is inventory/task discovery only; the
   trusted-workspace profile below explicitly opts into standing local write and
   structured exec after its distinct scope, node policy and package gates pass.
-- `private_tunnel_service` is an explicit, shared Business-connector mode for
-  owners who permit every member of that connector to use the same bounded
-  workspace authority. The Tunnel injects a revocable, server-issued service
+- `private_tunnel_service` is an explicit service-identity mode for a personal
+  or shared connector. The owner permits every caller allowed to use that
+  connector to use the same bounded workspace authority; it does not require
+  ChatGPT Business membership. The Tunnel injects a revocable, server-issued service
   grant from an owner-private header file; Ubuntu records one service principal,
   not a verified ChatGPT user. It must never be described as per-user OAuth.
   The owner provisions and revokes this principal/grant through the protected
@@ -85,7 +86,7 @@ There are three explicit MCP authentication modes:
   node-local policies, exact contract, lease and receipt checks. A grant alone
   never changes Windows permissions or opens central admission.
 
-The shared service principal is not a ChatGPT Business member identity. Its
+The service principal is not an individual ChatGPT account identity. Its
 grant scopes are exactly `control-plane.inventory`, the separate
 `control-plane.read` for content/task operations, and `control-plane.patch`
 for writes/command output; a new patch grant must also include read. Changing
@@ -101,6 +102,50 @@ node. Switching to `scoped_pilot` is a separate bearer-operator runbook step;
 the private browser Console can only close admission or revoke a grant or
 decision. A revoked/expired decision stops new intake and polling, not an
 already-dispatched Windows effect. Restore candidates force `recovery`.
+
+### Personal ChatGPT Plus / Pro: reuse the existing connection
+
+The Control Plane does not use an OpenAI organization ID or ChatGPT workspace
+ID as a `workspace_context` argument or Windows target selector. The
+`workspace_id` and `binding_id` returned by this product identify the
+registered Windows project and its route, not an OpenAI account or workspace.
+This is separate from whether a particular ChatGPT account and app expose a
+given MCP action. OpenAI's current [Developer Mode guide](https://developers.openai.com/api/docs/guides/developer-mode)
+lists Plus personal accounts as eligible for full MCP on the web; each app still
+exposes only its configured tools, and server policy/target readiness remain
+independent gates. On 2026-09-27, the existing personal Plus connection for this
+setup returned `inventory` and `task_list`; that verifies only those two
+operations on this configured connection. It does not prove the current app
+schema, queued file-read, write or exec path, or Ubuntu target readiness.
+
+1. If `Ubuntu Control Plane` already returns `inventory` in the intended
+   personal ChatGPT conversation, keep that connection. Do not create a second
+   tunnel or treat an empty Windows tunnel-client alias list as an Ubuntu
+   outage.
+2. For first-time setup, follow the connection options actually available in
+   that ChatGPT account and use a permitted existing Tunnel connection.
+   Provisioning/managing the OpenAI tunnel is a separate operator task with
+   its own account scope and permissions. A requirement of an administrative
+   tunnel-list command is not a requirement to type those IDs into Control
+   Plane or every MCP call.
+3. `private_tunnel_service` uses a protected grant injected by the tunnel;
+   ChatGPT's “No Authentication” setting for that configured mode does not
+   mean the Ubuntu MCP endpoint is unauthenticated. Do not change an OAuth
+   connector to this mode just because the ChatGPT plan is personal.
+4. After an authorized server/schema update, refresh the plugin's tools and
+   verify the returned facade identity before testing parameterized calls.
+   `task_open` needs `binding_id`, `label`, and `idempotency_key`; file-read
+   bounds are top-level fields, not a `bounds` object. Use the exact current
+   `expected_facade_contract` for `read_file`. An inventory success proves
+   metadata reachability, not file-read, patch or command execution.
+
+Official account/connection guidance (checked 2026-09-27):
+[ChatGPT Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode),
+[connect and test](https://developers.openai.com/plugins/deploy/connect-chatgpt),
+and [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
+Plus eligibility does not by itself grant every Platform tunnel permission.
+Keep the configured single-owner service scope, local policies and per-effect
+receipt requirements for both personal and shared clients.
 
 The packaged Windows Command Center can install standing file-read and
 exact-patch policies for the locally selected registered workspace generation
@@ -241,11 +286,31 @@ future-dated, and any `nbf` value must already be in effect.
 `CONTROL_PLANE_MCP_OAUTH_FILE_READ_ENABLED` is an optional **candidate** gate
 that is valid only in `oauth_introspection` mode. It defaults to false and
 must remain absent in `legacy_context_grant` mode. Setting it to true changes
-the discovered facade contract to add only the separately policy-bounded,
-read-only `workspace_context(read_file)` lane. It does not enable a write,
-shell, arbitrary path, context, or local policy; the exact Windows root,
+the discovered facade contract to expose durable account-scoped task handles
+and the separately policy-bounded, read-only `workspace_context(read_file)`
+lane. It does not enable workspace-file writes, shell, arbitrary paths, context,
+or local policy; the exact Windows root,
 generation, allowed relative paths, byte/line caps, expiry and local approval
 are still checked independently at the node.
+
+When this candidate is enabled, `tools/list` publishes `workspace_context` as
+JSON Schema 2020-12 with a root `oneOf` branch for each operation. MCP
+2025-11-25 defines tool input schemas as JSON Schema and defaults them to
+2020-12. Each branch spells out its exact allowed and required fields; the
+server parser remains the authority and rejects missing or extra fields per
+operation. Protocol-valid schema composition does not by itself prove which
+schema snapshot a particular ChatGPT connection has loaded: rediscover or
+refresh the tool definition after an authorized schema update, then verify its
+facade version/profile/hash before testing parameterized calls.
+`task_open` requires
+`binding_id`, `label` and `idempotency_key`; `task_close` requires `task_id`;
+`read_status` requires `action_id`; and `read_file` requires `binding_id`,
+`path`, `idempotency_key` and the exact `expected_facade_contract`. Read bounds
+are separate top-level `start_line`, `max_lines` and `max_bytes` fields. The
+client must rediscover the contract after its schema version or SHA changes.
+Because the full contract SHA is bound into node-local admission policy, that
+policy must also be reissued with the matching contract before a read can pass
+local admission.
 
 `CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED` is a separate **C4
 candidate** gate. It is accepted only in `oauth_introspection` mode when the
@@ -886,6 +951,15 @@ remain fail-closed for local operator review.
   --interval-seconds 15 `
   --max-backoff-seconds 300
 ```
+
+`npm run recovery:supervisor:status` also reports a sanitized
+`connected_agent_diagnostics` projection from an atomically written local status
+file. It validates the report schema and binds it to the Supervisor-recorded
+PID/start time and the live process start time. The projection separates report
+freshness, last heartbeat state/age, and a sanitized error code/scope; it never
+contains credentials, workspace paths, or remote action payloads. This is
+diagnostic evidence only: a live PID is not a successful heartbeat, and a
+recent heartbeat is not proof that a workspace file was read or a command ran.
 
 `--max-iterations` is a focused diagnostic/test bound only; the default `0`
 means the supervisor owns the process lifetime. The older

@@ -27,7 +27,7 @@ import uuid
 import zlib
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -41,6 +41,9 @@ READ_ONLY_POLICY_FILE_NAME = "control-plane-read-only-policy.json"
 ROUTE_EVIDENCE_FILE_NAME = "control-plane-route-evidence.json"
 ROUTE_EVIDENCE_SCHEMA_VERSION = 1
 ROUTE_EVIDENCE_KIND = "control_plane_authenticated_heartbeat"
+CONNECTED_AGENT_STATUS_FILE_NAME = "control-plane-connected-agent-status.json"
+CONNECTED_AGENT_STATUS_SCHEMA_VERSION = 1
+CONNECTED_AGENT_STATUS_KIND = "control_plane_connected_agent_status"
 STANDING_POLICY_OBSERVATION_TTL_MS = 60_000
 READ_ONLY_LOOP_MIN_INTERVAL_SECONDS = 15
 READ_ONLY_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
@@ -7663,10 +7666,16 @@ def _connected_agent_lane_admission(args: argparse.Namespace, lane: str) -> None
     raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_LANE_INVALID")
 
 
-def _connected_agent_iteration(args: argparse.Namespace) -> list[dict[str, str]]:
+def _connected_agent_iteration(
+    args: argparse.Namespace,
+    *,
+    on_heartbeat_success: Callable[[], None] | None = None,
+) -> list[dict[str, str]]:
     """Heartbeat first, then poll only locally enabled standing capability lanes."""
 
     runtime_heartbeat(args)
+    if on_heartbeat_success is not None:
+        on_heartbeat_success()
     lanes: list[tuple[str, Any]] = [
         ("file_read", poll_file_read_once),
         ("artifact", poll_artifact_once),
@@ -7696,6 +7705,36 @@ def _connected_agent_iteration(args: argparse.Namespace) -> list[dict[str, str]]
     return result
 
 
+def _write_connected_agent_status(args: argparse.Namespace, status: dict[str, Any]) -> bool:
+    """Persist a credential-free loop observation without affecting heartbeat work."""
+
+    document = {
+        "schema_version": CONNECTED_AGENT_STATUS_SCHEMA_VERSION,
+        "kind": CONNECTED_AGENT_STATUS_KIND,
+        "agent_pid": os.getpid(),
+        "agent_instance_id": status["agent_instance_id"],
+        "agent_started_at_ms": status["agent_started_at_ms"],
+        "updated_at_ms": int(time.time() * 1000),
+        "last_attempt_at_ms": status["last_attempt_at_ms"],
+        "last_iteration": status["last_iteration"],
+        "last_iteration_state": status["last_iteration_state"],
+        "last_heartbeat_state": status["last_heartbeat_state"],
+        "last_heartbeat_at_ms": status["last_heartbeat_at_ms"],
+        "last_error_scope": status["last_error_scope"],
+        "last_error_code": status["last_error_code"],
+    }
+    try:
+        _write_json_atomic(
+            _policy_data_root(args) / CONNECTED_AGENT_STATUS_FILE_NAME,
+            document,
+        )
+    except Exception:
+        # This is diagnostic-only state. A full disk, ACL problem, or temporary
+        # write failure must not stop a heartbeat or alter capability admission.
+        return False
+    return True
+
+
 def run_connected_agent(args: argparse.Namespace) -> int:
     """Keep an enrolled node connected independently of the read-only pilot.
 
@@ -7721,8 +7760,20 @@ def run_connected_agent(args: argparse.Namespace) -> int:
     _config(config_path)
     completed_iterations = 0
     failures = 0
+    agent_status: dict[str, Any] = {
+        "agent_instance_id": uuid.uuid4().hex,
+        "agent_started_at_ms": int(time.time() * 1000),
+        "last_attempt_at_ms": None,
+        "last_iteration": 0,
+        "last_iteration_state": "starting",
+        "last_heartbeat_state": "unknown",
+        "last_heartbeat_at_ms": None,
+        "last_error_scope": None,
+        "last_error_code": None,
+    }
     try:
         with _exclusive_connected_agent_lock(config_path):
+            _write_connected_agent_status(args, agent_status)
             print(json.dumps({
                 "execution": "connected_agent_started",
                 "interval_seconds": interval_seconds,
@@ -7731,18 +7782,57 @@ def run_connected_agent(args: argparse.Namespace) -> int:
             while max_iterations == 0 or completed_iterations < max_iterations:
                 iteration = completed_iterations + 1
                 lanes: list[dict[str, str]] = []
+                agent_status.update({
+                    "last_attempt_at_ms": int(time.time() * 1000),
+                    "last_iteration": iteration,
+                    "last_iteration_state": "connecting",
+                    "last_heartbeat_state": "pending",
+                    "last_error_scope": None,
+                    "last_error_code": None,
+                })
+                _write_connected_agent_status(args, agent_status)
+                heartbeat_succeeded = False
+
+                def record_heartbeat_success() -> None:
+                    nonlocal heartbeat_succeeded
+                    heartbeat_succeeded = True
+                    agent_status.update({
+                        "last_iteration_state": "polling",
+                        "last_heartbeat_state": "succeeded",
+                        "last_heartbeat_at_ms": int(time.time() * 1000),
+                        "last_error_scope": None,
+                        "last_error_code": None,
+                    })
+                    _write_connected_agent_status(args, agent_status)
+
                 try:
-                    lanes = _connected_agent_iteration(args)
+                    lanes = _connected_agent_iteration(
+                        args,
+                        on_heartbeat_success=record_heartbeat_success,
+                    )
                     state = "completed"
                     reason = None
                     failures = 0
                     delay_seconds = interval_seconds
+                    agent_status.update({
+                        "last_iteration_state": "completed",
+                        "last_heartbeat_state": "succeeded",
+                        "last_error_scope": None,
+                        "last_error_code": None,
+                    })
                 except RuntimeError as error:
                     reason = _safe_error_code(error)
                     state = "degraded"
                     failures += 1
                     delay_seconds = min(max_backoff_seconds, interval_seconds * (2 ** min(failures - 1, 16)))
+                    agent_status.update({
+                        "last_iteration_state": "degraded",
+                        "last_heartbeat_state": "succeeded" if heartbeat_succeeded else "failed",
+                        "last_error_scope": "capability_poll" if heartbeat_succeeded else "heartbeat",
+                        "last_error_code": reason,
+                    })
                 completed_iterations = iteration
+                _write_connected_agent_status(args, agent_status)
                 print(json.dumps({
                     "execution": "connected_agent_iteration",
                     "iteration": iteration,
@@ -7754,6 +7844,12 @@ def run_connected_agent(args: argparse.Namespace) -> int:
                 if max_iterations == 0 or completed_iterations < max_iterations:
                     time.sleep(delay_seconds)
     except KeyboardInterrupt:
+        agent_status.update({
+            "last_iteration_state": "interrupted",
+            "last_error_scope": None,
+            "last_error_code": None,
+        })
+        _write_connected_agent_status(args, agent_status)
         print(json.dumps({
             "execution": "connected_agent_interrupted",
             "completed_iterations": completed_iterations,
