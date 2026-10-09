@@ -76,7 +76,7 @@ WEB_UI_HTML = """<!doctype html>
 
       <section class="panel" aria-labelledby="service-pilot-title">
         <h2 id="service-pilot-title">ChatGPT qua private tunnel</h2>
-        <p class="muted">Mỗi lời gọi qua tunnel dùng cùng một service principal; Control Plane không xác định người ChatGPT nào đã gọi. Luồng này không yêu cầu thành viên ChatGPT Business và không phải OAuth đăng nhập từng người. Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh; binding, quyết định pilot, admission và policy tại Windows vẫn là các cửa kiểm tra riêng.</p>
+        <p class="muted">Mỗi lời gọi qua tunnel dùng cùng một service principal; Control Plane không xác định người ChatGPT nào đã gọi. Luồng này linh hoạt cho cả ChatGPT Plus/Pro cá nhân lẫn Business/Edu/Enterprise dùng chung, không phải OAuth đăng nhập từng người. Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh; binding, quyết định pilot, admission và policy tại Windows vẫn là các cửa kiểm tra riêng.</p>
         <details id="personal-tunnel-help">
           <summary>Dùng với ChatGPT Plus / Pro cá nhân</summary>
           <ol>

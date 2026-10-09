@@ -1025,7 +1025,8 @@ an opaque identity during retirement.
 The earlier pilot asked an Ubuntu operator to issue a `ctx_…` value and made
 the Windows user paste it into Command Center. That path is retired from the
 normal trusted-workspace flow. The account OAuth and shared private-service
-lanes are distinct; the latter does not identify individual Business members.
+lanes are distinct; the latter does not identify individual ChatGPT callers
+(whether personal Plus/Pro or Business/Edu/Enterprise shared connector).
 The intended sequence is authenticated connector → authorized target selection
 → Ubuntu creates one opaque `binding_id` for the
 already-registered node/workspace generation → the node keeps standing

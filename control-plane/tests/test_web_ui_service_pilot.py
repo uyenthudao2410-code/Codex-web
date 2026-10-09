@@ -12,6 +12,7 @@ class PrivateTunnelServiceConsoleTests(unittest.TestCase):
 
         self.assertIn("Mỗi lời gọi qua tunnel dùng cùng một service principal", html)
         self.assertIn("không xác định người ChatGPT nào đã gọi", html)
+        self.assertIn("Plus/Pro cá nhân lẫn Business", html)
         self.assertIn("workspace đã chọn trong app Windows", html)
         for element_id in (
             "mcp-service-principals-body",

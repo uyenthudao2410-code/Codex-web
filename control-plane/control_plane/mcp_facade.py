@@ -2689,8 +2689,8 @@ class ControlPlaneMcpFacade:
         targets = self.store.list_account_targets(owner_id=owner_id)
         message = "Authorized target inventory only; no workspace was accessed and no task authority was created."
         if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
-            # A shared connector identifies every permitted Business member
-            # as one service, so owner inventory is broader than the target
+            # A shared connector (personal Plus/Pro or Business/Edu/Enterprise)
+            # identifies every permitted caller as one service, so owner inventory is broader than the target
             # they were delegated. Show only the exact currently delegated
             # binding; an empty result is honest before/after a pilot decision.
             now = self.store.clock()
