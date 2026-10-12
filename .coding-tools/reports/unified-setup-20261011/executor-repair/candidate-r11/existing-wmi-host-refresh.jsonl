@@ -1,0 +1,2 @@
+{"phase":"existing_wmi_host_refresh_reserved","pid":17272,"process_start_token":"134362124992663030","instance_id":"32d052d8c746b30f3f081c850021216e","job_association":true,"job_identity_unproven":true,"new_host_spawned":false,"at_ms":1791739148146}
+{"phase":"existing_wmi_host_refresh_requested","ok":true,"pid":17272,"state":"HANDOFF","new_host_spawned":false,"refresh_performed":true,"acceptance_performed":false,"at_ms":1791739161411}

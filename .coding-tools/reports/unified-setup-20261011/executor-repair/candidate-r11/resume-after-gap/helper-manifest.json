@@ -1,0 +1,33 @@
+{
+  "all_live_operations_owner": "root",
+  "candidate": "initial-proof-1011-r11",
+  "captured_at_utc": "2026-10-11T16:14:46.435758+00:00",
+  "files": {
+    "breakaway-launch.py": {
+      "sha256": "810164f48412ed9c2cedd9d4e5c649bd45aa517696ea6ef2e053c21a789b5fc9",
+      "size_bytes": 5622
+    },
+    "diagnostic-receipt.json": {
+      "sha256": "5af1234afb98633e5dc0d56c32bd17781bd7b332da841b0802872fe936768ab6",
+      "size_bytes": 413
+    },
+    "old-r11-proof.json": {
+      "sha256": "4c9795e1e70d9b13c436e48addc2e8191d8bd318ddd91bbb5c484949f884bf32",
+      "size_bytes": 6146
+    },
+    "proof-receipt.json": {
+      "sha256": "8b13a2688375f6cdb36924eda17d642d652c3211d5dbb22d8477a9879cae75aa",
+      "size_bytes": 754
+    },
+    "prove-resume.cjs": {
+      "sha256": "dde3fd2ea819087497808e9c4202b0789e7e6a531e0e8dc76b0dace7870ac564",
+      "size_bytes": 4183
+    },
+    "resume.cjs": {
+      "sha256": "9be46712ed8b67e317e7c0e82ec8be1408d9719cb39558efa4d110f6e255aa5b",
+      "size_bytes": 21328
+    }
+  },
+  "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "prepared_only": true
+}

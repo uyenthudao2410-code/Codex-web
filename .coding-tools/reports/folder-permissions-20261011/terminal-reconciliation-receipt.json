@@ -1,0 +1,33 @@
+{
+  "receipt": {
+    "action_id": "act_16f5443e532942019fa7bb43868b34b0",
+    "attempt_id": "try_5239ead2bf2b459e8e175c623362b8cc",
+    "receipt_state": "rejected",
+    "local_handle": "",
+    "payload": {
+      "schema_version": 1,
+      "operation_kind": "control_plane_approved_patch",
+      "code": "CONTROL_PLANE_APPROVED_PATCH_SCHEMA_REJECTED_BEFORE_EFFECT",
+      "reconciliation": {
+        "operation_id": "HAt4M_RQNok1GYYb",
+        "request_id": "control-plane-approved-patch-workflow-46f19dc2e6ddfea9549cb93b",
+        "worker_terminalized": true,
+        "run_created": false,
+        "wave_created": false,
+        "preimage_sha256": "742976da6d38a49f35c48b5824eea2badc1e98258dd74d8c34720f08f09a14cb",
+        "local_evidence": "pre-effect-rejection.json",
+        "reason": "Schema validation rejected include_diff before workflow mutation; exact preimage remains unchanged"
+      }
+    },
+    "receipt_submitted": true
+  },
+  "server_receipt": {
+    "receipt_id": "rcpt_1e2053b50cd1497589265e569e0ee027",
+    "action_id": "act_16f5443e532942019fa7bb43868b34b0",
+    "attempt_id": "try_5239ead2bf2b459e8e175c623362b8cc",
+    "receipt_state": "rejected",
+    "delivery_state": "settled",
+    "replayed": false
+  },
+  "original_journal_preserved": true
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-11T19:59:47.024520+00:00",
+  "workspace_root": "E:\\Github\\Tools-Codex-web",
+  "git_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "branch": "main",
+  "scope": "read-only GitToolsMixin source status; no Runtime construction or tool dispatch",
+  "public_status_expected_negative": {
+    "code": "WORKTREE_STATUS_TOO_LARGE",
+    "details": {
+      "max_entries": 2000,
+      "observed_entries": 3520
+    }
+  },
+  "source_status": {
+    "entry_count": 108,
+    "truncated": false,
+    "runtime_evidence_entries": 0
+  },
+  "excluded_evidence_entries": 3412,
+  "source_sha256": {
+    "resources/coding-tools-mcp/coding_tools_mcp/git_tools.py": "dc432fce584eaed36e13d6150388817f944c154770024e5c59a90d7031ddaf42",
+    "resources/coding-tools-mcp/coding_tools_mcp/server.py": "808a6dc888f6812cf30ae805e29d7f0abdd340d0ef9c91c534e05e451acf7aa9",
+    "resources/coding-tools-mcp/tests/test_source_worktree_identity.py": "9c0b596d08dcc6ffc50f8658aa27e49cad32fa6b19fdf2a3ab6e1223fdc9c82a"
+  },
+  "validation": {
+    "new_regressions": "4 passed in 7.82s",
+    "existing_focused_gates": "4 passed in 2.49s"
+  },
+  "live_effects": {
+    "runtime_constructed": false,
+    "mcp_dispatched": false,
+    "service_operations": false
+  }
+}

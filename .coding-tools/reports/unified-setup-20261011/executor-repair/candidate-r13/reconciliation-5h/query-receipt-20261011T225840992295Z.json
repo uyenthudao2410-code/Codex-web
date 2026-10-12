@@ -1,0 +1,53 @@
+{
+  "phase": "root_r13_5h_exact_action_read_only_query",
+  "public_receipts": [
+    {
+      "action_context_id": "ctx_b7d6fe51fc7c4aaaaba2947ad8c98e43",
+      "action_id": "act_b2335c57472b4d68931d10dda1572ff9",
+      "attempts": [
+        {
+          "attempt_id": "try_3631a21448cd4a3798de3a284ba3e9e0",
+          "attempt_number": 1,
+          "dispatched_at_ms": 1791759246011
+        }
+      ],
+      "cleanup_authorized_by_this_query": false,
+      "created_at_ms": 1791759240282,
+      "database_query_only": true,
+      "delivery_state": "reconcile_required",
+      "dispatch_dispositions": [],
+      "effect_classification": "effect_unknown_requires_exact_native_file_and_journal_observation",
+      "expires_at_ms": 1791759840282,
+      "host": "100.116.112.22",
+      "observed_at_ms": 1791759520959,
+      "ok": true,
+      "phase": "r13_5h_exact_action_read_only_reconciliation",
+      "raw_error_disclosed": false,
+      "raw_payload_disclosed": false,
+      "receipts": [
+        {
+          "code": "CONTROL_PLANE_APPROVED_PATCH_EFFECT_UNKNOWN",
+          "diagnostic_code": "CONTROL_PLANE_APPROVED_PATCH_TIMEOUT",
+          "local_semantic_acceptance": null,
+          "operation_kind": "control_plane_approved_patch",
+          "payload_sha256": "302976a0f322a2633fc72f296e87b4149d67cedc3680894f056b66237339f333",
+          "receipt_id": "rcpt_9da35cd224ce47a2843d0a556a059589",
+          "receipt_state": "unknown",
+          "received_at_ms": 1791759259066
+        }
+      ],
+      "reconciliations": [],
+      "remote_mutation": false,
+      "replay_forbidden": true,
+      "request_id": "req_3f80be12f4914928a73f41974980c339",
+      "service": "codex-control-plane.service",
+      "service_instance_id": "cp_339c7a19bc2443eeab35583addfef543",
+      "settled_at_ms": null,
+      "task_id": "task_3b2a2a860ca54ef7889d2efce6923dc7"
+    }
+  ],
+  "remote_mutation": false,
+  "ssh_returncode": 0,
+  "staged_files": false,
+  "stderr_disclosed": false
+}

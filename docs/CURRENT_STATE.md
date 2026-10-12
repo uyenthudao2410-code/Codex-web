@@ -1,5 +1,1010 @@
 # Current Project State — Tools-Codex-web
 
+## r14 activated; original MCP patch/Job/proof passed — 12-10-2026, 07:36 +07
+
+`workflow-timeout-1012-r14` is activated for `web-mcp-assistant` on
+`DaoChienThang`, scoped to `E:\Github\Tools-Codex-web`. Its activation epoch
+`activation-mv4i9feu-9b7a86c37e9c24abc18dbcd5d4adc4c2` reached READY with
+current Host/UI/native revisions, local and central readiness, a matching
+Ubuntu heartbeat and byte-identical standing policies. The approved expiry
+remains **12-10-2026 10:42:51.067 +07**. Ubuntu revision `9cae1044…` and service
+instance `cp_339c7a19bc2443eeab35583addfef543` are unchanged. Scoped intake
+reopened with replacement pilot `pilot_7177a7cd197c4944ae77ebc1c4d433a3`.
+
+The old guard refusals occurred before activation effects. The preserved new
+attempt `r14-same-window-20261012_071700` used the actual completed agent
+observation without weakening the quiescence guard. Supported r13 cleanup was
+performed once; complete VM/backend shutdown was observed before the fresh
+r14 canary. A warm Sandbox after the canary is a separate state and must not
+be described using the earlier zero-VM evidence.
+
+One new patch trial was dispatched through the authenticated Ubuntu MCP service
+and Windows bridge at 07:25:28. The target
+`tests/fixtures/initial-proof-canary-target.cjs` reached POST SHA `0ae4bfe0…`.
+Its original Job `94b54216ffb64174a64c68c77b7e08f9` exited with code 0 at
+07:26:08; executed, source-bound proof `820e07686998402abc95b92ce1063c4a`
+passed without a cache hit. Action `act_f362cf6605b54b02a74df1778bf9c973`
+settled with a **completed** central receipt. The previous 12-second workflow
+timeout did not recur. At 07:31:08, supported cleanup released the exact central
+writer and closed task `task_8bcde5ea58e44d4cb924949f7262ace8`; subsequent
+read-only inspection confirmed zero open central tasks/writers and zero
+unsettled actions for this target. No patch or checker replay occurred.
+
+The strongest proof is **patch + original Job + source-bound executed proof**,
+captured before this documentation update. The isolated output reader timed
+out, and the original output's 300-second retention expired at 07:31:08.
+The durable proof summary does not contain complete TAP, so **4/4 live TAP is
+unobserved**. Native semantic acceptance remains pending:
+`NATIVE_CHATWEB_ACCEPTANCE_TRANSPORT_UNAVAILABLE`. The local RUN/WAVE is
+preserved for the genuine ChatWeb controller; central task closure is not
+native acceptance. The two historical pending families are also unchanged.
+
+Existing evidence is sufficient for the timeout correction: focused source
+tests **3/3**, package parity **17/17**, isolated packaged smoke PASS, and this
+new live source-bound proof. It is not a public release or an accepted ChatWeb
+end-to-end claim. No Ubuntu deployment/restart, Windows reboot, commit or push
+occurred during r14 rollout. Git remains dirty `main @ 2c554f59` with unrelated
+changes preserved.
+
+The final query-only census at 07:36:08 confirms exact current r14 identities,
+READY/open admission, fullyReady/localReady/centralConnected/authorityReady,
+and three current code/UI/native revisions. Tool calls, commands, starting
+commands, background operations, managed processes, foreign heavy processes,
+agent lanes and owned sidecar residues are all **zero**. SQLite integrity is
+`ok`, foreign-key violations are zero, and there is no projection drift,
+unexplained active run or unbound live resource. Exactly three native RUNs
+await acceptance: the two historical families plus this r14 canary. Census
+`RUNTIME_BUSY` only identifies the live runtime process; it is not a running
+Job. Actual Sandbox counts are **3 host processes / 1 backend**; no teardown
+or zero-VM claim is made. A separate read-only check found zero surviving
+isolated output-reader processes.
+
+The preactivation observation helpers refused these changed post-canary
+conditions (`CANONICAL_CENSUS_NOT_QUIESCENT` and an additional temporary action
+context). They performed no effects. Final observation used query-only actual
+state without changing the activation guards. The exact original authority
+context, scoped pilot, grant and expiry remain intact.
+
+Evidence: [source-bound correlation](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r14/canary-same-window/correlation-1791764809860445100.json),
+[terminal task cleanup](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r14/canary-same-window/remote-receipts/cleanup-20261012T003108328507Z.json),
+[final native census](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r14/canary-same-window/final-observation-1791765368847.json).
+Next: let the genuine ChatWeb controller review the original result and
+complete its supported acceptance action. Do not replay the canary to fill
+the missing TAP. No further runtime rollout is required by the observed result.
+
+## Historical r14 transition checkpoint — 12-10-2026, 07:04 +07
+
+The operator approved `workflow-timeout-1012-r14`, supported cleanup of the
+r13-owned Sandbox, same-window pilot replacement and one new MCP verification
+trial. The authority expiry remains **10:42:51.067 +07**. A pre-effect rollout
+guard incorrectly counted one expired, unclosed historical context. Read-only
+inspection confirmed exactly one live target context and no remote transition
+intent or marker. The original failed attempt is preserved; a separately pinned
+correction selects the live context and verifies its exact device/workspace.
+Its focused regression check and independent review passed.
+
+The corrected intake close succeeded at 06:58:56, revoking only the prior pilot
+while preserving context, grant and task/action history. One supported r13
+cleanup refresh handed off the Host and reached READY. The backend daemon has
+exited, but authoritative native Windows PowerShell still observes
+`vmmemWindowsSandbox` PID 26852 at 07:04:10. An earlier auxiliary zero-process
+query missed this process name and is invalidated. The frozen activation guard
+continues to require zero VM/backend processes; cleanup refresh is not replayed.
+r14 has not been activated. Next: confirm complete Windows VM shutdown, freeze
+the current r13 identities, then activate r14, replace/reopen the same-expiry
+pilot and run the new original-Job verification trial. Ubuntu revision/service
+instance are unchanged; no deployment/restart, Windows reboot, commit or push.
+
+## r13 live proof / workflow timeout correction — 12-10-2026, 06:38 +07
+
+r13 is activated for `web-mcp-assistant` on `DaoChienThang`. The exact
+replacement epoch reached READY with admission open, current Host/UI/native
+revisions, a matching Ubuntu heartbeat, and 17/17 package payloads. The existing
+five-hour window remains **05:42:51.067–10:42:51.067 +07**. Scoped intake reopened
+once at 05:52:52; Ubuntu revision `9cae1044…`, service instance and grant were
+preserved. No Ubuntu deployment/restart or Windows reboot occurred.
+
+One MCP trial was dispatched at 05:54:00: action
+`act_b2335c57472b4d68931d10dda1572ff9`, task
+`task_3b2a2a860ca54ef7889d2efce6923dc7`. The target reached the exact POST hash,
+its original managed Job exited with code 0, and the source-bound initial proof
+passed. The native idempotency record is genuinely completed. However, the
+inner Electron workflow HTTP call timed out after 12 seconds while the native
+workflow completed after about 31 seconds. At 06:18:21, owner-assisted node
+reconciliation persisted a truthful `failed` receipt after known effect and
+settled the action. The helper then returned an uncertain result; a separate
+read-only query at 06:18:51 verified that terminal receipt and the unchanged
+original unknown receipt. Exact read-only inspection at 06:30:23 verified one
+open task and one unreleased writer. The attempted `writer_release` reason was
+84 characters, exceeding the facade's 64-character limit; the supported release
+was rejected before its effect. At 06:38:12, a separately guarded task-only
+cleanup released that exact writer and closed the task with a valid reason.
+It preserved the action, both receipts, delivery attempt and task/lease history;
+no additional receipt or native operation was performed. Neither consumed
+helper may be replayed. This is not a completed central trial.
+The output reader timed out and complete TAP was not captured within retention.
+No patch/checker replay or semantic acceptance was performed. The historical
+pending RUN/WAVE records remain unchanged; the new native result also awaits
+semantic acceptance.
+
+Before any later source edit, read-only correlation froze the actual POST,
+source/worktree identity, completed native idempotency result, exited Job and
+passed proof in
+`.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r13/reconciliation-5h/native-correlation-1791759968554973600.json`
+(SHA `8c081b83…`). It explicitly retains the central delivery, TAP and acceptance
+gaps. That proof describes the observed source before the timeout correction;
+it is not proof of later source changes.
+
+The source correction now gives the initial workflow request and subsequent
+observations one shared deadline covering the verification plan, bounded
+provisioning and delivery margin. Plain patches retain their existing timeout.
+Three focused tests on the actual edited source pass, including simulated late
+handoff, exhausted-budget refusal without another write/poll, and independent
+local exec admission. Scoped diff whitespace checks pass. Candidate
+`workflow-timeout-1012-r14` is built, matches 17/17 source payloads, and passed
+isolated packaged Recovery smoke. It is not activated; r13 remains live. The
+next steps are a guarded transition packet, explicit approval for the revised
+runtime and one new MCP verification trial. Zero managed Jobs were observed,
+but the r13 canary Sandbox/backend still blocks activation preflight. Git remains
+dirty `main @ 2c554f59`; no commit, push or release occurred.
+
+## r13 five-hour approval — 12-10-2026, 05:38 +07
+
+The operator approved r13 activation, exact-target intake/pilot changes and one
+MCP edit → test → proof trial, and extended the requested trial duration to
+**five hours** (`call_a60e931056bd402b997c6c10b0796d81`). The previous 03:42:15.200
+window is expired; it is not reused or backdated. Server close and renewal have
+now completed once: the actual window is **05:42:51.067–10:42:51.067 +07**,
+context `ctx_1e7e2fec6f0e43018db7a51c6980e5c2`, pilot
+`pilot_b1cb26c319fb489aae24d3b746318447`. Two expired exact-target contexts were
+closed and the old pilot revoked; action/task history and the existing service
+grant are unchanged. That grant covers the full new window. Intake is `recovery`
+while Windows activation proceeds. No Ubuntu deployment/restart or Windows reboot
+occurred. Metadata policy and bounded agent receipts are next, keeping the same
+repository/device/profile and standing policy scope.
+
+A read-only Windows observation at 05:38 confirms the original r12 Host and
+local components remain live. The 230-iteration agent has exited; central route
+evidence is stale, runtime admission is closed and update-incomplete is true.
+Canonical active work and observed Sandbox/backend process counts are zero;
+protected historical RUN/WAVE hashes are unchanged. r13 source/package proof
+remains valid (17/17 payloads); r13 has not been activated and no new canary has
+been dispatched. Git remains dirty `main @ 2c554f59` with no commit or push.
+Next: activate r13 under the exact new five-hour authority,
+synchronize metadata policy, bootstrap its bounded agent, verify READY and run
+one distinct source-bound trial. Approval is already received; no second approval
+is required for these named operations.
+
+## r12 reconciliation / r13 candidate — 12-10-2026, 03:09 +07
+
+The operator approved `policy-contract-1012-r12` for profile `web-mcp-assistant`
+on `DaoChienThang`, with read/edit/exec scoped to `E:\Github\Tools-Codex-web`.
+The actual trial window is **02:42:15.200–03:42:15.200 +07**. Windows activation,
+standing-policy synchronization and bounded connected-agent bootstrap completed.
+The final live runtime proof at 02:45:58 reports the exact new epoch READY,
+admission open, current native identity and fresh matching server heartbeat.
+All 15 frozen payloads match; canonical active work and independent VM/backend
+counts were zero before dispatch. Ubuntu retains revision `9cae1044…`, schema29,
+instance `cp_339c7a19bc2443eeab35583addfef543`; it was not deployed or restarted.
+Scoped intake reopened at 02:47:53.
+
+One canary was dispatched at 02:49:55, action
+`act_6aa1329b96c146f38c807f9926b3e684`, task
+`task_d2c1dd3bff4042d084b045e9bc5a381b`. Its sole delivery attempt returned an
+unknown receipt with diagnostic `CONTROL_PLANE_APPROVED_PATCH_MCP_REJECTED`.
+The exact native failure is `WORKTREE_STATUS_TOO_LARGE`, before RUN creation:
+full Git status crossed the 2,000-entry bound while counting retained runtime
+evidence before source filtering. Read-only observation proved the target and
+checker preimages unchanged, no new RUN/WAVE/Job/proof and no active native work.
+At 03:09:12, a genuine node-authenticated rejected receipt settled the action;
+the supported task-close operation released its writer and closed this exact
+task. The original unknown receipt and all unrelated history remain intact.
+No patch was replayed or acceptance performed. Live edit → test → proof is
+therefore **not passed**; historical acceptance remains pending and unchanged.
+
+The focused r13 source identity repair excludes `.coding-tools` before bounded
+parsing only for the internal source query. Public Git status and genuine source
+overflow guards retain their behavior; no evidence is deleted or ignored.
+Eight focused tests pass, the built package matches 17/17 frozen payloads, and
+isolated packaged Recovery smoke passes. r13 is **prepared, not activated**;
+r12 remains the last verified live runtime. The deployed Ubuntu recovery-mode
+operation revokes existing pilots, so its transition packet must explicitly
+account for pilot rotation before any intake pause. The corrected Windows and
+intake packets pass nine and three focused guards respectively. Read-only live
+observations at 03:16–03:17 confirm r12 READY, current heartbeat and enabled
+policy, zero target unsettled actions/open tasks/writers, zero active native work
+and zero observed Sandbox/backend processes. Historical quarantined actions and
+pending acceptance are preserved. Current r12 authority is unchanged and expires
+at 03:42:15.200. One explicit r13 activation/same-window pilot-rotation/canary
+approval question is pending; no r13 effect has occurred. Next: use only the new
+rotation receipt for activation after approval, verify READY, reopen once, then
+dispatch one distinct source-bound canary if at least twelve minutes remain.
+
+The convenience canary wrapper failed before launching Node because `Get-Command`
+resolved multiple executable paths. Its intent/result are retained. Root then
+used the existing individual helpers, a fresh authenticated native receipt and
+new immutable pins; prepare/stage/preflight passed before the one dispatch.
+This resolved wrapper failure is separate from the native canary refusal.
+
+Evidence: [live transition](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r12/activation-windows/attempts/r12-rollout-20261012-0240/transition.jsonl),
+[reopened authority](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r12/authority-renewal/remote-receipts/reopen-20261011T194753738739Z.json),
+[one dispatch](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r12/live-canary/remote-receipts/dispatch-20261011T194955066999Z.json),
+[exact reconciliation](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r12/reconciliation/terminal-reconciliation-receipt-20261011T200912606456Z.json),
+[r13 package/source proof](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r13/README.md).
+Git remains dirty `main @ 2c554f59`, with concurrent work preserved. No commit,
+push, tag, public release or Windows reboot occurred. Earlier preparation and
+r11 observations below remain historical evidence.
+
+## r12 policy contract repair — 12-10-2026, prepared locally
+
+Windows candidate `policy-contract-1012-r12` is built with `app.asar` SHA256
+`2bd2bed8d9389a9381b49c92eeca6864cd6230db16d3dcff1822742f062888b1`.
+All 15 relevant payloads match the frozen source. Focused proof passed **33
+JavaScript tests and three Python inspect tests**, syntax checks and scoped diff
+checks. Independent review found an exec-admission reuse gap; it was fixed before
+the final tests, with no remaining concrete defect in that review scope. Isolated
+packaged Recovery smoke passed; production descriptor identity stayed unchanged
+and test-owned processes were cleaned up. This candidate is **not activated**.
+
+Standing read/patch/exec inspect receipts now expose their validated installed
+`facade_contract`. Enrollment obtains fresh authenticated current authority for
+the exact workspace/generation. Unified setup reuses a policy only when the
+installed/current schema, profile and hash match and authority is less than 60
+seconds old. Unknown authority, wrong target, disabled standing writes or
+non-admitted exec cannot appear ready through reuse. A long Sandbox probe is
+followed by a fresh file-authority check before setup completion. The existing
+installers, permissions, limits, allowlists and Sandbox gate remain unchanged;
+no public MCP schema, policy schema or heartbeat behavior changed.
+
+The last production observation at **00:47 +07** still showed the r11 Host and
+native MCP live but epoch `UPDATE_INCOMPLETE`, admission closed and all readiness
+flags false. The connected agent was absent; canonical active work and independent
+VM/backend counts were zero. Pending RUN/WAVE hashes remained unchanged, ledger
+integrity was `ok`, and SSH responded. The prior trial expired at 00:22:09.910. This local repair did not
+renew authority, activate r12, deploy/restart Ubuntu, dispatch a canary, create a
+test Job or perform semantic acceptance. Genuine native ChatWeb acceptance and
+live edit → test → proof remain unproven. Git is dirty `main @ 2c554f59`; no
+commit, push, tag, public release or Windows reboot occurred.
+
+Next: approve the concrete r12 activation packet and a fresh exact-scope
+60-minute trial, bootstrap the bounded registered agent before final central
+READY verification, then send one new source-bound canary with enough trial
+time remaining. Evidence: [r12 candidate and proof](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r12/README.md).
+
+The local Windows, authority-renewal and canary packets are now complete. Windows
+helper guard checks passed 10/10, authority checks 15/15, and canary/correlation
+checks 30 Python plus three Node. The final Windows helper review is clean after
+fixing exact server↔renewal trial/scope comparison and recording Recovery child
+lineage. One concrete r12 activation/60-minute renewal question is pending; no
+new runtime or authority effect has occurred while awaiting its answer.
+
+## r11 controlled runtime checkpoint — 12-10-2026, 00:23 +07
+
+Ubuntu `svhome@100.116.112.22` still serves release `9cae1044…`, schema29,
+instance `cp_339c7a19bc2443eeab35583addfef543`. No new Ubuntu deployment or
+service restart occurred in this continuation. The approved scoped pilot window
+**11-10 23:22:09.910–12-10 00:22:09.910 +07** has expired; its authority is not
+reused. The schema29 recovery release remains staged, not activated.
+
+The Windows r11 resume reached READY at 23:29, with exact package/source parity,
+fresh agent heartbeat, zero canonical work/VM and unchanged pending acceptance.
+One new action at 23:33 was rejected before patch/proof with
+`CONTROL_PLANE_APPROVED_PATCH_CONTRACT_MISMATCH`. The metadata policy had the
+current service facade `3664b707…`; all three standing policies still held
+`274af168…`. Its writer was released and exact task closed at 23:42; action
+history and authority markers remain intact.
+
+At 23:50 the supported packaged installers replaced only the three standing
+`facade_contract` triples. Every other policy field compared identically and
+metadata bytes stayed unchanged. A separate new trial packet was staged; its
+preflight refused a missing receipt directory. Root created only that private
+directory, retaining the original authority marker. No second action was sent.
+
+At 00:00 the resumed Host/native/agent were absent. Their earlier Job association
+was a lifecycle risk; the disappearance cause remains unproven. Two separate
+launcher attempts failed before WMI process creation because a Node-spawned
+Windows PowerShell inherited an incompatible module path. A corrected helper
+created Host PID17272 via WMI; exact PID/token, executable, user, parent and
+authenticated IPC were verified after the launching tool session ended. The
+process was still Job-associated; Job identity and durable supervision are not
+proven. This is not a claim that it was outside all Windows Jobs.
+
+The existing terminal epoch correctly refused native `runtime.start` with
+`UPDATE_INCOMPLETE` after its old MCP died. One supported `full_clean_refresh`
+returned HANDOFF and created epoch
+`activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb`. At 00:23 Host PID20400
+and the new native process/server were live, but epoch `UPDATE_INCOMPLETE`,
+admission closed and all readiness flags false. The connected agent was not
+started; current central route evidence is missing. No canary patch, Sandbox
+Job or source-bound proof was created. Genuine native ChatWeb acceptance also
+remains unavailable and pending historical records are unchanged.
+
+The source repair now addresses unified setup incorrectly reusing enabled
+policies without comparing their installed contract with fresh server authority.
+Source/package parity from the live r11 observation at 00:17 remains historical;
+subsequent source edits require a new candidate. Next: finish focused source
+proof, build and smoke that candidate, then request its concrete activation and
+fresh trial window. The approved connected-agent bootstrap must precede final
+central READY verification; do not bypass native identity or acceptance gates.
+
+Evidence: [contract reconciliation](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/policy-contract-reconciliation/reconciliation.jsonl),
+[rejected-action cleanup](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/observe-reconciliation/README.md),
+[runtime observation](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/current-r11-status.jsonl),
+[00:23 checkpoint](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/lifecycle-wmi-resume/checkpoint-1791739395612.json).
+Git remains dirty `main @ 2c554f59`, without conflicts. All existing work is
+preserved. Windows policy replacements, WMI Host creation and r11 full-clean
+refresh occurred under the approved window. No commit, push, tag, public release
+or Windows reboot occurred in this continuation.
+
+## Initial structured proof adapter — 11-10-2026 (prepared, not deployed)
+
+The r10 trial expired at **20:48:18.491 +07**. Its last successful controlled
+observation is the 20:38 checkpoint below; it is not current authority. Discovery
+after expiry refused, without a sufficiently specific cause in that helper's
+receipt. No new authority or external service operation occurred in this source wave.
+
+The new optional approved-patch `verification` plan binds exact argv/cwd/limits
+to permission, intent, action and idempotency. Both patch and exec permission and
+the same registered workspace are required before writing. Native checks the
+admitted expiry under the patch lock before commit and after Sandbox preparation
+before launch. One structured initial check records existing source-bound
+ProofLedger evidence for the patch's own RUN/WAVE. Failed/timed-out proof retains
+the applied effect and REPLAN; observation and dedup do not replay it. Missing
+plans preserve legacy hashes. Semantic acceptance still requires the real attested
+ChatWeb controller; neither Electron nor the central owner self-accepts.
+
+The native public surface remains eight `smart-v3` tools, schema1, with current
+contract SHA `0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4`.
+Discovery exposes an EXACT4 `initial_verification` plan and a separate admitted
+expiry field; native admission requires them together. The exact contract test
+also recomputes the fingerprint from the actual public `tools/list` payload.
+This native identity is distinct from the Ubuntu facade contract.
+
+Windows candidate `initial-proof-1011-r11` has been built. Twelve affected payload
+files match the frozen source; isolated packaged Recovery smoke passed, including
+exact resources/adapter, eight smart-v3 tools, healthy supervision, fail-closed
+faults and test-process cleanup. The production descriptor stayed unchanged.
+Ubuntu revision `9cae1044…` is a local verified artifact, with exactly four changed
+runtime files and 34 unchanged payloads relative to Store395. Schema29 adds nullable
+columns and preserves legacy records/digests. Store395/schema28 cannot open the
+migrated database; preserve its release and consistent backup and retain all later
+history during any recovery.
+
+A separate local recovery artifact `81303f7c…` passed seven offline checks. It
+opens only schema29 databases already persisted in recovery, preserves every
+row and new verification column, and denies new intake, dispatch, authority
+grants and acceptance. This prepares a schema-compatible closed recovery path;
+it is not deployed and cannot reopen normal operation. No network, live runtime
+or service was touched by that proof.
+
+Focused proof: JavaScript bridge 10/10, runtime 6/6, Recovery Host 4/4;
+server 31 distinct Python cases and CJS 3/3; native initial-proof behavior 10/10
+plus existing idempotency/source-cache cases. The full native extraction run
+reported **1218 PASS, 5 FAIL, 5 SKIP**. One failure was its stale exact native
+contract expectation; the updated fingerprint/schema case passed its focused
+retry. Three existing Windows continuation checks were refused by live shared
+Sandbox state at preflight. The remaining check expected a terminal result from
+an initial bounded yield; its fixture now polls the same returned handle and the
+exact real retry passed 1/1 without a VM. A synthetic boundary diagnostic passed
+4/4 with shell-free mock spawns; it does not validate those three blocked live
+checks. Two of the original failures are resolved by focused retries, with three
+live continuation gates still unvalidated. No source regression has been
+identified in these five classifications; this is not a claim that the full suite
+passed. Package smoke does not replace the missing shared-host Sandbox proof.
+The prepared new-patch canary proves a behavior change in a temporary copy and
+leaves the repository fixture at its documented baseline for a future approved
+action. It is excluded from the ordinary npm test glob.
+
+The current controller has no exposed authenticated native ChatWeb acceptance
+transport. A successful future approved-patch receipt may therefore prove patch
+and initial check while semantic acceptance remains pending. Before dispatching
+the new canary, establish the genuine controller session that can accept its
+exact RUN/WAVE; the Electron bridge cannot impersonate that session.
+
+Evidence: [Windows preparation](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/),
+[server packet](../.coding-tools/reports/unified-setup-20261011/executor-repair/initial-proof-server/README.md),
+[offline recovery proof](../.coding-tools/reports/unified-setup-20261011/executor-repair/initial-proof-server/rollback-preparation/proof-receipt.json),
+[new-patch acceptance packet](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/NEW-PATCH-ACCEPTANCE.md).
+Dirty `main @ 2c554f59` is preserved. r11 is not activated and Ubuntu remains last
+verified at Store395; no commit, push, public release, authority renewal or reboot
+occurred in this source wave. Genuine live patch/proof/controller acceptance,
+durable installed-agent lifecycle, cleanup/timeout and signed installer remain
+unproven product gates.
+
+## Execution repair — 11-10-2026 (r10 controlled activation)
+
+### Current controlled acceptance checkpoint — 20:38:26 +07
+
+Windows packaged candidate `setup-exec-contract-1011-r10` is active on
+DaoChienThang, profile `web-mcp-assistant`. The recovered epoch
+`activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2` is READY/open;
+Host/UI/native/agent are live and local/central/authority/fully-ready flags are
+all true. MCP discovery at 20:37:41 reports the exact target online/ready/enabled.
+Ubuntu serves Store `395c7868…`; the approved recovery close/open replaced the
+revoked pilot at the **same 20:48:18.491 +07 expiry**, without authority renewal.
+
+Two new MCP submissions on the recovered epoch ran
+`node --test tests/control-plane-approved-patch-runtime.test.js`: the initial
+attempt and a distinct warm attempt each have **4 PASS, 0 FAIL, exit 0**, one
+delivery attempt and matching native durable Job/receipt/output correlation.
+Their trial tasks, temporary contexts and writers closed; neither command was
+replayed. The earlier original r10 attempt also has verified Job correlation.
+The initial transport uses mode `cold`, but its preflight saw a stale private
+daemon record despite zero VM/backend processes: this is **not proof of a fresh
+cold startup**. The warm observation is a host presence hint; executor ownership,
+reuse and VM cleanup are not proven. No timeout canary was attempted.
+
+Final query-only census reports SQLite integrity `ok`, no active command/Job/lane,
+no unexplained live run or projection drift. Its `RUNTIME_BUSY` classification
+has only the expected `live_runtime_state_process` blocker. Pending RUN
+`95e909f0040a448faa9f1f3257e2ee2c` / WAVE
+`c101beadfc6d4f2fbc13845052c84693` and their exact record hashes are unchanged.
+These standalone exec Jobs have empty RUN/WAVE, so their test success does not
+establish a patch's source-bound ProofLedger or semantic acceptance.
+
+The first r10 runtime process set disappeared abruptly around 20:17; cause is
+unresolved. Read-only parent Job membership observations do not establish
+causation. Supported recovery restored the same package and actual readiness.
+The connected agent remains bounded, not a durable installed service. Initial
+patch → structured verification → source proof → genuine ChatWeb acceptance,
+durable private delegation/agent lifecycle, cleanup/timeout and signed installer
+remain completion gates. Source work for initial proof can continue while this
+packaged runtime remains r10. The recorded 11-file source/package parity is the
+pre-adapter snapshot; initial-proof source edits need fresh focused validation
+and a new candidate parity/rollout before being claimed as packaged/live.
+
+Evidence: [controlled r10 acceptance](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r10/mcp-acceptance/R10-CONTROLLED-ACCEPTANCE.md).
+Dirty `main @ 2c554f59` is preserved. Store deployment and Ubuntu service restart
+occurred earlier in this approved rollout; no commit, push, tag, public release
+or Windows reboot occurred. All checkpoints below are historical observations
+at their stated times.
+
+### Controlled rollout checkpoint — 19:58 +07
+
+r10 reached READY/open admission with all local, central and authority readiness
+flags true. The additive continuation verified the exact documented full-clean
+Host handoff before starting the bounded r10 agent; no second refresh was needed.
+The Ubuntu node and MCP inventory report online/ready/enabled. Intake reopened
+in scoped-pilot mode against the real new epoch. The exact-folder trial still
+ends at **20:48:18.491 +07**.
+
+The final pre-canary census has no active command/Job/lane, preserves the pending
+RUN/WAVE hashes and reports SQLite integrity `ok`. Cold/warm live canaries and
+native Job correlation are the remaining gates for this rollout. A read-only
+observation helper failed with ENOENT before canary; its immutable receipt is
+retained while the observer is corrected. No test command has been submitted yet.
+
+### Controlled rollout checkpoint — 19:53 +07
+
+Windows r10 was activated for `web-mcp-assistant`; the exact r9 UI/native/Host
+were retired after quiescent ledger and independent zero-VM observations.
+Metadata assignment is synchronized. Owner authority for exactly
+`E:\Github\Tools-Codex-web` is anchored at **19:48:18.491–20:48:18.491 +07**;
+retry does not extend this window. Ubuntu still serves Store395 and intake
+remains in recovery.
+
+The supported full-clean refresh created epoch
+`activation-mv3tn5og-8def0602e3d318e0c42052c6eefc00ba` and replaced the first
+r10 Recovery Host through HANDOFF. Native/UI are live; durable epoch is
+VERIFYING/CLOSED. The operational helper refused agent startup because its
+pre-refresh Host identity pin changed. A continuation must verify this exact
+handoff and current process identities before starting the approved bounded
+agent; authenticated policy heartbeat then permits normal activation finalization.
+No new r10 canary or semantic acceptance is claimed at this checkpoint.
+
+All checkpoints below are historical observations at their stated times.
+
+### Controlled rollout checkpoint — 19:38 +07
+
+The user approved r10 activation, Store deployment/restart and a new exact-folder
+60-minute trial. Ubuntu now serves Store-only snapshot `395c7868…`, package
+`sha256:836119…`, service `cp_6766892f5ada47d1862a0d24334f1116` (PID 821172).
+Backup SQLite integrity and all historical action/task/receipt families passed;
+schema 28, actions 37/tasks 9/acceptances 1, no open task/writer; no DB restore.
+Intake is in recovery pending renewal and the Windows transition.
+
+Windows is still r9. Its bounded agent ended; expired authority/heartbeat closes
+decorated readiness although the durable epoch remains READY/OPEN. Preflight
+refused before Windows mutation. Owner recovery is being bound to fresh local
+identity/quiescence evidence, then requires a real fresh ready r10 node before
+intake reopens. No readiness/epoch is fabricated or old trial deadline extended.
+
+The observations below describe the verified r9 canary and r10 preparation
+before this approved Store deployment. r10 has not yet been activated.
+
+The owner-approved r9 rollout activated `executor-lifecycle-1011-r9` for
+`web-mcp-assistant` on DaoChienThang. READY was observed at 18:20:31 +07.
+The read-only census at **18:49:11 +07** confirmed the exact Host/UI/native/
+connected-agent identities, READY/open admission and all readiness flags true.
+No active command, lane, open trial task or writer remains. The pending local
+RUN `95e909f0040a448faa9f1f3257e2ee2c` and WAVE
+`c101beadfc6d4f2fbc13845052c84693` retain their acceptance state and hashes.
+
+The cold MCP canary `node --test tests/control-plane-approved-patch-runtime.test.js`
+completed in one attempt: **4 PASS, 0 FAIL, exit 0**, with exact native Job and
+central receipt correlation. A distinct warm attempt also has a native exit 0,
+but its command ID starts with `-`; r9's relay validator rejected that legitimate
+URL-safe ID and produced UNKNOWN. The native stdout is retained as redacted
+metadata, so this is **not a second verified 4-PASS result**. Evidence-bound
+reconciliation settled the relay as failed; the original UNKNOWN journal remains
+preserved. Both trial tasks/writers and temporary action contexts were closed.
+Neither command was replayed.
+
+Ubuntu still serves snapshot
+`5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f`
+with the same service instance. Its census has 37 actions, 9 tasks and 1 patch
+acceptance, zero queue/accepted actions/open tasks/writers, and the original
+13 historical quarantine families retain their digest. Existing Read/Edit/Exec
+authority is **18:19:16.518–19:19:16.518 +07**, exact Tools-Codex-web scope.
+The connected trial poller remains bounded to 200 iterations; this is not a
+durable installed agent lifecycle.
+
+New candidate `setup-exec-contract-1011-r10` is built and passes isolated
+packaged Recovery smoke. Its 11 changed source files match packaged bytes;
+four critical/native resources and seven UI files remain unchanged from r9.
+There is no unexpected payload delta. r10 has **not been activated**:
+
+- Native command/Job/consumer IDs accept the URL-safe grammar actually emitted
+  by the executor; strict action/workspace identity and correlation stay intact.
+  The focused adapter tests passed 55 cases.
+- Standing setup uses the existing authenticated policy-authority/installers
+  without an unconditional expiring compact metadata assignment. The 57 setup/
+  policy tests passed. Compact assignment remains available for its own use.
+- Authenticated full-clean prepare asynchronously closes only the owned Sandbox
+  manager, keeps admission blocked until confirmed cleanup, and retains the
+  fixed deadline across short fence renewals. Parent failure handling preserves
+  an unconfirmed executor owner instead of force-killing it. Native tests passed
+  72 cases; full-clean tests passed 75 cases; isolated process checks passed 3/3.
+  Ordinary stop paths that skip prepare remain outside this cleanup proof.
+
+The Store metadata-assignment fix passed 7 focused/HTTP cases. A Store-only
+Ubuntu packet `395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5`
+is prepared with schema 28 and 37 other payload files unchanged; it is **not
+deployed**. Server deploy/restart, new runtime activation and any new authority
+window require the destination-specific operator approval in AGENTS.md §5.
+The old r9 runtime lacks the new cleanup marker; its warm executor must be
+observed and safely drained before replacement. Candidate smoke does not prove
+this migration or real ChatGPT renderer continuation.
+
+Read-only observations at **19:16:26 and 19:16:58 +07** found zero Sandbox
+host processes and no daemon record (its contents were not opened). Exact
+runtime/server census, pending acceptance and quarantine history stayed unchanged.
+The guarded r10 migration freeze/preflight also passed at **19:17:17–19:17:38**,
+with two independent zero VM/backend observations. No timeout canary was started;
+these observations do not identify the cleanup cause or confirm a legacy cleanup
+API. The activation helper must recheck absence at each effect boundary.
+
+At **19:20:40 +07**, owner read-only observation confirmed the same Ubuntu
+source/service and unchanged quiescent action/task/acceptance state. The r9
+trial authority expired at 19:19:16.518; no new execution or renewal occurred.
+The grouped r10/Store/60-minute approval is pending. Expiry is an authority
+boundary, not a new code-test failure.
+
+Evidence: [r9 census](../.coding-tools/reports/unified-setup-20261011/executor-repair/rollout-r9/final-census/),
+[r10 source/package proof](../.coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r10/),
+[Store packet](../.coding-tools/reports/unified-setup-20261011/executor-repair/store-delta/).
+Dirty `main @ 2c554f59` is preserved; no commit/push/tag/public release,
+Ubuntu code deployment/restart or Windows reboot occurred in this repair wave.
+Controller-authorized patch → test → proof → accept, durable private delegation,
+actual ChatGPT workflow and signed/reproducible installer remain completion gates.
+
+## Unified setup — 11-10-2026 (historical live r7 checkpoint)
+
+Owner-approved rollout activated Windows `unified-setup-1011-r7` for
+`web-mcp-assistant` on DaoChienThang. At 17:24:03 +07 the exact Host/UI/native/
+connected-agent identities reached READY, all readiness flags true and
+`updateIncomplete=false`. The existing local acceptance boundary remains
+pending; no semantic acceptance was manufactured.
+
+Ubuntu `svhome@100.116.112.22` now serves the frozen Console `web_ui.py` delta
+SHA-256 `03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b`.
+The immutable deployment identity `5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f`
+is a **content-addressed source snapshot**, not a Git commit. All 37 other
+payload files match the verified `beaa9d5a` base. Schema 28 and 38-file integrity
+passed; served HTML/JavaScript byte hashes match the snapshot. An initial
+postflight helper called `.encode()` on byte constants and triggered a healthy
+rollback; correcting that helper and guarded reapplication succeeded. Both
+attempts remain in evidence. No database restore occurred.
+
+The exact Tools-Codex-web context/pilot window is **17:20:33.341–18:20:33.341 +07**.
+Existing service grant, binding and workspace generation are preserved.
+Metadata assignment was synchronized; standing file/exec policies were already
+current and were not reinstalled. The workspace Sandbox probe passed. MCP
+inventory sees the exact target online/ready/dispatchable, wrong-contract
+feedback is actionable, and fixture/source reads both completed.
+
+**The new live exec canary did not pass.** It submitted one attempt of
+`node --test tests/control-plane-approved-patch-runtime.test.js`. Native Job
+`8f6df428efb4489aa310f6266cce054f` finished `spawn_failed` before any test process
+(root PID 0). The node submitted UNKNOWN with `CONTROL_PLANE_EXEC_MCP_REJECTED`;
+no test output or successful exit code exists. The exact native terminal error
+is `SANDBOX_STATE_PHASE_FAILED`; backend phase/cause is not retained. This is
+not authority expiry. READY and a passing prerequisite probe therefore do not
+establish reliable exec. The earlier r5 4-PASS receipt below remains historical
+limited evidence. No native resource code changed between those packages, so
+this canary does not establish that the UI delta caused the startup failure.
+
+At 17:31:51 exact request/idempotency and terminal Job evidence supported a
+failed/settled receipt through the authenticated node API. The original UNKNOWN
+journal/receipt is preserved. At 17:31:58 the writer was released and task closed.
+Final local census has zero active commands/jobs/lanes; the one prior acceptance
+boundary is unchanged. Final Ubuntu census at 17:33:17.904 has zero queue,
+accepted actions, open tasks and writers; all 13 historical unresolved families
+retain their original digest. No command was replayed.
+
+See [rollout evidence](../.coding-tools/reports/unified-setup-20261011/rollout-r7/)
+and [completion plan](CODE_EXECUTION_COMPLETION_PLAN.md). Renderer continuation
+and the actual ChatGPT connector workflow remain separate live acceptance
+gates. The connected poller used for this trial has a bounded 200-iteration
+lifetime; supported installation still needs durable managed lifecycle and the
+Sandbox release gate. No commit, push, tag, public release or Windows reboot
+occurred. Final task reconciliation is recorded in the rollout checkpoint.
+
+Proposed next implementation sequence (11-10-2026):
+[Code execution completion plan](CODE_EXECUTION_COMPLETION_PLAN.md).
+Its gates are planned work; they do not upgrade the source/candidate/live proof
+reported below or renew the expired scoped authority.
+
+## Unified setup and execution UI — 11-10-2026 (source checkpoint)
+
+Current source replaces the browser placeholder and separate manager with one
+primary Electron window loading the trusted `renderer/index.html` through the
+existing manager preload. **Cài đặt** contains the connection, folder/permission
+and execution-check sections together; **Thực thi mã** and **Tác vụ & kết quả**
+remain in that window. Manager/tray navigation reuses the primary window rather
+than opening another one or overlaying a separate task view. IPC requires that
+window's current top-level frame and exact local renderer file. The final six
+focused Node suites prove 106 cases in total (the 105-case combined receipt
+plus the new main-action case in the final 17-case setup receipt). The Console
+folder form's eight behavioral tests passed. Tests use mocked authority;
+they do not prove new live server approval or ChatGPT invocation.
+
+In the r7 implementation, after local confirmation for the exact server origin, device, workspace
+ID/generation and registered capabilities, setup checks Ubuntu every 15 seconds
+for at most ten minutes while waiting for authority. It then uses the existing
+metadata assignment, standing file-policy and sandboxed exec-policy installers
+for missing steps. Changing the selected scope or stopping continuation fences
+later steps; an already submitted operation still requires its result to be
+observed. The restored draft stores only opaque identity, not policy consent.
+Full application exit loses continuation consent. Closing a window configured
+to run in the background keeps the current bounded wait alive.
+
+The Console source also combines exact device/workspace selection with reuse
+or creation of a binding and one bounded context window. It retains the
+authenticated owner session, CSRF and scope checks. It does not create a tunnel
+grant or pilot decision, open admission, renew authority automatically or
+replace the Windows policy checks. Those service/pilot operations still use
+the protected operator flow. Folder capabilities, observed policies and settled
+execution receipts remain separate evidence.
+
+Unpacked candidate `unified-setup-1011-r7` has been built and passed isolated
+packaged Recovery smoke. All eight selected Electron/renderer files match
+their packaged bytes; packaged package identity agrees after the builder's
+documented field pruning. Compared with r5, the code delta is only
+`electron/main.js`, `renderer/app.js`, `renderer/index.html` and
+`renderer/settings-compact.css`; packaged Python/Node resource code is unchanged.
+Static preview checked 1360/1100/760 widths in light/dark plus pending,
+Sandbox-blocked and exec-policy-verified states. See the
+[unified setup checkpoint](../.coding-tools/reports/unified-setup-20261011/completion-checkpoint.md).
+
+No unified-UI candidate has been activated, and this
+checkpoint records no new rollout, authority grant, service restart or public
+release. The last proven live Windows installation is the r5 candidate in the
+checkpoint below; its 16:26:24.008 +07 authority window is not renewed by the new
+UI. Focused validation commands are in [TESTING](TESTING.md); operator steps
+are in [MCP web operations](MCP_WEB_OPERATIONS.md).
+
+## MCP web feedback — 11-10-2026 (controlled rollout checkpoint)
+
+Current source exposes the exact facade `tool_contract`, relay operations and
+workspace-relative POSIX path format in `workspace_context inventory`.
+Recognized tool validation/domain failures now return model-visible
+`result.isError`, field diagnostics and an actionable next step. Contract
+mismatch returns the exact expected pin; malformed protocol envelopes still
+return JSON-RPC errors. Input schemas, contract hash and authority gates are
+unchanged. The changed feedback, file-read, status, writer and artifact paths
+have 88 focused checks passing and one real-symlink check skipped for Windows
+privileges; the reparse-attribute check passes. HTTP exec real-process proof
+has not been run.
+
+The reported read failure used profile `workspace_context` and the local node
+contract hash instead of the facade contract. Live discovery at 14:52 +07
+observed schema 32 / `control-plane-private-tunnel-service-v1`; copy the full
+current pin rather than retaining that observation as permanent configuration.
+The deployed source also projects terminal local rejection reasons in action
+status and enforces artifact byte/line caps, expiry, reparse and file-drift
+checks. Those focused checks do not establish remote artifact acceptance.
+
+The owner rebooted Windows at 15:42:38.500 +07. The authorized unpacked
+Windows `exec-coldstart-1011-r5` candidate is active for `web-mcp-assistant`.
+Proof at 16:16:02 +07 observes Recovery Host PID `1936`, UI PID `852`, Coding
+MCP PID `9632` and connected agent PID `10336`, with exact process identities.
+Supported full-clean activation reached epoch
+`activation-mv3lxw05-c20b330cb58f3edea4f421b9a65b0743` at READY with admission
+open, all aggregate readiness flags true and `updateIncomplete=false`.
+Coding MCP running/disk revision agrees across 148 files; r5 packaged node,
+bridge and Electron source parity, 13 focused timeout checks and isolated
+packaged smoke pass. The agent heartbeat succeeded. The switch preserved
+pending acceptance and passed the exclusive resource census without manually
+editing the canonical ledger. The earlier r4 rollout remains dated evidence.
+See [r5 activation proof](../.coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.r5-activation.jsonl).
+
+Ubuntu revision `beaa9d5ade4926ef231e3ec9d0a517fe93830e90`, an isolated child
+of `70de202d`, is deployed on `svhome@100.116.112.22`. The user service
+`codex-control-plane.service` restarted at 15:24:40 +07 with PID `794023`.
+Live revision/fingerprint and the 38-file release verifier agree; database
+schema remains 28. The verified private backup and previous release are
+preserved, and no database restore occurred. The 13 historical unresolved
+actions remain preserved without replay. See the
+[Ubuntu rollout receipt](../.coding-tools/reports/mcp-web-contract-20261011/ubuntu-rollout-checkpoint.md).
+
+The same binding `bind_3e05bf64cb3e4bab93d930ae1692bebb` has an owner-approved
+context/pilot window from **15:26:24.008 to 16:26:24.008 +07 on 11-10-2026**.
+Admission is `scoped_pilot`; the existing service grant is unchanged. Windows
+metadata assignment matches that window, and standing file read/write policy
+is installed for the exact workspace. Neither capability registration nor this
+window proves command execution.
+
+Authenticated Ubuntu MCP verification observed the exact target online,
+ready, dispatchable and policy enabled. Replaying the user's wrong contract
+as a validation probe returns model-visible `CONTRACT_MISMATCH` for profile
+and SHA-256, with no JSON-RPC error and no execution. Historical patch status
+returns its safe pre-effect rejection diagnostic without replay. New bounded
+reads verified the 49-byte fixture and the first 40 source lines (1,366 bytes)
+of `control-plane/control_plane/mcp_facade.py`; both content hashes match.
+These receipts prove the deployed central file-read route, not ChatGPT client,
+artifact or command acceptance. See
+[live verification receipt](../.coding-tools/reports/mcp-web-contract-20261011/live-rollout-verification.jsonl).
+
+No new live patch was run. The exact-file lane cannot create/delete a disposable
+fixture, and each forward/revert patch creates a local ACCEPTING wave; the
+central-to-local semantic acceptance adapter is absent. Standing write policy
+and focused source proof are established, while the existing pending queue is
+preserved without adding another unaccepted write.
+
+After reboot, the real workspace-bound Windows Sandbox probe passed at
+16:01:16 +07, including E-drive mapping, canonical paths, nested Node and npm
+test/prefix execution, temporary storage and cleanup. The supported exec
+policy was installed at 16:01:18 for the exact workspace/generation with the
+unchanged 16:26:24.008 expiry. The first r4 test attempt timed out at the node
+adapter, then its native Job ended `spawn_failed` before any test process
+started. Exact local evidence was reconciled through the supported receipt
+API to `failed/settled`; its task/writer were closed without replay. The
+original UNKNOWN journal and historical unresolved actions are preserved.
+r5 aligns the initial relay timeouts to bounded cold Sandbox setup while
+keeping short poll/stop budgets and UNKNOWN reconciliation. The distinct r5
+action queued at 16:16:11 completed at 16:16:56 through authenticated Ubuntu
+MCP → Windows Recovery IPC → Windows Sandbox. Running
+`node --test tests/control-plane-approved-patch-runtime.test.js` returned
+exit code 0, **4 PASS / 0 FAIL**, one attempt and 1,089 verified output bytes.
+The server receipt is `completed/settled`; its task and writer were closed.
+Final server observation at 16:17:36 confirms online/ready/enabled, no queued
+or accepted actions, no open tasks/writers, the unchanged historical 13-action
+digest and the same authority expiry. This proves a bounded live test, not a
+full test suite or a new ChatGPT client invocation. See
+[live r5 test receipt](../.coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-r5-verification.jsonl)
+and [final server observation](../.coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-server-final.jsonl).
+Actual client discovery/acceptance, a new live write roundtrip, artifact
+acceptance, directory listing and the central-to-local semantic acceptance
+adapter remain open. Local RUN
+`95e909f0040a448faa9f1f3257e2ee2c` remains acceptance-pending; a central verdict
+does not close it. Git remains dirty `main @ 2c554f59`, with the primary HEAD
+and index preserved. No primary commit, push or public release occurred;
+Ubuntu deployment/restart, authority renewal and the local r4/r5 launches did occur.
+This checkpoint does not assert production readiness. See
+[MCP web operations](MCP_WEB_OPERATIONS.md).
+
+## Unified folder permissions — 11-10-2026
+
+The Ubuntu toolbar's **Thư mục ủy quyền** shortcut now opens the same
+**Thư mục & quyền** manager used by Settings. It no longer writes legacy local
+authorized roots while operating as a central executor. An existing manager
+receives navigation without reloading its draft; unknown role observations also
+use this safe entry point.
+
+Registered rows offer **Thiết lập quyền**, which loads that exact ID/generation's
+capabilities into the shared editor. The UI separates the selected draft,
+registered capability and observed file/exec policy. Changing capability uses
+the existing explicit generation replacement and requires rebinding on Ubuntu.
+The service resolves the selected root from its private registry, preserving
+realpath/junction drift and expected generation checks, so no repeated folder
+picker is needed. Paths remain local.
+
+For an unchanged, linked registration, **Bật quyền đã chọn** confirms the file
+and command policy effects once, then uses the existing guarded installers.
+Exec is not attempted after a partial file install or mismatched policy receipt
+hash. Fresh authority is required; stale list responses cannot overwrite newer
+inventory after a registration change. Advanced per-policy controls remain
+available for troubleshooting.
+
+Focused Node tests pass 75/75 plus the affected Recovery UI registration test.
+An isolated Electron preview reports no control overflow at 1100 and 760 pixels;
+screenshots and behavioral evidence are retained under
+`.coding-tools/reports/folder-permissions-20261011/`. The active unpacked 1.0.7
+candidate is `dist/windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3/win-unpacked`.
+Its packaged Recovery smoke passes and all nine changed app files match source
+bytes. It supersedes r2 and includes the live approved-patch bridge fix below.
+
+The shared `web-mcp-assistant` profile now runs the final candidate. The
+stopped-runtime canonical census was safe, with all blocking resource counts
+zero and 17 classified stale-run candidates. The supported full-clean refresh
+reached epoch `activation-mv3dp4q0-cf3cb3c43d2fc870b9e2bb39016ef78d` at
+`READY` with admission open at 12:25:09 +07. A fresh check at 12:34 +07 retained
+host PID 12036 and UI PID 20308, matching installation
+`50bffd9fc8d820da6d2afa3d1cfa8f269630c4088f7c302208406ebc4ee76866`;
+`fullyReady`, `localReady`, and `componentsReady` were true, central authority
+was ready and `updateIncomplete` was false. The original bounded connected
+agent finished; its PID 20504 was subsequently reused and is not an agent
+termination target. After the authority renewal below, a new packaged agent
+started at 14:14:19 +07 with PID 10668 and a maximum of 200 iterations. Its
+heartbeat succeeded. The latest runtime check reports `fullyReady`, `localReady`,
+`componentsReady`, `centralConnected`, and `authorityReady` true, with
+`updateIncomplete` false. The Recovery Supervisor is uninstalled; no recurring
+agent schedule was added.
+
+At 12:00:53 +07, a concurrent capability replacement changed the local
+Tools-Codex-web registration to
+`generation_c2f13e8d02344cf6a38a3f42ecfa59b6` with read/write/exec inventory.
+The old generation's metadata and standing file-read policies were disabled
+by the supported replacement path at 12:00:52. The resulting
+`CONTROL_PLANE_BRIDGE_DISABLED` and `CENTRAL_ROUTE_EVIDENCE_STALE` were authority
+failures, separate from local process readiness. The initiating caller was not
+established by the bounded evidence. The new generation subsequently received
+its own authority through the explicitly approved operation below.
+
+A read-only SSH/operator API check at 12:05:55 +07 confirmed that the old
+generation was retired, both old contexts were closed, and the new generation
+had zero active bindings. The owner then approved read/write/sandboxed exec
+for Tools-Codex-web on DaoChienThang, including the Ubuntu exec configuration
+and service restart. On `100.116.112.22`, the guarded change enabled
+`CONTROL_PLANE_MCP_SERVICE_EXEC_ENABLED` and restarted the user
+`codex-control-plane.service`. Service grant scopes and credentials were
+preserved. Exact binding `bind_3e05bf64cb3e4bab93d930ae1692bebb`, context
+`ctx_48bfd028d6b349788abc8477cd925967` and scoped pilot
+`pilot_b4069f55f8ab45e497c5287f51ce8ff6` were created for this generation,
+expiring at **13:13:04 +07 on 11-10-2026**. Admission reopened as `scoped_pilot`.
+The matching metadata and standing file-read/write policies were installed
+through the packaged installer; their protected Windows ACLs were independently
+verified. Standing local policies have no expiry; remote context/pilot expiry
+still limits central authority. Heartbeat policy observation horizons are
+separate from that authorization window.
+
+Authenticated Ubuntu loopback MCP -> Windows agent -> Recovery -> Coding MCP
+passed live read -> exact patch -> readback on
+`tests/fixtures/folder-permissions-20261011.txt`; independent local bytes and
+SHA-256 matched. This proves the controlled central file route, without claiming
+ChatGPT Tunnel client acceptance. The first patch exposed an unsupported
+`include_diff` bridge argument. Removing it and validating bridge packets against
+the actual Python schema passes 4/4 focused tests. The original UNKNOWN action
+was reconciled once to `rejected` using independent pre-effect evidence; its
+original journal was preserved and its patch was not replayed. All five test
+actions are settled, both test tasks are closed, and their writers are released.
+
+Windows command execution is still **blocked**. Initially,
+`Containers-DisposableClientVM` was disabled and `WindowsSandbox.exe` absent.
+After separate owner approval, the reviewed script ran through Administrator
+UAC at 13:57:59 +07, enabled the feature and returned `restartNeeded=true`.
+No Windows restart occurred, as explicitly requested; the host executable is
+still absent until installation completes after reboot. MXC base probing passes, but the
+exact E-drive child-process probe reports `WINDOWS_WORKSPACE_REALPATH_EPERM`;
+the supported service reports `WINDOWS_SANDBOX_NOT_READY`. No local exec policy
+was installed and no exec command was tested. Feature-enablement evidence is
+`windows-sandbox-feature-result.json`; command execution still needs a ready
+sandbox probe after the owner restarts Windows.
+
+Owner Console acceptance of the successful standing patch returned 404 because
+the lookup handled only owner-review intents. Source now resolves the sealed
+principal from both intent types, retaining owner/action and downstream receipt
+gates. Four focused acceptance tests pass, including closed-task, UNKNOWN,
+cross-owner, replay, conflicting verdict and revoked-principal cases. A clean
+isolated source preparation produced true commit
+`70de202d93c9a759befe5d38491ce54e9ef4b3cd` with parent `2c554f59`; its delivery
+snapshot guards passed before that isolated commit. The unchanged clean-source
+release CLI and release verifier passed. Comparison with every deployed manifest
+input finds only `store.py` changed in runtime/deploy files; 35 release files are
+unchanged and `DEPLOYMENT.md` carries the generated revision. Archive SHA-256 is
+`4ae84292797d93180d30fd938652b604c43ed85cf651f152be8c0b6b9e5955ea`;
+package fingerprint is
+`sha256:fd5132676f1a68e875348fe790c6803c591f65a73311d793194c20a4e70b7d81`.
+The authorized hotfix was deployed on `100.116.112.22` at 14:11:02 +07. A
+verified database snapshot and protected configuration backups remain private
+on the server. The immutable release switch and restart of the user
+`codex-control-plane.service` verified revision `70de202d`, schema 28 and the
+exact package fingerprint above. Intake entered `recovery` during deployment
+and reopened as `scoped_pilot` after the approved authority renewal.
+
+The same binding now uses context `ctx_9cb78107d4aa4828bed2a0c0ee40633e` and
+pilot `pilot_c9bac9faee6c459680e6a7c44931848d`, expiring at
+**15:11:19 +07 on 11-10-2026** within the same approved read/write/exec scope.
+The packaged metadata installer reports `enabled`; its protected Windows ACL
+was verified for the user, SYSTEM and Administrators. The standing local file
+policies retain their existing scope. Windows exec remains blocked by the
+sandbox readiness condition above; no local exec policy was installed.
+
+Owner Console acceptance now succeeds for exact standing patch action
+`act_45ac771eec124a6a9a043b3c471902dd`; independently verified fixture bytes and
+SHA-256 remained unchanged. Deployment, renewal, runtime and acceptance evidence
+is retained in `server-acceptance-fix/deployment-result.jsonl`,
+`server-renewal.jsonl`, `metadata-renewal-result.json`, `metadata-renewal-acl.json`,
+`connected-agent-renewal-process.json`, `connected-agent-renewal-status.json`,
+`runtime-result.json`, and `central-patch-acceptance-deployed.jsonl` beneath the
+folder-permissions report directory.
+
+Central acceptance still has no local semantic-completion adapter: run
+`95e909f0040a448faa9f1f3257e2ee2c`, wave
+`c101beadfc6d4f2fbc13845052c84693` remains acceptance-pending because the bridge
+is a supervisor effect actor and requested no proof. No controller identity,
+proof or ledger state was fabricated to close it. Action-specific contexts and
+release of the proof-stage write fence allow later central writes; ordinary
+full-clean activation still requires supported preservation or legitimate
+acceptance. A fresh canonical census records zero active commands, background
+operations, managed processes and agent lanes, with this one awaiting-acceptance
+run. Its overall `RUNTIME_BUSY` verdict also observes the intentionally running
+runtime; it is not a claim that the host stopped or that all jobs are absent.
+
+The isolated preview profile was relocated outside the repository because
+Chromium created an OS-protected encryption key; screenshots and sanitized
+reports remain here. Git remains dirty `main @ 2c554f59`, preserving earlier
+work. No primary-repository commit, push or public release occurred; the isolated
+artifact-preparation commit is described above. The Ubuntu hotfix deployment,
+configuration changes, authority renewal, service restarts, local packaged
+activation and approved Windows sandbox feature enablement did occur. Windows
+restart, a ready sandbox probe and local exec-policy installation remain open;
+no Windows exec command was run. The local semantic acceptance remains pending.
+
+## Windows packaged verification — 11-10-2026
+
+The `web-mcp-assistant` profile was switched from the development checkout to
+an unpacked 1.0.7 candidate at `main @ 2c554f59` with local source changes.
+The candidate passed the isolated packaged Recovery smoke. Authenticated IPC
+confirmed that Electron UI and Recovery Host used the same packaged
+installation, the activation epoch reached `READY` with admission open, and
+`fully_ready=true`. The packaged metadata agent subsequently reported repeated
+`strict_packaged_recovery_observation` ready heartbeats.
+
+The first packaged full-clean attempt failed at `STOPPING`: Windows tree
+termination of the UI also killed its detached Recovery Host descendant before
+replacement handoff. The supported startup recovery terminalized that epoch as
+`FAILED`; a subsequent standalone-host activation reached `READY`. Source now
+terminates only the verified UI root during full-clean, preserving PID/start
+token checks and the exact exit wait. Process identity tests pass 28/28, Recovery
+Host tests 50/50, and Recovery process E2E 3/3. A real Windows parent/child test
+proves the child survives root termination and is cleaned afterward. An isolated
+Electron 43.2.0 browser test observes all three renderer/utility children exit.
+
+The revised candidate at
+`dist/windows-candidate-mxc-wsb-cbe1774-recovery-rootonly-1011/win-unpacked`
+passes the isolated packaged smoke, including production descriptor stability
+and supervisor fault cases without Scheduled Task mutation. It was activated
+in the shared profile at that checkpoint, before the unified-folder candidate
+above superseded it. The real parent-UI/child-Host restart returned
+`HANDOFF`, then reached epoch
+`activation-mv3bxhun-917c8b8aff33794b0ce36867a9c5c223` at `READY` with admission
+open. At 11:36 +07, host PID 7060 and registered UI PID 20920 matched the new
+packaged installation; `fullyReady`, `localReady`, and `componentsReady` were
+true, `updateIncomplete` was false, and MCP running/disk revisions matched.
+The previous UI, host, and all three observed UI utility processes were absent.
+This is an unpacked local candidate, not an NSIS installation or a public release.
+
+The approved metadata policy expired at 11:17:56 +07. The agent stopped with
+`CONTROL_PLANE_BRIDGE_POLICY_EXPIRED`; it did not renew or widen authority.
+Aggregate central readiness closed after route evidence became stale. This was
+an expired authority condition, separate from local source or process failure.
+The owner then explicitly approved another 60 minutes of the same metadata
+scope. A new context and scoped pilot decision were created for the same binding,
+and the supported packaged installer replaced the metadata policy. All expire
+at 12:31:36 +07. Service grant scopes and workspace capabilities were unchanged;
+no file-content, write, or exec policy was installed. The new packaged agent
+has a fresh server heartbeat with readiness `ready` and policy `enabled`.
+
+In development mode, the central folder chooser is intentionally disabled.
+The workspace step now displays the packaged-runtime explanation. Focused
+renderer tests prove that a matching packaged installation can call the picker
+and retain only a candidate path, without changing the active workspace or
+installing policy. Native dialog interaction has not been verified: the Windows
+automation helper returned the Codex conversation instead of the target app.
+No commit, push, public release, or Ubuntu deployment was performed.
+
 ## Follow-up agent recovery and personal ChatGPT connection — 2026-09-27 05:57 +07
 
 At main @ 5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb with the existing dirty

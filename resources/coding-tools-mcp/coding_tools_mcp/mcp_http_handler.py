@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import functools
-import html
 import http.server
 import json
 import os
@@ -26,6 +25,8 @@ from .oauth import (
     OAUTH_CODE_TTL_SECONDS,
     OAUTH_MAX_BODY_BYTES,
     create_access_token,
+    oauth_login_page,
+    send_oauth_html,
     valid_pkce_challenge,
     validate_access_token,
     verify_pkce,
@@ -743,6 +744,7 @@ class MCPHandler(ContinuationConsentHTTPMixin, HTTPHubIdentityMixin, http.server
                     source_checkpoint=payload.get("source_checkpoint") if "source_checkpoint" in payload else None,
                     prepare=True,
                 )
+                result["executor_cleanup_supported"] = True
                 self.send_json(result, status=200 if result.get("safe") else 409)
                 return
             if action == "verify":
@@ -1392,51 +1394,8 @@ class MCPHandler(ContinuationConsentHTTPMixin, HTTPHubIdentityMixin, http.server
             head_only=head_only,
         )
 
-    def _send_html(self, body: str, *, status: int = 200) -> None:
-        data = body.encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(data)
-
-    def _oauth_login_page(
-        self,
-        *,
-        client_id: str,
-        redirect_uri: str,
-        code_challenge: str,
-        code_challenge_method: str,
-        state: str,
-        resource: str,
-        error: str = "",
-    ) -> str:
-        def esc(v: str) -> str:
-            return html.escape(v, quote=True)
-        error_block = f'<p style="color:red">{html.escape(error)}</p>' if error else ""
-        return (
-            "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>"
-            "<title>Authorize MCP Server</title>"
-            "<style>body{font-family:sans-serif;max-width:380px;margin:4rem auto;padding:1rem}"
-            "input{width:100%;padding:.5rem;margin:.4rem 0;box-sizing:border-box}"
-            "button{width:100%;padding:.7rem;background:#0066cc;color:#fff;border:none;cursor:pointer}</style>"
-            "</head><body>"
-            f"<h2>Authorize Coding Tools MCP</h2>"
-            f"<p>Client: <strong>{esc(client_id)}</strong></p>"
-            f"<p>Redirect URI: <code>{esc(redirect_uri)}</code></p>"
-            f"{error_block}"
-            "<form method='POST' action='/oauth/authorize'>"
-            f"<input type='hidden' name='client_id' value='{esc(client_id)}'>"
-            f"<input type='hidden' name='redirect_uri' value='{esc(redirect_uri)}'>"
-            f"<input type='hidden' name='code_challenge' value='{esc(code_challenge)}'>"
-            f"<input type='hidden' name='code_challenge_method' value='{esc(code_challenge_method)}'>"
-            f"<input type='hidden' name='state' value='{esc(state)}'>"
-            f"<input type='hidden' name='resource' value='{esc(resource)}'>"
-            "<label>Password<input type='password' name='password' autocomplete='current-password' required></label>"
-            "<button type='submit'>Authorize</button>"
-            "</form></body></html>"
-        )
+    _send_html = send_oauth_html
+    _oauth_login_page = staticmethod(oauth_login_page)
 
     def _read_oauth_body(self) -> bytes | None:
         raw_len = self.headers.get("Content-Length")

@@ -1,0 +1,28 @@
+{
+  "action": "stage",
+  "archives_transferred": false,
+  "captured_at_utc": "2026-10-11T16:18:10.189956+00:00",
+  "deployment_or_restart_requested": false,
+  "public_receipts": [
+    {
+      "files": {
+        "r11_common.py": {
+          "sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+          "size_bytes": 22388
+        },
+        "ubuntu-r11-renewal-next.py": {
+          "sha256": "2f9d6a35c7ee055228f252d17635635bae224d16a71a07b5c25dfb5fa9b59f11",
+          "size_bytes": 20501
+        }
+      },
+      "host": "100.116.112.22",
+      "ok": true,
+      "phase": "r11_artifacts_staged",
+      "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T161810185934Z",
+      "remote_mutation": true
+    }
+  ],
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T161810185934Z",
+  "ssh_returncode": 0,
+  "stderr_disclosed": false
+}

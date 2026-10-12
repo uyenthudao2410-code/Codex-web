@@ -1,0 +1,26 @@
+[
+  {
+    "path": "electron/services/runtimeOrchestrator.js",
+    "sha256": "e3e06e374aed5f1fab8c26692ef964c6a681ce4cb1a759461fc14c5693b63406"
+  },
+  {
+    "path": "control-plane/control_plane/node_agent.py",
+    "sha256": "7ac20204eb742719db1665651e97d52add481b691ba1cfcca907f35fdfd9ff40"
+  },
+  {
+    "path": "control-plane/control_plane/recovery_exec_bridge.cjs",
+    "sha256": "78951d8b0e0be005ce2b526ed4d8f139c304be5e083b8a9821fe6cc805321ba9"
+  },
+  {
+    "path": "tests/control-plane-exec-runtime.test.js",
+    "sha256": "0579f3883437f1ef05c77e18681ba10538649fdce92a4d2253661ada0805b69e"
+  },
+  {
+    "path": "control-plane/tests/test_exec_node_agent.py",
+    "sha256": "3852b93a3649297be1b3e847666e06e06057869f5222bc24eaacd3a804e63d64"
+  },
+  {
+    "path": "control-plane/tests/recovery_exec_bridge.test.cjs",
+    "sha256": "460d26cfe9dfcfd093ca12e459ce5c3bc3de6857db29079bba2c3d64755cbe92"
+  }
+]

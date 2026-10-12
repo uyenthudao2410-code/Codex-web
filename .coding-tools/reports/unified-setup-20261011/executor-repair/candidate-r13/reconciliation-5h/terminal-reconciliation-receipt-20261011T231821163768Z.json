@@ -1,0 +1,18 @@
+{
+  "credentials_saved": false,
+  "no_replay": true,
+  "phase": "root_r13_5h_exact_terminal_reconciliation",
+  "public_receipts": [
+    {
+      "code": "RECONCILIATION_UNCERTAIN_READ_ONLY_INSPECT_NO_RETRY",
+      "ok": false,
+      "phase": "r13_5h_exact_after_effect_reconciliation_failed",
+      "raw_error_disclosed": false,
+      "remote_mutation_possible": true,
+      "replay_forbidden": true
+    }
+  ],
+  "raw_error_disclosed": false,
+  "remote_mutation_possible": true,
+  "ssh_returncode": 2
+}

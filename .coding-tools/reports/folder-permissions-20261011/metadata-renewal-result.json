@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "expires_at_ms": 1791706279253,
+  "policy_sha256": "807f4be2127e5286c3d1c687fd28a3f8890ee63f4c4c9d8a7e5eed2fe61f4667",
+  "runtime_mode": "packaged",
+  "windows_acl_verified": false
+}

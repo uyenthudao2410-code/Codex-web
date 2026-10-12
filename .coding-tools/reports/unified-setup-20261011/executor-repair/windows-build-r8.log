@@ -1,0 +1,21 @@
+Building unpacked Windows dev candidate into E:\Github\Tools-Codex-web\dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8
+  • electron-builder  version=26.15.7 os=10.0.29683
+  • loaded configuration  file=package.json ("build" field)
+  • executing @electron/rebuild  electronVersion=43.2.0 arch=x64 buildFromSource=false workspaceRoot=E:\Github\Tools-Codex-web projectDir=./ appDir=./
+  • installing native dependencies  arch=x64
+  • completed installing native dependencies
+  • packaging       platform=win32 arch=x64 electron=43.2.0 appOutDir=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked
+  • using custom unpacked Electron distribution  electronDist=node_modules\electron\dist
+  • copying unpacked Electron  source=E:\Github\Tools-Codex-web\node_modules\electron\dist destination=E:\Github\Tools-Codex-web\dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked
+  • searching for node modules  pm=npm searchDir=E:\Github\Tools-Codex-web
+  • updating asar integrity executable resource  executablePath=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\Coding Tools MCP.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\fd.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\rg.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\wxc-exec.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\tunnel-client.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\mxc-windows-sandbox\wxc-windows-sandbox-daemon.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\mxc-windows-sandbox\wxc-windows-sandbox-guest.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\tools\mxc-windows-sandbox\wxc-exec.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\native-python\python.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\resources\resources\native-python\pythonw.exe
+  • signing with signtool.exe  path=dist\windows-candidate-mxc-wsb-cbe1774-executor-diagnostics-1011-r8\win-unpacked\Coding Tools MCP.exe

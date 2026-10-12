@@ -1,0 +1,25 @@
+{
+  "authority_sha256": "5ebb015298ba0442599af08ae31909fbb0af04294e1c95036455f8819d3743fd",
+  "captured_at_utc": "2026-10-11T15:13:27.008693+00:00",
+  "check_count": 13,
+  "checks_passed": [
+    "all_helpers_compile",
+    "unchanged_common_transport_rollout_recovery_and_archive_pins",
+    "fresh_standing_ttl_admitted_with_exact_anchored_context_and_pilot",
+    "expired_observation_ttl_rejected",
+    "boolean_observation_expiry_rejected",
+    "observation_ttl_over60s_rejected",
+    "stale_heartbeat_rejected",
+    "future_heartbeat_rejected",
+    "wrong_runtime_identity_rejected",
+    "expired_context_rejected_independently_of_fresh_telemetry",
+    "context_expiry_must_match_anchored_window",
+    "expired_pilot_rejected",
+    "expired_anchored60m_window_rejected"
+  ],
+  "common_sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+  "context_or_pilot_reanchored": false,
+  "external_mutation": false,
+  "network_or_ssh_used": false,
+  "source_product_changed": false
+}

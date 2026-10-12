@@ -1,0 +1,124 @@
+{
+  "kind": "immutable_r9_identity_pin_for_r10",
+  "observed_at": "2026-10-11T12:17:17.254Z",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "parity_sha256": "c9f6fe1313b6004519a61bebf3f8f173a74cfd1d563bef48fce87908ed72f57c",
+  "helper_sha256": "8af0a6ac4a2dda2fc1a41dd075185fe609a0b1032ca1a81bbd517be24c009104",
+  "installation_id": "e65d60602938af2f1c6e8cd9e8c59352ff2a5e24a268a45a98114726cdd8210d",
+  "instance_id": "6006092b7a061f47b20a0b27c1f34f1d",
+  "ui_instance_id": "2d80b88288e54bcc40f86f6ad45adcf6",
+  "owner": {
+    "pid": 1128,
+    "process_start_token": "134361911908524600"
+  },
+  "ui": {
+    "pid": 25296,
+    "process_start_token": "134361911886531150"
+  },
+  "native": {
+    "pid": 9212,
+    "process_start_token": "134361911931895600"
+  },
+  "agent": {
+    "pid": 7108,
+    "process_start_token": "134361912150770020"
+  },
+  "old_epoch": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+  "policies": {
+    "file_read": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "62bd90f00fc6ab196afe07ddea82996a22a2686cd82e7d3c83c12914f99df6e6"
+    },
+    "approved_patch": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "3e78ebb89ab90ef2b33964d922bd1294c17fd741c218322cf4efb4ee7f574d2b"
+    },
+    "exec": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "31125fd75f5147770eecde7b926e3c46efd1f5ee83a55b58d180f8b200966367",
+      "allowed_argv_prefix_count": 6,
+      "allowed_argv_prefixes_sha256": "6c67e3aa54d9dae49c41feff2d2b5c56100760b60cdef6a2a4eca392d9063597"
+    },
+    "workspace_root_verified": true,
+    "standalone_probe_performed": false
+  },
+  "census": {
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "reason": "live_runtime_state_process",
+    "ledger_mutated": false,
+    "content_free": true,
+    "census_fingerprint": "2a5236d54f3338f78b329252cad815a37c7da14e0fc1cc2a5e32595dda60a53c",
+    "snapshot": {
+      "logical_sha256": "6d461fb6f0d0fd952d52cb6bb4b901b185ab647e16af34f532df6862bfa6bd9e",
+      "integrity_check": [
+        "ok"
+      ]
+    }
+  },
+  "pending_acceptance": {
+    "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+    "wave_id": "c101beadfc6d4f2fbc13845052c84693",
+    "run_record_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "wave_record_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "unchanged": true
+  },
+  "vm_zero_proof": {
+    "observed_at": "2026-10-11T12:17:17.254Z",
+    "phase": "independent_vm_zero_proof",
+    "boundary": "freeze",
+    "ok": true,
+    "host": {
+      "observer": "GetProcessWindowsSandbox",
+      "begun_at_ms": 1791721036274,
+      "observed_at_ms": 1791721036703,
+      "count": 0,
+      "content_free": true
+    },
+    "daemon": {
+      "observer": "CimMxcBackend",
+      "begun_at_ms": 1791721036703,
+      "observed_at_ms": 1791721037254,
+      "count": 0,
+      "content_free": true
+    },
+    "vm_termination_performed": false,
+    "sandbox_probe_performed": false
+  },
+  "runtime_mutated": false,
+  "server_mutated": false
+}

@@ -15,6 +15,9 @@ const {
   digest,
   loadApprovedPatchBridgePolicy,
   normaliseApprovedPatchWorkflowResult,
+  normaliseInitialVerificationPlan,
+  normaliseInitialVerificationResult,
+  admitInitialVerificationExecPolicy,
   normaliseApprovedPatchResult,
   resolveExactRegisteredPatchTarget,
   resolveRegisteredWorkspaceRoot
@@ -418,4 +421,70 @@ test('approved-patch binds its opaque receipt to canonical agent-workflow RUN/WA
     }),
     { code: 'CONTROL_PLANE_APPROVED_PATCH_MCP_RESULT_INVALID' }
   );
+});
+
+const INITIAL_PLAN = Object.freeze({ argv: ['node', '--test', 'tests/fixture.test.js'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 });
+
+test('initial verification requires independent exec target, limits and allowlist before admission', () => {
+  const source = transportRequest(request());
+  source.verification = INITIAL_PLAN;
+  const admitted = admitApprovedPatchBridgeRequest({ ...policy(), policy_sha256: 'a'.repeat(64) }, source, { now: NOW });
+  const execPolicy = { ...policy(), policy_sha256: 'e'.repeat(64), max_timeout_ms: 60000,
+    max_output_bytes: 32768, allowed_argv_prefixes: [['node', '--test']] };
+  assert.equal(admitInitialVerificationExecPolicy(execPolicy, admitted, { now: NOW }), 'e'.repeat(64));
+  assert.equal(admitted.actor.client_id, BRIDGE_CLIENT_ID);
+  assert.throws(() => admitInitialVerificationExecPolicy({ ...execPolicy, allowed_argv_prefixes: [['npm']] }, admitted, { now: NOW }),
+    { code: 'CONTROL_PLANE_EXEC_ALLOWLIST_DENIED' });
+  assert.throws(() => admitInitialVerificationExecPolicy({ ...execPolicy, workspace_generation: 'another-generation' }, admitted, { now: NOW }),
+    { code: 'CONTROL_PLANE_EXEC_TARGET_MISMATCH' });
+  assert.throws(() => normaliseInitialVerificationPlan({ ...INITIAL_PLAN, argv: ['node', 'line\nsecond'] }),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_VERIFICATION_INVALID' });
+  assert.throws(() => normaliseInitialVerificationPlan({ ...INITIAL_PLAN, cwd: '../outside' }),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_VERIFICATION_INVALID' });
+  assert.throws(() => normaliseInitialVerificationPlan({ ...INITIAL_PLAN, timeout_ms: '60000' }),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_VERIFICATION_INVALID' });
+  for (const invalid of [{ argv: [' node', '--test'] }, { argv: ['C:/node.exe', '--test'] }, { argv: ['node', 'a;exit'] },
+    { cwd: 'tests//fixtures' }, { cwd: 'tests/./fixtures' }, { cwd: 'tests\tfixtures' }, { cwd: 'é'.repeat(257) }]) {
+    assert.throws(() => normaliseInitialVerificationPlan({ ...INITIAL_PLAN, ...invalid }),
+      { code: 'CONTROL_PLANE_APPROVED_PATCH_VERIFICATION_INVALID' });
+  }
+});
+
+test('failed initial proof retains completed patch effect and exact RUN/WAVE through dedup', () => {
+  const key = `cpap_${'a'.repeat(56)}`;
+  const workflow = workflowResult('fixture.txt', key);
+  const proof = { plan_sha256: digest(INITIAL_PLAN), proof_status: 'timed_out', proof_ids: ['4'.repeat(32)],
+    proof_fingerprint: null, command_id: '-opaque_command', job_id: '_opaque_job' };
+  workflow.execution.ok = false;
+  workflow.execution.status = 'failed';
+  workflow.execution.initial_verification = proof;
+  workflow.orchestration.orchestration_state = 'REPLAN';
+  Object.assign(workflow.idempotency.summary, { execution_ok: false, execution_status: 'failed',
+    orchestration_state: 'REPLAN', initial_verification: proof,
+    patch_effect: { applied: true, affected_files: [{ path: 'fixture.txt', operation: 'update' }] } });
+  const options = { path: 'fixture.txt', idempotency_key: key, verification: INITIAL_PLAN };
+  assert.equal(normaliseApprovedPatchWorkflowResult(workflow, options).initial_verification.proof_status, 'timed_out');
+  workflow.deduplicated = true;
+  delete workflow.execution;
+  delete workflow.orchestration;
+  assert.equal(normaliseApprovedPatchWorkflowResult(workflow, options).deduplicated, true);
+  workflow.idempotency.summary.patch_effect.affected_files[0].path = 'other.txt';
+  assert.throws(() => normaliseApprovedPatchWorkflowResult(workflow, options),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_MCP_RESULT_INVALID' });
+  assert.throws(() => normaliseInitialVerificationResult({ ...proof, plan_sha256: '0'.repeat(64) }, INITIAL_PLAN),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_PROOF_INVALID' });
+});
+
+test('proof result digest covers the initial check while legacy receipt remains unchanged', () => {
+  const source = transportRequest(request());
+  source.verification = INITIAL_PLAN;
+  const admitted = admitApprovedPatchBridgeRequest({ ...policy(), policy_sha256: 'a'.repeat(64) }, source, { now: NOW });
+  const result = safeResult(admitted);
+  result.initial_verification = { plan_sha256: digest(INITIAL_PLAN), proof_status: 'passed', proof_ids: ['4'.repeat(32)],
+    proof_fingerprint: '5'.repeat(64) };
+  result.response_sha256 = digest({ file: result.file, initial_verification: result.initial_verification });
+  assert.equal(normaliseApprovedPatchResult(result, admitted).initial_verification.proof_status, 'passed');
+  result.initial_verification.proof_ids = ['6'.repeat(32)];
+  assert.throws(() => normaliseApprovedPatchResult(result, admitted),
+    { code: 'CONTROL_PLANE_APPROVED_PATCH_RESULT_DIGEST_INVALID' });
 });

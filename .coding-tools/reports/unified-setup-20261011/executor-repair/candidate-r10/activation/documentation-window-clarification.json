@@ -1,0 +1,15 @@
+{
+  "kind": "r10_activation_documentation_window_clarification",
+  "observed_at": "2026-10-11T12:22:37.833Z",
+  "changed_file": ".coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r10\\activation\\README.md",
+  "prior_readme_path": ".coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r10\\activation\\README.before-window-clarification.md",
+  "prior_readme_sha256": "9faa0ca8959b2b2405f12facbe408a3d245ac60fa4da13c5200d58cf9b9dd1d8",
+  "current_readme_sha256": "73e11cb8ed2f80e44fe2f3f422fee9f56af04d7149309e63ea5472981490dd43",
+  "helper_sha256": "8af0a6ac4a2dda2fc1a41dd075185fe609a0b1032ca1a81bbd517be24c009104",
+  "change": "Expired anchored 60-minute renewal requires newly explicit window approval; stale closure/preflight may be freshly observed within an existing valid window.",
+  "helper_changed": false,
+  "source_changed": false,
+  "runtime_mutated": false,
+  "authority_mutated": false,
+  "tests_rerun": false
+}

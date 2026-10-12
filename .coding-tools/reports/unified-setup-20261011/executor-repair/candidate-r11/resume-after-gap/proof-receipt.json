@@ -1,0 +1,18 @@
+{
+  "at_utc": "2026-10-11T16:14:46.326Z",
+  "checks_passed": [
+    "new_exact60m_receipt_admitted",
+    "open_intake_rejected",
+    "stale_server_observation_rejected",
+    "old_authority_window_rejected",
+    "durable_launch_reservation_refuses_duplicate",
+    "descriptor_adoption_checks_exact_spawn_identity_and_authenticated_ping",
+    "fixed_hidden_recovery_launch_checks_child_job_independence"
+  ],
+  "check_count": 7,
+  "helper_sha256": "9be46712ed8b67e317e7c0e82ec8be1408d9719cb39558efa4d110f6e255aa5b",
+  "launcher_sha256": "810164f48412ed9c2cedd9d4e5c649bd45aa517696ea6ef2e053c21a789b5fc9",
+  "runtime_spawned": false,
+  "external_mutation": false,
+  "proof_scope": "focused offline guards; child-job independence requires live root launch"
+}

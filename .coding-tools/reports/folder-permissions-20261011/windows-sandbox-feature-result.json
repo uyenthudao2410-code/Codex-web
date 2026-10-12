@@ -1,0 +1,7 @@
+﻿{
+    "feature":  "Containers-DisposableClientVM",
+    "state":  "Enabled",
+    "restartNeeded":  true,
+    "observedAt":  "2026-10-11T06:57:59.5658530+00:00",
+    "automaticRestart":  false
+}

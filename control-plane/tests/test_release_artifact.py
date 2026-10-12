@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import socket
 import subprocess
 import sys
@@ -74,16 +75,59 @@ def post_json(url: str, payload: dict, *, authorization: str = "") -> tuple[int,
 
 
 class ControlPlaneReleaseArtifactTests(unittest.TestCase):
-    def test_clean_build_uses_selected_git_blob_bytes(self) -> None:
+    @staticmethod
+    def _clean_git_source(temporary_root: Path) -> tuple[Path, str]:
+        source_root = temporary_root / "source"
+        package_root = ROOT / "control-plane" / "control_plane"
+        for path in sorted(package_root.rglob("*")):
+            if path.is_file() and path.suffix.lower() in BUILDER.CONTROL_PLANE_RUNTIME_SUFFIXES:
+                target = source_root / path.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, target)
+        for directory, names in (
+            ("control-plane", BUILDER.CONTROL_PLANE_FILES),
+            ("deploy", BUILDER.DEPLOY_FILES),
+        ):
+            for name in names:
+                target = source_root / directory / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / directory / name, target)
+
+        # Model a clean Windows checkout whose physical Python bytes differ
+        # from Git's canonical LF blobs, on every test host.
+        (source_root / ".gitattributes").write_text("*.py text eol=crlf\n", encoding="utf-8")
+        (source_root / ".gitignore").write_text("__pycache__/\n", encoding="utf-8")
+        node_agent = source_root / "control-plane" / "control_plane" / "node_agent.py"
+        node_agent.write_bytes(node_agent.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+        for arguments in (
+            ("init",),
+            ("config", "user.name", "Release fixture"),
+            ("config", "user.email", "release-fixture@example.test"),
+            ("config", "core.autocrlf", "false"),
+            ("config", "core.safecrlf", "false"),
+            ("add", "."),
+            ("-c", "commit.gpgsign=false", "commit", "-m", "Release source fixture"),
+        ):
+            subprocess.run(
+                ["git", "-C", str(source_root), *arguments],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
         revision = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=ROOT,
+            ["git", "-C", str(source_root), "rev-parse", "HEAD"],
             text=True,
         ).strip()
+        return source_root, revision
+
+    def test_clean_build_uses_selected_git_blob_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            output = Path(temporary)
+            temporary_root = Path(temporary)
+            source_root, revision = self._clean_git_source(temporary_root)
+            output = temporary_root / "output"
+            output.mkdir()
             receipt = BUILDER.build_release(
-                ROOT,
+                source_root,
                 output,
                 revision,
                 require_clean_source=True,
@@ -92,13 +136,25 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             package_file = release / "control-plane" / "control_plane" / "node_agent.py"
             selected_git_bytes = subprocess.check_output(
                 ["git", "show", f"{revision}:control-plane/control_plane/node_agent.py"],
-                cwd=ROOT,
+                cwd=source_root,
             )
+            checkout_file = source_root / "control-plane" / "control_plane" / "node_agent.py"
+            self.assertIn(b"\r\n", checkout_file.read_bytes())
+            self.assertNotIn(b"\r\n", selected_git_bytes)
+            self.assertNotEqual(checkout_file.read_bytes(), selected_git_bytes)
             self.assertEqual(package_file.read_bytes(), selected_git_bytes)
             self.assertEqual(
                 receipt["package_source_sha256"],
                 BUILDER._package_source_sha256(release / "control-plane" / "control_plane"),
             )
+
+            # The hermetic fixture must not make the clean-source guard weaker.
+            checkout_file.write_bytes(checkout_file.read_bytes() + b"# fixture source drift\r\n")
+            rejected_output = temporary_root / "rejected-output"
+            rejected_output.mkdir()
+            with self.assertRaisesRegex(BUILDER.ReleaseBuildError, "release drift"):
+                BUILDER.build_release(source_root, rejected_output, revision, require_clean_source=True)
+            self.assertEqual(list(rejected_output.iterdir()), [])
 
     def test_builds_secret_free_versioned_release_and_archive(self) -> None:
         revision = "a" * 40

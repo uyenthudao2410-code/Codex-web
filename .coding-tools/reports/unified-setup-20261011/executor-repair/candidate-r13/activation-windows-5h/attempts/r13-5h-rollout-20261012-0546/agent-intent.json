@@ -1,0 +1,19 @@
+{
+  "phase": "agent",
+  "observed_at_ms": 1791758914488,
+  "helper_sha256": "ebfbef3a0d1020e901df21cb80a6f0fae4998191a78849ffbc43922c6418d391",
+  "launcher_identity": {
+    "state": "live",
+    "pid": 17668,
+    "process_start_token": "134362325085751400"
+  },
+  "no_automatic_retry": true,
+  "host": {
+    "state": "live",
+    "pid": 18140,
+    "process_start_token": "134362324432460200"
+  },
+  "instance_id": "d3dd85465b62d7dc0d2f24e338aae5f9",
+  "max_iterations": 1176,
+  "authority_expires_at_ms": 1791776571067
+}

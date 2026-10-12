@@ -1,0 +1,47 @@
+{
+  "readonly_policy_expiry_only_renewed": true,
+  "candidate_payload_files": 17,
+  "observed_at": "2026-10-11T22:45:48.3555629+00:00",
+  "candidate_parity_sha256": "7c2c60851359f619472bbfafb649529b3eaae90ee6a4626a724c401b91323b88",
+  "previous_evidence_preserved": true,
+  "source_freeze_sha256": "e9351a360eaa7c016514015a27ea06c762604e12c2a5ca436a550abbf09f29ff",
+  "runtime_activated": false,
+  "helper_files": [
+    {
+      "file": "transition-r13.cjs",
+      "sha256": "ebfbef3a0d1020e901df21cb80a6f0fae4998191a78849ffbc43922c6418d391"
+    },
+    {
+      "file": "launch-child.ps1",
+      "sha256": "3eeb8ffda791ff07c245d0fc955be4cd31dcd03743bfcf1857f1c525a03808d3"
+    },
+    {
+      "file": "query-job.py",
+      "sha256": "5c957000e82f816b0ba7754e816503f364ec035ff0fe55ae914f28d843599144"
+    },
+    {
+      "file": "offline-check.cjs",
+      "sha256": "03267533bde2083d48ae89b37f2c1e59aba8d2d251556fcee3e7e0eeee9416b3"
+    },
+    {
+      "file": "README.md",
+      "sha256": "ca724be82ee046d6e90e3f3eaee54a0d7bd12d8cc109f5bb1f8904bd163830b3"
+    }
+  ],
+  "actual_observation_sha256": "e835a20906803d26c66508dd8b24e47a70196a42235cc91c4f8bb0148011eea3",
+  "source_candidate_parity_and_smoke_reused": true,
+  "kind": "r13_5h_windows_transition_offline_proof",
+  "hard_wallclock_expiry_claimed": false,
+  "actual_renewal_sha256": "cfa13b49a704f2d089ffda4de9893b685d34dae048fe1d7f8e6fd0771d210d6a",
+  "policy_mutated": false,
+  "windows_powershell_parse_errors": 0,
+  "actual_public_contract_fixture": "renew-20261011T224251426341Z.json plus observe-20261011T224349137719Z.json",
+  "approved_duration_ms": 18000000,
+  "helper_manifest_sha256": "2e0c84a6f8d4b121a16a9cf766ccf0c92260c22e8ddf062293afd7f9309c90eb",
+  "standing_policy_reinstallation": false,
+  "guard_tests_passed": 11,
+  "approval_id": "call_a60e931056bd402b997c6c10b0796d81",
+  "maximum_agent_iterations": 1200,
+  "node_syntax": "passed",
+  "server_mutated": false
+}

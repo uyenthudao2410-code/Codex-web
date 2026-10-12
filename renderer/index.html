@@ -26,8 +26,8 @@
 
       <nav class="nav-list" aria-label="Điều hướng chính">
 
-        <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
-        <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Thực thi mã</span></button>
+        <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tác vụ & kết quả</span></button>
         <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
         <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
       </nav>
@@ -57,6 +57,10 @@
 
       <div class="content-viewport">
         <section class="page active" data-page-view="overview">
+          <article class="execution-workspace-strip panel" aria-label="Dự án đang thực thi">
+            <div class="execution-workspace-copy"><span class="section-kicker">DỰ ÁN HIỆN TẠI</span><h2 id="executionWorkspaceLabel">Chưa chọn thư mục</h2><p id="executionAccessSummary">Đang kiểm tra kết nối, quyền và trạng thái thực thi.</p></div>
+            <div class="execution-workspace-actions"><button class="primary-button" id="executionNextAction" data-nav="system" type="button">Thiết lập máy & thư mục</button><button class="secondary-button" data-nav="task" type="button">Theo dõi thực thi</button></div>
+          </article>
           <div class="control-hero">
             <div class="control-hero-top">
               <div class="control-hero-copy">
@@ -611,52 +615,40 @@
         </section>
 
         <section class="page" data-page-view="system">
-          <div class="section-header"><div><span class="section-kicker">THIẾT LẬP HỆ THỐNG</span><h2>Kết nối một lần, tiếp tục từ đây</h2><p>Ubuntu điều phối chung. Máy Windows giữ thư mục và thực thi trong quyền bạn cho phép.</p></div><button class="secondary-button" id="refreshSystemSetup" type="button">Kiểm tra thiết lập</button></div>
+          <div class="section-header"><div><span class="section-kicker">THIẾT LẬP THỰC THI MÃ</span><h2>Kết nối, cấp quyền và kiểm tra tại đây</h2><p>Chọn máy chủ và thư mục một lần. Tiếp tục ngay từ bước còn thiếu.</p></div><button class="secondary-button" id="refreshSystemSetup" type="button">Kiểm tra thiết lập</button></div>
 
           <article class="setup-card panel" id="setupSummary" aria-labelledby="setupSummaryTitle">
-            <div class="setup-card-head"><div><span class="section-kicker">THIẾT LẬP TIẾP TỤC ĐƯỢC</span><h3 id="setupSummaryTitle">Đang đọc trạng thái thiết lập…</h3><p id="setupSummaryText">Cấu hình đã lưu sẽ được giữ lại khi đóng và mở lại ứng dụng.</p></div><span id="setupSummaryBadge" class="soft-badge neutral">Đang kiểm tra</span></div>
+            <div class="setup-card-head"><div><span class="section-kicker">MÁY NÀY · THƯ MỤC · THỰC THI</span><h3 id="setupSummaryTitle">Đang đọc trạng thái thiết lập…</h3><p id="setupSummaryText">Cấu hình đã lưu sẽ được giữ lại khi đóng và mở lại ứng dụng.</p></div><span id="setupSummaryBadge" class="soft-badge neutral">Đang kiểm tra</span></div>
             <div class="setup-progress" role="list" aria-label="Tiến độ thiết lập">
               <div class="setup-step" id="setupStepConnection" role="listitem"><i>1</i><span><b>Kết nối máy chủ</b><small>Máy này và Ubuntu</small></span></div>
               <div class="setup-step" id="setupStepFolder" role="listitem"><i>2</i><span><b>Thư mục & quyền</b><small>Phạm vi làm việc</small></span></div>
               <div class="setup-step" id="setupStepAccount" role="listitem"><i>3</i><span><b>Liên kết tài khoản</b><small>Máy chủ cấp quyền</small></span></div>
-              <div class="setup-step" id="setupStepVerify" role="listitem"><i>4</i><span><b>Kiểm tra</b><small>Sẵn sàng nhận việc</small></span></div>
+              <div class="setup-step" id="setupStepVerify" role="listitem"><i>4</i><span><b>Kiểm tra</b><small>Đối chiếu kết quả thực tế</small></span></div>
             </div>
             <div class="setup-card-actions"><p id="setupNextDetail">Chưa có trạng thái mới.</p><button class="primary-button" id="setupPrimaryAction" type="button">Kiểm tra lại</button></div>
           </article>
 
-          <nav class="setup-navigation" aria-label="Các phần thiết lập hệ thống">
-            <button class="setup-section-link" data-nav="deploy"><b>1. Máy chủ & tài khoản</b><small id="settingsConnectionSummary">Đang kiểm tra</small></button>
+          <nav class="setup-navigation" aria-label="Các phần thiết lập">
+            <button class="setup-section-link" data-nav="deploy"><b>1. Máy chủ & máy này</b><small id="settingsConnectionSummary">Đang kiểm tra</small></button>
             <button class="setup-section-link" data-nav="workspace"><b>2. Thư mục & quyền</b><small id="settingsWorkspaceSummary">Đang kiểm tra</small></button>
-            <button class="setup-section-link" data-nav="settings"><b>Ứng dụng</b><small id="settingsAppSummary">Giao diện & chạy nền</small></button>
+            <button class="setup-section-link" data-nav="system" data-setup-anchor="setupExecutionSection"><b>3. Kiểm tra thực thi</b><small>Đọc, sửa và chạy mã</small></button>
           </nav>
 
-          <details class="setup-support">
-            <summary>Hỗ trợ & nâng cao</summary>
-          <div class="system-launch-grid settings-advanced-links">
-            <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Kiểm tra & sửa chữa</b><small>Quan sát trạng thái và chỉ sửa khi bạn bấm rõ ràng.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Nhật ký hỗ trợ</b><small>Xem chẩn đoán cục bộ đã che dữ liệu nhạy cảm.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build & xác minh</b><small>Dành cho người quản trị hoặc người phát triển.</small></span><i>›</i></button>
-            <button class="system-launch" data-nav="guide" data-direct-only><span class="system-launch-icon">GD</span><span><b>Hướng dẫn kết nối cũ</b><small>Chỉ dùng cho direct legacy; Ubuntu không cần Tunnel tại Windows.</small></span><i>›</i></button>
-          </div>
-          </details>
-        </section>
-
-        <section class="page" data-page-view="deploy">
-          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN TRIỂN KHAI</span><h2 id="deploySectionTitle">Cấu hình triển khai nhanh</h2><p id="deploySectionSubtitle">Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.</p></div><div class="step-pill" data-direct-only><span>1</span>Cấu hình <i></i><span>2</span>Kiểm tra <i></i><span>3</span>Triển khai</div></div>
-
-          <div class="two-column deploy-grid">
-            <article class="panel">
-              <div id="centralExecutorNotice" class="central-setup" hidden>
+          <div class="setup-sections">
+            <section class="setup-section" id="setupConnectionSection" aria-labelledby="setupConnectionTitle" tabindex="-1">
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">1</span><div><h3 id="setupConnectionTitle">Kết nối máy chủ và máy này</h3><p>Ubuntu quản lý quyền; máy này giữ mã nguồn và chạy tác vụ.</p></div></div>
+              <article class="panel setup-connection-panel">
+                <div id="centralExecutorNotice" class="central-setup" hidden>
                 <div class="setup-mode-notice" id="setupDevelopmentNotice" role="status" hidden><b>Bạn đang dùng bản phát triển · npm start</b><p>Bản này dùng để phát triển giao diện. Các bước xác minh máy, thư mục và quyền Ubuntu cần bản cài đặt đã được xác minh. Máy chủ đang bật không đồng nghĩa máy Windows đã được cấp quyền.</p></div>
                 <label class="field" for="controlPlaneServerUrl"><span>Địa chỉ máy chủ Ubuntu</span></label>
                 <div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" aria-describedby="controlPlaneEnrollmentStatus" placeholder="https://ten-may-chu.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu kết nối</button></div>
                 <p id="controlPlaneEnrollmentStatus" class="setup-field-help" role="status" aria-live="polite">Nhập địa chỉ HTTPS của Ubuntu. Không cần API key hay Tunnel trên Windows.</p>
-                <p id="personalChatGptConnectionHelp" class="setup-field-help">ChatGPT cá nhân: nếu Ubuntu Control Plane đã hiện trong mục Apps, hãy dùng lại kết nối đó; không cần nhập Organization ID hoặc ChatGPT Workspace ID ở đây. Khả năng thêm connector mới và quyền từng thao tác tùy theo tài khoản ChatGPT và policy Ubuntu.</p>
+                <p id="personalChatGptConnectionHelp" class="setup-field-help">ChatGPT cá nhân: dùng app Ubuntu Control Plane đã kết nối. Máy này không cần Organization ID hoặc ChatGPT Workspace ID. Quyền từng thao tác do Ubuntu quyết định.</p>
                 <button class="secondary-button" type="button" data-nav="guide">Cách dùng trong ChatGPT Plus</button>
                 <div class="setup-server-admin">
-                  <h3>Quản trị chung trên Ubuntu</h3>
-                  <p>Mở cùng địa chỉ máy chủ từ bất kỳ máy nào truy cập được mạng riêng / Tailnet. Đăng nhập operator trong trình duyệt để xem các máy, duyệt kết nối và quản lý quyền. Trang “Máy này” chỉ điều khiển Windows hiện tại.</p>
-                  <button class="secondary-button" id="openControlPlaneConsole" type="button" disabled>Mở trang quản trị Ubuntu</button>
+                  <h3>Phê duyệt trên máy chủ</h3>
+                  <p>Chủ hệ thống duyệt máy và quyền thư mục trong Console. Sau khi duyệt, tiếp tục thiết lập tại đây.</p>
+                  <button class="secondary-button" id="openControlPlaneConsole" type="button" disabled>Mở Console để duyệt</button>
                   <p id="controlPlaneConsoleHint">Nhập địa chỉ Ubuntu ở trên để mở trang quản trị. Mở trang không đăng ký máy hoặc cấp quyền.</p>
                 </div>
                 <div class="setup-next-step" aria-live="polite"><span class="section-kicker" id="connectionNextOwner">BƯỚC TIẾP THEO</span><h3 id="connectionNextTitle">Đang kiểm tra kết nối…</h3><p id="connectionNextText">Giữ nguyên cấu hình đã lưu.</p><button class="secondary-button" id="refreshControlPlaneEnrollment" type="button">Kiểm tra trạng thái máy</button></div>
@@ -675,6 +667,70 @@
                   <p>Không dán <code>ctx_…</code>, Operator Token hoặc bearer vào Windows. Máy này chỉ thực thi trong quyền local được cấp; kết nối không tự tạo quyền.</p>
                 </details>
               </div>
+              </article>
+            </section>
+
+            <section class="setup-section" id="setupFolderSection" aria-labelledby="setupFolderTitle" tabindex="-1">
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">2</span><div><h3 id="setupFolderTitle">Chọn thư mục và quyền làm việc</h3><p>Chọn đúng dự án, gửi mức quyền và theo dõi phê duyệt ngay bên dưới.</p></div></div>
+              <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
+            <div class="setup-mode-notice" id="workspaceSetupDevelopmentNotice" role="status" hidden><b>Cần xác minh bản cài đặt</b><p>Chọn thư mục, đăng ký workspace và bật quyền Ubuntu cần bản cài đặt đã được xác minh.</p></div>
+            <div class="panel-title"><div><h3>Thư mục ủy quyền</h3><p>Chọn thư mục đã thêm để thiết lập quyền, hoặc thêm thư mục mới.</p></div><button id="refreshControlPlaneWorkspaces" class="secondary-button" type="button">Làm mới</button></div>
+            <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
+            <section id="centralWorkspacePermissionEditor" class="workspace-permission-editor" tabindex="-1" aria-label="Thiết lập quyền thư mục">
+            <div class="workspace-folder-choice"><span class="input-action-meta"><b id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</b><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span><button id="chooseControlPlaneWorkspace" class="secondary-button" type="button">Chọn thư mục mới</button></div>
+            <fieldset class="capability-picker" aria-describedby="controlPlaneCapabilitySummary">
+              <legend>Mức quyền cho thư mục này</legend>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read" checked><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code"><span><b>Làm việc với mã nguồn</b><small>Đọc, sửa file và chạy lệnh trong sandbox.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="custom"><span><b>Tùy chỉnh</b><small>Chọn từng quyền trong phần nâng cao.</small></span></label>
+              <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small>
+              <details id="centralWorkspaceCustomCapabilities" class="capability-custom">
+                <summary>Chọn từng quyền</summary>
+                <label><input id="controlPlaneCapabilityRead" type="checkbox" checked disabled><span><b>Đọc</b><small>Bắt buộc để inventory và đọc kết quả.</small></span></label>
+                <label><input id="controlPlaneCapabilityWrite" type="checkbox"><span><b>Ghi</b><small>Cho phép runtime local sửa file theo policy máy.</small></span></label>
+                <label><input id="controlPlaneCapabilityExec" type="checkbox"><span><b>Chạy</b><small>Cho phép runtime local chạy process theo policy máy.</small></span></label>
+              </details>
+            </fieldset>
+            <div class="workspace-permission-submit"><button id="registerControlPlaneWorkspace" class="primary-button" type="button">Đăng ký thư mục</button><p id="controlPlaneWorkspaceRegistrationStatus" role="status">Chọn mức quyền rồi đăng ký. Sau khi liên kết trên Ubuntu, bật quyền tại đây.</p></div>
+            </section>
+            <details class="workspace-permission-help"><summary>Cách áp dụng quyền</summary><p>Các ô quyền là lựa chọn chưa lưu; dòng thư mục hiển thị quyền đã đăng ký và policy đang bật. Đổi mức quyền cần liên kết lại trên Ubuntu. Bật quyền đã đăng ký chỉ cần một lần xác nhận; sandbox và quyền tài khoản vẫn được kiểm tra.</p><p>Đường dẫn chỉ được giữ trên máy này. Mỗi máy giữ một policy file/lệnh hiện hành; bật cho thư mục khác sẽ thay thế policy cũ. Các nút bật riêng từng quyền và thu hồi nằm trong “Quản lý nâng cao”.</p></details>
+          </article>
+            </section>
+
+            <section class="setup-section" id="setupExecutionSection" aria-labelledby="setupExecutionTitle" tabindex="-1">
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">3</span><div><h3 id="setupExecutionTitle">Kiểm tra khả năng thực thi mã</h3><p>Quyền được cấp và kết quả thao tác thực tế được kiểm tra riêng.</p></div></div>
+              <article class="panel setup-execution-panel">
+                <ul id="setupExecutionChecklist" class="setup-execution-checklist" aria-label="Trạng thái từng thao tác">
+                  <li id="setupReadCheck" data-state="unknown"><b>Đọc mã nguồn</b><small>Chưa kiểm chứng thao tác đọc.</small></li>
+                  <li id="setupPatchCheck" data-state="unknown"><b>Sửa mã nguồn</b><small>Chưa kiểm chứng thao tác sửa.</small></li>
+                  <li id="setupExecCheck" data-state="unknown"><b>Chạy lệnh & test</b><small>Chưa kiểm chứng kết quả thực thi.</small></li>
+                </ul>
+                <div class="setup-continuation">
+                  <div><b>Hoàn tất bước còn thiếu</b><p id="setupContinueStatus" role="status" aria-live="polite">Kiểm tra trạng thái để tiếp tục thiết lập. Thao tác cần cấp quyền vẫn yêu cầu xác nhận.</p></div>
+                  <div class="inline-actions"><button class="primary-button" id="setupContinueAction" type="button">Tiếp tục thiết lập</button><button class="secondary-button" id="setupCancelContinuation" type="button" hidden>Dừng chờ</button></div>
+                </div>
+                <p class="setup-proof-note">Chỉ hiển thị kết quả đã quan sát. Chạy test không tự sửa mã nguồn hoặc cấp thêm quyền.</p>
+                <button class="secondary-button" type="button" data-nav="task">Xem tác vụ & kết quả</button>
+              </article>
+            </section>
+          </div>
+
+          <div class="setup-preferences-link"><button class="secondary-button" data-nav="settings" type="button">Tùy chọn ứng dụng</button><small id="settingsAppSummary">Giao diện & chạy nền</small></div>
+          <details class="setup-support">
+            <summary>Hỗ trợ & cấu hình nâng cao</summary>
+            <div class="system-launch-grid settings-advanced-links">
+              <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Kiểm tra & sửa chữa</b><small>Xem chẩn đoán và chọn thao tác sửa.</small></span><i>›</i></button>
+              <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Nhật ký hỗ trợ</b><small>Nhật ký cục bộ đã che dữ liệu nhạy cảm.</small></span><i>›</i></button>
+              <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build & xác minh</b><small>Dành cho người quản trị hoặc phát triển.</small></span><i>›</i></button>
+              <button class="system-launch" data-nav="guide"><span class="system-launch-icon">GD</span><span><b>Hướng dẫn ChatGPT</b><small>Kết nối app và kiểm tra công cụ trong chat.</small></span><i>›</i></button>
+            </div>
+            <details class="setup-legacy" data-direct-only>
+              <summary>Kết nối trực tiếp cũ · Tunnel, Proxy và cổng local</summary>
+        <div class="setup-legacy-deploy">
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN TRIỂN KHAI</span><h2 id="deploySectionTitle">Cấu hình triển khai nhanh</h2><p id="deploySectionSubtitle">Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.</p></div><div class="step-pill" data-direct-only><span>1</span>Cấu hình <i></i><span>2</span>Kiểm tra <i></i><span>3</span>Triển khai</div></div>
+
+          <div class="two-column deploy-grid">
+            <article class="panel">
               <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
                 <b>Chuyển vai trò máy này sang executor Ubuntu</b>
                 <p>Thao tác này kiểm tra công việc đang chạy, đóng quyền thực thi, dừng dịch vụ Windows cũ rồi chuyển máy sang chỉ chạy MCP/workspace cục bộ. Đây là chuyển cấu hình, không yêu cầu checkpoint nghiệm thu code. Runtime API Key và OpenAI Tunnel Windows không được gửi sang Ubuntu và sẽ không còn được dùng. Tiếp theo cần pairing và policy do Ubuntu cấp.</p>
@@ -709,37 +765,13 @@
             <div><span class="section-kicker">SẴN SÀNG TRIỂN KHAI</span><h3>Lưu cấu hình và triển khai dịch vụ</h3><p id="deploySummary">Vui lòng chọn thư mục làm việc và điền thông tin Tunnel.</p></div>
             <div class="deploy-actions"><button class="secondary-button" id="saveDeploySettings">Chỉ lưu cấu hình</button><button class="primary-button large" id="deployNow">Lưu và bắt đầu triển khai</button></div>
           </article>
-        </section>
-
-        <section class="page" data-page-view="workspace">
+        </div>
+        <div class="setup-legacy-workspace">
           <div class="section-header"><div><span class="section-kicker">RANH GIỚI KHÔNG GIAN LÀM VIỆC</span><h2>Thư mục làm việc & Quyền</h2><p>Đây là ranh giới an toàn quan trọng nhất của MCP: trang web chỉ nhìn thấy thư mục bạn cho phép.</p></div></div>
           <article class="panel workspace-picker" data-direct-only>
             <div class="folder-illustration">▱</div>
             <div class="folder-copy"><span>Đang cho phép truy cập</span><h3 id="selectedWorkspace">Chưa chọn thư mục</h3><p>Sau khi chuyển thư mục, trợ lý sẽ âm thầm khởi động lại MCP cục bộ ở chế độ nền và cập nhật ranh giới truy cập.</p></div>
             <button class="primary-button" id="chooseWorkspace">Chọn thư mục</button>
-          </article>
-
-          <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
-            <b>Thêm thư mục để làm việc</b>
-            <p>Chọn một thư mục local và mức quyền. Đường dẫn chỉ được giữ trên máy này; Ubuntu nhận inventory ẩn danh. Sau khi liên kết target trên Ubuntu, bấm “Bật đọc/sửa file” ngay tại thư mục đã chọn; quyền chạy có nút kiểm tra sandbox riêng. Chạy lệnh là quyền riêng, chưa được bật ở bước này; sau khi bật một lần, các lệnh trong allowlist không cần duyệt từng lần.</p>
-            <div class="input-action"><button id="chooseControlPlaneWorkspace" type="button">Chọn thư mục</button><span class="input-action-meta"><small id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</small><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span></div>
-            <fieldset class="capability-picker" aria-describedby="controlPlaneCapabilitySummary">
-              <legend>Mức quyền cho thư mục này</legend>
-              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read" checked><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
-              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code"><span><b>Làm việc với mã nguồn</b><small>Đăng ký khả năng đọc/sửa/chạy; policy file và lệnh phải bật riêng.</small></span></label>
-              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="custom"><span><b>Tùy chỉnh</b><small>Chọn từng quyền trong phần nâng cao.</small></span></label>
-              <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small>
-              <details id="centralWorkspaceCustomCapabilities" class="capability-custom">
-                <summary>Chọn từng quyền</summary>
-                <label><input id="controlPlaneCapabilityRead" type="checkbox" checked disabled><span><b>Đọc</b><small>Bắt buộc để inventory và đọc kết quả.</small></span></label>
-                <label><input id="controlPlaneCapabilityWrite" type="checkbox"><span><b>Ghi</b><small>Cho phép runtime local sửa file theo policy máy.</small></span></label>
-                <label><input id="controlPlaneCapabilityExec" type="checkbox"><span><b>Chạy</b><small>Cho phép runtime local chạy process theo policy máy.</small></span></label>
-              </details>
-            </fieldset>
-            <div class="input-action"><button id="registerControlPlaneWorkspace" type="button">Thêm thư mục này</button><small id="controlPlaneWorkspaceRegistrationStatus">Đăng ký chỉ ghi nhận phạm vi local; chưa tạo liên kết tài khoản hoặc quyền chạy.</small></div>
-            <div class="input-action"><button id="refreshControlPlaneWorkspaces" type="button">Xem thư mục đã thêm</button><small>Không cần nhập context ID, JSON hoặc token. Ubuntu chỉ nhận định danh opaque; đường dẫn không rời Windows.</small></div>
-            <p class="task-muted">Mỗi máy chỉ giữ một policy đọc file và một policy sửa file hiện hành; bật cho thư mục khác sẽ thay thế quyền file cũ. Đổi mức quyền hoặc thu hồi thư mục nằm trong “Quản lý nâng cao”. Generation cũ không bị ghi đè âm thầm và target cần được liên kết lại sau thay đổi.</p>
-            <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
           </article>
 
           <article class="panel authorized-roots-panel" data-direct-only>
@@ -762,6 +794,9 @@
             </article>
           </div>
           <div class="page-footer-actions" data-direct-only><button class="secondary-button" id="saveWorkspace">Lưu cài đặt không gian làm việc</button><button class="primary-button" id="saveWorkspaceRestart">Lưu và tái triển khai</button></div>
+        </div>
+            </details>
+          </details>
         </section>
 
         <section class="page" data-page-view="guide">

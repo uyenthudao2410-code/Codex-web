@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-11T16:47:29.0177445Z",
+  "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "helper_manifest_sha256": "ba14f8aa44e8f009d6aba7adaa5a120dcdf77f0d105f8be4a0a4e93f114c9ac3",
+  "files": [
+    {
+      "path": "r11_mcp_canary.py",
+      "bytes": 39584,
+      "sha256": "32de0311939961b007e2a2c26ffca3d4e40485d17f5db0fecc80075fadeae9bf"
+    },
+    {
+      "path": "root-canary-ssh.py",
+      "bytes": 12154,
+      "sha256": "3783b623d54d3f4a9819d74aa73a8bc0ac6dc8682de921b0be8b3ddff4eb5e98"
+    },
+    {
+      "path": "patch-envelope.txt",
+      "bytes": 639,
+      "sha256": "77f2c282c91f3627e721d0d68bf1fa821bad21575ec136204353894b18ce5e4a"
+    },
+    {
+      "path": "pins.template.json",
+      "bytes": 1226,
+      "sha256": "c84054cd2fe366ae99ca68f179cb7fe2a573580a4c2ec7cb2bf7d10049eaa8e0"
+    },
+    {
+      "path": "test_after_contract_sync.py",
+      "bytes": 8149,
+      "sha256": "9526919a236df6c3f4c157f1089a1bfa9a897ebbcf89d789cad5bce8c80d5f80"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2547,
+      "sha256": "34eeedc53dbadc78a146a30c48d23b05e726b62e8d4fa09677acc80e8f87eec2"
+    }
+  ],
+  "proof": {
+    "focused_tests": 13,
+    "passed": 13,
+    "previous_unchanged_transport_tests": 6,
+    "previous_unchanged_packet_and_authority_guards": "reused unchanged behavior proof",
+    "live_dispatch": "not_performed",
+    "native_semantic_acceptance": "pending"
+  },
+  "authority_marker_unchanged": "/home/svhome/.local/state/codex-control-plane/owner-operations/r11-initial-verification-next-60m/authority-renewal-public.json",
+  "trial_operation_directory": "/home/svhome/.local/state/codex-control-plane/owner-operations/r11-initial-verification-next-60m/canary-after-contract-sync",
+  "prior_canary_sha256": "b9be1f2fb50b3831442dbf12aaf15f68a2af5286c8ae5bd14b74f0a375b7918a",
+  "external_effects_by_lane": false,
+  "commit_push_release": false
+}

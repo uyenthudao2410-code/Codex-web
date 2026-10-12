@@ -403,6 +403,18 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "adopt_existing_files": existing_file_adoptions,
             "commands": {"type": "array", "maxItems": 6, "items": string, "description": "Initialization or focused checks to run in order before automatic verification."},
             "verification": {**string, "enum": ["none", "tests", "build", "all"], "description": "Automatic validation level. Defaults are selected from the workflow type."},
+            "initial_verification": {
+                "type": "object", "additionalProperties": False,
+                "properties": {
+                    "argv": {"type": "array", "minItems": 1, "maxItems": 32, "items": {**string, "minLength": 1, "maxLength": 2048}},
+                    "cwd": {**string, "maxLength": 512},
+                    "timeout_ms": {**integer, "minimum": 5000, "maximum": 300000},
+                    "max_output_bytes": {**integer, "minimum": 1024, "maximum": 65536},
+                },
+                "required": ["argv", "cwd", "timeout_ms", "max_output_bytes"],
+                "description": "One exact initial structured proof for the attested approved-patch custom execute workflow. It grants no authority and cannot replace controller acceptance.",
+            },
+            "initial_verification_expires_at_ms": {**integer, "minimum": 1, "description": "Admitted authority deadline required with initial_verification, rechecked before patch and command start. It cannot renew authority."},
             "test_command": string,
             "build_command": string,
             "timeout_seconds": {**integer, "minimum": 1, "maximum": 600, "default": 600},

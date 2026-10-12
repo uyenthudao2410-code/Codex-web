@@ -1,0 +1,26 @@
+{
+  "approval_id": "call_flEpmLChKJPZsbnlAAXR5byS",
+  "files": {
+    "root-ssh-next.py": "5e6ab36c5c9979c1c1a8f20556e3496fad66377d49c3cd14407b6857bfe69591",
+    "ubuntu-r11-renewal-next.py": "2f9d6a35c7ee055228f252d17635635bae224d16a71a07b5c25dfb5fa9b59f11",
+    "r11_common.py": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+    "test-renewal-next.py": "0f3d0a193734f50a5d14ae2a9b24de91a7b36030a8f37894cd66367aca8a7364",
+    "helper-manifest.json": "f21af7a798f735ccf1ef929a6648c15173edbfdf91cc678b84d0baef604c8f4d"
+  },
+  "external_mutation": false,
+  "old_marker_modified": false,
+  "git_branch": "main",
+  "checks_passed": 9,
+  "window_anchor_phase": "renew",
+  "preparation_failure": {
+    "final_manifest_valid": true,
+    "class": "resolved_local_manifest_serialization",
+    "retained": "helper-manifest-preparation-invalid.json"
+  },
+  "network_or_ssh_used": false,
+  "kind": "r11_next_renewal_local_preparation",
+  "previous_marker_phase": "authority_renewed",
+  "git_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "observed_at_utc": "2026-10-11T16:15:01.9583680Z",
+  "commit_push_release": false
+}

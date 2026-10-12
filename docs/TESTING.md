@@ -12,11 +12,102 @@ Run only the lane relevant to the changed boundary; documentation-only changes d
 |---|---|---|
 | Electron/Desktop source tests | `npm test` | Node test suite plus source-root cleanliness check. |
 | Coding Tools MCP | `npm run test:mcp` | Runs the Python MCP pytest suite from its correct package root. Install the package development extras first (`python3 -m pip install -e 'resources/coding-tools-mcp[dev]'` on Ubuntu, or the equivalent `python -m pip` command on Windows). |
+| Control Plane source | `python -W error -B -m unittest discover -s tests -v` from `control-plane` | Ubuntu deployment lane. Cross-platform source tests also run on Windows; POSIX-only cases explicitly skip there. Release-artifact tests use an isolated Git fixture and can run while the developer checkout has edits. |
 | Desktop + MCP | `npm run test:all` | Use for cross-boundary changes or release readiness, not every edit. |
 | Recovery process boundary | `npm run test:recovery:e2e` | Required when Recovery Host/process ownership behavior changes. |
-| Packaged Recovery boundary | `npm run test:recovery:packaged` | Builds `win-unpacked`, runs packaged Recovery Host/Supervisor in isolated user data, proves fail-closed fault cases, and never installs a Scheduled Task. |
+| Packaged Recovery boundary | `npm run test:recovery:packaged` | Builds a fresh unpacked candidate and tests that exact output, runs packaged Recovery Host/Supervisor in isolated user data, proves fail-closed fault cases, and never installs a Scheduled Task. |
 | OpenCode provider readiness | `npm run canary:opencode-flash:preflight` | Zero provider dispatch; safe readiness/contract preflight. |
 | Windows package | `npm run dist` | Runs current NSIS packaging path; package proof is separate from source tests. |
+
+### Unified setup and execution UI focused lane
+
+From the repository root, validate the changed Desktop shell, permission editor,
+setup continuation and preference controls:
+
+```powershell
+node --test tests/toolbar-folder-navigation.test.js tests/folder-permission-editor.test.js tests/system-setup-console.test.js tests/unified-desktop-shell.test.js tests/control-center-manager.test.js tests/settings-redesign.test.js tests/settings.test.js
+Push-Location control-plane
+try { python -W error -B -m unittest discover -s tests -p test_web_ui_folder_setup.py -v }
+finally { Pop-Location }
+```
+
+The Desktop lane checks one primary window, exact-file/top-level IPC trust,
+unchanged runtime ownership, opaque selection restoration, bounded continuation,
+scope/cancellation and observed policy checks. The Console lane checks exact
+device/workspace scope, binding reuse, bounded context creation, stale-state
+guards and partial-failure reconciliation. It must not create grants/pilots or
+open admission. Source checks do not prove the activated r5 renderer contains
+the new UI, native folder selection, live owner approval or execution from a
+new ChatGPT session. Report source, isolated package and live proof separately.
+
+An isolated candidate build and packaged Recovery smoke are separate from
+source validation. Use a new output tag with `scripts/build-dev-candidate.js`
+and point `CODEX_PACKAGED_APP_ROOT` at that exact output for
+`scripts/packaged-recovery-smoke.js`; verify source parity for changed app.asar
+entries as well. Do not clean the output of an active installation. The smoke
+uses temporary user data and checks production descriptor stability; it does
+not activate the new UI in the production profile or grant remote authority.
+
+For a Windows source regression run from the repository root:
+
+```powershell
+python -m pip install -e "resources/coding-tools-mcp[dev]"
+npm run test:all
+npm run test:recovery:e2e
+Push-Location control-plane
+try { python -W error -B -m unittest discover -s tests -v }
+finally { Pop-Location }
+```
+
+The development extras constrain pytest to `>=8,<9`. The MCP CI lanes use
+pytest on both Ubuntu and Windows so they include the function-based tests
+that `unittest discover` does not collect. The Windows MXC integration fixtures
+use isolated directories at a local drive root; non-Windows fixtures retain the
+normal temporary directory.
+
+After source tests pass, check the development runtime separately:
+
+```powershell
+npm start
+npm run dev:status
+```
+
+The selected Desktop workspace must exist and contain its canonical
+`.coding-tools/orchestration/ledger.sqlite3`. A stale selection can cause
+`ORCHESTRATION_STATE_UNCERTAIN` before any MCP process starts. In
+`central_executor`, a current UI/MCP revision is only source-loading proof:
+activation also needs a fresh authenticated Control Plane heartbeat and an
+enabled unexpired policy for the exact registered workspace generation.
+Restore these through the supported enrollment and policy flows; a `VERIFYING`
+epoch with closed admission is not a ready runtime.
+
+If a shared private-service connector reports an old offline target while
+the current Windows node has fresh ready heartbeats, compare the inventory's
+device and binding IDs with the registered workspace. Its scoped pilot decision
+selects the exact visible binding; installing a local policy or creating a
+context does not change that selection. The owner must authorize a target
+transfer through the protected admission and pilot-decision APIs. Entering
+`recovery` revokes the previous pilot decisions, so inspect the current decision
+before transferring it. The central-mode toolbar displays the Ubuntu route;
+an unused Windows Tunnel is not a failure of that route.
+
+The central-mode “Thư mục & quyền” setup controls remain disabled in
+`npm start`, even when the Ubuntu route is connected. The runtime notice in
+that step explains the packaged-runtime requirement. Use a verified packaged
+Desktop runtime for workspace registration and policy setup; registration
+capabilities alone do not authorize commands. Exec additionally requires its
+workspace-bound local policy and a passing Windows sandbox probe.
+
+For a cold Windows Sandbox `exec_run`, the packaged relay budgets are 300 s
+for local MCP HTTP, 330 s for Recovery IPC and 360 s for the node adapter.
+Sandbox provisioning and startup happen before the initial Job response, so
+the ordinary 20 s polling timeout is insufficient for that first request.
+Poll/stop retain the configured adapter timeout; poll yield reserves 10 s for
+transport. If an attempt becomes UNKNOWN, inspect the exact idempotency key,
+native Job and process identity before submitting a terminal receipt or
+retrying. A timeout alone does not prove that no process started. Live test
+proof requires settled execution, exit code zero and verified test output;
+READY and a successful Sandbox probe are separate evidence.
 
 `npm run canary:opencode-flash` performs a real provider dispatch and may incur external cost. Run it only when the user/operator explicitly authorizes that external-cost canary. Do not substitute it for the no-dispatch preflight.
 

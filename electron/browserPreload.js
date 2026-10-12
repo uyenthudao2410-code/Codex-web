@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('browserAssistant', {
-  openManager: () => ipcRenderer.invoke('manager:open'),
+  openManager: (page) => ipcRenderer.invoke('manager:open', page),
   openChatGPT: () => ipcRenderer.invoke('shell:open', 'chatgpt-connectors'),
   lightweightStatus: () => ipcRenderer.invoke('app:lightweight-snapshot'),
   liveOrchestration: () => ipcRenderer.invoke('panel:live-control'),

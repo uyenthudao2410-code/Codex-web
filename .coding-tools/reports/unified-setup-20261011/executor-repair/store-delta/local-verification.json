@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-10-11T11:53:50.452546+00:00",
+  "file_sha256": {
+    "prepare-reopen-helper.py": "0c2587d3094db8ca9a65feb1fc9e81d3515fcfed21fb516a03b18f86272b7c73",
+    "prepare-store-packet.py": "90d131c9eb45560a1ba0d1441f7e17be36bd4b698aa5a8c5a126a5166b1ff4c8",
+    "ubuntu-store-observe-reopen.py": "7ed4ace1d54bea7865f3c6dbf5790917dd95f254ca5d2609049efedf0a85d39d",
+    "ubuntu-store-rollout.py": "753b957a0dd30dbd0a9ce2c2cf1bf9022387bfe6dedc279090bb099d771ac1c3"
+  },
+  "focused_test_proof_reused": {
+    "existing_http_assignment_test_passed": 1,
+    "new_store_tests_passed": 6,
+    "reported_by": "coordinator prior delegated worker proof",
+    "rerun_in_this_packet_task": false
+  },
+  "operation": "local_packet_static_verification",
+  "remote_execution": false,
+  "source_still_matches_frozen_proof": true,
+  "syntax": {
+    "prepare-reopen-helper.py": "pass",
+    "prepare-store-packet.py": "pass",
+    "ubuntu-store-observe-reopen.py": "pass",
+    "ubuntu-store-rollout.py": "pass"
+  }
+}

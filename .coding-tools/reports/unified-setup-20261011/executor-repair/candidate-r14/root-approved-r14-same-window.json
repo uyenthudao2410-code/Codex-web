@@ -1,0 +1,28 @@
+{
+  "approved": true,
+  "source": "human_user_response",
+  "approval_id": "call_VVCZ5vN5tTi8XytTvFyQyHY0",
+  "approved_at_ms": 1791762647878,
+  "operation": "owner_approved_r14_same_window_activation",
+  "candidate_tag": "workflow-timeout-1012-r14",
+  "context_id": "ctx_1e7e2fec6f0e43018db7a51c6980e5c2",
+  "expires_at_ms": 1791776571067,
+  "pilot_replacement_same_principal_binding_expiry": true,
+  "r13_owned_executor_cleanup_refresh": true,
+  "new_approved_patch_verification_canary": true,
+  "authority_extension": false,
+  "ubuntu_deploy_or_restart": false,
+  "windows_reboot": false,
+  "semantic_acceptance": false,
+  "target": {
+    "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+    "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+    "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+    "owner_id": "owner_default",
+    "endpoint_id": "executor-72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "server_origin": "https://svhome.tail0e4032.ts.net",
+    "root": "E:\\Github\\Tools-Codex-web",
+    "profile": "web-mcp-assistant"
+  }
+}

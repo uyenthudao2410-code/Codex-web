@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "kind": "r14_same_window_query_only_native_preflight",
+  "observed_at_ms": 1791764722095,
+  "package": {
+    "matched_files": 17,
+    "candidate_tag": "workflow-timeout-1012-r14",
+    "app_asar_sha256": "f2a1e77b08f7109ccbd4072055da8d281a339dd5f32f154285d3696ad11f6324",
+    "executable_sha256": "8270535a8149b54527172f9b774ea1fd6ed975fde44e4bb91022bdde31dea154",
+    "source_freeze_sha256": "a618711528b418db77a901a5b83537bde2d511618ef630ab22670a2e6579625d",
+    "parity_sha256": "59e4a0af303424a42db59831f83e8205420f6143a446f530bd9a9a272d4ae51a",
+    "helper_manifest_sha256": "77ab6e95eef25874c309d6233cf0f3f855f7b8f39ed14ffe03455e55de76b389"
+  },
+  "native_preflight": {
+    "observed_at_ms": 1791764722095,
+    "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "preimage_sha256": "d1edd529d09c7d4f71dfbb9e9b9e53010cc43a616cf1247594ddf4d705b84a1e",
+    "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+    "old_run_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "old_wave_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "second_old_run_sha256": "6a66aac3bf8d389938a0b4284b487378c180ce7bfca9cf1d5f754fc20077a2ca",
+    "second_old_wave_sha256": "3d2c5310ba6e9d91d32ba09c3d2b191c722cc0fe550b25cba371650e360a2b4d",
+    "cold_sandbox": true,
+    "no_active_jobs": true
+  },
+  "activation_epoch": "activation-mv4i9feu-9b7a86c37e9c24abc18dbcd5d4adc4c2",
+  "runtime_instance_id": "1Xxn_GjxlVe8hZn4",
+  "mcp_server_instance_id": "Q3nBEQrb4xq2NqKH",
+  "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 19,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "fbaf4b0700d04794af4062671c1bcd2b"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    }
+  },
+  "vm_zero": {
+    "backend_count": 0,
+    "host_count": 0
+  },
+  "authenticated_identity_observation": true,
+  "fixture_mutated": false,
+  "checker_executed": false,
+  "external_mutation": false,
+  "attestation_claimed": false
+}

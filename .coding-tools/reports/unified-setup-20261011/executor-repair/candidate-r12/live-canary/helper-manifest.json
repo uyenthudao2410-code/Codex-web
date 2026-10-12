@@ -1,0 +1,74 @@
+{
+  "authority_helper_sha256": "c7db3834b2238029c0f0693f4eb6e9f92dadfe9958ebf7278d0c174fd8575613",
+  "authority_manifest_sha256": "f5f56b2c85865e80df69e998a951ac8d38b73b2d67b073a61578438bf8f8d68e",
+  "files": [
+    {
+      "bytes": 24187,
+      "path": "correlate_r12.py",
+      "sha256": "ff9506b6b055eff6448cfb981f4b2f42aee0d565d365b3492244d53216067f7d"
+    },
+    {
+      "bytes": 11758,
+      "path": "native-output-read.cjs",
+      "sha256": "03b3901906a7f8a553b62adaec004463eeaf3c8e0c4353bdf4d68bb9d7f67dd4"
+    },
+    {
+      "bytes": 11034,
+      "path": "native-preflight.cjs",
+      "sha256": "54564016314003084f35ed3fe16a8930cdfc83aefee8d9319425a802209b0336"
+    },
+    {
+      "bytes": 639,
+      "path": "patch-envelope.txt",
+      "sha256": "77f2c282c91f3627e721d0d68bf1fa821bad21575ec136204353894b18ce5e4a"
+    },
+    {
+      "bytes": 1373,
+      "path": "pins.template.json",
+      "sha256": "18851757e38ce63fb9d601cfb3ee0032923a92c6d1503d3cf1586f41ddd3f812"
+    },
+    {
+      "bytes": 41482,
+      "path": "r12_mcp_canary.py",
+      "sha256": "ef0928a25dcbc25c3977d9fc74e207dfe29281af2c291b831867a16b8927a43f"
+    },
+    {
+      "bytes": 7580,
+      "path": "README.md",
+      "sha256": "eeebedd76b24ebb13d1434eeaf7e2be27e3b6a8eadf05e2c3b65c1d761bad262"
+    },
+    {
+      "bytes": 15095,
+      "path": "root-canary-ssh.py",
+      "sha256": "846e861e9d1cc51484f8da3dcbda0d17721a9454581f8baf065588926c2119b8"
+    },
+    {
+      "bytes": 1971,
+      "path": "test-native-preflight.cjs",
+      "sha256": "98aa333aab094f627a7d1082fcbbdd6f8f084539dbac8083f40ade55fffe4441"
+    },
+    {
+      "bytes": 15159,
+      "path": "test_canary_r12.py",
+      "sha256": "1ccf9f7224fa13c06de277537cb1f3b7b35f710ddeda71fcbb294eb5d00e2cf1"
+    },
+    {
+      "bytes": 9543,
+      "path": "test_correlate_r12.py",
+      "sha256": "36502588df8141fced17b39a32a2c3f37d77951cd18cee3f0b1ee25d07b2e7e3"
+    },
+    {
+      "bytes": 5351,
+      "path": "test_transport_r12.py",
+      "sha256": "231ac04f28ac7a0d3eba025a8ccb543a24ab6a75923c91616d6375c88a81dab8"
+    }
+  ],
+  "frozen_common_sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+  "frozen_ssh_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba",
+  "kind": "r12_canary_helper_freeze",
+  "minimum_canary_remaining_ms": 720000,
+  "observed_at": "2026-10-11T17:49:40.657277+00:00",
+  "remote_mutation": false,
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "repository_root": "E:\\Github\\Tools-Codex-web"
+}

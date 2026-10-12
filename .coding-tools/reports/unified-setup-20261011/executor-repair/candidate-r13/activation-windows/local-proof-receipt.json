@@ -1,0 +1,46 @@
+{
+  "kind": "r13_windows_transition_offline_proof",
+  "observed_at": "2026-10-11T20:05:43.144Z",
+  "runtime_activated": false,
+  "server_mutated": false,
+  "policy_mutated": false,
+  "approval_received": false,
+  "guard_tests_passed": 6,
+  "node_syntax": "passed",
+  "windows_powershell_parse_errors": 0,
+  "query_job_compile_only": "passed",
+  "matched_candidate_payload_files": 17,
+  "matched_lifecycle_dependencies": 6,
+  "source_freeze_sha256": "e9351a360eaa7c016514015a27ea06c762604e12c2a5ca436a550abbf09f29ff",
+  "candidate_parity_sha256": "7c2c60851359f619472bbfafb649529b3eaae90ee6a4626a724c401b91323b88",
+  "helper_manifest_sha256": "c298d21bde44e086f150b67d108df8b6bbb00cfc02856cc5fb54b9bbebe933ba",
+  "helper_files": [
+    {
+      "file": "transition-r13.cjs",
+      "sha256": "e73a2b211d704b357f449659164b9c8d0f3d17867750954cfec4f9815dae0722"
+    },
+    {
+      "file": "launch-child.ps1",
+      "sha256": "4e48a43db576b7915df0eac6236cd07fb57e5827474459f198dc09a17a65dd45"
+    },
+    {
+      "file": "query-job.py",
+      "sha256": "5c957000e82f816b0ba7754e816503f364ec035ff0fe55ae914f28d843599144"
+    },
+    {
+      "file": "offline-check.cjs",
+      "sha256": "aa1a3d6e4bcaa64b1e0fe84d02152ae87621dd5a139e746d4fa2f70df0c846a4"
+    },
+    {
+      "file": "README.md",
+      "sha256": "c60318c8f6def5d31a21dbce4ff26788126da3d46c4d165c444aff69609e7882"
+    }
+  ],
+  "authority_window_reused": {
+    "context_id": "ctx_d7a539dd85264a62951fddad0ffa2f23",
+    "pilot_id": "pilot_98c0b502568a4f888b3106838004c117",
+    "requested_at_ms": 1791747735200,
+    "expires_at_ms": 1791751335200
+  },
+  "minimum_remaining_ms": 720000
+}

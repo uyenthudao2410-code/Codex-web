@@ -23,6 +23,7 @@ from control_plane.node_agent import (
     _read_file_read_policy,
     _write_json_atomic,
     main as node_agent_main,
+    inspect_file_read_policy,
     poll_artifact_once,
     poll_file_read_once,
 )
@@ -143,6 +144,18 @@ class FileReadNodeAgentTests(unittest.TestCase):
             max_bytes=1024,
             max_lines=20,
         )
+
+    def test_inspect_reports_installed_facade_without_changing_policy(self) -> None:
+        self.install_policy()
+        policy_path = self.data_root / "control-plane-file-read-policy.json"
+        before = policy_path.read_bytes()
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(inspect_file_read_policy(self.args()), 0)
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["facade_contract"], FACADE_CONTRACT)
+        self.assertEqual(receipt["state"], "enabled")
+        self.assertEqual(policy_path.read_bytes(), before)
+        self.assertNotIn(self.config["node_secret"], output.getvalue())
 
     def test_standing_file_read_policy_is_not_bound_to_the_former_ttl(self) -> None:
         policy = _install_file_read_policy_values(
@@ -382,6 +395,8 @@ class FileReadNodeAgentTests(unittest.TestCase):
         action = {
             "action_id": "action-artifact-other-root-0001",
             "attempt_id": "attempt-artifact-other-root-0001",
+            "tool_name": "document_workflow",
+            "expires_at_ms": int(time.time() * 1000) + 30_000,
             "owner_id": "owner-control-plane-0001",
             "device_id": self.config["device_id"],
             "endpoint_id": self.config["endpoint_id"],

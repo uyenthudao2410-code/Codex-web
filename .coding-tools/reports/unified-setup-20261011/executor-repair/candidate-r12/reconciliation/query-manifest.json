@@ -1,0 +1,20 @@
+{
+  "action_id": "act_6aa1329b96c146f38c807f9926b3e684",
+  "captured_at_utc": "2026-10-11T19:52:51.293677+00:00",
+  "files": {
+    "observe-exact-action.py": {
+      "sha256": "3f645414f8a47265869be1f443e8c4ca175fc406522bdb7885b3bcbbb5e816c5",
+      "size_bytes": 7429
+    },
+    "root-query-ssh.py": {
+      "sha256": "8d665e6e69d780b7b4da946d2f4e10e5fc963210af56c7b534e1ec080cf16ff0",
+      "size_bytes": 2513
+    }
+  },
+  "query_sha256": "3f645414f8a47265869be1f443e8c4ca175fc406522bdb7885b3bcbbb5e816c5",
+  "remote_directory": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T194930649730Z",
+  "remote_mutation": false,
+  "staging": false,
+  "task_id": "task_d2c1dd3bff4042d084b045e9bc5a381b",
+  "validation": "compile only; no live query by lane"
+}

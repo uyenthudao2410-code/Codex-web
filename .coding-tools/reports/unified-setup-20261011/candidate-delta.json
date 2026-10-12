@@ -1,0 +1,30 @@
+{
+  "observed_at": "2026-10-11T10:01:12.797Z",
+  "kind": "local_candidate_code_delta",
+  "prior": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-exec-coldstart-1011-r5\\win-unpacked",
+  "current": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-unified-setup-1011-r7\\win-unpacked",
+  "archive_delta": [
+    {
+      "file": "electron\\main.js",
+      "prior": "9cd72dcad11025b99c67bfdbb404f1ef75cbb882a86fe4080f4bd6b927930dcd",
+      "current": "98e8711e6b7ff129c893b0582d7d41f85c97bec8cb8c92d35f500943c33ba880"
+    },
+    {
+      "file": "renderer\\app.js",
+      "prior": "3b54e3595e356d7f5ffa7e1b9b5ec208c94cbbc2befa7b8572ac14f4485e4228",
+      "current": "f6fe53ff2a2b6e05612b8859af41097c7f6ef3d5c3d949c77c1395f622f0d5c2"
+    },
+    {
+      "file": "renderer\\index.html",
+      "prior": "9d69937ad70efd5dcd160b71522a090b358bc8416d932c5b04dfadd0c91fe62e",
+      "current": "dc7dceb03cae483a2509393225ae8ba1e1209144578ae87396c11eec6f0ae613"
+    },
+    {
+      "file": "renderer\\settings-compact.css",
+      "prior": "f714614d0c28f99028722a7fc1a0be03bae29b49dd0f892e2dbf9534e7f177c6",
+      "current": "e02aa3a8cd77d123fac50c75459be644adeea85444b9496bf0b6d2636e5aa373"
+    }
+  ],
+  "resources_delta": [],
+  "note": "Local artifact comparison. Neither candidate read causes runtime activation."
+}

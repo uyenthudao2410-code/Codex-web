@@ -1,0 +1,32 @@
+{
+  "kind": "r10_mcp_canary_prepared_packet_v2",
+  "captured_at_utc": "2026-10-11T12:44:43.500109+00:00",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "branch": "main",
+  "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "worktree": "dirty_preserved",
+  "prepared_static_only": true,
+  "execution_accepted": false,
+  "helper_main_invoked": false,
+  "live_operations": false,
+  "supersedes_helper": "r10-mcp-canary.py",
+  "original_manifest_sha256": "8347c7f5fc0a3d9cd786001dd1500a7be0cfdd18ce30c9fb246885cc1d72e9a3",
+  "original_files_byte_identical": true,
+  "change": "Node standing policy observation expiry is a60s freshness horizon, independent from exact60m context/pilot authority expiry. Require integer horizon>now,enabled/ready/exactruntime and nonfuture heartbeat age<60s.",
+  "focused_actual_guard_cases": 15,
+  "modes": [
+    "cold",
+    "warm"
+  ],
+  "timeout_mode_excluded": true,
+  "native_job_correlation_required_before_acceptance": true,
+  "terminal_cleanup_finally": true,
+  "node_agent_source_sha256": "9eb1b8d7b82ca62b7275d1374c77a6f4d45b68145bfc396136943f57f0a64f32",
+  "files": {
+    "r10-mcp-canary-v2.py": "54f8ee88889e60437c7831410aae7845b2481401ce3f73bf7daa33a77e3ea047",
+    "check-freshness-guard-v2.py": "eaf5772d3e52b9f443842da9b2c283f3dd789922e4540314fb381994093e0afa",
+    "static-proof-v2.jsonl": "10e571a6e9f3bdc9cdaab086a3af7d48d56405ad53d2e83bd2764d3eba55f206",
+    "README-v2.md": "f2a0269ae9ced3eb9cd6a7d3625dadd9c6e3ba00dd1040d9e0ae0fcc6469e941",
+    "verify-r10-native-job.py": "b620253eb7cd1851fd38c862cfaa3be2abc407c2ddd3ad8534af96739048baf5"
+  }
+}

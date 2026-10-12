@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "product_source_modified": false,
+  "supersedes_patch_sha256": "d5253bfd9e06cb9337d7e8e6f85d3bdec098efd55ab7355b351897f5f70cdcf4",
+  "changes": [
+    {
+      "file": "electron/services/runtimeOrchestrator.js",
+      "before_sha256": "043540376ce6deeff271839e2e7e9f259156462dc6ce286ff5bca6d51a309d99",
+      "candidate_normalized_sha256": "ec9a500aacc35e6e7594fa780fce96198b897e671c7e4fa5d63c3e8dd6a6d666"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "before_sha256": "f019eaacea22852949c45c6bc753e3849a3664245f3f3af316bf9283f00df6db",
+      "candidate_normalized_sha256": "926e215ca13590462ebe7f2f889796262db79f433a86a80ac9cdfc8fb6655b5a"
+    }
+  ],
+  "patch_sha256": "5614539fdda1a5fd22a880a65a26d06f46c2741c649e3a1a68e0b045d643cf88",
+  "replacements": [
+    {
+      "file": "electron/services/runtimeOrchestrator.js",
+      "before": "    let structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {",
+      "after": "    const verificationDeadline = verificationPlan\n      ? Date.now() + verificationPlan.timeout_ms + CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS + 30000\n      : null;\n    let structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {"
+    },
+    {
+      "file": "electron/services/runtimeOrchestrator.js",
+      "before": "    }, 'workflow');\n    if (verificationPlan && structured?.status === 'running') {",
+      "after": "    }, 'workflow', verificationPlan\n      ? Math.max(1, verificationDeadline - Date.now())\n      : CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS);\n    if (verificationPlan && structured?.status === 'running') {"
+    },
+    {
+      "file": "electron/services/runtimeOrchestrator.js",
+      "before": "      const deadline = Date.now() + verificationPlan.timeout_ms + CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS + 30000;",
+      "after": "      const deadline = verificationDeadline;"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "before": "  const calls = [];\n  let workflowArguments;\n  const operationId = 'background_opaque_operation';",
+      "after": "  const calls = [];\n  const requestTimeouts = [];\n  const request = http.request;\n  let now = Date.now();\n  t.mock.method(Date, 'now', () => now);\n  t.mock.method(http, 'request', function (options, ...argumentsList) {\n    requestTimeouts.push(options.timeout);\n    return Reflect.apply(request, this, [options, ...argumentsList]);\n  });\n  let workflowArguments;\n  const operationId = 'background_opaque_operation';"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "before": "        assert.equal(workflowArguments.verification, 'none');\n        fs.writeFileSync(item.target, action._after, 'utf8');",
+      "after": "        assert.equal(workflowArguments.verification, 'none');\n        now += 325_000; // Simulate elapsed handoff/setup without a real wait.\n        fs.writeFileSync(item.target, action._after, 'utf8');"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "before": "      assert.equal(body.params.arguments.operation_id, operationId);\n      assert.equal(body.params.arguments.task_context_id, workflowArguments.task_context_id);",
+      "after": "      assert.equal(body.params.arguments.operation_id, operationId);\n      assert.equal(body.params.arguments.wait_ms, 5_000);\n      assert.equal(body.params.arguments.task_context_id, workflowArguments.task_context_id);"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "before": "  assert.equal(result.initial_verification.proof_status, 'failed');\n  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);",
+      "after": "  assert.equal(result.initial_verification.proof_status, 'failed');\n  assert.deepEqual(requestTimeouts, [12_000, 330_000, 15_000]);\n  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "before": "test('initial verification cannot write before independent local exec admission', async (t) => {",
+      "after": "test('initial verification expires its original observation budget without another write or poll', async (t) => {\n  const item = fixture(t);\n  const action = admission(item.registeredRoot);\n  action.verification = { argv: ['node', '--test'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };\n  action.exec_policy_sha256 = 'e'.repeat(64);\n  action.expires_at_ms = Date.now() + 600000;\n  let now = Date.now();\n  t.mock.method(Date, 'now', () => now);\n  const calls = [];\n  const server = http.createServer((request, response) => {\n    const chunks = [];\n    request.on('data', chunk => chunks.push(chunk));\n    request.on('end', () => {\n      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));\n      calls.push(body);\n      if (calls.length === 1) return send(response, body.id, { workspace: item.registeredRoot });\n      assert.equal(body.params.name, 'agent_workflow');\n      assert.equal(calls.length, 2, 'an exhausted budget must not poll or start another workflow');\n      fs.writeFileSync(item.target, action._after, 'utf8');\n      now += 330_001;\n      send(response, body.id, { status: 'running', background_operation: {\n        operation_id: 'background_expired_operation', tool: 'agent_workflow', workspace: item.registeredRoot, status: 'running' } });\n    });\n  });\n  await listen(server);\n  t.after(() => server.close());\n  const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });\n  await assert.rejects(context.orchestrator.controlPlaneApprovedPatch(action), {\n    code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_UNCONFIRMED'\n  });\n  assert.equal(calls.length, 2);\n  assert.equal(calls.filter(call => call.params.name === 'agent_workflow').length, 1);\n  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);\n});\n\ntest('initial verification cannot write before independent local exec admission', async (t) => {"
+    }
+  ]
+}

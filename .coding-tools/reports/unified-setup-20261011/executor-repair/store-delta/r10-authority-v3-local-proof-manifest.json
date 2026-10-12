@@ -1,0 +1,18 @@
+{
+  "kind": "immutable_r10_store_authority_v3_local_proof",
+  "base_helper": "ubuntu-r10-store-authority-v2-pinned.py",
+  "base_sha256": "ab182f47b605e5edac1e30cb9cdf48ca53a571f0cbb5367a0f6fb837cbe0c9af",
+  "helper": "ubuntu-r10-store-authority-v3-local-proof.py",
+  "helper_sha256": "a312575854fee785158fa21624a096d7b09ae3701ded38f449a7330ba089ebec",
+  "prepared_only": true,
+  "runtime_executed": false,
+  "authority_mutated": false,
+  "scope": "same existing Tools-Codex-web target/grant; one 60-minute renewal; reopen fresh r10 only",
+  "input": {
+    "transport": "exact raw proof bytes on stdin",
+    "max_bytes": 131072,
+    "hash_argument": "--expected-local-preparation-sha256",
+    "freshness_ms": 60000
+  },
+  "unchanged": "v2 source/Store package/service/source/quarantine/full action families/grant/reopen/window routines"
+}

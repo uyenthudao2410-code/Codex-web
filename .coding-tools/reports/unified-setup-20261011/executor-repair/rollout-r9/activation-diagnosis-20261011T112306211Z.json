@@ -1,0 +1,231 @@
+{
+  "kind": "read_only_r9_activation_diagnosis",
+  "observed_at": "2026-10-11T11:23:06.211Z",
+  "helper_sha256": "cdbbb1f94fdbde68f0afa378f6d2495c61d1141d5767cafd69558fc7af08d473",
+  "expected_epoch": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+  "recovery_status": {
+    "observed_keys": [
+      "activation_closure",
+      "activation_epoch",
+      "auto_activation",
+      "capabilities",
+      "code_revision",
+      "device_display_name",
+      "device_id",
+      "device_instance_id",
+      "electron_ui_recovery",
+      "electron_ui_revision",
+      "full_clean_activation",
+      "gateway",
+      "gateway_metrics",
+      "instance_id",
+      "last_progress",
+      "pid",
+      "process_start_token",
+      "ready_adoption",
+      "recovery_bootstrap",
+      "recovery_plane",
+      "recovery_plane_mode",
+      "runtime",
+      "signal_stale",
+      "snapshot_age_ms",
+      "snapshot_observed_at_unix_ms",
+      "started_at",
+      "state",
+      "telemetry_available",
+      "watchdog_interval_ms"
+    ],
+    "state": "healthy",
+    "pid": 1128,
+    "full_clean_activation": {
+      "observed_keys": [
+        "activation_epoch_id",
+        "available",
+        "contract_version",
+        "disk_revision",
+        "running_revision",
+        "state"
+      ],
+      "running_revision": "919e2fd308bc6c0f408accdb04a9039c0d418e9d96b8a94696622e9702f67b5d",
+      "disk_revision": "919e2fd308bc6c0f408accdb04a9039c0d418e9d96b8a94696622e9702f67b5d",
+      "state": "current",
+      "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7"
+    },
+    "activation_epoch": {
+      "observed_keys": [
+        "activation_epoch_id",
+        "admission_open",
+        "epoch_state",
+        "error",
+        "expires_at_unix_ms",
+        "operation_id",
+        "ready_at",
+        "ready_commit_digest",
+        "state",
+        "update_incomplete"
+      ],
+      "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+      "operation_id": "full-clean-mv3qdvfq-a83d4dacc8a5de0588fb6ba5",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "f85415b88bd6b9b1442a40fbb308d69d6aa4d7e0a8c9ee690a86ef5a5f22fe3e",
+      "expires_at_unix_ms": 1791718178343
+    },
+    "recovery_plane": {
+      "observed_keys": [
+        "activation_epoch_id",
+        "checked_at",
+        "device_id",
+        "device_instance_id",
+        "mcp",
+        "mode",
+        "state",
+        "tunnel"
+      ],
+      "mode": "independent_mcp_tunnel_v1",
+      "state": "healthy",
+      "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+      "mcp": {
+        "observed_keys": [
+          "activation_epoch_id",
+          "device_id",
+          "device_instance_id",
+          "instance_id",
+          "pid",
+          "port",
+          "process_start_token",
+          "replaced",
+          "revision",
+          "state"
+        ],
+        "state": "healthy",
+        "pid": 14552,
+        "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7"
+      }
+    },
+    "runtime": {
+      "observed_keys": [
+        "activation_epoch_id",
+        "authority_ready",
+        "central_connected",
+        "central_status_reason",
+        "connector_ack_sha_matches",
+        "connector_acknowledged_sha256",
+        "connector_current_sha256",
+        "connector_ready",
+        "execution_role",
+        "fully_ready",
+        "mcp",
+        "recovering",
+        "recovery_blocked",
+        "tunnel",
+        "update_incomplete"
+      ],
+      "update_incomplete": false,
+      "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7"
+    }
+  },
+  "epoch_status": {
+    "observed_keys": [
+      "activation_epoch_id",
+      "admission_open",
+      "epoch_state",
+      "error",
+      "expires_at_unix_ms",
+      "operation_id",
+      "ready_at",
+      "ready_commit_digest",
+      "state",
+      "update_incomplete"
+    ],
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+    "operation_id": "full-clean-mv3qdvfq-a83d4dacc8a5de0588fb6ba5",
+    "state": "READY",
+    "epoch_state": "READY",
+    "admission_open": true,
+    "update_incomplete": false,
+    "ready_commit_digest": "f85415b88bd6b9b1442a40fbb308d69d6aa4d7e0a8c9ee690a86ef5a5f22fe3e",
+    "expires_at_unix_ms": 1791718178343
+  },
+  "durable_epoch": {
+    "observed_keys": [
+      "activation_epoch_id",
+      "admission_state",
+      "component_evidence",
+      "component_revisions",
+      "components",
+      "created_at",
+      "created_at_unix_ms",
+      "error",
+      "expires_at",
+      "expires_at_unix_ms",
+      "failed_at",
+      "failed_at_unix_ms",
+      "ledger_snapshot",
+      "metadata",
+      "mode",
+      "operation_id",
+      "owner_instance_id",
+      "owner_pid",
+      "ready_at",
+      "ready_at_unix_ms",
+      "ready_commit_digest",
+      "request_fingerprint",
+      "request_intent",
+      "revision",
+      "source_checkpoint",
+      "started_at",
+      "started_at_unix_ms",
+      "state",
+      "transitions",
+      "updated_at",
+      "updated_at_unix_ms",
+      "verification",
+      "version"
+    ],
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+    "operation_id": "full-clean-mv3qdvfq-a83d4dacc8a5de0588fb6ba5",
+    "mode": "full_clean_activation",
+    "state": "READY",
+    "admission_state": "OPEN",
+    "components": [
+      "recovery_host",
+      "coding_mcp",
+      "electron_ui"
+    ],
+    "owner_pid": 24780,
+    "expires_at_unix_ms": 1791718178343,
+    "ready_commit_digest": "f85415b88bd6b9b1442a40fbb308d69d6aa4d7e0a8c9ee690a86ef5a5f22fe3e",
+    "metadata": {
+      "observed_keys": [
+        "activation_mode",
+        "allow_acceptance_pending",
+        "component_profile",
+        "execution_role",
+        "expires_at_unix_ms",
+        "ledger_census_fingerprint",
+        "reason",
+        "refresh",
+        "requested_at_unix_ms"
+      ],
+      "expires_at_unix_ms": 1791718178343
+    },
+    "ready_at_unix_ms": 1791717631230
+  },
+  "code_activation_status": {
+    "observed_keys": [
+      "error"
+    ],
+    "error": {
+      "observed_keys": [
+        "code"
+      ],
+      "code": "ACTIVATION_OPERATION_NOT_FOUND"
+    }
+  },
+  "runtime_mutated": false,
+  "sandbox_probe_performed": false,
+  "server_mutated": false
+}

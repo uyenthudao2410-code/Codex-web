@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "operation": "r14_context_guard_read_only_inspection",
+  "root_execution_only": true,
+  "read_only": true,
+  "helper_sha256": "1679d8248b72e41faa5fb8e29faab1e58a265c21e85f0cde29afe3dda5486641",
+  "driver_sha256": "aa9523c463b9ba969e1e75cfbfb0bd39e25c2a86879abb5039f0cc4b6364b51f",
+  "frozen_common_sha256": "25f2d15359ff49a50e1ded411d40f1f029fb6067390c68aff9b93bda0130d986",
+  "frozen_safe_receipt_transport_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba",
+  "host": "svhome@100.116.112.22",
+  "context_id": "ctx_1e7e2fec6f0e43018db7a51c6980e5c2",
+  "expires_at_ms": 1791776571067,
+  "syntax_ast_parse_passed": true,
+  "remote_effects_performed": false
+}

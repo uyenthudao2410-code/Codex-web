@@ -1,0 +1,8 @@
+{
+  "kind": "r10_native_local_read_only_failed",
+  "observed_at": "2026-10-11T12:57:35.829Z",
+  "ok": false,
+  "code": "ENOENT",
+  "live_command_invoked": false,
+  "mutations_requested": false
+}

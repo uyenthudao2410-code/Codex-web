@@ -1,9 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { DEVICE_ID_PATTERN, loadOrCreateDeviceIdentity } = require('../electron/services/deviceIdentity');
 const {
@@ -15,8 +17,10 @@ const {
 } = require('../electron/services/componentRevision');
 const { RecoveryActionStore } = require('../electron/services/recoveryActionStore');
 const { RecoveryActivation } = require('../electron/services/recoveryActivation');
-const { RecoveryIpcClient, RecoveryIpcServer, RPC_ACTIONS } = require('../electron/services/recoveryIpc');
+const { RecoveryIpcClient, RecoveryIpcServer, RPC_ACTIONS, sanitizeControlPlaneExecErrorDetails } = require('../electron/services/recoveryIpc');
 const { compactWorkspaceSummary, workspaceSummaryDigest } = require('../electron/services/controlPlaneReadOnlyBridge');
+const { digest: approvedPatchDigest } = require('../electron/services/controlPlaneApprovedPatchBridge');
+const { loadExecBridgePolicy } = require('../electron/services/controlPlaneExecBridge');
 const {
   RecoveryHost,
   acquireRecoveryHostLock,
@@ -75,6 +79,7 @@ function activationLifecycle(operationId, sourceCheckpoint, fenced) {
     },
     source_checkpoint: { ok: true, code: 'ACTIVATABLE', ...sourceCheckpoint },
     fenced: fenced === true,
+    executor_cleanup: { state: 'not_required', confirmed: true },
     fence_operation_id: fenced === true ? operationId : null
   };
 }
@@ -320,6 +325,129 @@ function readyAdoptionHost(t, { executionRole = 'direct_legacy' } = {}) {
   return { host, calls };
 }
 
+function approvedPatchVerificationHost(t, { execDenied = false, differentExecWorkspace = false } = {}) {
+  const { host } = readyAdoptionHost(t);
+  const root = fs.realpathSync.native(host.paths.appRoot());
+  const before = 'before\n';
+  const after = 'after\n';
+  const sha256 = value => crypto.createHash('sha256').update(value).digest('hex');
+  const preimage = sha256(before);
+  const postimage = sha256(after);
+  const envelope = [
+    '*** Begin Patch',
+    '*** Write Exact File: fixture.txt',
+    `@@ encoding=zlib-base64 preimage_sha256=${preimage} postimage_sha256=${postimage}`,
+    `+${zlib.deflateSync(Buffer.from(after)).toString('base64')}`,
+    '*** End Patch'
+  ].join('\n');
+  fs.writeFileSync(path.join(root, 'fixture.txt'), before, 'utf8');
+  const expiresAtMs = Date.now() + 60_000;
+  const authority = {
+    server_origin: 'https://control.example.test',
+    owner_id: 'owner-approved-patch-host-0001',
+    device_id: host.deviceIdentity.device_id,
+    endpoint_id: 'endpoint-approved-patch-host-0001',
+    workspace_id: 'workspace-approved-patch-host-0001',
+    workspace_generation: 'generation-approved-patch-host-0001',
+    expires_at_ms: expiresAtMs,
+    facade_contract: { schema_version: 32, profile: 'control-plane-private-tunnel-service-v1', sha256: 'f'.repeat(64) }
+  };
+  const patchPolicy = { schema_version: 1, enabled: true, ...authority,
+    allowed_relative_paths: ['fixture.txt'], max_patch_bytes: 4096, max_file_bytes: 4096,
+    validation_profile: 'targeted' };
+  const execAuthority = differentExecWorkspace ? { ...authority,
+    workspace_id: 'workspace-other-approved-patch-host-0001',
+    workspace_generation: 'generation-other-approved-patch-host-0001' } : authority;
+  const execPolicy = { schema_version: 1, enabled: true, ...execAuthority,
+    allowed_argv_prefixes: execDenied ? [['npm']] : [['node', '--test']],
+    max_timeout_ms: 60_000, max_output_bytes: 32768, max_concurrent: 1 };
+  const registration = (authorityValue, canonicalPath) => ({
+    workspace_id: authorityValue.workspace_id,
+    workspace_generation: authorityValue.workspace_generation,
+    canonical_path: canonicalPath,
+    display_name: 'Isolated approved-patch host fixture',
+    capabilities: { read: true, write: true, exec: true },
+    created_at_ms: Date.now()
+  });
+  const entries = [registration(authority, root)];
+  if (differentExecWorkspace) {
+    const otherRoot = path.join(root, 'other-workspace');
+    fs.mkdirSync(otherRoot);
+    entries.push(registration(execAuthority, fs.realpathSync.native(otherRoot)));
+  }
+  fs.writeFileSync(host.paths.controlPlaneApprovedPatchPolicyFile(), JSON.stringify(patchPolicy), 'utf8');
+  fs.writeFileSync(host.paths.controlPlaneExecPolicyFile(), JSON.stringify(execPolicy), 'utf8');
+  fs.writeFileSync(host.paths.controlPlaneWorkspaceRegistryFile(), JSON.stringify({ schema_version: 1, entries }), 'utf8');
+  const verification = { argv: ['node', '--test', 'tests/fixture.test.js'], cwd: '', timeout_ms: 60_000, max_output_bytes: 32768 };
+  const request = { ...authority, expires_at_ms: expiresAtMs - 1,
+    context_id: 'context-approved-patch-host-0001', binding_id: 'binding-approved-patch-host-0001',
+    action_id: 'action-approved-patch-host-0001', attempt_id: 'attempt-approved-patch-host-0001',
+    task_id: `task_${'a'.repeat(32)}`, writer_lease_generation: 1,
+    tool_name: 'agent_workflow', operation: 'apply_patch',
+    permission_request_id: 'permission-approved-patch-host-0001', permission_digest: 'a'.repeat(64), intent_digest: 'b'.repeat(64),
+    path: 'fixture.txt', preimage_sha256: preimage, patch_sha256: sha256(envelope), patch_envelope: envelope,
+    validation_profile: 'targeted', verification };
+  const identity = { activation_epoch_id: 'activation-approved-patch-host-0001',
+    mcp_process_instance_id: 'process-approved-patch-host-0001', mcp_server_instance_id: 'server-approved-patch-host-0001',
+    tool_contract_sha256: 'd'.repeat(64), mcp_ready: true, identity_current: true };
+  const calls = { snapshot: 0, patch: 0, admission: null };
+  host.orchestrator.lightweightSnapshot = async () => {
+    calls.snapshot += 1;
+    return { executionRole: 'central_executor', componentsReady: true, fullyReady: true, updateIncomplete: false,
+      centralConnected: true, authorityReady: true, centralStatusReason: null };
+  };
+  host.mcpIdentityObservation = async () => identity;
+  host.orchestrator.controlPlaneApprovedPatch = async admission => {
+    calls.patch += 1;
+    calls.admission = admission;
+    fs.writeFileSync(path.join(admission.workspace_root, admission.path), after, 'utf8');
+    const file = { path: admission.path, preimage_sha256: admission.preimage_sha256,
+      postimage_sha256: admission.postimage_sha256, bytes_written: admission.postimage_bytes };
+    const initialVerification = { plan_sha256: approvedPatchDigest(verification), proof_status: 'passed',
+      proof_ids: ['4'.repeat(32)], proof_fingerprint: '5'.repeat(64), command_id: '-original-command', job_id: '_original-job' };
+    return { schema_version: 1, operation_kind: 'control_plane_approved_patch', local_handle: `cp_ap_${'c'.repeat(48)}`,
+      action_id: admission.action_id, attempt_id: admission.attempt_id, task_id: admission.task_id,
+      writer_lease_generation: admission.writer_lease_generation, run_id: '1'.repeat(32), wave_id: '2'.repeat(32),
+      patch_applied: true, local_semantic_acceptance: 'pending', actor: admission.actor, policy_sha256: admission.policy_sha256,
+      facade_contract: admission.facade_contract, runtime_identity: { activation_epoch_id: identity.activation_epoch_id,
+        process_instance_id: identity.mcp_process_instance_id, server_instance_id: identity.mcp_server_instance_id,
+        tool_contract_sha256: identity.tool_contract_sha256 }, file, initial_verification: initialVerification,
+      response_sha256: approvedPatchDigest({ file, initial_verification: initialVerification }) };
+  };
+  return { host, root, request, calls, before, after };
+}
+
+test('Recovery Host initial verification denies exec authority before the patch orchestrator', async t => {
+  for (const scenario of [
+    { name: 'argv outside independent exec policy', options: { execDenied: true }, code: 'CONTROL_PLANE_EXEC_ALLOWLIST_DENIED' },
+    { name: 'exec registration resolves another workspace', options: { differentExecWorkspace: true }, code: 'CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH' }
+  ]) {
+    await t.test(scenario.name, async child => {
+      const item = approvedPatchVerificationHost(child, scenario.options);
+      await assert.rejects(item.host.controlPlaneApprovedPatch(item.request), { code: scenario.code });
+      assert.equal(item.calls.patch, 0);
+      assert.equal(item.calls.snapshot, 0, 'independent exec admission must precede asynchronous runtime work');
+      assert.equal(fs.readFileSync(path.join(item.root, 'fixture.txt'), 'utf8'), item.before);
+    });
+  }
+});
+
+test('Recovery Host initial verification forwards the exact independent exec admission for the same root', async t => {
+  const item = approvedPatchVerificationHost(t);
+  const expectedExecPolicy = loadExecBridgePolicy(item.host.paths);
+  const result = await item.host.controlPlaneApprovedPatch(item.request);
+  assert.equal(item.calls.patch, 1);
+  assert.equal(item.calls.admission.workspace_root, item.root);
+  assert.equal(item.calls.admission.exec_policy_sha256, expectedExecPolicy.policy_sha256);
+  assert.deepEqual(item.calls.admission.verification, item.request.verification);
+  assert.equal(item.calls.admission.expires_at_ms, item.request.expires_at_ms);
+  assert.equal(item.calls.admission.actor.client_id, 'electron-control-plane-approved-patch-bridge');
+  assert.equal(Object.isFrozen(item.calls.admission), true);
+  assert.equal(result.patch_applied, true);
+  assert.equal(result.initial_verification.proof_status, 'passed');
+  assert.equal(fs.readFileSync(path.join(item.root, 'fixture.txt'), 'utf8'), item.after);
+});
+
 function uiRecoveryFixture(t, { paths = fixture(t), revision = 'a'.repeat(64), spawnElectronUi = async () => 0 } = {}) {
   const host = new RecoveryHost({
     paths,
@@ -350,6 +478,51 @@ function uiRecoveryFixture(t, { paths = fixture(t), revision = 'a'.repeat(64), s
   });
   return { host, paths, revision };
 }
+
+test('full-clean UI termination keeps a detached Recovery Host descendant alive', async (t) => {
+  const paths = fixture(t);
+  const terminations = [];
+  const uiPid = process.pid + 1;
+  const uiToken = '133801234567890123';
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ autoStartServices: false, workspace: paths.appRoot() }) },
+    secrets: {},
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator: {},
+    healthService: {},
+    gateway: { stop: async () => {} },
+    revisionTracker: {
+      captureRunning: () => 'a'.repeat(64),
+      status: () => ({ running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), state: 'current' })
+    },
+    processIdentityObserver: (pid) => ({ state: 'live', pid, process_start_token: uiToken }),
+    lifecycleProcessIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: uiToken }),
+    exactProcessTerminator: async (identity, options) => { terminations.push({ identity, options }); }
+  });
+  t.after(() => host.stop());
+  host.activation.uiRegistration = {
+    instance_id: 'detached-ui-child-host-test-0001',
+    pid: uiPid,
+    process_start_token: uiToken,
+    revision: 'a'.repeat(64),
+    registered_at_unix_ms: Date.now()
+  };
+
+  const presence = host.activation.uiPresence();
+  assert.equal(presence.alive, true);
+  await host.fullCleanActivation.terminateUi(presence);
+
+  assert.deepEqual(terminations, [{
+    identity: { pid: uiPid, process_start_token: uiToken },
+    options: {
+      observeProcessIdentity: host.lifecycleProcessIdentityObserver,
+      timeoutMs: 5000,
+      includeDescendants: false
+    }
+  }]);
+});
 
 function unauthorizedCall(descriptor) {
   return new Promise((resolve, reject) => {
@@ -452,6 +625,59 @@ test('Recovery IPC client keeps fresh status as a read argument, not transport a
     [{ fresh: true }],
     { timeout: 321, expectedOwnerPid: 42 }
   ]);
+});
+
+test('Recovery IPC preserves only typed execution diagnostics on the exact error action', async (t) => {
+  const paths = fixture(t);
+  const details = {
+    native_error_code: 'SANDBOX_STATE_PHASE_FAILED', phase: 'start', backend_error_code: 'backend_error',
+    command_id: '-4hBa9tkNAYi4ngWamUIO4Ba', job_id: 'a'.repeat(32), job_lifecycle: 'spawn_failed',
+    root_pid: 0, execution_started: false, job_finished_at: '2026-10-11T10:27:08.489123Z'
+  };
+  const privateFields = { token: 'do-not-forward-token', descriptor: { token: 'private' }, stdout: 'private stdout' };
+  const server = new RecoveryIpcServer({
+    paths, instanceId: 'instance-exec-diagnostics', startedAt: new Date().toISOString(), log: { warn() {} },
+    handlers: {
+      'runtime.control_plane_exec': async (request) => {
+        throw Object.assign(new Error('private native message'), {
+          code: request?.otherCode ? 'OTHER_EXEC_ERROR' : 'CONTROL_PLANE_EXEC_MCP_REJECTED',
+          details: { ...details, ...privateFields }
+        });
+      },
+      'runtime.stop': async () => { throw Object.assign(new Error('other action'), {
+        code: 'CONTROL_PLANE_EXEC_MCP_REJECTED', details
+      }); }
+    }
+  });
+  t.after(() => server.stop());
+  await server.start();
+  const client = new RecoveryIpcClient({ paths });
+  await assert.rejects(client.call('runtime.control_plane_exec', [{}]), (error) => {
+    assert.equal(error.code, 'CONTROL_PLANE_EXEC_MCP_REJECTED');
+    assert.equal(error.recoveryResponseReceived, true);
+    assert.deepEqual(error.details, details);
+    assert.equal(error.message.includes('private'), false);
+    assert.equal(JSON.stringify(error).includes('do-not-forward'), false);
+    return true;
+  });
+  for (const [action, args] of [['runtime.stop', []], ['runtime.control_plane_exec', [{ otherCode: true }]]]) {
+    await assert.rejects(client.call(action, args), (error) => {
+      assert.equal(Object.hasOwn(error, 'details'), false);
+      assert.equal(error.recoveryResponseReceived, true);
+      return true;
+    });
+  }
+});
+
+test('Recovery IPC execution diagnostics reject coercion and impossible UTC completion dates', () => {
+  assert.deepEqual(sanitizeControlPlaneExecErrorDetails({
+    native_error_code: 'SANDBOX_STATE_PHASE_FAILED', phase: 'shell', backend_error_code: 'private\nmessage',
+    command_id: 'x'.repeat(161), job_id: 'job\nsecret', job_lifecycle: 'completed',
+    root_pid: '0', execution_started: 0, job_finished_at: '2026-02-31T10:27:08Z',
+    token: 'private'
+  }), { native_error_code: 'SANDBOX_STATE_PHASE_FAILED' });
+  assert.equal(sanitizeControlPlaneExecErrorDetails([]), null);
+  assert.equal(sanitizeControlPlaneExecErrorDetails({ root_pid: true, job_finished_at: Date.now() }), null);
 });
 
 test('Recovery Host lock rejects a second live owner and replaces a dead owner', (t) => {
@@ -2065,7 +2291,7 @@ test('Recovery Host replacement hands off ownership without stopping Coding MCP 
     supervise: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
-    inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
+    inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY' }),
     prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => (
       activationLifecycle(operationId, sourceCheckpoint, true)
     ),
@@ -2185,7 +2411,7 @@ test('Recovery Host handoff drains in-flight supervision before releasing owners
     supervise: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
-    inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
+    inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY' }),
     prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => (
       activationLifecycle(operationId, sourceCheckpoint, true)
     ),
@@ -2328,7 +2554,7 @@ test('Recovery Host resumes ownership and releases the fence when replacement do
     supervise: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
-    inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
+    inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY' }),
     prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => (
       activationLifecycle(operationId, sourceCheckpoint, true)
     ),
@@ -2534,7 +2760,7 @@ test('Electron UI registers with Recovery Host only after its window is visible'
   const root = path.resolve(__dirname, '..');
   const main = fs.readFileSync(path.join(root, 'electron', 'main.js'), 'utf8');
   const createStart = main.indexOf('function createChatWindow()');
-  const managerStart = main.indexOf('function openManagerWindow()');
+  const managerStart = main.indexOf('function openManagerWindow(');
   const startupStart = main.indexOf('app.whenReady().then(async () => {');
   const startupEnd = main.indexOf("log.info('Coding Tools MCP UI đã kết nối Recovery Host');", startupStart);
   assert.ok(createStart >= 0 && managerStart > createStart);
@@ -2543,7 +2769,7 @@ test('Electron UI registers with Recovery Host only after its window is visible'
   const createSource = main.slice(createStart, managerStart);
   const revealFunction = createSource.indexOf('const revealOpeningWindow =');
   const readyListener = createSource.indexOf("openingWindow.once('ready-to-show'");
-  const loadFile = createSource.indexOf('chatWindow.loadFile(');
+  const loadFile = createSource.indexOf('openingWindow.loadFile(');
   const showWindow = createSource.indexOf('openingWindow.show()', revealFunction);
   const visibleGuard = createSource.indexOf('openingWindow.isVisible()', showWindow);
   const markReady = createSource.indexOf('uiWindowReady = true', visibleGuard);
@@ -2570,8 +2796,10 @@ test('Electron UI registers with Recovery Host only after its window is visible'
     'startup must not publish UI readiness before creating and showing the window');
 
   const managerSource = main.slice(managerStart, main.indexOf('function registerIpc()', managerStart));
-  assert.ok(managerSource.indexOf("managerWindow.once('ready-to-show'") < managerSource.indexOf('managerWindow.loadFile('),
-    'the manager window must subscribe before loading local HTML');
+  assert.match(managerSource, /const targetWindow = showChatWindow\(\)/,
+    'manager navigation must use the already guarded primary window');
+  assert.doesNotMatch(managerSource, /new BrowserWindow|\.loadFile\(/,
+    'manager navigation must not create or load a second window');
 });
 
 test('Recovery Host restart resolves the current accepted checkpoint and rejects caller drift', async (t) => {

@@ -1,0 +1,640 @@
+TAP version 13
+# Subtest: workspace setup notice follows packaged runtime boundary
+ok 1 - workspace setup notice follows packaged runtime boundary
+  ---
+  duration_ms: 10.3839
+  type: 'test'
+  ...
+# Subtest: packaged workspace chooser returns a candidate without changing the active workspace or granting authority
+ok 2 - packaged workspace chooser returns a candidate without changing the active workspace or granting authority
+  ---
+  duration_ms: 4.2198
+  type: 'test'
+  ...
+# Subtest: manager heartbeat retains Ubuntu presentation and replaces central route evidence
+ok 3 - manager heartbeat retains Ubuntu presentation and replaces central route evidence
+  ---
+  duration_ms: 3.9926
+  type: 'test'
+  ...
+# Subtest: manager heartbeat distinguishes direct Tunnel and uncertain telemetry
+ok 4 - manager heartbeat distinguishes direct Tunnel and uncertain telemetry
+  ---
+  duration_ms: 3.9703
+  type: 'test'
+  ...
+# Subtest: manager primary navigation keeps execution central and combines connection and folder setup in System
+ok 5 - manager primary navigation keeps execution central and combines connection and folder setup in System
+  ---
+  duration_ms: 2.3272
+  type: 'test'
+  ...
+# Subtest: manager exposes truthful current-device identity, Git and existing safe runtime controls
+ok 6 - manager exposes truthful current-device identity, Git and existing safe runtime controls
+  ---
+  duration_ms: 4.3289
+  type: 'test'
+  ...
+# Subtest: central executor UI does not require or erase a Windows OpenAI Tunnel profile
+ok 7 - central executor UI does not require or erase a Windows OpenAI Tunnel profile
+  ---
+  duration_ms: 7.6596
+  type: 'test'
+  ...
+# Subtest: central workspace row installs standing file policy only for its exact local generation, without claiming exec
+ok 8 - central workspace row installs standing file policy only for its exact local generation, without claiming exec
+  ---
+  duration_ms: 4.2772
+  type: 'test'
+  ...
+# Subtest: manager Command Center exposes the truthful nine-node topology in the overview fabric
+ok 9 - manager Command Center exposes the truthful nine-node topology in the overview fabric
+  ---
+  duration_ms: 2.0683
+  type: 'test'
+  ...
+# Subtest: manager preload reuses the existing read-only orchestration IPC without changing MCP contracts
+ok 10 - manager preload reuses the existing read-only orchestration IPC without changing MCP contracts
+  ---
+  duration_ms: 1.8145
+  type: 'test'
+  ...
+# Subtest: manager captures a bounded real-renderer performance window without payload or ledger telemetry
+ok 11 - manager captures a bounded real-renderer performance window without payload or ledger telemetry
+  ---
+  duration_ms: 1.6073
+  type: 'test'
+  ...
+# Subtest: manager router treats OpenCode connectivity and DeepSeek model activity as separate evidence
+ok 12 - manager router treats OpenCode connectivity and DeepSeek model activity as separate evidence
+  ---
+  duration_ms: 1.2161
+  type: 'test'
+  ...
+# Subtest: Command Center overview keeps bounded provider admission evidence without a dedicated traffic page
+ok 13 - Command Center overview keeps bounded provider admission evidence without a dedicated traffic page
+  ---
+  duration_ms: 5.2306
+  type: 'test'
+  ...
+# Subtest: Live Execution Fabric uses semantic SVG paths and injects directional particles only for active execution evidence
+ok 14 - Live Execution Fabric uses semantic SVG paths and injects directional particles only for active execution evidence
+  ---
+  duration_ms: 1.9494
+  type: 'test'
+  ...
+# Subtest: Control Center projects durable orchestration phases into visible activity state without fabricating model streaming
+ok 15 - Control Center projects durable orchestration phases into visible activity state without fabricating model streaming
+  ---
+  duration_ms: 0.8491
+  type: 'test'
+  ...
+# Subtest: Control Center styling is responsive, accessible to reduced-motion users, and avoids hiding legacy functionality
+ok 16 - Control Center styling is responsive, accessible to reduced-motion users, and avoids hiding legacy functionality
+  ---
+  duration_ms: 0.3719
+  type: 'test'
+  ...
+# Subtest: Control Center renders provider admission, bounded flight recorder, history and recovery without inventing quota or context pressure
+ok 17 - Control Center renders provider admission, bounded flight recorder, history and recovery without inventing quota or context pressure
+  ---
+  duration_ms: 1.3836
+  type: 'test'
+  ...
+# Subtest: Control Center reports the direct MCP tool contract and measured usage receipts without analytics inference
+ok 18 - Control Center reports the direct MCP tool contract and measured usage receipts without analytics inference
+  ---
+  duration_ms: 0.5973
+  type: 'test'
+  ...
+# Subtest: Tasks & Proof exposes only the authenticated P5-A0 shadow operator path without treatment controls or raw seed material
+ok 19 - Tasks & Proof exposes only the authenticated P5-A0 shadow operator path without treatment controls or raw seed material
+  ---
+  duration_ms: 3.0214
+  type: 'test'
+  ...
+# Subtest: selecting a registered folder loads its capabilities by exact identity and clears the previous picker
+ok 20 - selecting a registered folder loads its capabilities by exact identity and clears the previous picker
+  ---
+  duration_ms: 6.4921
+  type: 'test'
+  ...
+# Subtest: changing the selected permission preset is a draft with no API mutation
+ok 21 - changing the selected permission preset is a draft with no API mutation
+  ---
+  duration_ms: 2.0245
+  type: 'test'
+  ...
+# Subtest: applying changed capabilities replaces only the selected ID and generation without another picker
+ok 22 - applying changed capabilities replaces only the selected ID and generation without another picker
+  ---
+  duration_ms: 5.7271
+  type: 'test'
+  ...
+# Subtest: unchanged capabilities with no exact dispatchable binding wait for owner without opening Console or installing policies
+ok 23 - unchanged capabilities with no exact dispatchable binding wait for owner without opening Console or installing policies
+  ---
+  duration_ms: 3.8045
+  type: 'test'
+  ...
+# Subtest: retained authority targets cannot grant permissions when freshness refresh still fails and remain pending
+ok 24 - retained authority targets cannot grant permissions when freshness refresh still fails and remain pending
+  ---
+  duration_ms: 2.5842
+  type: 'test'
+  ...
+# Subtest: successful authority refresh permits the same exact selected target
+ok 25 - successful authority refresh permits the same exact selected target
+  ---
+  duration_ms: 4.0319
+  type: 'test'
+  ...
+# Subtest: fresh but inactive authority does not reuse a retained dispatchable target or auto-open Console
+ok 26 - fresh but inactive authority does not reuse a retained dispatchable target or auto-open Console
+  ---
+  duration_ms: 2.5822
+  type: 'test'
+  ...
+# Subtest: pending owner authority resumes on the 15 second check using the same in-memory consent
+ok 27 - pending owner authority resumes on the 15 second check using the same in-memory consent
+  ---
+  duration_ms: 3.241
+  type: 'test'
+  ...
+# Subtest: a duplicated exact target remains pending rather than silently choosing a binding
+ok 28 - a duplicated exact target remains pending rather than silently choosing a binding
+  ---
+  duration_ms: 2.2349
+  type: 'test'
+  ...
+# Subtest: dispatchable binding without every selected capability remains pending before local effects
+ok 29 - dispatchable binding without every selected capability remains pending before local effects
+  ---
+  duration_ms: 3.5689
+  type: 'test'
+  ...
+# Subtest: cancelling pending setup clears the timer and a later authority observation cannot install policies
+ok 30 - cancelling pending setup clears the timer and a later authority observation cannot install policies
+  ---
+  duration_ms: 4.2248
+  type: 'test'
+  ...
+# Subtest: server, device, generation, and capability changes cancel retained consent before installing policies
+ok 31 - server, device, generation, and capability changes cancel retained consent before installing policies
+  ---
+  duration_ms: 16.2244
+  type: 'test'
+  ...
+# Subtest: waiting stops after its bounded deadline without creating durable consent
+ok 32 - waiting stops after its bounded deadline without creating durable consent
+  ---
+  duration_ms: 1.9427
+  type: 'test'
+  ...
+# Subtest: reopening restores only an exact server/device/generation draft and requires new consent
+ok 33 - reopening restores only an exact server/device/generation draft and requires new consent
+  ---
+  duration_ms: 4.1016
+  type: 'test'
+  ...
+# Subtest: unapproved enrollment does not select or register a root or install policies
+ok 34 - unapproved enrollment does not select or register a root or install policies
+  ---
+  duration_ms: 3.464
+  type: 'test'
+  ...
+# Subtest: setup confirms local scope once and verifies metadata and files before installing exec
+ok 35 - setup confirms local scope once and verifies metadata and files before installing exec
+  ---
+  duration_ms: 2.9504
+  type: 'test'
+  ...
+# Subtest: cancelling setup consent performs no policy or registry mutation
+ok 36 - cancelling setup consent performs no policy or registry mutation
+  ---
+  duration_ms: 1.6901
+  type: 'test'
+  ...
+# Subtest: a partial file policy installation reports its verified read scope and stops before enabling exec
+ok 37 - a partial file policy installation reports its verified read scope and stops before enabling exec
+  ---
+  duration_ms: 3.6148
+  type: 'test'
+  ...
+# Subtest: unverified file policy hashes stop unified enable before exec
+ok 38 - unverified file policy hashes stop unified enable before exec
+  ---
+  duration_ms: 2.0796
+  type: 'test'
+  ...
+# Subtest: missing or expired metadata assignment stops before file and exec policies
+ok 39 - missing or expired metadata assignment stops before file and exec policies
+  ---
+  duration_ms: 3.5228
+  type: 'test'
+  ...
+# Subtest: a stale runtime signal stops before metadata and file effects despite dispatchable authority
+ok 40 - a stale runtime signal stops before metadata and file effects despite dispatchable authority
+  ---
+  duration_ms: 2.1175
+  type: 'test'
+  ...
+# Subtest: unavailable Sandbox retains verified file access and stops before exec installation
+ok 41 - unavailable Sandbox retains verified file access and stops before exec installation
+  ---
+  duration_ms: 2.2197
+  type: 'test'
+  ...
+# Subtest: mismatched exec receipt hash prevents setup completion even when Sandbox remains available
+ok 42 - mismatched exec receipt hash prevents setup completion even when Sandbox remains available
+  ---
+  duration_ms: 4.7578
+  type: 'test'
+  ...
+# Subtest: cancelling while metadata installation is outstanding prevents subsequent file and exec effects
+ok 43 - cancelling while metadata installation is outstanding prevents subsequent file and exec effects
+  ---
+  duration_ms: 3.6731
+  type: 'test'
+  ...
+# Subtest: cancelling during the actual exec helper Sandbox probe prevents exec policy installation
+ok 44 - cancelling during the actual exec helper Sandbox probe prevents exec policy installation
+  ---
+  duration_ms: 3.264
+  type: 'test'
+  ...
+# Subtest: selecting a root invalidates prior exec observations and probing a new root evicts other-root policy state
+ok 45 - selecting a root invalidates prior exec observations and probing a new root evicts other-root policy state
+  ---
+  duration_ms: 1.8685
+  type: 'test'
+  ...
+# Subtest: capability loss at final authority recheck prevents a completed setup claim
+ok 46 - capability loss at final authority recheck prevents a completed setup claim
+  ---
+  duration_ms: 3.1365
+  type: 'test'
+  ...
+# Subtest: metadata expiry during Sandbox preparation prevents a completed setup claim at final recheck
+ok 47 - metadata expiry during Sandbox preparation prevents a completed setup claim at final recheck
+  ---
+  duration_ms: 6.1366
+  type: 'test'
+  ...
+# Subtest: a stale selected generation fails before confirmation, replacement, or policy installation
+ok 48 - a stale selected generation fails before confirmation, replacement, or policy installation
+  ---
+  duration_ms: 2.5248
+  type: 'test'
+  ...
+# Subtest: an older inventory response cannot overwrite a newer completed refresh
+ok 49 - an older inventory response cannot overwrite a newer completed refresh
+  ---
+  duration_ms: 2.1826
+  type: 'test'
+  ...
+# Subtest: inventory refresh refuses a workspace mutation except the explicit committed observation
+ok 50 - inventory refresh refuses a workspace mutation except the explicit committed observation
+  ---
+  duration_ms: 2.1029
+  type: 'test'
+  ...
+# Subtest: register invalidates an earlier inventory read before observing its committed generation
+ok 51 - register invalidates an earlier inventory read before observing its committed generation
+  ---
+  duration_ms: 2.0965
+  type: 'test'
+  ...
+# Subtest: replace invalidates an earlier inventory read before observing its committed generation
+ok 52 - replace invalidates an earlier inventory read before observing its committed generation
+  ---
+  duration_ms: 1.9444
+  type: 'test'
+  ...
+# Subtest: Settings has one obvious entry and a resumable four-step setup surface
+ok 53 - Settings has one obvious entry and a resumable four-step setup surface
+  ---
+  duration_ms: 3.3293
+  type: 'test'
+  ...
+# Subtest: Preferences expose per-field save feedback instead of saving the whole form
+ok 54 - Preferences expose per-field save feedback instead of saving the whole form
+  ---
+  duration_ms: 3.8876
+  type: 'test'
+  ...
+# Subtest: Common settings stay compact and technical controls are in a collapsed disclosure
+ok 55 - Common settings stay compact and technical controls are in a collapsed disclosure
+  ---
+  duration_ms: 1.7628
+  type: 'test'
+  ...
+# Subtest: Connection, folder and execution controls share one setup page without duplicate forms
+ok 56 - Connection, folder and execution controls share one setup page without duplicate forms
+  ---
+  duration_ms: 2.1227
+  type: 'test'
+  ...
+# Subtest: Execution setup starts unverified and legacy credentials stay in a collapsed disclosure
+ok 57 - Execution setup starts unverified and legacy credentials stay in a collapsed disclosure
+  ---
+  duration_ms: 1.4687
+  type: 'test'
+  ...
+# Subtest: Changing the theme applies it immediately and saves only the theme preference
+ok 58 - Changing the theme applies it immediately and saves only the theme preference
+  ---
+  duration_ms: 7.2407
+  type: 'test'
+  ...
+# Subtest: Static preview preserves the theme selected by theme-bootstrap
+ok 59 - Static preview preserves the theme selected by theme-bootstrap
+  ---
+  duration_ms: 3.0898
+  type: 'test'
+  ...
+# Subtest: Central setup never labels a read-only inspection as executor start
+ok 60 - Central setup never labels a read-only inspection as executor start
+  ---
+  duration_ms: 2.4973
+  type: 'test'
+  ...
+# Subtest: Central route guidance separates local runtime failure from pairing and stale heartbeat
+ok 61 - Central route guidance separates local runtime failure from pairing and stale heartbeat
+  ---
+  duration_ms: 3.9745
+  type: 'test'
+  ...
+# Subtest: Authority UI distinguishes a dispatchable binding from an online, ready executor
+ok 62 - Authority UI distinguishes a dispatchable binding from an online, ready executor
+  ---
+  duration_ms: 4.9986
+  type: 'test'
+  ...
+# Subtest: Central target readiness fails closed on stale authority, offline/degraded runtime, and non-enabled policy
+ok 63 - Central target readiness fails closed on stale authority, offline/degraded runtime, and non-enabled policy
+  ---
+  duration_ms: 4.0215
+  type: 'test'
+  ...
+# Subtest: System setup is the only primary settings entry and preferences remain subordinate
+ok 64 - System setup is the only primary settings entry and preferences remain subordinate
+  ---
+  duration_ms: 2.0502
+  type: 'test'
+  ...
+# Subtest: Central workspace setup uses understandable presets and keeps opaque IDs out of normal UI
+ok 65 - Central workspace setup uses understandable presets and keeps opaque IDs out of normal UI
+  ---
+  duration_ms: 3.7371
+  type: 'test'
+  ...
+# Subtest: Central wizard resumes from the registered Ubuntu inventory, not legacy direct workspace settings
+ok 66 - Central wizard resumes from the registered Ubuntu inventory, not legacy direct workspace settings
+  ---
+  duration_ms: 3.6778
+  type: 'test'
+  ...
+# Subtest: Central setup rehydrates local workspace inventory after reopening the window
+ok 67 - Central setup rehydrates local workspace inventory after reopening the window
+  ---
+  duration_ms: 2.603
+  type: 'test'
+  ...
+# Subtest: Central setup keeps enrollment resume metadata and inventory failures truthful
+ok 68 - Central setup keeps enrollment resume metadata and inventory failures truthful
+  ---
+  duration_ms: 5.4147
+  type: 'test'
+  ...
+# Subtest: Central connection page hides direct-mode network and deployment controls
+ok 69 - Central connection page hides direct-mode network and deployment controls
+  ---
+  duration_ms: 3.643
+  type: 'test'
+  ...
+# Subtest: Central setup supports personal ChatGPT without Business IDs or mandatory OAuth
+ok 70 - Central setup supports personal ChatGPT without Business IDs or mandatory OAuth
+  ---
+  duration_ms: 4.8037
+  type: 'test'
+  ...
+# Subtest: The last Ubuntu origin is an ordinary setting, not a credential or context id
+ok 71 - The last Ubuntu origin is an ordinary setting, not a credential or context id
+  ---
+  duration_ms: 2.6249
+  type: 'test'
+  ...
+# Subtest: manager IPC opens only the normalized HTTPS Ubuntu root and has no write side effect
+ok 72 - manager IPC opens only the normalized HTTPS Ubuntu root and has no write side effect
+  ---
+  duration_ms: 16.4436
+  type: 'test'
+  ...
+# Subtest: manager IPC uses the saved origin only when no origin is supplied
+ok 73 - manager IPC uses the saved origin only when no origin is supplied
+  ---
+  duration_ms: 5.746
+  type: 'test'
+  ...
+# Subtest: non-manager callers are rejected before settings or browser side effects
+ok 74 - non-manager callers are rejected before settings or browser side effects
+  ---
+  duration_ms: 3.146
+  type: 'test'
+  ...
+# Subtest: console IPC rejects non-origin URLs, credentials, paths, queries and fragments
+ok 75 - console IPC rejects non-origin URLs, credentials, paths, queries and fragments
+  ---
+  duration_ms: 4.021
+  type: 'test'
+  ...
+# Subtest: enrollment-status IPC restores an empty Ubuntu origin from the durable receipt
+ok 76 - enrollment-status IPC restores an empty Ubuntu origin from the durable receipt
+  ---
+  duration_ms: 5.3798
+  type: 'test'
+  ...
+# Subtest: enrollment-status IPC never overwrites an explicitly configured Ubuntu origin
+ok 77 - enrollment-status IPC never overwrites an explicitly configured Ubuntu origin
+  ---
+  duration_ms: 1.7895
+  type: 'test'
+  ...
+# Subtest: central setup guidance keeps development, stale authority and local runtime blockers distinct
+ok 78 - central setup guidance keeps development, stale authority and local runtime blockers distinct
+  ---
+  duration_ms: 4.2789
+  type: 'test'
+  ...
+# Subtest: central setup source preserves a single enrollment request and opens operator linking explicitly
+ok 79 - central setup source preserves a single enrollment request and opens operator linking explicitly
+  ---
+  duration_ms: 1.9404
+  type: 'test'
+  ...
+# Subtest: central setup ready text limits a read-only target to status and keeps file and command lanes unverified
+ok 80 - central setup ready text limits a read-only target to status and keeps file and command lanes unverified
+  ---
+  duration_ms: 5.47
+  type: 'test'
+  ...
+# Subtest: central setup does not turn registered write and exec capabilities into ChatGPT execution proof
+ok 81 - central setup does not turn registered write and exec capabilities into ChatGPT execution proof
+  ---
+  duration_ms: 3.5663
+  type: 'test'
+  ...
+# Subtest: central setup does not label an assigned but offline target ready and offers a status refresh
+ok 82 - central setup does not label an assigned but offline target ready and offers a status refresh
+  ---
+  duration_ms: 3.2394
+  type: 'test'
+  ...
+# Subtest: central setup requires the local Ubuntu route in addition to a healthy account target
+ok 83 - central setup requires the local Ubuntu route in addition to a healthy account target
+  ---
+  duration_ms: 3.7394
+  type: 'test'
+  ...
+# Subtest: refreshing an unhealthy assigned target is read-only and does not open account-linking console
+ok 84 - refreshing an unhealthy assigned target is read-only and does not open account-linking console
+  ---
+  duration_ms: 3.5564
+  type: 'test'
+  ...
+# Subtest: system navigation opens the unified setup shell instead of silently redirecting to the old connection page
+ok 85 - system navigation opens the unified setup shell instead of silently redirecting to the old connection page
+  ---
+  duration_ms: 9.6187
+  type: 'test'
+  ...
+# Subtest: connection and folder aliases stay on the single system page
+ok 86 - connection and folder aliases stay on the single system page
+  ---
+  duration_ms: 3.0761
+  type: 'test'
+  ...
+# Subtest: development central controls are visibly gated before action handlers run
+ok 87 - development central controls are visibly gated before action handlers run
+  ---
+  duration_ms: 2.533
+  type: 'test'
+  ...
+# Subtest: Ubuntu toolbar opens the shared folder manager without changing local roots
+ok 88 - Ubuntu toolbar opens the shared folder manager without changing local roots
+  ---
+  duration_ms: 5.2353
+  type: 'test'
+  ...
+# Subtest: an unobserved execution role opens the folder manager without granting a legacy root
+ok 89 - an unobserved execution role opens the folder manager without granting a legacy root
+  ---
+  duration_ms: 3.3433
+  type: 'test'
+  ...
+# Subtest: direct legacy toolbar retains its existing local folder chooser
+ok 90 - direct legacy toolbar retains its existing local folder chooser
+  ---
+  duration_ms: 1.4764
+  type: 'test'
+  ...
+# Subtest: failed manager navigation does not fall back to a local permission change
+ok 91 - failed manager navigation does not fall back to a local permission change
+  ---
+  duration_ms: 1.3408
+  type: 'test'
+  ...
+# Subtest: a folder shortcut opens the primary window and routes to workspace without a second manager
+ok 92 - a folder shortcut opens the primary window and routes to workspace without a second manager
+  ---
+  duration_ms: 2.0999
+  type: 'test'
+  ...
+# Subtest: an existing primary window receives navigation while retaining its renderer state
+ok 93 - an existing primary window receives navigation while retaining its renderer state
+  ---
+  duration_ms: 3.3088
+  type: 'test'
+  ...
+# Subtest: navigation during primary loading waits for its renderer and ignores a closed window
+ok 94 - navigation during primary loading waits for its renderer and ignores a closed window
+  ---
+  duration_ms: 1.7862
+  type: 'test'
+  ...
+# Subtest: queued folder navigation cannot target a replacement primary window or an untrusted page
+ok 95 - queued folder navigation cannot target a replacement primary window or an untrusted page
+  ---
+  duration_ms: 2.3345
+  type: 'test'
+  ...
+# Subtest: manager shortcuts reject unrecognized pages before opening or navigating a window
+ok 96 - manager shortcuts reject unrecognized pages before opening or navigating a window
+  ---
+  duration_ms: 4.9641
+  type: 'test'
+  ...
+# Subtest: preload forwards folder navigation and cleans up its manager event subscription
+ok 97 - preload forwards folder navigation and cleans up its manager event subscription
+  ---
+  duration_ms: 4.3374
+  type: 'test'
+  ...
+# Subtest: setup and execution navigation reuse one native window with the privileged renderer
+ok 98 - setup and execution navigation reuse one native window with the privileged renderer
+  ---
+  duration_ms: 6.9252
+  type: 'test'
+  ...
+# Subtest: manager routes reject URLs and unknown pages before creating a window
+ok 99 - manager routes reject URLs and unknown pages before creating a window
+  ---
+  duration_ms: 2.8292
+  type: 'test'
+  ...
+# Subtest: privileged IPC requires the current window, its top-level frame, and the exact renderer file
+ok 100 - privileged IPC requires the current window, its top-level frame, and the exact renderer file
+  ---
+  duration_ms: 3.0013
+  type: 'test'
+  ...
+# Subtest: main window blocks browser navigation and popups while keeping in-app routes
+ok 101 - main window blocks browser navigation and popups while keeping in-app routes
+  ---
+  duration_ms: 1.9115
+  type: 'test'
+  ...
+# Subtest: panel controls route into the execution view without creating an overlay or a window
+ok 102 - panel controls route into the execution view without creating an overlay or a window
+  ---
+  duration_ms: 2.6599
+  type: 'test'
+  ...
+# Subtest: closing the unified window preserves background, explicit stop and Recovery UI identity semantics
+ok 103 - closing the unified window preserves background, explicit stop and Recovery UI identity semantics
+  ---
+  duration_ms: 2.165
+  type: 'test'
+  ...
+# Subtest: stale window events cannot clear or navigate a replacement primary window
+ok 104 - stale window events cannot clear or navigate a replacement primary window
+  ---
+  duration_ms: 2.1295
+  type: 'test'
+  ...
+# Subtest: runtime heartbeat has one primary delivery and one in-flight observation
+ok 105 - runtime heartbeat has one primary delivery and one in-flight observation
+  ---
+  duration_ms: 3.2461
+  type: 'test'
+  ...
+1..105
+# tests 105
+# suites 0
+# pass 105
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 313.4778

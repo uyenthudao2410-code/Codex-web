@@ -2,8 +2,9 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const http = require('node:http');
+const { pathToFileURL } = require('node:url');
 const { performance: nodePerformance } = require('node:perf_hooks');
-const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, WebContentsView, clipboard } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, clipboard } = require('electron');
 const { SettingsStore } = require('./services/settingsStore');
 const { SecretStore } = require('./services/secretStore');
 const { LogService } = require('./services/logService');
@@ -13,7 +14,6 @@ const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
 const { buildCodexDesktopMcpConfig } = require('./services/codexDesktopConfig');
 const { readJson, writeJsonAtomic } = require('./services/jsonStore');
-const { panelInset, panelBounds } = require('./services/panelLayout');
 const runtimePathApi = require('./paths');
 const { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;
 const {
@@ -42,17 +42,15 @@ app.setName('Coding Tools MCP');
 configureElectronUserDataPath(app, { argv: process.argv, recoveryHostMode });
 
 let chatWindow;
-let managerWindow;
 let orchestrator;
 let recoveryHostConnectionError = null;
 let forceQuit = false;
 let tray = null;
 let buildVerification;
-let panelView = null;
-let panelVisible = false;
 let lastRecoveryProgressTime = '';
 let runtimeHeartbeatInFlight = null;
-const TOOLBAR_HEIGHT = 112;
+const trustedRendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+const trustedRendererUrl = pathToFileURL(trustedRendererPath).href;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
 const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
 const PANEL_ANALYTICS_TIMEOUT_MS = 10000;
@@ -351,7 +349,11 @@ function appIconPath() {
 }
 
 function sendManager(channel, payload) {
-  if (managerWindow && !managerWindow.isDestroyed()) managerWindow.webContents.send(channel, payload);
+  if (chatWindow && !chatWindow.isDestroyed()
+    && !chatWindow.webContents.isDestroyed()
+    && isTrustedRendererUrl(chatWindow.webContents.getURL())) {
+    chatWindow.webContents.send(channel, payload);
+  }
 }
 
 function safeMessage(error) {
@@ -359,22 +361,35 @@ function safeMessage(error) {
 }
 
 function assertTrustedIpc(event) {
-  const url = event.senderFrame?.url || event.sender?.getURL?.() || '';
-  if (!url.startsWith('file://')) throw new Error('Đã chặn cuộc gọi IPC từ trang không phải cục bộ.');
+  if (!isManagerIpc(event)) throw new Error('Đã chặn cuộc gọi IPC từ trang không phải Execution Hub.');
+}
+
+function isTrustedRendererUrl(value) {
+  try {
+    const url = new URL(value);
+    url.search = '';
+    url.hash = '';
+    return url.href === trustedRendererUrl;
+  } catch { return false; }
 }
 
 function isManagerIpc(event) {
+  const contents = chatWindow?.webContents;
   return Boolean(
-    managerWindow
-    && !managerWindow.isDestroyed()
-    && managerWindow.webContents
-    && !managerWindow.webContents.isDestroyed()
-    && event?.sender === managerWindow.webContents
+    chatWindow
+    && !chatWindow.isDestroyed()
+    && contents
+    && !contents.isDestroyed()
+    && event?.sender === contents
+    && event.senderFrame
+    && event.senderFrame === contents.mainFrame
+    && isTrustedRendererUrl(contents.getURL())
+    && isTrustedRendererUrl(event.senderFrame.url)
   );
 }
 
 function assertManagerIpc(event) {
-  if (!isManagerIpc(event)) throw new Error('Đã chặn telemetry UI từ cửa sổ không phải Command Center.');
+  assertTrustedIpc(event);
 }
 
 function secureHandle(channel, handler) {
@@ -658,49 +673,10 @@ async function panelP5A0Control(action) {
 }
 
 
-function layoutViews() {
-  if (!chatWindow || chatWindow.isDestroyed()) return;
-  const [width, height] = chatWindow.getContentSize();
-  if (panelView && !panelView.webContents.isDestroyed()) {
-    const bounds = panelBounds(width, height, TOOLBAR_HEIGHT, panelVisible);
-    panelView.setBounds(bounds || { x: width, y: TOOLBAR_HEIGHT, width: 0, height: Math.max(0, height - TOOLBAR_HEIGHT) });
-  }
-}
-
-function broadcastPanelVisibility() {
-  if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('panel:visibility', { visible: panelVisible });
-}
-
-function createPanelView() {
-  if (panelView && !panelView.webContents.isDestroyed()) return panelView;
-  panelView = new WebContentsView({
-    webPreferences: {
-      preload: path.join(__dirname, 'panelPreload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
-    }
-  });
-  panelView.setBackgroundColor('#ffffff');
-  chatWindow.contentView.addChildView(panelView);
-  panelView.webContents.loadFile(path.join(__dirname, '..', 'renderer', 'panel.html'));
-  return panelView;
-}
-
-function destroyPanelView() {
-  if (!panelView) return;
-  try { chatWindow?.contentView?.removeChildView(panelView); } catch { /* already detached */ }
-  if (panelView.webContents && !panelView.webContents.isDestroyed()) panelView.webContents.close();
-  panelView = null;
-}
-
 function togglePanel() {
-  panelVisible = !panelVisible;
-  if (panelVisible) createPanelView();
-  else destroyPanelView();
-  layoutViews();
-  broadcastPanelVisibility();
-  return panelVisible;
+  openManagerWindow('overview');
+  sendManager('panel:visibility', { visible: false });
+  return false;
 }
 
 function createTray() {
@@ -710,7 +686,7 @@ function createTray() {
   tray.setToolTip('Coding Tools MCP · Đang chạy ngầm');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Mở Coding Tools MCP', click: () => showChatWindow() },
-    { label: 'Mở Cấu hình Quản lý', click: () => { showChatWindow(); openManagerWindow(); } },
+    { label: 'Thiết lập máy và thư mục', click: () => openManagerWindow() },
     { type: 'separator' },
     { label: 'Thoát ứng dụng (Giữ dịch vụ MCP)', click: () => { void quitUi('operator_quit'); } }
   ]));
@@ -737,7 +713,7 @@ function createChatWindow() {
     title: 'Coding Tools MCP',
     icon: appIconPath(),
     webPreferences: {
-      preload: path.join(__dirname, 'browserPreload.js'),
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -745,8 +721,15 @@ function createChatWindow() {
   });
   chatWindow.removeMenu();
   const openingWindow = chatWindow;
+  openingWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  const guardNavigation = (event, url) => {
+    if (!isTrustedRendererUrl(url)) event.preventDefault();
+  };
+  openingWindow.webContents.on('will-navigate', guardNavigation);
+  openingWindow.webContents.on('will-redirect', guardNavigation);
   const revealOpeningWindow = (attemptsRemaining = 20) => {
-    if (openingWindow.isDestroyed()) return;
+    if (openingWindow !== chatWindow || openingWindow.isDestroyed()
+      || !isTrustedRendererUrl(openingWindow.webContents.getURL())) return;
     openingWindow.show();
     openingWindow.focus();
     if (!openingWindow.isVisible()) {
@@ -766,23 +749,19 @@ function createChatWindow() {
     }));
   };
   openingWindow.once('ready-to-show', () => revealOpeningWindow());
-  chatWindow.loadFile(path.join(__dirname, '..', 'renderer', 'browser.html'));
-
-  chatWindow.on('resize', () => layoutViews());
+  const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
+  openingWindow.loadFile(trustedRendererPath, { query: { theme: initialTheme }, hash: 'system' });
 
   chatWindow.on('closed', () => {
-    destroyPanelView();
-    panelVisible = false;
+    if (openingWindow !== chatWindow) return;
     uiWindowReady = false;
     chatWindow = null;
-    if (managerWindow && !managerWindow.isDestroyed()) managerWindow.destroy();
   });
   chatWindow.on('close', (event) => {
     if (forceQuit) return;
     event.preventDefault();
     if (settings.load().keepRunningOnClose) {
-      if (managerWindow && !managerWindow.isDestroyed()) managerWindow.hide();
-      chatWindow.hide();
+      openingWindow.hide();
       return;
     }
     if (!orchestrator) {
@@ -794,55 +773,31 @@ function createChatWindow() {
   return chatWindow;
 }
 
-function openManagerWindow() {
-  if (managerWindow && !managerWindow.isDestroyed()) {
-    managerWindow.show();
-    managerWindow.focus();
-    return managerWindow;
+function managerNavigationPage(page) {
+  if (page == null || page === '') return 'system';
+  if (!['system', 'workspace', 'deploy', 'overview', 'device', 'settings'].includes(page)) {
+    throw new Error('Trang cấu hình được yêu cầu không hợp lệ.');
   }
+  return page;
+}
 
-  const chatBounds = chatWindow && !chatWindow.isDestroyed() ? chatWindow.getBounds() : null;
-  const width = 980;
-  const height = 720;
-  const x = chatBounds ? Math.round(chatBounds.x + Math.max(0, (chatBounds.width - width) / 2)) : undefined;
-  const y = chatBounds ? Math.round(chatBounds.y + Math.max(0, (chatBounds.height - height) / 2)) : undefined;
-
-  managerWindow = new BrowserWindow({
-    width,
-    height,
-    x,
-    y,
-    minWidth: 820,
-    minHeight: 580,
-    show: false,
-    skipTaskbar: true,
-    frame: false,
-    transparent: false,
-    backgroundColor: '#f7f7f8',
-    title: 'Coding Tools MCP · Trung tâm Quản lý',
-    icon: appIconPath(),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
+function openManagerWindow(page) {
+  const requestedPage = managerNavigationPage(page);
+  const targetWindow = showChatWindow();
+  const sendNavigation = () => {
+    if (targetWindow === chatWindow
+      && !targetWindow.isDestroyed()
+      && !targetWindow.webContents.isDestroyed()
+      && isTrustedRendererUrl(targetWindow.webContents.getURL())) {
+      targetWindow.webContents.send('manager:navigate', { page: requestedPage });
     }
-  });
-  managerWindow.removeMenu();
-  const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
-  managerWindow.once('ready-to-show', () => managerWindow.show());
-  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), { query: { theme: initialTheme } });
-  managerWindow.on('close', (event) => {
-    if (forceQuit) return;
-    event.preventDefault();
-    managerWindow.hide();
-    if (chatWindow && !chatWindow.isDestroyed()) {
-      chatWindow.show();
-      chatWindow.focus();
-    }
-  });
-  managerWindow.on('closed', () => { managerWindow = null; });
-  return managerWindow;
+  };
+  if (targetWindow.webContents.isLoadingMainFrame()) {
+    targetWindow.webContents.once('did-finish-load', sendNavigation);
+  } else {
+    sendNavigation();
+  }
+  return targetWindow;
 }
 
 function registerIpc() {
@@ -1159,16 +1114,12 @@ function registerIpc() {
   secureHandle('health:repair', () => invokeSafely(() => orchestrator.healthRepair()));
   secureHandle('workspace:choose-and-switch', () => invokeSafely(async () => { const result = await dialog.showOpenDialog(chatWindow, { properties: ['openDirectory', 'createDirectory'] }); if (result.canceled) return null; return orchestrator.switchWorkspace(result.filePaths[0]); }));
   secureHandle('manager:close', () => invokeSafely(async () => {
-    if (managerWindow && !managerWindow.isDestroyed()) managerWindow.hide();
-    if (chatWindow && !chatWindow.isDestroyed()) {
-      chatWindow.show();
-      chatWindow.focus();
-    }
+    if (chatWindow && !chatWindow.isDestroyed()) chatWindow.close();
     return true;
   }));
-  secureHandle('manager:open', () => invokeSafely(async () => { openManagerWindow(); return true; }));
+  secureHandle('manager:open', (_event, page) => invokeSafely(async () => { openManagerWindow(page); return true; }));
   secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
-  secureHandle('panel:visibility', () => invokeSafely(async () => ({ visible: panelVisible })));
+  secureHandle('panel:visibility', () => invokeSafely(async () => ({ visible: false })));
   secureHandle('panel:live-control', (event) => invokeSafely(async () => {
     const startedAt = nodePerformance.now();
     const current = settings.load();
@@ -1287,7 +1238,7 @@ function registerIpc() {
     return (response && response.result) || null;
   }));
   secureHandle('dialog:workspace', () => invokeSafely(async () => {
-    const result = await dialog.showOpenDialog(managerWindow || chatWindow, { properties: ['openDirectory', 'createDirectory'] });
+    const result = await dialog.showOpenDialog(chatWindow, { properties: ['openDirectory', 'createDirectory'] });
     return result.canceled ? '' : result.filePaths[0];
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
@@ -1435,7 +1386,6 @@ if (recoveryHostMode) {
           sendManager('runtime:progress', progress);
         }
         sendManager('runtime:heartbeat', status);
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
       }).then(() => registerUiRevision()).catch(() => {});
       runtimeHeartbeatInFlight = operation;
       return operation.finally(() => {

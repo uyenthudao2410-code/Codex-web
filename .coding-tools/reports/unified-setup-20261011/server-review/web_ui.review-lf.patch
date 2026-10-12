@@ -1,0 +1,239 @@
+--- a/control-plane/control_plane/web_ui.py
++++ b/control-plane/control_plane/web_ui.py
+@@ -44,6 +44,21 @@
+ 
+     <section id="dashboard" hidden>
+       <p class="notice">Bảng này quan sát dữ liệu central và có thể thu hồi quyền central. Nó không mở shell, không chọn path Windows, không xác nhận job đã dừng và không tự suy diễn Windows đã sẵn sàng.</p>
++
++      <section id="folder-setup" class="panel" aria-labelledby="folder-setup-title">
++        <h2 id="folder-setup-title">Cấp quyền cho thư mục</h2>
++        <p>Chọn thư mục đã đăng ký từ app Windows và thời lượng. Console dùng lại liên kết hiện hành hoặc tạo liên kết, rồi cấp một cửa sổ context cho đúng máy và generation.</p>
++        <form id="folder-setup-form" class="operator-form">
++          <label>Máy / thư mục <select id="folder-setup-workspace" required></select></label>
++          <label>Thời lượng <select id="folder-setup-duration"><option value="15">15 phút</option><option value="60" selected>1 giờ</option><option value="240">4 giờ</option><option value="1440">24 giờ</option></select></label>
++          <p id="folder-setup-summary" class="muted" aria-live="polite">Đang đọc thư mục đã đăng ký.</p>
++          <button id="folder-setup-submit" type="submit" disabled>Cấp quyền cho thư mục</button>
++        </form>
++        <p id="folder-setup-result" class="notice" aria-live="polite">Chưa cấp quyền trong phiên này.</p>
++        <p class="muted">Đọc / Sửa / Chạy được chọn và cài policy trong app Windows. Context này có hạn, không tự gia hạn; cấp context chưa chứng minh máy chạy được code. Kết nối ChatGPT còn cần grant, pilot và admission phù hợp.</p>
++        <p id="folder-setup-next-action" aria-live="polite"></p>
++        <a href="#enrollment-setup">Xem máy đang chờ duyệt</a> · <a href="#service-pilot-title">Kiểm tra kết nối ChatGPT</a>
++      </section>
+ 
+       <div class="grid cards" aria-live="polite">
+         <article class="card">
+@@ -99,7 +114,7 @@
+ 
+       <section class="panel">
+         <h2>Kết nối một lần (wizard)</h2>
+-        <p class="muted">Một luồng duy nhất: duyệt enrollment → chọn workspace trong app Windows → tạo binding → ghim task đúng đích → cài policy local tại app → giao việc từ ChatGPT/Console. Wizard không tự approve máy lạ, không nhận path Windows và không biến đổi UI thành quyền remote.</p>
++        <p class="muted">Duyệt máy một lần → chọn thư mục trong app Windows → cấp quyền bằng biểu mẫu phía trên → quay về app để đồng bộ và kiểm tra chạy code. Máy lạ cần owner duyệt riêng; Console không nhận path Windows.</p>
+         <div class="table-wrap"><table><thead><tr><th>Bước</th><th>Trạng thái hiện tại</th><th>Đi tới</th></tr></thead><tbody id="onboarding-wizard-body"></tbody></table></div>
+       </section>
+       <section class="panel">
+@@ -109,8 +124,11 @@
+       </section>
+       <section class="panel">
+         <h2>Workspace đã đăng ký, bindings và contexts</h2>
+-        <p class="muted">Chỉ chọn workspace generation do Windows node đăng ký. Console không nhận path Windows, nội dung file hoặc secret. Registration không cấp policy/quyền chạy; binding và context vẫn là hai bước riêng.</p>
+-        <div class="operator-forms">
++        <p class="muted">Chỉ chọn workspace generation do Windows node đăng ký. Console không nhận path Windows, nội dung file hoặc secret. Biểu mẫu cấp quyền phía trên gộp việc tạo binding/context; policy tại máy vẫn quyết định quyền thực thi.</p>
++        <details id="advanced-folder-setup">
++          <summary>Nâng cao: tạo liên kết hoặc context riêng</summary>
++          <p class="muted">Tạo nhiều context còn hạn cho cùng thư mục làm policy assignment bị mơ hồ. Đối soát và đóng context cũ trước khi cấp cửa sổ mới; không đóng context của tác vụ đang chạy.</p>
++          <div class="operator-forms">
+           <form id="binding-form" class="operator-form">
+             <h3>Tạo workspace binding</h3>
+             <label>Workspace node đã đăng ký <select id="binding-workspace-registration" required></select></label>
+@@ -122,11 +140,12 @@
+             <label>Thời lượng <select id="context-duration-minutes"><option value="15">15 phút</option><option value="60" selected>1 giờ</option><option value="240">4 giờ</option><option value="1440">24 giờ</option></select></label>
+             <button type="submit">Cấp context</button>
+           </form>
+-        </div>
++          </div>
++        </details>
+         <div class="table-wrap"><table><thead><tr><th>Node</th><th>Workspace</th><th>Generation</th><th>Capability</th><th>Trạng thái</th></tr></thead><tbody id="workspace-registrations-body"></tbody></table></div>
+         <div class="table-wrap"><table><thead><tr><th>Binding / workspace</th><th>Node</th><th>Generation</th><th>Context / expiry</th><th>Canary</th><th>Control</th></tr></thead><tbody id="bindings-body"></tbody></table></div>
+       </section>
+-      <section class="panel">
++      <section id="enrollment-setup" class="panel">
+         <h2>Yêu cầu và enrollment</h2>
+         <p class="muted">Duyệt enrollment chỉ tạo identity cho request đang chờ; không cài policy, binding, context hay thực thi trên node.</p>
+         <div class="table-wrap"><table><thead><tr><th>Loại</th><th>ID</th><th>Target</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead><tbody id="requests-body"></tbody></table></div>
+@@ -210,6 +229,9 @@
+ .operator-form { border: 1px solid #2a3b56; border-radius: .5rem; display: grid; gap: .7rem; padding: .9rem; }
+ .operator-form h3 { font-size: .95rem; margin: 0; }
+ .operator-form label { display: grid; gap: .35rem; color: #aebed5; font-size: .9rem; }
++#folder-setup { border-color: #478cff; }
++#folder-setup-summary, #folder-setup-result { white-space: pre-line; overflow-wrap: anywhere; }
++summary { cursor: pointer; padding: .4rem 0; }
+ .reconciliation-form { margin: 1rem 0; }
+ .card { margin: 0; }
+ dl { display: grid; gap: .45rem .8rem; grid-template-columns: minmax(7rem, auto) 1fr; margin: 0; }
+@@ -235,6 +257,8 @@
+   let admissionMode = null;
+   let pollTimer = null;
+   let requestInFlight = false;
++  let folderSetupOverview = null;
++  let folderSetupInFlight = false;
+ 
+   const byId = (id) => document.getElementById(id);
+   const dashboard = byId('dashboard');
+@@ -244,6 +268,7 @@
+   const logout = byId('logout');
+   const bindingForm = byId('binding-form');
+   const contextForm = byId('context-form');
++  const folderSetupForm = byId('folder-setup-form');
+   const actionReconciliationForm = byId('action-reconciliation-form');
+   const dispatchDispositionForm = byId('dispatch-disposition-form');
+ 
+@@ -350,6 +375,117 @@
+     const [device_id, workspace_id, workspace_generation, display_name] = registration;
+     return { device_id, workspace_id, workspace_generation, display_name };
+   }
++  function folderSetupPlan(data, selection, durationMinutes, now = Date.now()) {
++    let target;
++    try { target = JSON.parse(selection); } catch { throw new Error('Chọn thư mục đã đăng ký trước.'); }
++    if (!Array.isArray(target) || target.length !== 3 || target.some((value) => typeof value !== 'string' || !value)) throw new Error('Đích thư mục không hợp lệ.');
++    if (![15, 60, 240, 1440].includes(durationMinutes)) throw new Error('Chọn thời lượng từ 15 phút đến 24 giờ.');
++    const [deviceId, workspaceId, generation] = target;
++    const nodes = (data.nodes || []).filter((node) => node.device_id === deviceId && node.revoked_at_ms == null);
++    if (nodes.length !== 1 || typeof nodes[0].endpoint_id !== 'string' || !nodes[0].endpoint_id) throw new Error('Máy chưa được duyệt hoặc identity không còn hiện hành.');
++    const current = (data.workspace_registrations || []).filter((item) => item.device_id === deviceId && item.workspace_id === workspaceId && item.retired_at_ms == null);
++    if (current.length !== 1 || current[0].workspace_generation !== generation) throw new Error('Generation đã đổi hoặc đăng ký thư mục bị mơ hồ. Làm mới rồi chọn lại.');
++    const registration = current[0];
++    if (typeof registration.display_name !== 'string' || !registration.display_name || !['read', 'write', 'exec'].every((key) => typeof registration.capabilities?.[key] === 'boolean')) throw new Error('Metadata thư mục chưa đầy đủ. Đăng ký lại từ app Windows.');
++    const matches = (item) => item.device_id === deviceId && item.workspace_id === workspaceId && item.workspace_generation === generation;
++    const bindings = (data.bindings || []).filter((binding) => matches(binding) && binding.revoked_at_ms == null);
++    if (bindings.length > 1 || bindings.some((binding) => binding.endpoint_id !== nodes[0].endpoint_id)) throw new Error('Liên kết thư mục bị mơ hồ hoặc khác identity máy. Đối soát ở mục Nâng cao trước.');
++    const contexts = (data.contexts || []).filter((context) => matches(context) && context.closed_at_ms == null && Number.isFinite(context.expires_at_ms) && context.expires_at_ms > now);
++    return { node: nodes[0], registration, binding: bindings[0] || null, contexts, durationMinutes };
++  }
++  function folderSetupScope(plan) {
++    const { node, registration, durationMinutes } = plan;
++    const capabilities = registration.capabilities;
++    return `Máy: ${node.display_name || node.device_id} (${node.device_id})\nThư mục: ${registration.display_name} (${registration.workspace_id})\nGeneration: ${registration.workspace_generation}\nThời lượng context mới: ${durationMinutes} phút\nKhả năng máy công bố: Đọc ${capabilities.read ? 'có' : 'không'} / Sửa ${capabilities.write ? 'có' : 'không'} / Chạy ${capabilities.exec ? 'có' : 'không'} (chưa phải policy đã cấp).`;
++  }
++  function folderSetupContextBlocker(plan, data) {
++    if (!plan.contexts.length) return '';
++    const hasActionContext = plan.contexts.some((context) => (data.actions || []).some((action) => action.context_id === context.context_id));
++    if (plan.contexts.length > 1) return 'Có nhiều context còn hạn cho thư mục này. Đối soát ở mục Nâng cao; không tự chọn cửa sổ mới nhất hoặc tạo thêm.';
++    const context = plan.contexts[0];
++    return hasActionContext
++      ? `Có context gắn với tác vụ/action còn hạn đến ${formatTime(context.expires_at_ms)}. Không dùng context tác vụ làm quyền duy trì hoặc cấp thêm. Quan sát tác vụ và đối soát trước.`
++      : `Đã có cửa sổ context còn hạn đến ${formatTime(context.expires_at_ms)}. Quay về app Windows để đồng bộ; biểu mẫu không tự gia hạn hoặc tạo thêm context.`;
++  }
++  function renderFolderSetup(data) {
++    folderSetupOverview = data;
++    const selectedScope = byId('folder-setup-workspace').value;
++    const registrations = (data.workspace_registrations || []).filter((registration) => registration.retired_at_ms == null && (data.nodes || []).some((node) => node.device_id === registration.device_id && node.revoked_at_ms == null));
++    const options = registrations.map((registration) => {
++      const node = (data.nodes || []).find((item) => item.device_id === registration.device_id);
++      return { value: JSON.stringify([registration.device_id, registration.workspace_id, registration.workspace_generation]), label: `${node?.display_name || registration.device_id} · ${registration.display_name || registration.workspace_id}` };
++    });
++    setSelectOptions('folder-setup-workspace', options, 'Chọn máy và thư mục', 'thư mục');
++    if (selectedScope && !options.some((option) => option.value === selectedScope)) {
++      const stale = document.createElement('option');
++      stale.value = selectedScope; stale.textContent = 'Đích đã chọn không còn hiện hành — chọn lại máy / thư mục'; stale.disabled = true;
++      byId('folder-setup-workspace').appendChild(stale);
++      byId('folder-setup-workspace').value = selectedScope;
++    }
++    const pending = (data.enrollment_requests || []).filter((item) => !item.approved_at_ms);
++    text('folder-setup-next-action', !registrations.length
++      ? pending.length ? `Có ${pending.length} máy chờ duyệt. Duyệt đúng máy ở mục bên dưới, rồi đăng ký thư mục trong app Windows.` : 'Mở app Windows, kết nối server và chọn thư mục để đăng ký. Máy mới cần owner duyệt lần đầu.'
++      : 'Sau khi cấp context: quay về app Windows, dùng Tiếp tục thiết lập để đồng bộ policy và kiểm tra thực thi. Nếu ChatGPT bị chặn, xem grant / pilot / admission bên dưới.');
++    updateFolderSetupSummary();
++  }
++  function updateFolderSetupSummary() {
++    const button = byId('folder-setup-submit');
++    button.disabled = true;
++    if (!folderSetupOverview) return;
++    try {
++      const plan = folderSetupPlan(folderSetupOverview, byId('folder-setup-workspace').value, Number(byId('folder-setup-duration').value));
++      const blocker = folderSetupContextBlocker(plan, folderSetupOverview);
++      text('folder-setup-summary', `${folderSetupScope(plan)}\n${blocker || (plan.binding ? 'Dùng lại liên kết hiện hành, cấp một context mới.' : 'Tạo liên kết cho đúng đích, rồi cấp một context mới.')}`);
++      button.disabled = !csrfToken || folderSetupInFlight || !!blocker;
++    } catch (error) { text('folder-setup-summary', error.message); }
++  }
++  async function submitFolderSetup(event) {
++    event.preventDefault();
++    if (!csrfToken || folderSetupInFlight) return;
++    const selection = byId('folder-setup-workspace').value;
++    const duration = Number(byId('folder-setup-duration').value);
++    let createdBinding = null;
++    let mutation = null;
++    folderSetupInFlight = true;
++    byId('folder-setup-submit').disabled = true;
++    byId('folder-setup-workspace').disabled = true;
++    byId('folder-setup-duration').disabled = true;
++    text('folder-setup-result', 'Đang kiểm tra đúng máy, thư mục và quyền hiện hành…');
++    try {
++      let data = await api('/v1/ui/overview');
++      let plan = folderSetupPlan(data, selection, duration);
++      const blocker = folderSetupContextBlocker(plan, data);
++      if (blocker) throw new Error(blocker);
++      if (!confirm(`Cấp một cửa sổ context cho đúng đích sau?\n\n${folderSetupScope(plan)}\n\nPolicy Đọc / Sửa / Chạy vẫn phải được chọn trong app Windows. Không tạo grant/pilot, mở admission hoặc tự gia hạn.`)) { text('folder-setup-result', 'Đã hủy xác nhận; chưa tạo liên kết hoặc context.'); return; }
++      // Re-read after confirmation. A changed generation or another live
++      // context must not turn a stale selection into a new authority window.
++      data = await api('/v1/ui/overview');
++      plan = folderSetupPlan(data, selection, duration);
++      if (folderSetupContextBlocker(plan, data)) throw new Error(folderSetupContextBlocker(plan, data));
++      let binding = plan.binding;
++      if (!binding) {
++        mutation = 'binding';
++        const registration = plan.registration;
++        binding = await api('/v1/ui/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ device_id: registration.device_id, workspace_id: registration.workspace_id, workspace_generation: registration.workspace_generation, display_name: registration.display_name }) });
++        createdBinding = binding.binding_id;
++        data = await api('/v1/ui/overview');
++        plan = folderSetupPlan(data, selection, duration);
++        if (!plan.binding || plan.binding.binding_id !== createdBinding || folderSetupContextBlocker(plan, data)) throw new Error('Đích hoặc context đã đổi sau khi tạo liên kết. Đối soát trước khi cấp context.');
++      }
++      mutation = 'context';
++      const context = await api('/v1/ui/contexts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ binding_id: binding.binding_id, duration_minutes: duration }) });
++      text('folder-setup-result', `Đã ${createdBinding ? 'tạo' : 'dùng lại'} liên kết và cấp context đến ${formatTime(context.expires_at_ms)}.\nMáy ${plan.node.display_name || plan.node.device_id} · thư mục ${plan.registration.display_name}.\nQuay về app Windows để đồng bộ policy và kiểm tra chạy code.`);
++    } catch (error) {
++      const progress = createdBinding ? `Đã tạo liên kết ${createdBinding}; chưa xác nhận cấp context.` : mutation === 'binding' ? 'Chưa xác nhận tạo liên kết; server có thể đã nhận yêu cầu.' : mutation === 'context' ? 'Đã có liên kết; chưa xác nhận cấp context. Server có thể đã nhận yêu cầu.' : 'Chưa gửi thay đổi quyền.';
++      text('folder-setup-result', `${progress}\n${error.message}\nGiữ nguyên đích đã chọn. Làm mới để đối soát trước khi thử lại; không tự gửi lại hoặc hoàn tác.`);
++    } finally {
++      folderSetupInFlight = false;
++      byId('folder-setup-workspace').disabled = false;
++      byId('folder-setup-duration').disabled = false;
++      // Observation only: never retry a mutation when a response is lost.
++      try { renderOverview(await api('/v1/ui/overview')); } catch { updateFolderSetupSummary(); }
++    }
++  }
+   function clearBody(id) { const body = byId(id); while (body.firstChild) body.removeChild(body.firstChild); return body; }
+   function emptyRow(body, columns, value) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = columns; cell.textContent = value; row.appendChild(cell); body.appendChild(row); }
+   async function api(path, options = {}) {
+@@ -361,10 +497,12 @@
+   function setSessionVisible(active) {
+     if (!active) admissionMode = null;
+     dashboard.hidden = !active; loginPanel.hidden = active; logout.hidden = !active; refresh.disabled = !active; byId('close-admission').disabled = !active || !csrfToken || admissionMode === 'recovery';
++    updateFolderSetupSummary();
+   }
+   function stopPolling() { if (pollTimer !== null) { clearTimeout(pollTimer); pollTimer = null; } }
+   function schedulePolling() { stopPolling(); if (!document.hidden) pollTimer = setTimeout(loadOverview, POLL_MS); }
+   function renderOverview(data) {
++    renderFolderSetup(data);
+     const health = data.health || {};
+     text('service-state', health.ok ? 'healthy (central only)' : 'unhealthy');
+     text('sqlite-state', health.sqlite_integrity || null);
+@@ -478,7 +616,7 @@
+       const steps = [
+         { name: '1. Duyệt enrollment máy', state: (data.nodes || []).length ? 'đã có node' : pendingEnrollments.length ? `đợi duyệt (${pendingEnrollments.length})` : 'chưa có yêu cầu', target: 'Yêu cầu và enrollment' },
+         { name: '2. Node đăng ký root local', state: currentRegistrations.length ? `${currentRegistrations.length} root current` : 'chưa có root', target: 'Workspace đã đăng ký' },
+-        { name: '3. Tạo binding (chọn root)', state: (data.bindings || []).length ? `${data.bindings.length} binding` : 'chưa có binding', target: 'Workspace đã đăng ký' },
++        { name: '3. Cấp quyền cho thư mục', state: (data.bindings || []).length ? 'chọn đúng thư mục; biểu mẫu dùng lại liên kết hiện hành' : 'chọn thư mục và thời lượng; biểu mẫu gộp liên kết/context', target: 'Cấp quyền cho thư mục' },
+       ];
+       if (mcpAuthenticationMode === 'private_tunnel_service') steps.push({ name: '4. Tunnel grant + pilot exact-target', state: !activeGrant ? 'chưa có grant còn hạn' : !currentPilot ? 'chưa có decision current' : admissionMode !== 'scoped_pilot' ? 'decision current; admission chưa mở' : 'central scoped_pilot; cần kiểm chứng tunnel/local', target: 'ChatGPT qua private tunnel' });
+       steps.push({ name: `${steps.length + 1}. Cài policy workspace tại app Windows`, state: 'chỉ local policy cho workspace đã chọn mới cấp quyền file/lệnh; central observation không thay thế kiểm chứng', target: 'Windows nodes' });
+@@ -780,6 +918,9 @@
+       connectionStatus.textContent = `Đã tạo ${binding.binding_id}; cấp context riêng khi cần.`; bindingForm.reset(); await loadOverview();
+     } catch (error) { connectionStatus.textContent = `Không tạo binding: ${error.message}`; } finally { button.disabled = !csrfToken; }
+   });
++  folderSetupForm.addEventListener('submit', submitFolderSetup);
++  byId('folder-setup-workspace').addEventListener('change', updateFolderSetupSummary);
++  byId('folder-setup-duration').addEventListener('change', updateFolderSetupSummary);
+   contextForm.addEventListener('submit', async (event) => {
+     event.preventDefault(); const button = contextForm.querySelector('button[type="submit"]'); button.disabled = true; connectionStatus.textContent = 'Đang cấp context tạm thời…';
+     try {

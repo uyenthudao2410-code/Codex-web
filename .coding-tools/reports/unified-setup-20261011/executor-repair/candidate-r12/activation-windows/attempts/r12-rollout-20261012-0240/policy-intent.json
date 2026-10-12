@@ -1,0 +1,17 @@
+{
+  "phase": "policy",
+  "observed_at_ms": 1791747829778,
+  "helper_sha256": "71972c3aa7f88cb625d44507ef5e3b69ca6921a21d6f2520bde0fff5119f5927",
+  "launcher_identity": {
+    "state": "live",
+    "pid": 10244,
+    "process_start_token": "134362214236576980"
+  },
+  "no_automatic_retry": true,
+  "before_policy_hashes": {
+    "ReadOnly": "734f7de680b9213d021041c06788027340816aaf72629b778cd38dd649feb793",
+    "FileRead": "24c3f41a7153a7e444b9d0f00c882c1d6c07ed7a94a6a364b33be484f1ef9fed",
+    "ApprovedPatch": "f148a2263da6e29ed9baf30f9a7fe0e06af1b8f3ac01d3e6a3fa53b38df7bd67",
+    "Exec": "f26b6afa18e705e57b0626527451d24c2a7fc19ddaec74819543e304bbc72e08"
+  }
+}

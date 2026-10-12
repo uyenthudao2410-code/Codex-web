@@ -1529,7 +1529,8 @@ class McpExecHttpNodeE2ETests(unittest.TestCase):
             }},
         })
         self.assertEqual(claim_status, 200)
-        self.assertEqual(claim["error"]["data"]["code"], "CONFLICT")
+        self.assertTrue(claim["result"]["isError"])
+        self.assertEqual(claim["result"]["structuredContent"]["code"], "CONFLICT")
 
         release_while_running_status, release_while_running = self._mcp_post({
             "jsonrpc": "2.0", "id": "mcp-http-exec-writer-job-task-a-release-running", "method": "tools/call",
@@ -1538,7 +1539,8 @@ class McpExecHttpNodeE2ETests(unittest.TestCase):
             }},
         })
         self.assertEqual(release_while_running_status, 200)
-        self.assertEqual(release_while_running["error"]["data"]["code"], "CONFLICT")
+        self.assertTrue(release_while_running["result"]["isError"])
+        self.assertEqual(release_while_running["result"]["structuredContent"]["code"], "CONFLICT")
 
         with mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
              mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \

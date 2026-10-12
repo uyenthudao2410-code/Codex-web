@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: manager IPC opens only the normalized HTTPS Ubuntu root and has no write side effect
+ok 1 - manager IPC opens only the normalized HTTPS Ubuntu root and has no write side effect
+  ---
+  duration_ms: 10.1068
+  type: 'test'
+  ...
+# Subtest: manager IPC uses the saved origin only when no origin is supplied
+ok 2 - manager IPC uses the saved origin only when no origin is supplied
+  ---
+  duration_ms: 1.7234
+  type: 'test'
+  ...
+# Subtest: non-manager callers are rejected before settings or browser side effects
+ok 3 - non-manager callers are rejected before settings or browser side effects
+  ---
+  duration_ms: 1.4239
+  type: 'test'
+  ...
+# Subtest: console IPC rejects non-origin URLs, credentials, paths, queries and fragments
+ok 4 - console IPC rejects non-origin URLs, credentials, paths, queries and fragments
+  ---
+  duration_ms: 2.1698
+  type: 'test'
+  ...
+# Subtest: enrollment-status IPC restores an empty Ubuntu origin from the durable receipt
+ok 5 - enrollment-status IPC restores an empty Ubuntu origin from the durable receipt
+  ---
+  duration_ms: 1.4131
+  type: 'test'
+  ...
+# Subtest: enrollment-status IPC never overwrites an explicitly configured Ubuntu origin
+ok 6 - enrollment-status IPC never overwrites an explicitly configured Ubuntu origin
+  ---
+  duration_ms: 0.9865
+  type: 'test'
+  ...
+# Subtest: central setup guidance keeps development, stale authority and local runtime blockers distinct
+ok 7 - central setup guidance keeps development, stale authority and local runtime blockers distinct
+  ---
+  duration_ms: 2.6044
+  type: 'test'
+  ...
+# Subtest: central setup source preserves a single enrollment request and opens operator linking explicitly
+ok 8 - central setup source preserves a single enrollment request and opens operator linking explicitly
+  ---
+  duration_ms: 1.1578
+  type: 'test'
+  ...
+# Subtest: central setup ready text limits a read-only target to status and keeps file and command lanes unverified
+ok 9 - central setup ready text limits a read-only target to status and keeps file and command lanes unverified
+  ---
+  duration_ms: 2.716
+  type: 'test'
+  ...
+# Subtest: central setup does not turn registered write and exec capabilities into ChatGPT execution proof
+ok 10 - central setup does not turn registered write and exec capabilities into ChatGPT execution proof
+  ---
+  duration_ms: 1.8888
+  type: 'test'
+  ...
+# Subtest: the main setup action continues the selected folder while owner approval is pending
+ok 11 - the main setup action continues the selected folder while owner approval is pending
+  ---
+  duration_ms: 2.6748
+  type: 'test'
+  ...
+# Subtest: central setup does not label an assigned but offline target ready and offers a status refresh
+ok 12 - central setup does not label an assigned but offline target ready and offers a status refresh
+  ---
+  duration_ms: 2.5497
+  type: 'test'
+  ...
+# Subtest: central setup requires the local Ubuntu route in addition to a healthy account target
+ok 13 - central setup requires the local Ubuntu route in addition to a healthy account target
+  ---
+  duration_ms: 1.9185
+  type: 'test'
+  ...
+# Subtest: refreshing an unhealthy assigned target is read-only and does not open account-linking console
+ok 14 - refreshing an unhealthy assigned target is read-only and does not open account-linking console
+  ---
+  duration_ms: 2.1413
+  type: 'test'
+  ...
+# Subtest: system navigation opens the unified setup shell instead of silently redirecting to the old connection page
+ok 15 - system navigation opens the unified setup shell instead of silently redirecting to the old connection page
+  ---
+  duration_ms: 3.1589
+  type: 'test'
+  ...
+# Subtest: connection and folder aliases stay on the single system page
+ok 16 - connection and folder aliases stay on the single system page
+  ---
+  duration_ms: 2.6092
+  type: 'test'
+  ...
+# Subtest: development central controls are visibly gated before action handlers run
+ok 17 - development central controls are visibly gated before action handlers run
+  ---
+  duration_ms: 2.5913
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 148.2751

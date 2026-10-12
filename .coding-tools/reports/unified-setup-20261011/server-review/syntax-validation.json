@@ -1,0 +1,12 @@
+{
+  "operation": "frozen_console_asset_syntax_validation",
+  "observed_at_utc": "2026-10-11T09:58:41.601069+00:00",
+  "file_sha256": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b",
+  "python_compile": "pass",
+  "javascript_node_check": "pass",
+  "html_bytes": 18558,
+  "css_bytes": 2755,
+  "javascript_bytes": 68043,
+  "source_copy_still_matches": true,
+  "full_package_or_live_server_validated": false
+}

@@ -1,0 +1,122 @@
+{
+  "kind": "initial_proof_candidate_parity",
+  "observed_at": "2026-10-11T14:23:14.644Z",
+  "ok": true,
+  "candidate_tag": "initial-proof-1011-r11",
+  "candidate_path": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-initial-proof-1011-r11\\win-unpacked",
+  "source_freeze_sha256": "3bd561909abf56126ae2a15cc65932181251a48a1a9d47779b506e1b6c359c63",
+  "source_files": [
+    {
+      "source": "electron/services/controlPlaneApprovedPatchBridge.js",
+      "payload": "app.asar/electron/services/controlPlaneApprovedPatchBridge.js",
+      "sha256": "08391c186c3243f5e290e15ea7514a977316cfcad082b00da8f6e46be8f2d555",
+      "current_sha256": "08391c186c3243f5e290e15ea7514a977316cfcad082b00da8f6e46be8f2d555",
+      "packaged_sha256": "08391c186c3243f5e290e15ea7514a977316cfcad082b00da8f6e46be8f2d555",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "electron/services/recoveryHost.js",
+      "payload": "app.asar/electron/services/recoveryHost.js",
+      "sha256": "612861c7c27f7e0a3071c6acb45cdc971fa893b317038e7153d8ef41d9442fd1",
+      "current_sha256": "612861c7c27f7e0a3071c6acb45cdc971fa893b317038e7153d8ef41d9442fd1",
+      "packaged_sha256": "612861c7c27f7e0a3071c6acb45cdc971fa893b317038e7153d8ef41d9442fd1",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "electron/services/runtimeOrchestrator.js",
+      "payload": "app.asar/electron/services/runtimeOrchestrator.js",
+      "sha256": "043540376ce6deeff271839e2e7e9f259156462dc6ce286ff5bca6d51a309d99",
+      "current_sha256": "043540376ce6deeff271839e2e7e9f259156462dc6ce286ff5bca6d51a309d99",
+      "packaged_sha256": "043540376ce6deeff271839e2e7e9f259156462dc6ce286ff5bca6d51a309d99",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/approved_patch_verification.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/approved_patch_verification.py",
+      "sha256": "57ec5798b408c26eb29d2d006ac018fd55250aa62e08d31f3d28d5dd5b9cd79f",
+      "current_sha256": "57ec5798b408c26eb29d2d006ac018fd55250aa62e08d31f3d28d5dd5b9cd79f",
+      "packaged_sha256": "57ec5798b408c26eb29d2d006ac018fd55250aa62e08d31f3d28d5dd5b9cd79f",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+      "sha256": "2723839c51727b92b4543aba3ef39842a88b26f3588d20bb0a7c329412aaa514",
+      "current_sha256": "2723839c51727b92b4543aba3ef39842a88b26f3588d20bb0a7c329412aaa514",
+      "packaged_sha256": "2723839c51727b92b4543aba3ef39842a88b26f3588d20bb0a7c329412aaa514",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "sha256": "e743287a026b139d538b4a3080a823b56feb423387ba8b94b79bf36e94619364",
+      "current_sha256": "e743287a026b139d538b4a3080a823b56feb423387ba8b94b79bf36e94619364",
+      "packaged_sha256": "e743287a026b139d538b4a3080a823b56feb423387ba8b94b79bf36e94619364",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+      "sha256": "700da02303077a3267408d90a60c5f0fd20ce765c673851b1a74593e4f3eed9a",
+      "current_sha256": "700da02303077a3267408d90a60c5f0fd20ce765c673851b1a74593e4f3eed9a",
+      "packaged_sha256": "700da02303077a3267408d90a60c5f0fd20ce765c673851b1a74593e4f3eed9a",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "sha256": "b2df54b2450237cfff50b9662a5746704855fda8708a7076ea606a43e0b36ebb",
+      "current_sha256": "b2df54b2450237cfff50b9662a5746704855fda8708a7076ea606a43e0b36ebb",
+      "packaged_sha256": "b2df54b2450237cfff50b9662a5746704855fda8708a7076ea606a43e0b36ebb",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+      "sha256": "0b3e402bd1c5d6649eaae01668a9a77ca9c29f3967522717c544f424dc2dda37",
+      "current_sha256": "0b3e402bd1c5d6649eaae01668a9a77ca9c29f3967522717c544f424dc2dda37",
+      "packaged_sha256": "0b3e402bd1c5d6649eaae01668a9a77ca9c29f3967522717c544f424dc2dda37",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "sha256": "692a8ad182889ae06f304f3880c83a7682732c599fda0571d5040eae2e2d458c",
+      "current_sha256": "692a8ad182889ae06f304f3880c83a7682732c599fda0571d5040eae2e2d458c",
+      "packaged_sha256": "692a8ad182889ae06f304f3880c83a7682732c599fda0571d5040eae2e2d458c",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "control-plane/control_plane/node_agent.py",
+      "payload": "resources/resources/control-plane/node_agent.py",
+      "sha256": "8eb81ca3867642877b3ca0a4b1c14f419e19f15b2293bf8a61322c7250eb0f87",
+      "current_sha256": "8eb81ca3867642877b3ca0a4b1c14f419e19f15b2293bf8a61322c7250eb0f87",
+      "packaged_sha256": "8eb81ca3867642877b3ca0a4b1c14f419e19f15b2293bf8a61322c7250eb0f87",
+      "source_stable": true,
+      "packaged_matches": true
+    },
+    {
+      "source": "control-plane/control_plane/recovery_approved_patch_bridge.cjs",
+      "payload": "resources/resources/control-plane/recovery_approved_patch_bridge.cjs",
+      "sha256": "da9748607ac7cbe036b5bb011d5794e773331591b9d1ce916619d5130c320e70",
+      "current_sha256": "da9748607ac7cbe036b5bb011d5794e773331591b9d1ce916619d5130c320e70",
+      "packaged_sha256": "da9748607ac7cbe036b5bb011d5794e773331591b9d1ce916619d5130c320e70",
+      "source_stable": true,
+      "packaged_matches": true
+    }
+  ],
+  "app_asar_sha256": "2071c0c242bc4b24ebfc22ea21b5c4d066e018505061ebe299cd666c6d2e8a91",
+  "executable_sha256": "d556d6040ced8fd0d6ed52b05cbdbb15a398344d1995402ad3bfcd8efbce94bc",
+  "runtime_activated": false,
+  "server_mutated": false
+}

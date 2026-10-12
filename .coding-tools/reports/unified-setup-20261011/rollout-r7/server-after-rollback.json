@@ -1,0 +1,47 @@
+{
+  "current_release": "codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+  "health": {
+    "admission_mode": "recovery",
+    "declared_source_revision": "beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+    "expected_package_source_sha256": "sha256:acb5ae4713844015e32ee5005001583ae4c04e650c68fb599b22309c65dd2835",
+    "mcp_authentication_mode": "private_tunnel_service",
+    "ok": true,
+    "package_source_sha256": "sha256:acb5ae4713844015e32ee5005001583ae4c04e650c68fb599b22309c65dd2835",
+    "schema_version": 28,
+    "service": "coding-tools-control-plane",
+    "service_instance_id": "cp_e311c873baf64e08b0412f898c44a8f6",
+    "started_at_ms": 1791713876276
+  },
+  "health_url": "https://svhome.tail0e4032.ts.net/healthz",
+  "manifest_identity": {
+    "control_plane_schema_version": 28,
+    "package_source_sha256": "sha256:acb5ae4713844015e32ee5005001583ae4c04e650c68fb599b22309c65dd2835",
+    "source_revision": "beaa9d5ade4926ef231e3ec9d0a517fe93830e90"
+  },
+  "observed_at_utc": "2026-10-11T10:18:37.625545+00:00",
+  "operation": "redacted_read_only_server_preflight",
+  "queue": {
+    "active_writer_lease_count": 0,
+    "admission_mode": "recovery",
+    "delivery_state_counts": {
+      "dispatch_unconfirmed": 1,
+      "reconcile_required": 12,
+      "settled": 19
+    },
+    "live_pilot_count": 0,
+    "open_task_count": 0,
+    "quarantined_unresolved_action_count": 13,
+    "queued_unexpired_count": 0,
+    "sqlite_integrity": "ok",
+    "unquarantined_unresolved_action_count": 0,
+    "unresolved_action_count": 13
+  },
+  "remote_mutation": false,
+  "service": {
+    "ActiveState": "active",
+    "MainPID": "806179",
+    "NRestarts": "0",
+    "SubState": "running"
+  },
+  "web_ui_sha256": "073bde8624c5d6ff76ddfae8633acb7c1c4118b05aa458b4be1b21b3ae8181aa"
+}

@@ -1,0 +1,78 @@
+{
+  "observed_at_ms": 1791734613490,
+  "tag": "initial-proof-1011-r11",
+  "descriptor": {
+    "installation_id": "955c37956bb8afeef8bd771cc5c2d5245d6e69e35ba3fcd05e445e8c1c5f2a1b",
+    "instance_id": "53d1229ec0d4a9964536abf506946c0f",
+    "owner_pid": 27028,
+    "owner_process_start_token": "134362047261230270"
+  },
+  "identities": {
+    "host": {
+      "state": "absent",
+      "pid": 27028,
+      "process_start_token": null
+    },
+    "native": {
+      "state": "absent",
+      "pid": 24044,
+      "process_start_token": null
+    },
+    "tunnel": {
+      "state": "absent"
+    },
+    "agent": {
+      "state": "absent",
+      "pid": 25160,
+      "process_start_token": null
+    }
+  },
+  "status": null,
+  "agent": {
+    "last_iteration_state": "polling",
+    "last_heartbeat_state": "succeeded",
+    "last_heartbeat_at_ms": 1791734509855
+  },
+  "census": {
+    "safe": true,
+    "code": "READY",
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": []
+    },
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "dc69cb406695ff38c1348f6863600e5c2bc94f4cf0e5ec9cebb609454712bc9a",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "5d2e5da4752c0abf31deebf48a6e90d99659db367fcf39d4205e555069c5b914",
+      "size_bytes": 97800192,
+      "snapshot_at": "2026-10-11T16:03:30.360Z"
+    },
+    "mutated_canonical_ledger": false
+  }
+}

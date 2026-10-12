@@ -1,0 +1,40 @@
+{
+  "kind": "root_mcp_transport_static_guard_proof",
+  "helper_sha256": "a081b293cd1e33fbc4c53f86ed52fe2c9c2ce53cb6b6797c4fee1b615eaf5d19",
+  "canary_sha256": "54f8ee88889e60437c7831410aae7845b2481401ce3f73bf7daa33a77e3ea047",
+  "local_and_remote_syntax": "passed",
+  "positive_cases": 2,
+  "negative_cases": [
+    {
+      "case": "old_epoch",
+      "rejected": true
+    },
+    {
+      "case": "different_context",
+      "rejected": true
+    },
+    {
+      "case": "extended_window",
+      "rejected": true
+    },
+    {
+      "case": "private_pin_field",
+      "rejected": true
+    },
+    {
+      "case": "private_stdout",
+      "rejected": true
+    },
+    {
+      "case": "nested_header",
+      "rejected": true
+    },
+    {
+      "case": "nonpublic_phase",
+      "rejected": true
+    }
+  ],
+  "helper_main_invoked": false,
+  "ssh_invoked": false,
+  "live_operations": false
+}

@@ -1,0 +1,39 @@
+{
+  "kind": "content_free_packaged_census_phase_timings",
+  "observed_at": "2026-10-11T08:32:00Z",
+  "observation_timestamp_precision": "approximate_phase_window",
+  "candidate": "windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4",
+  "session_id": 2368,
+  "exit_code": 0,
+  "elapsed_seconds": {
+    "imports_complete": 0.203,
+    "snapshot_complete": 4.672,
+    "projection_complete": 19.875,
+    "classification_complete": 19.906,
+    "cleanup_complete": 20.047
+  },
+  "snapshot_size_bytes": 97779712,
+  "snapshot_logical_sha256": "6f8b18cc9bb53048f5e24a83a32dff871e6c68e9d89dcfc463e0698d7733389a",
+  "context_count": 1083,
+  "summary": {
+    "run_classification_counts": {
+      "AWAITING_ACCEPTANCE": 1,
+      "P5_EXPERIMENT_ANCHOR": 6,
+      "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 17
+    },
+    "managed_job_classification_counts": {},
+    "ordinary_active_runs": 18,
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "stale_background_operation_residues": 0,
+    "projection_drift": false,
+    "p5_epochs": 6
+  },
+  "content_free": true,
+  "mutated_canonical_ledger": false,
+  "limits": [
+    "A read-only diagnostic; not an activation admission receipt.",
+    "The 20-second watchdog emitted one traceback during context-manager cleanup, then the process exited successfully.",
+    "Earlier activation and standalone admission censuses exceeded their unchanged 30-second budget; this result does not relabel those attempts as successful."
+  ]
+}

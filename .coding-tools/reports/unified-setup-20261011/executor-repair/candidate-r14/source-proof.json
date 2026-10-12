@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-11T23:10:29.259Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "candidate_tag": "workflow-timeout-1012-r14",
+  "source_freeze_sha256": "a618711528b418db77a901a5b83537bde2d511618ef630ab22670a2e6579625d",
+  "applied_patch_sha256": "5614539fdda1a5fd22a880a65a26d06f46c2741c649e3a1a68e0b045d643cf88",
+  "applied_manifest_sha256": "e335d85556254301a9dcda8e8edf235e4ba1e20aac038ea1ebbcb9c1f9028969",
+  "applied_source_files": [
+    {
+      "file": "electron/services/runtimeOrchestrator.js",
+      "applied_sha256": "aa1c7dfc33cefe916b54806c7ddd591b91c80850a7a925ab7af7bafa49e83775",
+      "applied_normalized_sha256": "ec9a500aacc35e6e7594fa780fce96198b897e671c7e4fa5d63c3e8dd6a6d666"
+    },
+    {
+      "file": "tests/control-plane-approved-patch-runtime.test.js",
+      "applied_sha256": "013bd67f2b08b9ddce0951b0babf972fae19dfe3a78e5065ea604bd85f98fd55",
+      "applied_normalized_sha256": "926e215ca13590462ebe7f2f889796262db79f433a86a80ac9cdfc8fb6655b5a"
+    }
+  ],
+  "actual_source_validation": {
+    "provenance": "root controller reported successful actual-source tool execution; this lane did not rerun it",
+    "tool_chunk_id": "87110f",
+    "command": "node --test '--test-name-pattern=initial verification' tests/control-plane-approved-patch-runtime.test.js",
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "skipped": 0,
+    "duration_ms": 458.3366,
+    "subtest_duration_ms": [
+      322.7551,
+      13.1968,
+      3.251
+    ],
+    "stdout_artifact_available": false,
+    "scoped_git_diff_check": "root reported passed in the same execution wave"
+  },
+  "prior_in_memory_preparation_validation": {
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "proof_path": ".coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r13/reconciliation-5h/approved-patch-initial-proof-timeout-r2.proof.json"
+  },
+  "claim": "source applied and focused checks passed; packaged parity and activation require separate evidence",
+  "runtime_activated": false,
+  "server_mutated": false
+}

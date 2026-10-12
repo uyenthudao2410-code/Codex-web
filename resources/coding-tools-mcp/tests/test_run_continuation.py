@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -69,6 +70,24 @@ def grant_request(**overrides: object) -> dict[str, object]:
     }
     request.update(overrides)
     return request
+
+
+def mxc_workspace_temporary_directory(prefix: str) -> tempfile.TemporaryDirectory[str]:
+    """Keep Windows MXC fixtures outside the user profile's Temp directory.
+
+    Windows BaseContainer cannot reliably create its security environment for
+    workspaces nested below the user profile's Temp directory.  The production
+    workspace contract permits any local drive directory, and the integration
+    tests use that same shape.
+    """
+
+    if os.name != "nt":
+        return tempfile.TemporaryDirectory(prefix=prefix)
+
+    try:
+        return tempfile.TemporaryDirectory(prefix=prefix, dir=str(Path(__file__).resolve().anchor))
+    except OSError as error:
+        raise unittest.SkipTest(f"the test account cannot create an isolated MXC workspace at the volume root: {error}") from error
 
 
 def policy(run_id: str, request: dict[str, object] | None = None) -> dict[str, object]:
@@ -1789,7 +1808,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             self.assertTrue(observed["backup_complete"])
 
     def test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with mxc_workspace_temporary_directory("continuation-argv-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 with self.assertRaises(ToolFailure) as denied:
@@ -2167,7 +2186,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with mxc_workspace_temporary_directory("continuation-proof-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             (root / "target.py").write_text("before\n", encoding="utf-8")
             (root / "checks").mkdir()
@@ -2265,7 +2284,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with mxc_workspace_temporary_directory("continuation-repair-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             (root / "target.py").write_text("before\n", encoding="utf-8")
             (root / "checks").mkdir()
@@ -2389,9 +2408,11 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                     patch.object(runtime, "activation_admission_snapshot", return_value={"admission": "open", "activation_epoch_id": "epoch-current"}),
                     patch.object(runtime, "_run_continuation_current_evidence", return_value=({}, "a" * 64)),
                     patch.object(runtime._codex_bridge, "owns_thread", return_value=True),
+                    patch.object(runtime._codex_bridge, "continue_thread", wraps=runtime._codex_bridge.continue_thread) as second_turn,
                     patch.object(runtime._codex_bridge, "observe", return_value=repair_observation),
                 ):
                     repaired = runtime._run_continuation_observe_driver(run_id=ctx.run_id)
+                second_turn.assert_not_called()
                 self.assertEqual(repaired["status"], "ACCEPTING")
                 self.assertEqual((root / "target.py").read_text(encoding="utf-8"), "correct\n")
                 final_record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)

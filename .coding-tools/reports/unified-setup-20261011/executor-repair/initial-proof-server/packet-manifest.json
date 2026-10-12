@@ -1,0 +1,95 @@
+{
+  "archive_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c.tar.gz",
+  "archive_sha256": "7d1a0b015208b4fc257a52bc888cd8a15f559ce33cf04846953d533002b7c273",
+  "authority_renewal": false,
+  "base_archive_sha256": "bf76625554e32478202191c29ccdea0790448a47971db30af54a7aa5959d9061",
+  "base_manifest_sha256": "c608465e22c2a1e4f5801cf93cb416c5bec9c66b412834f0bfed619a1f01ec8d",
+  "base_package_source_sha256": "sha256:83611914241508ad1f5ca96d017902cb6675fa15ea082f3aa4698f7cffe74419",
+  "base_source_revision": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5",
+  "captured_at_utc": "2026-10-11T14:02:43.843224+00:00",
+  "changed_payload_paths": [
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/node_agent.py",
+    "control-plane/control_plane/recovery_approved_patch_bridge.cjs",
+    "control-plane/control_plane/store.py"
+  ],
+  "database_restore_or_replay": false,
+  "deployment_authorized": false,
+  "deployment_performed": false,
+  "diff_sha256": "1d97a1602e64083fcc81bb7c397933d055ac3aceadbd2bf5b9f9b64655ae66e4",
+  "git_commit_or_push_performed": false,
+  "git_head_observed": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "live_identity_expected_only": {
+    "package_source_sha256": "sha256:83611914241508ad1f5ca96d017902cb6675fa15ea082f3aa4698f7cffe74419",
+    "service_instance_id": "cp_6766892f5ada47d1862a0d24334f1116",
+    "source_revision": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5"
+  },
+  "local_verification": {
+    "control_plane_schema_version": 29,
+    "file_count": 38,
+    "operation": "control_plane_release_verification",
+    "package_source_sha256": "sha256:80a2e82115714f8e5e32cc7144e180b1f83ee8738e2af1e4821de8048128f7e8",
+    "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c"
+  },
+  "manifest_sha256": "a9ecac2d8935cd36790ee08a49be090446a2458a10d7a4bf542f825e34e14e55",
+  "operation": "immutable_initial_proof_server_packet_preparation",
+  "package_source_sha256": "sha256:80a2e82115714f8e5e32cc7144e180b1f83ee8738e2af1e4821de8048128f7e8",
+  "payload_file_count": 38,
+  "payload_line_endings": "LF; canonicalizes Windows CRLF while preserving served format",
+  "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "rollback": {
+    "old_schema28_binary_supports_schema29": false,
+    "restore_database_automatically": false,
+    "retain_preactivation_sqlite_backup": true,
+    "retain_store395_release": true,
+    "strategy": "Preserve all task history; use schema29-compatible rollback or forward fix. Never lower user_version or restore an old snapshot over new task history."
+  },
+  "schema_migration": {
+    "add_nullable_columns": {
+      "mcp_approved_patch_intents": [
+        "verification_json TEXT"
+      ],
+      "mcp_permission_requests": [
+        "verification_json TEXT"
+      ],
+      "mcp_standing_patch_intents": [
+        "verification_json TEXT"
+      ]
+    },
+    "from": 28,
+    "legacy_no_plan_digests_preserved": true,
+    "legacy_rows_rewritten": false,
+    "new_tables": [],
+    "to": 29
+  },
+  "service_operation_performed": false,
+  "source_hashes": {
+    "control-plane/control_plane/mcp_facade.py": {
+      "base_sha256": "6e2bbf968bc867ca8e0cd5cc265363b3a65708a242befb0bfca596cf203ebe1c",
+      "local_sha256": "0a1882ab526cd6903c43a05f65892e6b14f660303080c120a430450641bafe7f",
+      "payload_sha256": "133b6d891290fd37303f14eb2919e03903ead7b3f36510c55ebd843dd36dcac0"
+    },
+    "control-plane/control_plane/node_agent.py": {
+      "base_sha256": "4dadefb805358dc8ac2dc0efdba2a1cd6aeeb7bdded125b75577bcac68fe7cc9",
+      "local_sha256": "8eb81ca3867642877b3ca0a4b1c14f419e19f15b2293bf8a61322c7250eb0f87",
+      "payload_sha256": "ea79c0fb874a1449260380a3e438fc24b38d0006ab39b541870c01bb121cd412"
+    },
+    "control-plane/control_plane/recovery_approved_patch_bridge.cjs": {
+      "base_sha256": "db50e1a20a7f97642d6856b3ab91bfed8d9cfc9d9655ff234ae005f534f81072",
+      "local_sha256": "da9748607ac7cbe036b5bb011d5794e773331591b9d1ce916619d5130c320e70",
+      "payload_sha256": "0a8bf8a04bbc981c591bdd9396f416d49dc9ce1f3c05343b0a2709530c94a53c"
+    },
+    "control-plane/control_plane/store.py": {
+      "base_sha256": "1d45615fff15e19dc50d4a7cead04b7566ed0acd87489f2ab5cd69adbc24a9e0",
+      "local_sha256": "f6a1bee23ba44370434e3aa5687718ebe962347b1c6300dd10cb6c7360600d46",
+      "payload_sha256": "f50ddce70d5821bd82a32b12640ce5609ec510409cac18a312f6ffd23d56d513"
+    }
+  },
+  "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "source_revision_is_git_commit": false,
+  "target_host": "100.116.112.22",
+  "target_service": "codex-control-plane.service",
+  "target_user": "svhome",
+  "unchanged_payload_file_count": 34
+}

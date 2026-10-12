@@ -1,0 +1,10 @@
+{"event":"begin","artifact":"r7","command":"node --version","workspace":"E:\\Github\\Tools-Codex-web"}
+{"event":"phase_begin","phase":"provision"}
+{"event":"phase_end","phase":"provision","ok":true,"elapsed_ms":155}
+{"event":"phase_begin","phase":"start"}
+{"event":"phase_end","phase":"start","ok":true,"elapsed_ms":23157}
+{"event":"command_end","exit_code":0,"version":"v22.21.0"}
+{"event":"phase_begin","phase":"deprovision"}
+{"event":"phase_end","phase":"deprovision","ok":true,"elapsed_ms":7296}
+{"event":"invocation_cleanup","ok":true}
+{"event":"manager_cleanup","ok":true}

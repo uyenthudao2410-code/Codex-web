@@ -1,0 +1,15 @@
+{
+  "action": "reopen",
+  "captured_at_utc": "2026-10-11T15:08:31.259891+00:00",
+  "public_receipts": [
+    {
+      "code": "R11_NODE_NOT_FRESH_READY_OR_EXACT_POLICY_WINDOW",
+      "next_action": "KEEP_INTAKE_CLOSED_INSPECT_MARKER_AND_FRESH_STATE_NO_WINDOW_REANCHOR",
+      "ok": false,
+      "phase": "r11_authority_failed"
+    }
+  ],
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T145116647004Z",
+  "ssh_returncode": 2,
+  "stderr_disclosed": false
+}

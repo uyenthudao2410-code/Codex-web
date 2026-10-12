@@ -1914,7 +1914,7 @@ test('operator central handoff preserves live-runtime fences and binds checkpoin
       save: () => { calls.push('settings.save'); }
     },
     orchestrator: {
-      inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: root }),
+      inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY', workspace: root }),
       prepareCodeActivation: async (options) => {
         calls.push('fence');
         assert.equal(Object.hasOwn(options, 'sourceCheckpoint'), false);
@@ -1922,6 +1922,7 @@ test('operator central handoff preserves live-runtime fences and binds checkpoin
         return {
           safe: true,
           fenced: true,
+          executor_cleanup: { state: 'not_required', confirmed: true },
           fence_operation_id: options.operationId,
           expires_at_unix_ms: options.expiresAtUnixMs
         };
@@ -2052,6 +2053,7 @@ test('full-clean bounds the Coding MCP preparation fence without shortening the 
         return {
           safe: true,
           fenced: true,
+          executor_cleanup: { state: 'not_required', confirmed: true },
           fence_operation_id: options.operationId,
           expires_at_unix_ms: options.expiresAtUnixMs
         };
@@ -2087,13 +2089,14 @@ test('public full-clean refresh renews the Coding MCP fence after slow UI termin
     epochStore: store,
     settings: { load: () => ({ workspace: root }) },
     orchestrator: {
-      inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: root }),
+      inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY', workspace: root }),
       prepareCodeActivation: async (options) => {
         prepareCalls.push({ preparedAtUnixMs: nowUnixMs, ...options });
         events.push('prepare');
         return {
           safe: true,
           fenced: true,
+          executor_cleanup: { state: 'not_required', confirmed: true },
           fence_operation_id: options.operationId,
           expires_at_unix_ms: options.expiresAtUnixMs
         };
@@ -2159,11 +2162,12 @@ test('full-clean restart forwards service ports as recovery-plane idle proof', a
     epochStore: new ActivationEpochStore({ paths, now: () => nowUnixMs }),
     settings: { load: () => ({ workspace: root, recoveryHealthPort: 18083, recoveryMcpPort: 18767 }) },
     orchestrator: {
-      inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: root }),
+      inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY', workspace: root }),
       prepareCodeActivation: async (options) => ({
         safe: true,
         fenced: true,
-        fence_operation_id: options.operationId,
+        executor_cleanup: { state: 'not_required', confirmed: true },
+          fence_operation_id: options.operationId,
         expires_at_unix_ms: options.expiresAtUnixMs
       }),
       currentMcpHealth: async () => null,
@@ -2362,7 +2366,7 @@ test('replacement refuses malformed exact stale-run maintenance before Coding MC
   assert.equal(store.current().admission_state, 'CLOSED');
 });
 
-test('full-clean failure after epoch creation stops owned old components before terminalizing', async (t) => {
+test('full-clean unverified prepare preserves owned old components and terminalizes the epoch', async (t) => {
   const { root, paths } = fixture(t);
   const store = epochStore(paths);
   const failure = Object.assign(new Error('activation fence raced with another lifecycle mutation'), { code: 'ACTIVATION_PREFLIGHT_UNVERIFIED' });
@@ -2380,7 +2384,7 @@ test('full-clean failure after epoch creation stops owned old components before 
     orchestrator: {
       busy: false,
       recovering: false,
-      inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
+      inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY' }),
       prepareCodeActivation: async () => { throw failure; },
       currentMcpHealth: async () => null,
       codingMcpRevisionStatus: () => revisions.status(),
@@ -2401,7 +2405,7 @@ test('full-clean failure after epoch creation stops owned old components before 
     }),
     { code: 'ACTIVATION_PREFLIGHT_UNVERIFIED' }
   );
-  assert.deepEqual(calls.map(([name]) => name), ['ui.stop', 'runtime.stop', 'recovery-plane.stop']);
+  assert.deepEqual(calls.map(([name]) => name), [], 'an unverified prepare must preserve the owned executor');
   assert.equal(store.current().state, 'FAILED');
   assert.equal(store.current().admission_state, 'CLOSED');
 });

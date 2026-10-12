@@ -1,0 +1,13 @@
+{
+  "kind": "prepared_root_mcp_transport_manifest",
+  "live_operations": false,
+  "helper_main_invoked": false,
+  "approved_requested_at_ms": 1791722898491,
+  "approved_expires_at_ms": 1791726498491,
+  "files": {
+    "root-mcp-transport.py": "a081b293cd1e33fbc4c53f86ed52fe2c9c2ce53cb6b6797c4fee1b615eaf5d19",
+    "check-root-mcp-transport.py": "af4b45579d613fc1798c3386ae74c1d2efefe5303497ae7ddbbe9a1f2b90bb25",
+    "root-mcp-transport-static-proof.json": "ca446fe0945c406a7f2c8db974fb473365a8f4aba69eec0eef78ceae66dceb42",
+    "ROOT-MCP-TRANSPORT.md": "534d3b12d1bcee4ea53f91344deef649481de46ddb7e21d44be1275370226824"
+  }
+}

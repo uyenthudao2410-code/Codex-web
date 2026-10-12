@@ -1,0 +1,13 @@
+{
+  "archives": [],
+  "helpers": {
+    "r11_common.py": {
+      "sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+      "size_bytes": 22388
+    },
+    "ubuntu-r12-authority.py": {
+      "sha256": "c7db3834b2238029c0f0693f4eb6e9f92dadfe9958ebf7278d0c174fd8575613",
+      "size_bytes": 22772
+    }
+  }
+}

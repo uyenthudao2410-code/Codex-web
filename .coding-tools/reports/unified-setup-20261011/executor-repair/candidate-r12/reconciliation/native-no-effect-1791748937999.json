@@ -1,0 +1,177 @@
+{
+  "acceptance_performed": false,
+  "action_id": "act_6aa1329b96c146f38c807f9926b3e684",
+  "active_census_required": false,
+  "attempt_id": "try_4178cd41d2f3424a81dcb3c4cc706ed1",
+  "checker_unchanged": true,
+  "external_mutation": false,
+  "files": {
+    "tests/fixtures/initial-proof-canary-check.cjs": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+    "tests/fixtures/initial-proof-canary-target.cjs": "90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650"
+  },
+  "journal": {
+    "code": "CONTROL_PLANE_APPROVED_PATCH_EFFECT_UNKNOWN",
+    "diagnostic_code": "CONTROL_PLANE_APPROVED_PATCH_MCP_REJECTED",
+    "local_handle": "",
+    "receipt_state": "unknown",
+    "receipt_submitted": true,
+    "sha256": "62cc02428d788c83c161c392f203406eb2b33907dacf3b98889ab3d790d0c8a4",
+    "state": "unknown"
+  },
+  "kind": "r12_query_only_native_no_effect_reconciliation",
+  "ledger": {
+    "protected_records": {
+      "runs": {
+        "id": "95e909f0040a448faa9f1f3257e2ee2c",
+        "sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+        "unchanged": true
+      },
+      "waves": {
+        "id": "c101beadfc6d4f2fbc13845052c84693",
+        "sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+        "unchanged": true
+      }
+    },
+    "related_id_counts": {
+      "events": 0,
+      "managed_process_jobs": 0,
+      "proofs": 0,
+      "runs": 0,
+      "waves": 0
+    },
+    "since_counts": {
+      "events": 0,
+      "managed_process_jobs": 0,
+      "problem_events": 0,
+      "proofs": 0,
+      "runs": 0,
+      "waves": 0
+    },
+    "since_utc": "2026-10-11T19:49:00.000Z",
+    "snapshot": {
+      "events_max_seq": 59838,
+      "ledger_path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "query_only": true,
+      "transaction": true
+    }
+  },
+  "mutated_canonical_ledger": false,
+  "native_failure": {
+    "client_id": "electron-control-plane-approved-patch-bridge",
+    "error_category": "validation",
+    "error_code": "WORKTREE_STATUS_TOO_LARGE",
+    "finished_at": "2026-10-11T19:50:13.078Z",
+    "performance_sha256": "8b59680fbab8999e295b83eb057dcccbb89dc2b36a730dcc1722b1c180d47afc",
+    "preceding_workspace_context_succeeded": true,
+    "request_id": "control-plane-approved-patch-workflow-a68e2de8825490466499dacd",
+    "retryable": false,
+    "row_sha256": "a659852ad99c5d2fe7ebe7e752f3284d846759523188347ca103befc709aace7",
+    "run_id": "",
+    "started_at": "2026-10-11T19:50:12.489Z",
+    "task_context_id": "cpap_8de2cfe03c2a2da52b6fdcaaef626ae31b31fc296a1bb72885c42aad",
+    "tool": "agent_workflow",
+    "wave_id": ""
+  },
+  "native_identity_pins": {
+    "activation_epoch": "activation-mv48frhf-ae11a9a83ceb72447f9ba6e78678f206",
+    "mcp_server_instance_id": "Pi0RHPpfohoORNHX",
+    "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+    "runtime_instance_id": "Gnc95EG5Apr7IkcP"
+  },
+  "no_native_patch_effect_observed": true,
+  "observed_at_ms": 1791748937999,
+  "observed_at_utc": "2026-10-11T20:02:17.999Z",
+  "ok": true,
+  "pins_sha256": "47595de08c90cca91f0e6344d84c552c864f7c3e4aea82cb3f6bb8e8a29715ab",
+  "receipt_terminalized": false,
+  "replay_forbidden": true,
+  "schema_version": 1,
+  "secret_values_emitted": false,
+  "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "target_is_exact_preimage": true,
+  "task_id": "task_d2c1dd3bff4042d084b045e9bc5a381b",
+  "authenticated_identity_observation": true,
+  "attestation_claimed": false,
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0
+    },
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "553e9f4c4ea70613dd9ad60e16301d162f0cef854e8034a4462df483b73a1a17",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "2836bc17b10d975209fb2e5e06b16c20cc6c71c0901fa0868fed8732980d7908",
+      "size_bytes": 97800192,
+      "snapshot_at": "2026-10-11T20:02:07.866Z"
+    },
+    "blockers": [
+      "live_runtime_state_process"
+    ],
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "projection_drift": false,
+    "mutated_canonical_ledger": false
+  },
+  "active_work_quiescent": true,
+  "code": "WORKTREE_STATUS_TOO_LARGE",
+  "category": "validation",
+  "pre_effect": true,
+  "pre_effect_basis": [
+    "unique_exact_native_validation_failure_before_RUN_creation",
+    "target_and_checker_exact_preimage",
+    "zero_RUN_WAVE_Job_proof_and_events_since_dispatch_window",
+    "canonical_work_census_quiescent"
+  ],
+  "target_preimage_sha256": "90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650",
+  "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+  "no_new_runs": true,
+  "no_new_jobs": true,
+  "no_new_proof": true,
+  "no_active_work": true,
+  "zero_vm": true,
+  "zero_vm_basis": "no_matching_windows_sandbox_host_or_wxc_backend_processes",
+  "vm_process_census": {
+    "before": {
+      "content_free": true,
+      "host_count": 0,
+      "backend_count": 0,
+      "observed_at_ms": 1791748925133,
+      "basis": "windows_sandbox_host_and_wxc_backend_process_census",
+      "physical_hcs_inventory_claimed": false
+    },
+    "after": {
+      "content_free": true,
+      "host_count": 0,
+      "backend_count": 0,
+      "observed_at_ms": 1791748937999,
+      "basis": "windows_sandbox_host_and_wxc_backend_process_census",
+      "physical_hcs_inventory_claimed": false
+    }
+  },
+  "hcs_inventory_status": "not_observed_by_this_helper",
+  "physical_hcs_inventory_claimed": false,
+  "old_run_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+  "old_wave_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+  "native_identity": {
+    "activation_epoch_id": "activation-mv48frhf-ae11a9a83ceb72447f9ba6e78678f206",
+    "process_instance_id": "Gnc95EG5Apr7IkcP",
+    "server_instance_id": "Pi0RHPpfohoORNHX",
+    "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+  },
+  "performance_evidence_sha256": "a659852ad99c5d2fe7ebe7e752f3284d846759523188347ca103befc709aace7",
+  "performance_snapshot_sha256": "8b59680fbab8999e295b83eb057dcccbb89dc2b36a730dcc1722b1c180d47afc",
+  "helper_sha256": "c537aa6fc49713458125fe08ec7d90375a47076c48a29c4f05b58213a9ee2967",
+  "local_helper_sha256": "8d369c1acf2e3dc32bb5a48d4651b34cb0e8ab88467fb3f86b95fe05d6e0d765"
+}

@@ -1,0 +1,28 @@
+{
+  "kind": "r14_new_canary_static_preparation",
+  "observed_at": "2026-10-11T23:33:48.020Z",
+  "target": "tests/fixtures/initial-proof-canary-target.cjs",
+  "checker": "tests/fixtures/initial-proof-canary-check.cjs",
+  "existing_preimage_sha256": "d1edd529d09c7d4f71dfbb9e9b9e53010cc43a616cf1247594ddf4d705b84a1e",
+  "proposed_postimage_sha256": "0ae4bfe07e94d171e8885a464f3bf8f3e0d9b49a444b144b1aed2e4963ab4496",
+  "proposed_postimage_bytes": 406,
+  "patch_sha256": "4abb1d97a6da4ac507c70b0af1e1902160609597e3efe4096c6a8d96b19cb9b2",
+  "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+  "verification": {
+    "argv": [
+      "node",
+      "--test",
+      "tests/fixtures/initial-proof-canary-check.cjs"
+    ],
+    "cwd": "",
+    "timeout_ms": 60000,
+    "max_output_bytes": 32768
+  },
+  "plan_sha256": "235ecd2dc1bf8b49b21648ffd24df378088916e65e2420cb383fa79a6439afe7",
+  "old_r13_preimage_reset": false,
+  "fixture_mutated": false,
+  "checker_executed": false,
+  "runtime_contacted": false,
+  "new_idempotency_namespace": "r14_same_window-initial-",
+  "authority_expires_at_ms": 1791776571067
+}

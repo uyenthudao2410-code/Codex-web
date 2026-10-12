@@ -1,0 +1,15 @@
+{
+  "kind": "prepared_same_expiry_recovery_intake",
+  "helper": "ubuntu-r10-same-expiry-recovery-intake.py",
+  "helper_sha256": "8f260b9c43da8facda48d2a73c60b3ec298f104890e8ba9e181c1751fa482744",
+  "base_observe_only_sha256": "770853b1f6df78550961a04e0a8d01e19c368247d6384acbf6aa6b0bf98358d0",
+  "frozen_v3_sha256": "a312575854fee785158fa21624a096d7b09ae3701ded38f449a7330ba089ebec",
+  "requested_at_ms": 1791722898491,
+  "expires_at_ms": 1791726498491,
+  "authority_renewed": false,
+  "original_marker_modified": false,
+  "prepared_only": true,
+  "live_operations": false,
+  "supersedes_manifest": "r10-same-expiry-recovery-intake-manifest.json",
+  "change": "Add exact source, package and preserved grant to close/reopen receipts"
+}

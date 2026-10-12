@@ -1,0 +1,42 @@
+{
+  "action": "stage",
+  "captured_at_utc": "2026-10-11T16:04:12.205026+00:00",
+  "public_receipts": [
+    {
+      "files": {
+        "codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb.tar.gz": {
+          "sha256": "7059225a0c7663b0a28899afc3d8603d496af85fb3d32789a5b8a9a2d055b3fc",
+          "size_bytes": 270001
+        },
+        "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c.tar.gz": {
+          "sha256": "7d1a0b015208b4fc257a52bc888cd8a15f559ce33cf04846953d533002b7c273",
+          "size_bytes": 273660
+        },
+        "r11_common.py": {
+          "sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+          "size_bytes": 22388
+        },
+        "ubuntu-r11-authority.py": {
+          "sha256": "5ebb015298ba0442599af08ae31909fbb0af04294e1c95036455f8819d3743fd",
+          "size_bytes": 10143
+        },
+        "ubuntu-r11-recovery.py": {
+          "sha256": "329422e156165be0bdb45b431e763f0fda164b4a65a47495d8eb0887dabea712",
+          "size_bytes": 6317
+        },
+        "ubuntu-r11-rollout.py": {
+          "sha256": "3a453738d7f9194c1da29b1da8c21dbfd0f53cf658bd0ca906e979d765ed5385",
+          "size_bytes": 10109
+        }
+      },
+      "host": "100.116.112.22",
+      "ok": true,
+      "phase": "r11_artifacts_staged",
+      "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T160411811921Z",
+      "remote_mutation": true
+    }
+  ],
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T160411811921Z",
+  "ssh_returncode": 0,
+  "stderr_disclosed": false
+}

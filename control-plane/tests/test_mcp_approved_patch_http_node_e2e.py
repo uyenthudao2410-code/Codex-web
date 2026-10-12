@@ -31,6 +31,9 @@ from control_plane.mcp_oauth import (
 from control_plane.node_agent import (
     _approved_patch_projection_digest,
     _install_approved_patch_policy_values,
+    _install_exec_policy_values,
+    _exec_policy_path,
+    _write_json_atomic,
     _policy_digest,
     heartbeat,
     poll_approved_patch_once,
@@ -183,11 +186,17 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
         }), encoding="utf-8")
 
     def _stop_servers(self) -> None:
-        for server in (self.main_server, self.mcp_server):
-            server.shutdown()
-            server.server_close()
-        for thread in self.threads:
-            thread.join(timeout=2)
+        for server, thread in zip((self.main_server, self.mcp_server), self.threads):
+            self._stop_server(server, thread)
+
+    @staticmethod
+    def _stop_server(server: ControlPlaneHttpServer, thread: threading.Thread) -> None:
+        # Stop the selector loop before closing its socket. Separate unittest
+        # cleanups run in reverse registration order, which otherwise closes
+        # a standing-write fixture while serve_forever is still selecting.
+        server.shutdown()
+        thread.join(timeout=2)
+        server.server_close()
 
     def args(self) -> SimpleNamespace:
         return SimpleNamespace(
@@ -396,7 +405,7 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
         )
         return args, fixture_file, process_holder, restart
 
-    def _standing_http_fixture(self) -> tuple[Any, str, Any, dict[str, Any]]:
+    def _standing_http_fixture(self, *, exec_enabled: bool = False) -> tuple[Any, str, Any, dict[str, Any]]:
         """Create a standing-write ingress with the real OAuth/MCP facade."""
 
         standing_configuration = OAuthIntrospectionConfiguration(
@@ -413,6 +422,7 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
             patch_write_scope=WRITE_SCOPE,
             approved_patch_enabled=False,
             standing_write_enabled=True,
+            exec_enabled=exec_enabled,
         )
         standing_server = ControlPlaneHttpServer(
             ("127.0.0.1", 0),
@@ -425,9 +435,7 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
         )
         standing_thread = threading.Thread(target=standing_server.serve_forever, daemon=True)
         standing_thread.start()
-        self.addCleanup(standing_server.shutdown)
-        self.addCleanup(standing_server.server_close)
-        self.addCleanup(lambda: standing_thread.join(timeout=2))
+        self.addCleanup(self._stop_server, standing_server, standing_thread)
         standing_url = f"http://127.0.0.1:{standing_server.server_port}"
 
         def standing_post(body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
@@ -484,6 +492,70 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
             "file": file,
             "response_sha256": _approved_patch_projection_digest(file),
         }
+
+    def test_standing_initial_verification_is_immutable_and_failed_proof_preserves_one_effect(self) -> None:
+        _server, _url, post, contract = self._standing_http_fixture(exec_enabled=True)
+        self.workspace_id = "workspace-http-initial-verification-001"
+        self.workspace_generation = "generation-http-initial-verification-001"
+        self.store.register_node_workspace(device_id=self.node["device_id"], workspace_id=self.workspace_id,
+                                           workspace_generation=self.workspace_generation, display_name="Initial verification fixture",
+                                           capabilities={"read": True, "write": True, "exec": True})
+        self.binding = self.store.create_binding(owner_id=self.owner_id, device_id=self.node["device_id"], workspace_id=self.workspace_id,
+                                                 workspace_generation=self.workspace_generation, display_name="Initial verification fixture")
+        self.task = self.store.create_mcp_task_session(owner_id=self.owner_id, principal_id=self.principal["principal_id"],
+                                                     binding_id=self.binding["binding_id"], label="Initial verification fixture task",
+                                                     idempotency_key="http-initial-verification-task-key")
+        registry = json.loads(self.registry_path.read_text(encoding="utf-8"))
+        registry["entries"][0].update(workspace_id=self.workspace_id, workspace_generation=self.workspace_generation,
+                                      capabilities={"read": True, "write": True, "exec": True})
+        self.registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        policy = _install_approved_patch_policy_values(self.args(), config_path=self.config_path, config=self.config,
+                                                      owner_id=self.owner_id, workspace_id=self.workspace_id, workspace_generation=self.workspace_generation,
+                                                      facade_contract=contract, expires_at_ms=None, allowed_relative_paths=None,
+                                                      allowed_relative_prefixes=["."], max_patch_bytes=4096, max_file_bytes=4096)
+        exec_policy = _install_exec_policy_values(owner_id=self.owner_id, device_id=self.node["device_id"], endpoint_id=self.config["endpoint_id"],
+                                                   workspace_id=self.workspace_id, workspace_generation=self.workspace_generation, server_origin=self.main_url,
+                                                   facade_contract=contract, allowed_argv_prefixes=[["node", "--test"]], max_timeout_ms=60000, max_output_bytes=32768)
+        _write_json_atomic(_exec_policy_path(self.args()), exec_policy)
+        with redirect_stdout(io.StringIO()):
+            heartbeat(self.args())
+        self.store.claim_mcp_task_writer_lease(owner_id=self.owner_id, principal_id=self.principal["principal_id"], task_id=self.task["task_id"])
+        patch = self._patch_envelope()
+        plan = {"argv": ["node", "--test", "tests/fixture.test.js"], "cwd": "", "timeout_ms": 60000, "max_output_bytes": 32768}
+        arguments = {"operation": "apply_patch", "binding_id": self.binding["binding_id"], "task_id": self.task["task_id"],
+                     "path": "src/fixture.txt", "preimage_sha256": hashlib.sha256(self.initial_content).hexdigest(),
+                     "patch_sha256": hashlib.sha256(patch.encode()).hexdigest(), "validation_profile": "targeted", "patch_envelope": patch,
+                     "idempotency_key": "http-initial-verification-patch-key", "expected_facade_contract": contract, "verification": plan}
+        def call(name, args):
+            return post({"jsonrpc": "2.0", "id": "initial-verification-call", "method": "tools/call", "params": {"name": name, "arguments": args}})
+        _, queued = call("agent_workflow", arguments)
+        action_id = queued["result"]["structuredContent"]["action_id"]
+        _, drift = call("agent_workflow", {**arguments, "verification": {**plan, "timeout_ms": 5000}})
+        self.assertEqual(drift["result"]["structuredContent"]["code"], "CONFLICT")
+        calls = []
+        def bridge(_args, _root, request):
+            self.assertEqual(request["verification"], plan)
+            calls.append(request["action_id"])
+            result = self._bridge_result(request, policy)
+            result["initial_verification"] = {"plan_sha256": _approved_patch_projection_digest(plan), "proof_status": "failed", "proof_ids": [], "proof_fingerprint": None}
+            result["response_sha256"] = _approved_patch_projection_digest({"file": result["file"], "initial_verification": result["initial_verification"]})
+            return result, None
+        with mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+             mock.patch("control_plane.node_agent.recovery_approved_patch_bridge", side_effect=bridge), redirect_stdout(io.StringIO()):
+            poll_approved_patch_once(self.args())
+            poll_approved_patch_once(self.args())
+        self.assertEqual(calls, [action_id])
+        self.assertEqual(self.fixture_path.read_bytes(), self.updated_content)
+        _, observed = call("agent_workflow", {"operation": "patch_status", "action_id": action_id})
+        observation = observed["result"]["structuredContent"]
+        self.assertTrue(observation["patch_applied"])
+        self.assertEqual(observation["proof_status"], "failed")
+        self.assertEqual(observation["local_semantic_acceptance"], "pending")
+        self.assertEqual(observation["patch"]["run_id"], "a" * 32)
+        _, replay = call("agent_workflow", arguments)
+        self.assertTrue(replay["result"]["structuredContent"]["replayed"])
+        self.assertEqual(replay["result"]["structuredContent"]["action_id"], action_id)
 
     def test_oauth_permission_to_node_patch_to_verified_status(self) -> None:
         contract = {
@@ -660,9 +732,7 @@ class McpApprovedPatchHttpNodeE2ETests(unittest.TestCase):
         )
         standing_thread = threading.Thread(target=standing_server.serve_forever, daemon=True)
         standing_thread.start()
-        self.addCleanup(standing_server.shutdown)
-        self.addCleanup(standing_server.server_close)
-        self.addCleanup(lambda: standing_thread.join(timeout=2))
+        self.addCleanup(self._stop_server, standing_server, standing_thread)
         standing_url = f"http://127.0.0.1:{standing_server.server_port}"
 
         def standing_post(body: dict[str, Any]) -> tuple[int, dict[str, Any]]:

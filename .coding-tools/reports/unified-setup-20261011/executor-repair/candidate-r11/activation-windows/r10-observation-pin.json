@@ -1,0 +1,197 @@
+{
+  "kind": "r11_local_transition_observation",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "target": {
+    "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+    "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+    "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+    "root": "E:\\Github\\Tools-Codex-web",
+    "profile": "web-mcp-assistant"
+  },
+  "tag": "r10",
+  "descriptor": {
+    "installation_id": "36cd3af6fe1da4607cfe3035d48becd97dc12265901b480401bf44389ff1d1dc",
+    "instance_id": "4d3c42c864437d33fb43f647939d4e35",
+    "owner_pid": 25868,
+    "owner_process_start_token": "134361991050098600"
+  },
+  "owner": {
+    "state": "live",
+    "pid": 25868,
+    "process_start_token": "134361991050098600"
+  },
+  "ui": {
+    "identity": {
+      "state": "live",
+      "pid": 26252,
+      "process_start_token": "134361991148631080"
+    },
+    "instance_id": "02d8fe235d6e58745ab7838603d1fe42",
+    "alive": true,
+    "registered": true,
+    "ui_installation_id": "36cd3af6fe1da4607cfe3035d48becd97dc12265901b480401bf44389ff1d1dc"
+  },
+  "native": {
+    "state": "live",
+    "pid": 17488,
+    "process_start_token": "134361991080061930"
+  },
+  "tunnel": {
+    "state": "absent",
+    "pid": null
+  },
+  "agent": {
+    "identity": {
+      "state": "absent",
+      "pid": 25208,
+      "process_start_token": null
+    },
+    "last_iteration_state": "completed",
+    "last_heartbeat_state": "succeeded",
+    "last_heartbeat_at_ms": 1791729165010,
+    "completed_iterations": null,
+    "device_id": null,
+    "workspace_id": null,
+    "workspace_generation": null,
+    "node_config": {
+      "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "endpoint_id": "executor-72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "server_origin": "https://svhome.tail0e4032.ts.net"
+    }
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2",
+    "operation_id": "full-clean-mv3v3e8h-c373e8deafd081660abdfcea",
+    "state": "READY",
+    "admission_open": false,
+    "update_incomplete": true
+  },
+  "readiness": {
+    "fullyReady": false,
+    "localReady": true,
+    "componentsReady": true,
+    "centralConnected": false,
+    "authorityReady": false,
+    "updateIncomplete": true,
+    "failureKind": "",
+    "centralStatusReason": "CENTRAL_ROUTE_EVIDENCE_STALE"
+  },
+  "native_epoch": "activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2",
+  "revisions": [
+    {
+      "state": "current",
+      "running_revision": "5e0b6a773f4296211dee1460ee2862016c909bfc5888b35e8c1a469931322150",
+      "disk_revision": "5e0b6a773f4296211dee1460ee2862016c909bfc5888b35e8c1a469931322150",
+      "update_pending": false,
+      "pending_revision": null
+    },
+    {
+      "state": "current",
+      "running_revision": "a6cde0058d937525b6c937a330c60fe3802faa4f1f3ec78c252dd3e9fa87db6f",
+      "disk_revision": "a6cde0058d937525b6c937a330c60fe3802faa4f1f3ec78c252dd3e9fa87db6f",
+      "update_pending": false,
+      "pending_revision": null
+    },
+    {
+      "state": "current",
+      "running_revision": "61b291bb0c3a31ec793a7301fd6e95096372757e50a2e7dfff84fa4758740995",
+      "disk_revision": "61b291bb0c3a31ec793a7301fd6e95096372757e50a2e7dfff84fa4758740995",
+      "update_pending": false,
+      "pending_revision": null
+    }
+  ],
+  "package": {
+    "app_asar_sha256": "2071c0c242bc4b24ebfc22ea21b5c4d066e018505061ebe299cd666c6d2e8a91",
+    "executable_sha256": "d556d6040ced8fd0d6ed52b05cbdbb15a398344d1995402ad3bfcd8efbce94bc",
+    "matched_files": 12,
+    "parity_sha256": "cefbb4daaeda869629594ed311e685de10049ef07445766b73ae4a5113bc0666",
+    "source_freeze_sha256": "3bd561909abf56126ae2a15cc65932181251a48a1a9d47779b506e1b6c359c63"
+  },
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "content_free": true,
+    "ledger_mutated": false,
+    "snapshot": {
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "9770bda466234e74cca88a6b2c4112d893fda0e6605f3b6b9f13e1b04e05171a"
+    }
+  },
+  "pending_acceptance": {
+    "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+    "wave_id": "c101beadfc6d4f2fbc13845052c84693",
+    "run_record_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "wave_record_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "unchanged": true
+  },
+  "vm_zero": {
+    "content_free": true,
+    "host_count": 3,
+    "backend_count": 1,
+    "ok": false,
+    "observed_at_ms": 1791730037569
+  },
+  "policies": {
+    "file_hashes": {
+      "controlPlaneFileReadPolicyFile": "284bd75cc62669c42a7a8bbb9d0531d6da7afd344442f457727fdecfde5404db",
+      "controlPlaneApprovedPatchPolicyFile": "63cd7bf31e8db3fed7f99cc3bfdbf5cd522b3accd5d91cbaff2ed2ae0ab71ab8",
+      "controlPlaneExecPolicyFile": "5e38d0067e7d8e7a38ce1dba8378616202d6192ed01b22ffbd1ee8105e257040"
+    },
+    "exec_policy_sha256": "31125fd75f5147770eecde7b926e3c46efd1f5ee83a55b58d180f8b200966367",
+    "authority_mode": "standing",
+    "expires_at_ms": null,
+    "allowed_argv_prefixes": [
+      [
+        "git"
+      ],
+      [
+        "node"
+      ],
+      [
+        "npm"
+      ],
+      [
+        "npx"
+      ],
+      [
+        "python"
+      ],
+      [
+        "python3"
+      ]
+    ],
+    "canary_allowed": true,
+    "standalone_sandbox_probe_performed": false
+  },
+  "runtime_mutated": false,
+  "server_mutated": false,
+  "activation_blocker": "VM_OR_BACKEND_STILL_PRESENT_REQUIRES_SUPPORTED_OWNED_CLEANUP"
+}

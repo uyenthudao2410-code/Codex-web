@@ -1,0 +1,88 @@
+{
+  "kind": "read_only_r11_before_r12",
+  "observed_at_ms": 1791740326987,
+  "ok": true,
+  "host": {
+    "pid": 20400,
+    "process_start_token": "134362127609947980",
+    "instance_id": "e289f4d07ed2d9d2fb1d49d7d66b599e"
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb",
+    "state": "UPDATE_INCOMPLETE",
+    "admission_open": false,
+    "update_incomplete": true
+  },
+  "readiness": {
+    "fullyReady": false,
+    "localReady": false,
+    "centralConnected": false,
+    "authorityReady": false,
+    "updateIncomplete": true
+  },
+  "native": {
+    "observation_schema_version": 1,
+    "observation_kind": "mcp_identity_read_only",
+    "observed_at": "2026-10-11T17:38:42.136Z",
+    "recovery_host_instance_id": "e289f4d07ed2d9d2fb1d49d7d66b599e",
+    "mcp_process_instance_id": "i9NiVIv9hFBben2i",
+    "mcp_server_instance_id": "doSwkyBa0xMXFRM4",
+    "activation_epoch_id": "activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb",
+    "current_activation_epoch_id": "activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb",
+    "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+    "mcp_ready": true,
+    "identity_current": false,
+    "workspace_read": null
+  },
+  "agent": {
+    "identity": {
+      "state": "absent",
+      "pid": 26860,
+      "process_start_token": null
+    },
+    "last_heartbeat_state": "succeeded",
+    "last_heartbeat_at_ms": 1791737728704
+  },
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "content_free": true,
+    "canonical_mutated": false,
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "integrity_check": [
+      "ok"
+    ]
+  },
+  "pending": {
+    "runs": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "waves": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "unchanged": true
+  },
+  "fixture_sha256": "90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650",
+  "runtime_mutated": false,
+  "authority_mutated": false
+}

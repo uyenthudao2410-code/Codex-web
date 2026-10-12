@@ -1,0 +1,392 @@
+TAP version 13
+# (node:25752) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: canonical ledger census keeps a bounded cold-snapshot budget and classifies timeout causes
+ok 1 - canonical ledger census keeps a bounded cold-snapshot budget and classifies timeout causes
+  ---
+  duration_ms: 2.3482
+  type: 'test'
+  ...
+# Subtest: canonical ledger census gives Python discovery one five-second budget and preserves its typed timeout
+ok 2 - canonical ledger census gives Python discovery one five-second budget and preserves its typed timeout
+  ---
+  duration_ms: 12.7071
+  type: 'test'
+  ...
+# Subtest: one-shot canonical census timeout waits for owned child exit before settling
+ok 3 - one-shot canonical census timeout waits for owned child exit before settling
+  ---
+  duration_ms: 60.9055
+  type: 'test'
+  ...
+# Subtest: one-shot canonical census fails closed when owned child cleanup is unconfirmed
+ok 4 - one-shot canonical census fails closed when owned child cleanup is unconfirmed
+  ---
+  duration_ms: 35.3799
+  type: 'test'
+  ...
+# Subtest: one-shot canonical census keeps lock timeout distinct and does not leak stderr
+ok 5 - one-shot canonical census keeps lock timeout distinct and does not leak stderr
+  ---
+  duration_ms: 0.6329
+  type: 'test'
+  ...
+# Subtest: held canonical census timeout waits for owned child exit before settling
+ok 6 - held canonical census timeout waits for owned child exit before settling
+  ---
+  duration_ms: 66.5674
+  type: 'test'
+  ...
+# Subtest: held canonical census fails closed when owned child cleanup is unconfirmed
+ok 7 - held canonical census fails closed when owned child cleanup is unconfirmed
+  ---
+  duration_ms: 31.1321
+  type: 'test'
+  ...
+# Subtest: held canonical census keeps lock timeout distinct and does not leak stderr
+ok 8 - held canonical census keeps lock timeout distinct and does not leak stderr
+  ---
+  duration_ms: 0.8266
+  type: 'test'
+  ...
+# Subtest: Recovery Host bootstrap failure receipt retains a typed census cause without process output
+ok 9 - Recovery Host bootstrap failure receipt retains a typed census cause without process output
+  ---
+  duration_ms: 14.9082
+  type: 'test'
+  ...
+# Subtest: pending activation census replaces stale durable component evidence without opening admission
+ok 10 - pending activation census replaces stale durable component evidence without opening admission
+  ---
+  duration_ms: 48.7198
+  type: 'test'
+  ...
+# Subtest: pending census advances only STARTING and refreshes VERIFYING without mutating coordinator-owned states
+ok 11 - pending census advances only STARTING and refreshes VERIFYING without mutating coordinator-owned states
+  ---
+  duration_ms: 4.498
+  type: 'test'
+  ...
+# Subtest: checkpoint-bound fresh activation observation forwards only explicit durable acceptance-pending policy
+ok 12 - checkpoint-bound fresh activation observation forwards only explicit durable acceptance-pending policy
+  ---
+  duration_ms: 5.743
+  type: 'test'
+  ...
+# Subtest: pending projection reuse requires every admission-closed identity and immutable-ledger gate
+ok 13 - pending projection reuse requires every admission-closed identity and immutable-ledger gate
+  ---
+  duration_ms: 2.2149
+  type: 'test'
+  ...
+# Subtest: pending projection reuse permits a strict discovered candidate for finalize without a second preflight
+ok 14 - pending projection reuse permits a strict discovered candidate for finalize without a second preflight
+  ---
+  duration_ms: 0.2795
+  type: 'test'
+  ...
+# Subtest: pending projection reuse permits an exact compatible bootstrap candidate for finalize
+ok 15 - pending projection reuse permits an exact compatible bootstrap candidate for finalize
+  ---
+  duration_ms: 0.2245
+  type: 'test'
+  ...
+# Subtest: committed projection reuse is explicit and remains admission-closed
+ok 16 - committed projection reuse is explicit and remains admission-closed
+  ---
+  duration_ms: 0.2309
+  type: 'test'
+  ...
+# Subtest: projection rebuild gate accepts only one exact current preflight and health receipt
+ok 17 - projection rebuild gate accepts only one exact current preflight and health receipt
+  ---
+  duration_ms: 1.3834
+  type: 'test'
+  ...
+# Subtest: projection rebuild gate accepts a ledger-bound contextual projection set without selecting a global run
+ok 18 - projection rebuild gate accepts a ledger-bound contextual projection set without selecting a global run
+  ---
+  duration_ms: 0.6387
+  type: 'test'
+  ...
+# Subtest: projection rebuild gate fails closed for identity, ledger, projection, timestamp, and wrapper drift
+ok 19 - projection rebuild gate fails closed for identity, ledger, projection, timestamp, and wrapper drift
+  ---
+  duration_ms: 6.3775
+  type: 'test'
+  ...
+# Subtest: connector gate binds ACK and rediscovery to the exact post-preflight health observation
+ok 20 - connector gate binds ACK and rediscovery to the exact post-preflight health observation
+  ---
+  duration_ms: 1.1533
+  type: 'test'
+  ...
+# Subtest: connector gate accepts only an acknowledged exact no-workspace compatibility bootstrap
+ok 21 - connector gate accepts only an acknowledged exact no-workspace compatibility bootstrap
+  ---
+  duration_ms: 0.7242
+  type: 'test'
+  ...
+# Subtest: final census rebuilds an ordinary no-checkpoint projection before health and gates READY on the exact receipt
+    # Subtest: central activation requires fresh route and policy while its epoch remains closed, then finalizes without a connector
+    ok 1 - central activation requires fresh route and policy while its epoch remains closed, then finalizes without a connector
+      ---
+      duration_ms: 160.9978
+      type: 'test'
+      ...
+    1..1
+ok 22 - final census rebuilds an ordinary no-checkpoint projection before health and gates READY on the exact receipt
+  ---
+  duration_ms: 835.137
+  type: 'test'
+  ...
+# Subtest: central full-clean replacement persists its epoch role and never supplies node Tunnel credentials
+ok 23 - central full-clean replacement persists its epoch role and never supplies node Tunnel credentials
+  ---
+  duration_ms: 42.8823
+  type: 'test'
+  ...
+# Subtest: execution role changes are refused outside an explicit full-clean handoff
+ok 24 - execution role changes are refused outside an explicit full-clean handoff
+  ---
+  duration_ms: 3.0666
+  type: 'test'
+  ...
+# Subtest: operator central handoff is checkpoint-free and preserves its distinct mode for direct migration or central retry
+ok 25 - operator central handoff is checkpoint-free and preserves its distinct mode for direct migration or central retry
+  ---
+  duration_ms: 5.5535
+  type: 'test'
+  ...
+# Subtest: operator central handoff refuses source, revision, soft-restart and acceptance authority before mutation
+ok 26 - operator central handoff refuses source, revision, soft-restart and acceptance authority before mutation
+  ---
+  duration_ms: 3.8367
+  type: 'test'
+  ...
+# Subtest: operator central handoff preserves live-runtime fences and binds checkpointless migration mode durably
+ok 27 - operator central handoff preserves live-runtime fences and binds checkpointless migration mode durably
+  ---
+  duration_ms: 97.7002
+  type: 'test'
+  ...
+# Subtest: operator central handoff cannot override busy runtime or stopped canonical-ledger acceptance blockers
+ok 28 - operator central handoff cannot override busy runtime or stopped canonical-ledger acceptance blockers
+  ---
+  duration_ms: 6.7324
+  type: 'test'
+  ...
+# Subtest: full-clean restart refuses a missing accepted source checkpoint before any epoch or process mutation
+ok 29 - full-clean restart refuses a missing accepted source checkpoint before any epoch or process mutation
+  ---
+  duration_ms: 4.1215
+  type: 'test'
+  ...
+# Subtest: explicit process refresh starts a full-clean epoch without inventing a source checkpoint
+ok 30 - explicit process refresh starts a full-clean epoch without inventing a source checkpoint
+  ---
+  duration_ms: 3.1096
+  type: 'test'
+  ...
+# Subtest: full-clean bounds the Coding MCP preparation fence without shortening the durable epoch
+ok 31 - full-clean bounds the Coding MCP preparation fence without shortening the durable epoch
+  ---
+  duration_ms: 2.4752
+  type: 'test'
+  ...
+# Subtest: public full-clean refresh renews the Coding MCP fence after slow UI termination without shortening handoff expiry
+ok 32 - public full-clean refresh renews the Coding MCP fence after slow UI termination without shortening handoff expiry
+  ---
+  duration_ms: 56.5192
+  type: 'test'
+  ...
+# Subtest: full-clean restart forwards service ports as recovery-plane idle proof
+ok 33 - full-clean restart forwards service ports as recovery-plane idle proof
+  ---
+  duration_ms: 106.9593
+  type: 'test'
+  ...
+# Subtest: full-clean single-flight reuses only the exact operation and source authority
+ok 34 - full-clean single-flight reuses only the exact operation and source authority
+  ---
+  duration_ms: 3.2137
+  type: 'test'
+  ...
+# Subtest: replacement startup failure terminalizes the activation epoch and keeps admission closed
+ok 35 - replacement startup failure terminalizes the activation epoch and keeps admission closed
+  ---
+  duration_ms: 28.5327
+  type: 'test'
+  ...
+# Subtest: replacement reconciles exact stale runs in one atomic helper invocation before Coding MCP start
+ok 36 - replacement reconciles exact stale runs in one atomic helper invocation before Coding MCP start
+  ---
+  duration_ms: 29.7374
+  type: 'test'
+  ...
+# Subtest: exact stale-run maintenance accepts 64 exact IDs and rejects 65
+ok 37 - exact stale-run maintenance accepts 64 exact IDs and rejects 65
+  ---
+  duration_ms: 2.8811
+  type: 'test'
+  ...
+# Subtest: replacement refuses malformed exact stale-run maintenance before Coding MCP start
+ok 38 - replacement refuses malformed exact stale-run maintenance before Coding MCP start
+  ---
+  duration_ms: 20.5987
+  type: 'test'
+  ...
+# Subtest: full-clean failure after epoch creation stops owned old components before terminalizing
+ok 39 - full-clean failure after epoch creation stops owned old components before terminalizing
+  ---
+  duration_ms: 33.2907
+  type: 'test'
+  ...
+# Subtest: Recovery Host replacement-start exceptions persist FAILED before ownership is released
+ok 40 - Recovery Host replacement-start exceptions persist FAILED before ownership is released
+  ---
+  duration_ms: 609.7692
+  type: 'test'
+  ...
+# Subtest: Recovery Host remains available for an explicit retry after a FAILED epoch
+ok 41 - Recovery Host remains available for an explicit retry after a FAILED epoch
+  ---
+  duration_ms: 35.9888
+  type: 'test'
+  ...
+# Subtest: Recovery Host terminalizes an expired resumable epoch and publishes control-plane readiness
+ok 42 - Recovery Host terminalizes an expired resumable epoch and publishes control-plane readiness
+  ---
+  duration_ms: 39.6796
+  type: 'test'
+  ...
+# Subtest: stopped-runtime retry requires and binds an unchanged independent ledger census
+ok 43 - stopped-runtime retry requires and binds an unchanged independent ledger census
+  ---
+  duration_ms: 84.4879
+  type: 'test'
+  ...
+# Subtest: stopped-runtime retry refuses when the independent ledger changes before admission
+ok 44 - stopped-runtime retry refuses when the independent ledger changes before admission
+  ---
+  duration_ms: 22.3822
+  type: 'test'
+  ...
+# Subtest: stopped-runtime retry refuses dangerous unresolved acceptance from the canonical ledger census
+ok 45 - stopped-runtime retry refuses dangerous unresolved acceptance from the canonical ledger census
+  ---
+  duration_ms: 20.8231
+  type: 'test'
+  ...
+# Subtest: final census exceptions are durably terminalized instead of leaving an active epoch
+ok 46 - final census exceptions are durably terminalized instead of leaving an active epoch
+  ---
+  duration_ms: 28.6165
+  type: 'test'
+  ...
+# Subtest: replacement without a required Electron UI launcher fails durably and stays closed
+ok 47 - replacement without a required Electron UI launcher fails durably and stays closed
+  ---
+  duration_ms: 27.1768
+  type: 'test'
+  ...
+# Subtest: manual restart delegates to full clean while automatic recovery remains component-scoped
+ok 48 - manual restart delegates to full clean while automatic recovery remains component-scoped
+  ---
+  duration_ms: 4.3622
+  type: 'test'
+  ...
+# Subtest: manual restart never falls back to stop-start when full-clean coordination is unavailable
+ok 49 - manual restart never falls back to stop-start when full-clean coordination is unavailable
+  ---
+  duration_ms: 2.5891
+  type: 'test'
+  ...
+# Subtest: ordinary runtime start is refused while a durable activation epoch is incomplete
+ok 50 - ordinary runtime start is refused while a durable activation epoch is incomplete
+  ---
+  duration_ms: 12.049
+  type: 'test'
+  ...
+# Subtest: pre-admission revalidation rejects process drift against the committed census
+ok 51 - pre-admission revalidation rejects process drift against the committed census
+  ---
+  duration_ms: 2.5994
+  type: 'test'
+  ...
+# Subtest: finalize never opens MCP admission when the durable ready commit fails
+ok 52 - finalize never opens MCP admission when the durable ready commit fails
+  ---
+  duration_ms: 3.9042
+  type: 'test'
+  ...
+# Subtest: finalize commits proof before opening admission and performs no post-open census
+ok 53 - finalize commits proof before opening admission and performs no post-open census
+  ---
+  duration_ms: 3.0721
+  type: 'test'
+  ...
+# Subtest: lost complete response reconciles exact MCP health once without retrying the mutation
+ok 54 - lost complete response reconciles exact MCP health once without retrying the mutation
+  ---
+  duration_ms: 2.9311
+  type: 'test'
+  ...
+# Subtest: mismatched health after response loss closes the exact epoch and digest
+ok 55 - mismatched health after response loss closes the exact epoch and digest
+  ---
+  duration_ms: 3.037
+  type: 'test'
+  ...
+# Subtest: unavailable reconciliation stops the owned runtime when exact close is unconfirmed
+ok 56 - unavailable reconciliation stops the owned runtime when exact close is unconfirmed
+  ---
+  duration_ms: 2.8857
+  type: 'test'
+  ...
+# Subtest: durable READY failure after MCP admission rolls back the exact epoch
+ok 57 - durable READY failure after MCP admission rolls back the exact epoch
+  ---
+  duration_ms: 2.5528
+  type: 'test'
+  ...
+# Subtest: post-READY linked-action reporting failure does not roll back a ready runtime
+ok 58 - post-READY linked-action reporting failure does not roll back a ready runtime
+  ---
+  duration_ms: 2.7751
+  type: 'test'
+  ...
+# Subtest: expiry at commit, open, or durable READY boundary leaves admission closed
+    # Subtest: commitReady
+    ok 1 - commitReady
+      ---
+      duration_ms: 2.5024
+      type: 'test'
+      ...
+    # Subtest: MCP open
+    ok 2 - MCP open
+      ---
+      duration_ms: 2.6024
+      type: 'test'
+      ...
+    # Subtest: durable READY
+    ok 3 - durable READY
+      ---
+      duration_ms: 2.713
+      type: 'test'
+      ...
+    1..3
+ok 59 - expiry at commit, open, or durable READY boundary leaves admission closed
+  ---
+  duration_ms: 8.1987
+  type: 'test'
+  ...
+1..59
+# tests 63
+# suites 0
+# pass 63
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2768.2419

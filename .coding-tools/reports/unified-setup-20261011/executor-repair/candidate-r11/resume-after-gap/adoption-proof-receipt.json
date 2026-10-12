@@ -1,0 +1,14 @@
+{
+  "check_count": 6,
+  "checks": [
+    "unique_failed_attempt_exactpid_provenance",
+    "exact_descriptor_process_token_and_authenticated_ping",
+    "single_supported_refresh_preserves_pending_acceptance",
+    "replacement_host_requires_exact_durable_handoff",
+    "same_agent_pid_association_warning_no_retry",
+    "new_exact60m_window_preserved"
+  ],
+  "helper_sha256": "6036982dd766669ab18e5982a10161b74b25533b400c7146fe74e7640e3208ec",
+  "mutated_runtime": false,
+  "proof_scope": "focused static guard review plus syntax; live root execution still required"
+}

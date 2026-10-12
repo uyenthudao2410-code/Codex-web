@@ -1,0 +1,17 @@
+{
+  "version": "0.9.0-alpha",
+  "containerId": "wslc-readonly-mount",
+  "containment": "wslc",
+  "process": {
+    "commandLine": "cat /mnt/c/wslcro/test.txt && echo 'Read succeeded' && echo 'write test' > /mnt/c/wslcro/readonly_write_test.txt && echo 'Write succeeded (unexpected)' || echo 'Write blocked (expected for readonly)'"
+  },
+  "filesystem": {
+    "readonlyPaths": ["C:\\wslcro"]
+  },
+  "network": {
+    "egress": { "default": "deny" }
+  },
+  "wslc": {
+    "image": "alpine:latest"
+  }
+}

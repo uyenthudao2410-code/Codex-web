@@ -1,0 +1,18 @@
+{
+  "archives": [],
+  "duration_ms": 3600000,
+  "kind": "r11_next_authority_helpers_only",
+  "approval_id": "call_flEpmLChKJPZsbnlAAXR5byS",
+  "scope": "same Tools-Codex-web binding and web-mcp-assistant profile",
+  "external_mutation": false,
+  "helpers": {
+    "ubuntu-r11-renewal-next.py": {
+      "size_bytes": 20501,
+      "sha256": "2f9d6a35c7ee055228f252d17635635bae224d16a71a07b5c25dfb5fa9b59f11"
+    },
+    "r11_common.py": {
+      "size_bytes": 22388,
+      "sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "accepted": false,
+  "authority_mutated": false,
+  "canary_dispatched": false,
+  "committed": false,
+  "current_failures": [],
+  "helper_manifest_sha256": "9e99998631a9bcdda82a6460fa2657fa47a77633fdc8e488a071aa8ce9709495",
+  "kind": "r12_canary_preparation_proof",
+  "live_ipc_performed": false,
+  "node_syntax": true,
+  "node_tests": {
+    "failed": 0,
+    "package_and_final_native_gates": 3
+  },
+  "observed_at": "2026-10-11T17:49:40.659282+00:00",
+  "owned_subtree_whitespace_and_conflict_check": true,
+  "production_activated": false,
+  "pushed": false,
+  "python_ast_syntax": true,
+  "python_tests": {
+    "causal_authority": 19,
+    "correlation": 7,
+    "failed": 0,
+    "transport": 4
+  },
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "runtime_launched": false,
+  "ssh_performed": false
+}

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const {
   normalisedResult,
+  serializeExecBridgeError,
   runDevelopmentExecBridge
 } = require('../control_plane/recovery_exec_bridge.cjs');
 const {
@@ -107,9 +108,41 @@ test('exec bridge hides Recovery descriptor and returns allowlisted receipt', as
   assert.equal(calls[0].action, 'runtime.control_plane_exec');
   assert.deepEqual(calls[0].args, [request]);
   assert.equal(calls[0].options.token, descriptor.token);
+  assert.equal(calls[0].options.timeout, 330_000);
   assert.equal(result.command_id, 'command-recovery-exec-0001');
   assert.equal(result.job_id, 'job-recovery-exec-0001');
   assert.equal(Object.hasOwn(result, 'token'), false);
+});
+
+test('exec bridge preserves the configured short IPC budget for poll and stop', async () => {
+  const descriptor = { runtime_mode: 'development', installation_id: 'i'.repeat(32) };
+  const paths = {
+    appRoot: () => '/project',
+    runtimeIdentity: () => ({ installation_id: descriptor.installation_id, mode: 'development' })
+  };
+  const calls = [];
+  class FakeClient {
+    async call(action, args, options) {
+      calls.push({ action, args, options });
+      return candidate();
+    }
+  }
+  for (const operation of ['exec_poll', 'exec_stop']) {
+    await runDevelopmentExecBridge({ ...request, operation }, {
+      dependencies: {
+        lifecycle: { createDevelopmentPaths: () => paths },
+        RecoveryIpcClient: FakeClient,
+        loadRecoveryDescriptor: () => descriptor,
+        descriptorMatchesInstallation: () => true,
+        descriptorRequestOptions: () => ({ expectedOwnerPid: 123, timeout: 17_000 }),
+        execBridge: { normaliseExecResult }
+      }
+    });
+  }
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.deepEqual(call.options, { expectedOwnerPid: 123, timeout: 17_000 });
+  }
 });
 
 test('exec bridge normalizer rejects a changed result digest', () => {
@@ -178,4 +211,71 @@ test('exec bridge preserves a typed Recovery IPC failure without exposing its de
     }),
     { code: 'RECOVERY_IPC_TIMEOUT' }
   );
+});
+
+function failingExecOptions(error) {
+  const descriptor = { runtime_mode: 'development', installation_id: 'i'.repeat(32), token: 'descriptor-private' };
+  const paths = { appRoot: () => '/project', runtimeIdentity: () => ({ installation_id: descriptor.installation_id, mode: 'development' }) };
+  class FailingClient { async call() { throw error; } }
+  return { dependencies: {
+    lifecycle: { createDevelopmentPaths: () => paths }, RecoveryIpcClient: FailingClient,
+    loadRecoveryDescriptor: () => descriptor, descriptorMatchesInstallation: () => true,
+    descriptorRequestOptions: () => ({ expectedOwnerPid: 123 }), execBridge: { normaliseExecResult }
+  } };
+}
+
+test('exec bridge correlates authenticated native spawn failure without forwarding private fields', async () => {
+  const details = {
+    native_error_code: 'SANDBOX_STATE_PHASE_FAILED', phase: 'start', backend_error_code: 'backend_error',
+    command_id: '_aJumSgZyYU90Yj_Mt7qu-Gp', job_id: 'a'.repeat(32), job_lifecycle: 'spawn_failed',
+    root_pid: 0, execution_started: false, job_finished_at: '2026-10-11T10:27:08.489123Z'
+  };
+  const error = Object.assign(new Error('private native message'), {
+    code: 'CONTROL_PLANE_EXEC_MCP_REJECTED', recoveryResponseReceived: true,
+    action_id: 'wrong-action', attempt_id: 'wrong-attempt', task_id: 'wrong-task', writer_lease_generation: 99,
+    details: { ...details, token: 'descriptor-private', stdout: 'private output', message: 'private cause' }
+  });
+  await assert.rejects(runDevelopmentExecBridge(request, failingExecOptions(error)), (received) => {
+    assert.deepEqual(serializeExecBridgeError(received), {
+      code: 'CONTROL_PLANE_EXEC_MCP_REJECTED', details, recovery_response_received: true,
+      action_id: request.action_id, attempt_id: request.attempt_id, task_id: request.task_id,
+      writer_lease_generation: request.writer_lease_generation
+    });
+    assert.equal(JSON.stringify(serializeExecBridgeError(received)).includes('private'), false);
+    return true;
+  });
+});
+
+test('exec bridge does not grant diagnostic provenance to transport loss or unmatched invocations', async () => {
+  for (const recoveryResponseReceived of [false, undefined]) {
+    const error = Object.assign(new Error('private error'), {
+      code: 'CONTROL_PLANE_EXEC_MCP_REJECTED', recoveryResponseReceived,
+      details: { native_error_code: 'SANDBOX_STATE_PHASE_FAILED', root_pid: 0 }
+    });
+    await assert.rejects(runDevelopmentExecBridge(request, failingExecOptions(error)), (received) => {
+      assert.deepEqual(serializeExecBridgeError(received), { code: 'CONTROL_PLANE_EXEC_MCP_REJECTED' });
+      return true;
+    });
+  }
+  const error = Object.assign(new Error('private error'), {
+    code: 'CONTROL_PLANE_EXEC_MCP_REJECTED', recoveryResponseReceived: true,
+    details: { native_error_code: 'SANDBOX_STATE_PHASE_FAILED' }
+  });
+  await assert.rejects(runDevelopmentExecBridge({ ...request, action_id: 'private\ninvalid' }, failingExecOptions(error)), (received) => {
+    assert.deepEqual(serializeExecBridgeError(received), { code: 'CONTROL_PLANE_EXEC_MCP_REJECTED' });
+    return true;
+  });
+  assert.deepEqual(serializeExecBridgeError({ code: 'RECOVERY_IPC_TIMEOUT', recovery_response_received: true,
+    ...request, details: { native_error_code: 'SANDBOX_STATE_PHASE_FAILED' }, message: 'private' }), { code: 'RECOVERY_IPC_TIMEOUT' });
+});
+
+test('exec bridge error serializer rejects malformed diagnostics without inventing completion facts', () => {
+  const error = {
+    code: 'CONTROL_PLANE_EXEC_MCP_REJECTED', ...request, recovery_response_received: true,
+    details: { native_error_code: 'SANDBOX_STATE_PHASE_FAILED', phase: 'shell', backend_error_code: 'secret\nvalue',
+      command_id: {}, job_id: 'x'.repeat(161), job_lifecycle: 'complete', root_pid: '0', execution_started: 'false',
+      job_finished_at: '2026-02-31T10:27:08Z', token: 'private', stdout: 'private' }
+  };
+  assert.deepEqual(serializeExecBridgeError(error).details, { native_error_code: 'SANDBOX_STATE_PHASE_FAILED' });
+  assert.deepEqual(serializeExecBridgeError({ code: 'private\ncode', message: 'private' }), { code: 'CONTROL_PLANE_EXEC_FAILED' });
 });

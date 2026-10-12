@@ -452,6 +452,10 @@ class MxcWindowsSandboxInvocation:
 class MxcWindowsSandboxManager:
     """Own at most one warm, exact-workspace Windows Sandbox VM per Runtime."""
 
+    # close() may wait for one outstanding command lease, then deprovision.
+    # Activation polls this bounded work; an HTTP request never waits for it.
+    close_timeout_seconds = MAX_MXC_WSB_PHASE_SECONDS * 2 + 5
+
     def __init__(self, *, executor_directory: Path | None = None) -> None:
         self.executor_directory = Path(executor_directory or _executor_directory())
         self.executor_path = self.executor_directory / "wxc-exec.exe"
@@ -473,6 +477,34 @@ class MxcWindowsSandboxManager:
             "TEMP": os.environ.get("TEMP") or host_temp,
             "TMP": os.environ.get("TMP") or os.environ.get("TEMP") or host_temp,
         }
+
+    def _host_process_count(self) -> int:
+        # Windows can keep vmmemWindowsSandbox alive after the UI/daemon exit.
+        # Starting another cold VM during that interval can stall before guest
+        # bootstrap. Observe the host; never terminate a foreign or unproven VM.
+        script = (
+            "$ErrorActionPreference='Stop';"
+            "@(Get-Process | Where-Object { $_.ProcessName -in @("
+            "'WindowsSandbox','WindowsSandboxClient','WindowsSandboxServer',"
+            "'WindowsSandboxRemoteSession','vmmemWindowsSandbox') }).Count"
+        )
+        try:
+            result = subprocess.run(
+                [str(_system_root() / "System32/WindowsPowerShell/v1.0/powershell.exe"),
+                 "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script],
+                env=self._environment(), stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                timeout=5, check=False,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            output = result.stdout.decode("ascii", "strict").strip()
+            if result.returncode != 0 or not re.fullmatch(r"[0-9]{1,6}", output):
+                raise ValueError("invalid host observation")
+            return int(output)
+        except (OSError, subprocess.SubprocessError, ValueError, UnicodeError) as error:
+            raise _failure("SANDBOX_HOST_STATE_UNAVAILABLE",
+                "Windows Sandbox host state could not be verified; no VM was started.",
+                phase="provision") from error
 
     def _run_envelope(self, config: dict[str, Any], *, timeout_seconds: int = 30) -> dict[str, Any]:
         verify_mxc_windows_sandbox_candidate()
@@ -516,12 +548,25 @@ class MxcWindowsSandboxManager:
         if result.returncode != 0:
             error = payload.get("error") if isinstance(payload, dict) else None
             code = error.get("code") if isinstance(error, dict) else None
+            message = error.get("message") if isinstance(error, dict) else None
+            # The backend's readiness deadline is different from this adapter's
+            # subprocess deadline. Classify its exact public phrase before
+            # deprovision removes the log; never forward raw backend text.
+            ready_timeout = (
+                config.get("phase") == "start"
+                and code == "backend_error"
+                and isinstance(message, str)
+                and re.fullmatch(r"daemon did not become ready within [0-9]{1,6}s", message)
+            )
             raise _failure(
-                "SANDBOX_STATE_PHASE_FAILED",
-                "The Windows Sandbox lifecycle phase was rejected or failed.",
+                "SANDBOX_STATE_START_READY_TIMEOUT" if ready_timeout else "SANDBOX_STATE_PHASE_FAILED",
+                "The Windows Sandbox guest did not become ready before the backend deadline."
+                if ready_timeout else "The Windows Sandbox lifecycle phase was rejected or failed.",
                 retryable=config.get("phase") == "start",
                 phase=config.get("phase"),
-                backend_error_code=code if isinstance(code, str) and re.fullmatch(r"[a-z_]{3,48}", code) else None,
+                backend_error_code="start_ready_timeout" if ready_timeout else (
+                    code if isinstance(code, str) and re.fullmatch(r"[a-z_]{3,48}", code) else None
+                ),
             )
         if (
             not isinstance(payload, dict)
@@ -570,6 +615,10 @@ class MxcWindowsSandboxManager:
                 raise _failure("SANDBOX_TEARDOWN_UNCONFIRMED", "The prior Windows Sandbox could not be safely deprovisioned; no new workspace will be mounted.", retryable=True) from error
             self._active = None
 
+        if self._host_process_count():
+            raise _failure("SANDBOX_HOST_BUSY",
+                "Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.",
+                retryable=True, phase="provision", backend_error_code="host_busy")
         sandbox_id = self._provision(root, readonly_roots)
         try:
             self._run_envelope(_phase_config("start", sandbox_id), timeout_seconds=MAX_MXC_WSB_PHASE_SECONDS)

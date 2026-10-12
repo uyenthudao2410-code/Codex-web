@@ -1,0 +1,10 @@
+{"event":"begin","artifact":"r7","command":"node --test tests/control-plane-approved-patch-runtime.test.js","workspace":"E:\\Github\\Tools-Codex-web"}
+{"event":"phase_begin","phase":"provision"}
+{"event":"phase_end","phase":"provision","ok":true,"elapsed_ms":61}
+{"event":"phase_begin","phase":"start"}
+{"event":"phase_end","phase":"start","ok":true,"elapsed_ms":18109}
+{"event":"command_end","exit_code":0,"version":null,"tap_summary":["# tests 4","# pass 4","# fail 0","# cancelled 0","# skipped 0"],"stdout_sha256":"672992d7e5fb89a747424254b7c1614e6ca024e5d86e915d73f5ebfc8fdc6a9a"}
+{"event":"phase_begin","phase":"deprovision"}
+{"event":"phase_end","phase":"deprovision","ok":true,"elapsed_ms":7297}
+{"event":"invocation_cleanup","ok":true}
+{"event":"manager_cleanup","ok":true}

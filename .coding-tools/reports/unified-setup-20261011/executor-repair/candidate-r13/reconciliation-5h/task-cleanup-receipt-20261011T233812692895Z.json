@@ -1,0 +1,31 @@
+{
+  "phase": "root_r13_5h_exact_task_only_cleanup",
+  "public_receipts": [
+    {
+      "action_and_receipt_history_preserved": true,
+      "action_id": "act_b2335c57472b4d68931d10dda1572ff9",
+      "authority_extended": false,
+      "checker_4_of_4": "not_observed",
+      "closed_at_ms": 1791761892620,
+      "local_semantic_acceptance": "pending",
+      "new_receipt_posted": false,
+      "ok": true,
+      "phase": "r13_5h_exact_after_effect_task_only_cleanup",
+      "raw_error_disclosed": false,
+      "remote_mutation": true,
+      "replay_forbidden": true,
+      "target_after_sha256": "e0f8bc32eb07f22b8f6231c51f973f1bca793c848912b757db586c6a90f23a3b",
+      "target_before_sha256": "5b60799b3eecc70511d728a729e09cef58f88809eda5c5d104126a487a2877cb",
+      "target_task_and_lease_history_preserved": true,
+      "task_closed": true,
+      "task_id": "task_3b2a2a860ca54ef7889d2efce6923dc7",
+      "terminal_receipt_id": "rcpt_eea61400c4a3408d88bfec9174b75ec7",
+      "writer_released": true
+    }
+  ],
+  "raw_error_disclosed": false,
+  "receipt_posted": false,
+  "remote_mutation_possible": true,
+  "replay_forbidden": true,
+  "ssh_returncode": 0
+}

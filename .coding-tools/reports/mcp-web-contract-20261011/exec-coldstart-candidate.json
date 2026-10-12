@@ -1,0 +1,31 @@
+{
+  "observed_at": "2026-10-11T09:10:41.212Z",
+  "candidate": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-exec-coldstart-1011-r5\\win-unpacked",
+  "source_parity": [
+    {
+      "source": "electron/services/runtimeOrchestrator.js",
+      "sha256": "e3e06e374aed5f1fab8c26692ef964c6a681ce4cb1a759461fc14c5693b63406",
+      "packaged_path": "resources/app.asar:electron/services/runtimeOrchestrator.js",
+      "matched": true
+    },
+    {
+      "source": "control-plane/control_plane/node_agent.py",
+      "sha256": "7ac20204eb742719db1665651e97d52add481b691ba1cfcca907f35fdfd9ff40",
+      "packaged_path": "resources/resources/control-plane/node_agent.py",
+      "matched": true
+    },
+    {
+      "source": "control-plane/control_plane/recovery_exec_bridge.cjs",
+      "sha256": "78951d8b0e0be005ce2b526ed4d8f139c304be5e083b8a9821fe6cc805321ba9",
+      "packaged_path": "resources/resources/control-plane/recovery_exec_bridge.cjs",
+      "matched": true
+    }
+  ],
+  "app_asar_sha256": "4e9c51c4952b5cc491f42a40859d0e78911356453643023ab740ec06343e6f62",
+  "executable_sha256": "8726f7fc2bbe2b1dc22c87decb8be8c54690c5650bc2d5102f76755b75c53e95",
+  "focused_checks_passed": 13,
+  "build_exit_code": 0,
+  "packaged_smoke_exit_code": 0,
+  "activated": false,
+  "pushed": false
+}

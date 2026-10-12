@@ -4,10 +4,11 @@ import hashlib
 import json
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .approved_patch_verification import (APPROVED_PATCH_VERIFICATION_ORIGIN, admit_initial_verification,
+                                          bounded_patch_effect, project_initial_verification_readiness)
 from .controller_continuity import ControllerContinuityError
 from .completion_readiness import CompletionReadinessWorkflowMixin
 from .errors import ToolFailure
@@ -23,7 +24,7 @@ from .host_correlation import (
     validate_pending_host_turn,
 )
 from .orchestration_control import OrchestrationControlError, RunContext
-from .patching import parse_patch
+from .patching import PatchWorkflowMixin, parse_patch
 from .p5_experiment import P5ExperimentError
 from .problem_lineage import ProblemLineageError
 from .prepared_workflow_binding import (
@@ -43,7 +44,7 @@ from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
 
-class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
+class AgentWorkflowMixin(CompletionReadinessWorkflowMixin, PatchWorkflowMixin):
     @staticmethod
     def _host_correlation_record(value: Any) -> dict[str, Any] | None:
         return validate_pending_host_turn(value)
@@ -253,83 +254,6 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
             if desired.get("work_origin") != "problem" or desired.get("problem_id") != previous.get("problem_id") or int(desired.get("problem_revision") or 0) != int(previous.get("problem_revision") or 0):
                 raise ToolFailure("PRL_REPLAN_BINDING_CHANGE", "A replacement wave cannot silently switch problem revision; start a new RUN after explicit problem transition.", category="validation")
         return desired
-
-    def _agent_patch_inputs(self, args: dict[str, Any]) -> tuple[list[str], list[str]]:
-        directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
-        patches = [str(item) for item in args.get("patches", []) if str(item).strip()]
-        if str(args.get("patch", "")).strip():
-            patches.insert(0, str(args["patch"]))
-        new_file_patch = self._new_files_patch(list(args.get("files", [])))
-        if new_file_patch:
-            patches.insert(0, new_file_patch)
-        return directories, patches
-
-    def _preflight_patch_sequence(self, patches: list[str]) -> dict[str, Any]:
-        """Reject predictable disjoint-patch failures before EOCL or workspace writes."""
-        parsed: list[tuple[str, set[str]]] = []
-        seen_paths: set[str] = set()
-        overlapping_paths: set[str] = set()
-        operation_count = 0
-        for patch_text in patches:
-            operations = parse_patch(patch_text)
-            touched: set[str] = set()
-            for operation in operations:
-                operation_count += 1
-                touched.add(str(operation.path).replace("\\", "/"))
-                if operation.move_to:
-                    touched.add(str(operation.move_to).replace("\\", "/"))
-            overlapping_paths.update(seen_paths.intersection(touched))
-            seen_paths.update(touched)
-            parsed.append((patch_text, touched))
-        if operation_count == 0:
-            return {"checked": False, "reason": "empty_patch_sequence", "patch_count": len(patches)}
-        if overlapping_paths:
-            return {
-                "checked": False,
-                "reason": "cross_patch_path_dependency",
-                "patch_count": len(patches),
-                "overlap_count": len(overlapping_paths),
-            }
-        for patch_text, _touched in parsed:
-            self.apply_patch({"patch": patch_text, "dry_run": True})
-        return {"checked": True, "patch_count": len(patches), "operation_count": operation_count}
-
-    @staticmethod
-    def _source_write_paths(patches: list[str]) -> list[str]:
-        paths: set[str] = set()
-        for patch_text in patches:
-            for operation in parse_patch(patch_text):
-                path = str(operation.path).strip().replace("\\", "/")
-                if path:
-                    paths.add(path)
-                move_to = str(operation.move_to or "").strip().replace("\\", "/")
-                if move_to:
-                    paths.add(move_to)
-        return sorted(paths)
-
-    @staticmethod
-    def _new_files_patch(files: list[Any]) -> str:
-        sections = ["*** Begin Patch"]
-        added = 0
-        for item in files[:100]:
-            if not isinstance(item, dict):
-                raise ToolFailure("INVALID_ARGUMENT", "Each files item must contain path and content.", category="validation")
-            path = str(item.get("path", "")).strip().replace("\\", "/")
-            if not path or path.startswith("/") or ".." in Path(path).parts:
-                raise ToolFailure("INVALID_ARGUMENT", f"Invalid new file path: {path!r}", category="validation")
-            content = str(item.get("content", ""))
-            sections.append(f"*** Add File: {path}")
-            lines = content.splitlines()
-            sections.extend(f"+{line}" for line in lines)
-            if content.endswith(("\n", "\r")) is False and lines:
-                pass
-            if not lines:
-                sections.append("+")
-            added += 1
-        if not added:
-            return ""
-        sections.append("*** End Patch")
-        return "\n".join(sections)
 
     def _agent_orchestration_context(
         self,
@@ -760,6 +684,9 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
             "path": str(args.get("path") or ".").strip(),
             "workdir": str(args.get("workdir") or args.get("path") or ".").strip(),
             "verification": str(args.get("verification") or "").strip().lower(),
+            **({"initial_verification": args["initial_verification"],
+                "initial_verification_expires_at_ms": args.get("initial_verification_expires_at_ms")}
+               if "initial_verification" in args else {}),
             "test_command": str(args.get("test_command") or "").strip(),
             "build_command": str(args.get("build_command") or "").strip(),
         }
@@ -797,6 +724,9 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
         if str(args.get("build_command", "")).strip():
             planned_auto_steps += 1
         planned_tool_hops = 2 + commands + (1 if patches or files or directories else 0) + candidate
+        if args.get("initial_verification") is not None:
+            planned_auto_steps += 1
+            planned_tool_hops += 1
         if planned_auto_steps > max_auto_steps or planned_tool_hops > max_tool_hops:
             raise ToolFailure(
                 "WORKFLOW_BUDGET_EXCEEDED",
@@ -843,10 +773,15 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
             "proof_fingerprint": proof.get("proof_fingerprint"),
             "external_review_status": review.get("status"),
             "reports": orchestration.get("reports"),
+            **({"patch_effect": bounded_patch_effect(execution), "initial_verification": execution["initial_verification"]}
+               if "initial_verification" in execution else {}),
         }
 
     def agent_workflow(self, args: dict[str, Any]) -> dict[str, Any]:
         self._preflight_tool_workspace_scope("agent_workflow", args)
+        initial_plan = admit_initial_verification(self, args)
+        if initial_plan is not None:
+            args = {**args, "initial_verification": initial_plan.public()}
         normalized, budget = self._agent_admission_budget(args)
         phase = str(normalized.get("phase", "prepare")).lower()
         idempotency_key = str(normalized.get("idempotency_key", "") or "").strip()
@@ -953,6 +888,7 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
 
     def _agent_workflow_impl(self, args: dict[str, Any]) -> dict[str, Any]:
         """End-to-end workflow with durable wave audit, explicit authority, proof, and final acceptance state."""
+        initial_plan = admit_initial_verification(self, args)
         workflow = str(args.get("workflow", "custom")).lower()
         phase = str(args.get("phase", "prepare")).lower()
         dedup_key = self._fast_cache_key("agent_workflow_execute", args)
@@ -1211,6 +1147,8 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
             prepared=prepared,
             explicit_patches=explicit_patches,
         )
+        if initial_plan is not None:
+            project_initial_verification_readiness(completion_readiness, initial_plan)
         if not should_execute:
             self._project_orchestration(ctx, event="orchestration_prepared")
             return {
@@ -1562,6 +1500,9 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
                 "_orchestration_context": ctx,
                 "_requested_write_paths": requested_write_paths,
                 "_write_owner_session": write_owner_session,
+                **({"_approved_patch_verification_plan": initial_plan,
+                    "_approved_patch_verification_origin": APPROVED_PATCH_VERIFICATION_ORIGIN}
+                   if initial_plan is not None else {}),
             })
         except (ToolFailure, OrchestrationControlError) as exc:
             code = getattr(exc, "code", type(exc).__name__)

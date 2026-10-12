@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const {
   ControlPlaneEnrollmentService,
@@ -36,6 +37,16 @@ function authority() {
     observed_at_ms: Date.now(),
     runtime_mode: 'packaged'
   };
+}
+
+function execObservation(installedFacade = facade) {
+  const prefixes = [['git'], ['node'], ['npm'], ['npx'], ['python'], ['python3']];
+  return { operation: 'control_plane_exec_policy_observation', execution: 'exec_policy_inspected',
+    state: 'enabled', enabled: true, authority_mode: 'standing', expires_at_ms: null,
+    workspace_id: workspaceId, workspace_generation: workspaceGeneration, facade_contract: installedFacade,
+    policy_sha256: 'b'.repeat(64), allowed_argv_prefix_count: prefixes.length,
+    allowed_argv_prefixes_sha256: crypto.createHash('sha256').update(JSON.stringify(prefixes)).digest('hex'),
+    max_timeout_ms: 300000, max_output_bytes: 65536, max_concurrent: 2, runtime_mode: 'packaged' };
 }
 
 function workspaceList() {
@@ -156,6 +167,48 @@ test('development runtime can inspect the exact workspace sandbox but cannot ins
   await assert.rejects(service.installStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration }), {
     code: 'CONTROL_PLANE_EXEC_POLICY_PACKAGED_REQUIRED'
   });
+});
+
+test('exec inspection keeps the installed facade distinct from fresh authenticated authority', async (t) => {
+  const item = fixture(t);
+  for (const installed of [facade, { ...facade, sha256: 'f'.repeat(64) }]) {
+    const commands = [];
+    const service = new ControlPlaneEnrollmentService({ paths: item.paths,
+      runner: async (_command, args) => {
+        commands.push(args[2]);
+        return { stdout: JSON.stringify(args[2] === 'inspect-policy-authority' ? authority() : execObservation(installed)) };
+      }
+    });
+    service.inspectMxcSandbox = async () => ({ state: 'available' });
+    const result = await service.inspectStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration });
+    assert.deepEqual(result.policy.facade_contract, installed);
+    assert.deepEqual(result.policy.current_facade_contract, facade);
+    assert.ok(Number.isSafeInteger(result.policy.authority_observed_at_ms));
+    assert.deepEqual(commands, ['inspect-exec-policy', 'inspect-policy-authority']);
+  }
+});
+
+test('exec inspection cannot reuse missing contract, wrong target, or unknown/stale server authority', async (t) => {
+  const item = fixture(t);
+  for (const scenario of ['missing', 'invalid', 'wrong-target', 'unavailable', 'stale', 'disabled', 'no-exec-binding']) {
+    const service = new ControlPlaneEnrollmentService({ paths: item.paths, runner: async (_command, args) => {
+      if (args[2] === 'inspect-policy-authority') {
+        if (scenario === 'unavailable') throw Object.assign(new Error('not returned'), { code: 'AUTHORITY_OFFLINE' });
+        return { stdout: JSON.stringify({ ...authority(), ...(scenario === 'stale' ? { observed_at_ms: Date.now() - 60_000 } : {}),
+          ...(scenario === 'disabled' ? { exec_enabled: false } : {}), ...(scenario === 'no-exec-binding' ? { exec_binding_count: 0 } : {}) }) };
+      }
+      const payload = execObservation();
+      if (scenario === 'missing') delete payload.facade_contract;
+      if (scenario === 'invalid') payload.facade_contract = { ...facade, sha256: 'invalid' };
+      if (scenario === 'wrong-target') payload.workspace_generation = 'generation_' + 'f'.repeat(32);
+      return { stdout: JSON.stringify(payload) };
+    } });
+    service.inspectMxcSandbox = async () => ({ state: 'available' });
+    const result = await service.inspectStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration });
+    assert.ok(!result.policy.current_facade_contract, scenario);
+    assert.equal(result.policy.authority_observed_at_ms ?? null, null, scenario);
+    if (['disabled', 'no-exec-binding'].includes(scenario)) assert.equal(result.policy.reason, 'CONTROL_PLANE_EXEC_NOT_ADMITTED');
+  }
 });
 
 test('packaged WSB candidate probes the exact workspace through state-aware lifecycle', async (t) => {

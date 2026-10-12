@@ -561,16 +561,18 @@ async function waitForExactProcessExit(identityValue, {
 }
 
 /**
- * Terminate exactly the process represented by `identity`, including its
- * Windows descendant tree.  The pre-termination observation is mandatory;
- * a recycled PID or an unavailable probe can never reach taskkill.
+ * Terminate exactly the process represented by `identity`. Windows descendants
+ * are included unless `includeDescendants` is false. The pre-termination
+ * observation is mandatory; a recycled PID or unavailable probe never reaches
+ * taskkill.
  */
 async function terminateExactProcessTree(identityValue, {
   observeProcessIdentity: observer = observeProcessIdentity,
   runProcess = defaultRunProcess,
   processKill = process.kill,
   sleep,
-  timeoutMs = DEFAULT_WAIT_TIMEOUT_MS
+  timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
+  includeDescendants = true
 } = {}) {
   const identity = processIdentityFrom(identityValue);
   let observed;
@@ -593,7 +595,11 @@ async function terminateExactProcessTree(identityValue, {
   if (process.platform === 'win32') {
     let result;
     try {
-      result = await runProcess('taskkill.exe', ['/PID', String(identity.pid), '/T', '/F'], { allowFailure: true });
+      result = await runProcess(
+        'taskkill.exe',
+        ['/PID', String(identity.pid), ...(includeDescendants === false ? [] : ['/T']), '/F'],
+        { allowFailure: true }
+      );
     } catch (error) {
       throw identityError('PROCESS_TERMINATION_FAILED', 'Exact process tree termination command failed.', {
         pid: identity.pid,

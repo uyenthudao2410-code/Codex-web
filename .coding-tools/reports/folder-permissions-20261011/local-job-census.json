@@ -1,0 +1,32 @@
+{
+  "phase": "census",
+  "safe": false,
+  "code": "RUNTIME_BUSY",
+  "reason": "live_runtime_state_process",
+  "counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "threshold_sensitive_stale_candidates": 17,
+    "owned_codex_sidecar_residues": 0
+  },
+  "lifecycle": {
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "projection_drift": false,
+    "ordinary_active_runs": 18,
+    "awaiting_acceptance_runs": [
+      "95e909f0040a448faa9f1f3257e2ee2c"
+    ],
+    "live_owned_runs": [],
+    "active_p5_runs": [],
+    "blockers": [
+      "acceptance_pending",
+      "live_runtime_state_process"
+    ]
+  }
+}

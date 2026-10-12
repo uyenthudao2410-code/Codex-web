@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { PassThrough } = require('node:stream');
+const { spawn } = require('node:child_process');
 
 const {
   POWERSHELL_BROKER_SCRIPT,
@@ -187,6 +188,95 @@ test('exact Windows identity reaches one structured taskkill invocation', WINDOW
   assert.equal(result.state, 'terminated');
   assert.equal(result.exit_state, 'exited');
   assert.equal(observations, 2);
+});
+
+test('root-only Windows termination preserves detached lifecycle descendants', WINDOWS_ONLY, async () => {
+  const calls = [];
+  let observations = 0;
+  const result = await terminateExactProcessTree(
+    { pid: PID, process_start_token: START_TOKEN },
+    {
+      includeDescendants: false,
+      observeProcessIdentity: async () => {
+        observations += 1;
+        return observations === 1 ? live() : { state: 'absent', pid: PID };
+      },
+      runProcess: async (command, args, options) => {
+        calls.push({ command, args, options });
+        return { code: 0 };
+      },
+      sleep: async () => {
+        throw new Error('sleep must not run after the exact process is already absent');
+      }
+    }
+  );
+
+  assert.deepEqual(calls, [{
+    command: 'taskkill.exe',
+    args: ['/PID', String(PID), '/F'],
+    options: { allowFailure: true }
+  }]);
+  assert.equal(result.state, 'terminated');
+  assert.equal(result.exit_state, 'exited');
+  assert.equal(observations, 2);
+});
+
+test('verified root-only Windows termination leaves a real detached child alive', WINDOWS_ONLY, async (t) => {
+  const program = [
+    "const { spawn } = require('node:child_process');",
+    "const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { detached: true, windowsHide: true, stdio: 'ignore' });",
+    "child.once('spawn', () => { child.unref(); process.stdout.write(JSON.stringify({ childPid: child.pid }) + '\\n'); });",
+    'setInterval(() => {}, 1000);'
+  ].join('\n');
+  const parent = spawn(process.execPath, ['-e', program], {
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'ignore']
+  });
+  const exactIdentities = [];
+  const observer = (pid) => observeProcessIdentity(pid, { noCache: true });
+  const captureIdentity = (pid) => {
+    const observed = observer(pid);
+    assert.equal(observed.state, 'live');
+    const identity = { pid, process_start_token: observed.process_start_token };
+    exactIdentities.push(identity);
+    return identity;
+  };
+  t.after(async () => {
+    for (const identity of exactIdentities.slice().reverse()) {
+      await terminateExactProcessTree(identity, { observeProcessIdentity: observer, timeoutMs: 5000 });
+    }
+  });
+  await new Promise((resolve, reject) => {
+    parent.once('spawn', resolve);
+    parent.once('error', reject);
+  });
+  const parentIdentity = captureIdentity(parent.pid);
+  const childPid = await new Promise((resolve, reject) => {
+    let text = '';
+    const timeout = setTimeout(() => reject(new Error('Detached child did not report its PID')), 5000);
+    parent.stdout.on('data', (chunk) => {
+      text += chunk.toString('utf8');
+      if (!text.includes('\n')) return;
+      clearTimeout(timeout);
+      try { resolve(JSON.parse(text.split('\n')[0]).childPid); } catch (error) { reject(error); }
+    });
+    parent.once('exit', () => {
+      clearTimeout(timeout);
+      reject(new Error('Parent exited before reporting detached child'));
+    });
+  });
+  const childIdentity = captureIdentity(childPid);
+
+  const result = await terminateExactProcessTree(parentIdentity, {
+    includeDescendants: false,
+    observeProcessIdentity: observer,
+    timeoutMs: 5000
+  });
+  assert.equal(result.exit_state, 'exited');
+  assert.deepEqual(observer(childPid), { state: 'live', ...childIdentity });
+
+  await terminateExactProcessTree(childIdentity, { observeProcessIdentity: observer, timeoutMs: 5000 });
+  assert.equal(observer(childPid).state, 'absent', 'the exact detached child is cleaned up after the proof');
 });
 
 test('same PID with a different start token never reaches taskkill', WINDOWS_ONLY, async () => {

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "phase": "r14_exact_live_context_guard_correction_offline_proof",
+  "ok": true,
+  "helper_sha256": "61b625adc8c707632d2f4d5ff2b9b07ee9fe654b90402513348aadb8b23ba896",
+  "driver_sha256": "30407f4c13434803b08bc10fd2ca3b5d28a7ed689fef3796e6b86d3c41c309d4",
+  "test_sha256": "6f9ef4b108c0873ab3694930ab52138aea780b514d9c78bf2f4be8419b002a8c",
+  "test_command": "python -B .coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r14/activation-server-same-window-context-guard/test_context_guard_correction.py -v",
+  "test_count": 1,
+  "test_exit_code": 0,
+  "actual_inspection_sha256": "0e7c8f027fac258ef34a68f1f850ff07acca51328dcbbf59fd50fc06eea18cf9",
+  "actual_inspection_observed_at_ms": 1791762929114,
+  "failure_classification": "pre_effect_rollout_guard_counted_expired_unclosed_context_history",
+  "original_failed_attempt_preserved": true,
+  "context_history_preserved": true,
+  "authority_extended": false,
+  "external_effects_performed_by_this_lane": false,
+  "live_r14_activation_proven": false
+}

@@ -21,13 +21,17 @@ from control_plane.node_agent import (
     _approved_patch_projection_digest,
     _disable_matching_retired_workspace_approved_patch_policy,
     _install_approved_patch_policy_values,
+    _install_exec_policy_values,
+    _exec_policy_path,
     _install_file_read_policy_values,
     _install_read_only_policy_values,
     _policy_digest,
     _read_approved_patch_journal,
     _read_approved_patch_policy,
+    _safe_approved_patch_bridge_result,
     _write_json_atomic,
     main as node_agent_main,
+    inspect_approved_patch_policy,
     poll_approved_patch_once,
     run_approved_patch_loop,
 )
@@ -181,6 +185,135 @@ class ApprovedPatchNodeAgentTests(unittest.TestCase):
             max_patch_bytes=4096,
             max_file_bytes=4096,
         )
+
+    def test_inspect_reports_installed_facade_without_changing_policy(self) -> None:
+        self.install_policy()
+        policy_path = self.data_root / "control-plane-approved-patch-policy.json"
+        before = policy_path.read_bytes()
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(inspect_approved_patch_policy(self.args()), 0)
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["facade_contract"], FACADE_CONTRACT)
+        self.assertEqual(receipt["state"], "enabled")
+        self.assertEqual(policy_path.read_bytes(), before)
+        self.assertNotIn(self.config["node_secret"], output.getvalue())
+
+    def verification_action(self) -> tuple[dict, dict]:
+        plan = {"argv": ["node", "--test", "tests/fixture.test.js"], "cwd": "", "timeout_ms": 60000, "max_output_bytes": 32768}
+        action = self.action()
+        arguments = json.loads(action["arguments_json"])
+        arguments["verification_sha256"] = _approved_patch_projection_digest(plan)
+        action["arguments_json"] = json.dumps(arguments)
+        action["mcp_approved_patch_verification_json"] = json.dumps(plan)
+        return action, plan
+
+    def install_verification_exec_policy(self) -> dict:
+        registry = json.loads(self.registry_path.read_text(encoding="utf-8"))
+        registry["entries"][0]["capabilities"]["exec"] = True
+        self.registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        policy = _install_exec_policy_values(
+            owner_id="owner-control-plane-0001", device_id=self.config["device_id"], endpoint_id=self.config["endpoint_id"],
+            workspace_id="workspace-control-plane-0001", workspace_generation="generation-control-plane-0001",
+            server_origin=self.config["server_url"], facade_contract=FACADE_CONTRACT,
+            allowed_argv_prefixes=[["node", "--test"]], max_timeout_ms=60000, max_output_bytes=32768,
+        )
+        _write_json_atomic(_exec_policy_path(self.args()), policy)
+        return policy
+
+    def test_initial_verification_requires_independent_exec_policy_before_bridge(self) -> None:
+        self.install_policy()
+        action, plan = self.verification_action()
+        request = _approved_patch_bridge_request(action, self.config)
+        self.assertEqual(request["verification"], plan)
+        with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_EXEC_POLICY_MISSING"):
+            _admit_approved_patch_policy_request(self.args(), config_path=self.config_path, config=self.config, request=request)
+        exec_policy = self.install_verification_exec_policy()
+        for changes, code in (({"enabled": False}, "CONTROL_PLANE_EXEC_DISABLED"),
+                              ({"owner_id": "another-owner-0001"}, "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH"),
+                              ({"allowed_argv_prefixes": [["python"]]}, "CONTROL_PLANE_EXEC_ALLOWLIST_DENIED"),
+                              ({"max_timeout_ms": 5000}, "CONTROL_PLANE_EXEC_REQUEST_TOO_LARGE")):
+            with self.subTest(code=code):
+                _write_json_atomic(_exec_policy_path(self.args()), {**exec_policy, **changes})
+                with self.assertRaisesRegex(RuntimeError, code):
+                    _admit_approved_patch_policy_request(self.args(), config_path=self.config_path, config=self.config, request=request)
+        _write_json_atomic(_exec_policy_path(self.args()), exec_policy)
+        expired = {key: value for key, value in exec_policy.items() if key != "authority_mode"}
+        expired.update(schema_version=1, expires_at_ms=int(time.time() * 1000) - 1)
+        _write_json_atomic(_exec_policy_path(self.args()), expired)
+        with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_EXEC_POLICY_EXPIRED"):
+            _admit_approved_patch_policy_request(self.args(), config_path=self.config_path, config=self.config, request=request)
+        _write_json_atomic(_exec_policy_path(self.args()), exec_policy)
+        registry = json.loads(self.registry_path.read_text(encoding="utf-8"))
+        registry["entries"][0]["capabilities"]["exec"] = False
+        self.registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT"):
+            _admit_approved_patch_policy_request(self.args(), config_path=self.config_path, config=self.config, request=request)
+        registry["entries"][0]["capabilities"]["exec"] = True
+        self.registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        with mock.patch("control_plane.node_agent.recovery_exec_bridge") as exec_bridge:
+            _admit_approved_patch_policy_request(self.args(), config_path=self.config_path, config=self.config, request=request)
+        exec_bridge.assert_not_called()
+        self.assertEqual(self.fixture.read_bytes(), self.initial_content)
+        arguments = json.loads(action["arguments_json"])
+        arguments["verification_sha256"] = "0" * 64
+        with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED"):
+            _approved_patch_bridge_request({**action, "arguments_json": json.dumps(arguments)}, self.config)
+
+    def test_initial_verification_failed_proof_keeps_completed_effect_and_dedup(self) -> None:
+        policy = self.install_policy()
+        self.install_verification_exec_policy()
+        action, plan = self.verification_action()
+        receipts = []
+        def central_request(_url, route, payload, _authorization=None):
+            if route.endswith("/poll"):
+                return {"actions": [action]}
+            receipts.append(payload)
+            return {"receipt_id": "receipt-approved-patch-initial-proof-0001"}
+        def bridge(_args, _root, request):
+            result = self.bridge_result(request, policy)
+            result["initial_verification"] = {"plan_sha256": _approved_patch_projection_digest(plan), "proof_status": "failed", "proof_ids": [], "proof_fingerprint": None}
+            result["response_sha256"] = _approved_patch_projection_digest({"file": result["file"], "initial_verification": result["initial_verification"]})
+            return result, None
+        with mock.patch("control_plane.node_agent._request", side_effect=central_request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+             mock.patch("control_plane.node_agent.recovery_approved_patch_bridge", side_effect=bridge) as patch_bridge, \
+             redirect_stdout(io.StringIO()):
+            poll_approved_patch_once(self.args())
+            poll_approved_patch_once(self.args())
+        self.assertEqual(patch_bridge.call_count, 1)
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(receipts[0]["receipt_state"], "completed")
+        self.assertTrue(receipts[0]["payload"]["patch_applied"])
+        self.assertEqual(receipts[0]["payload"]["initial_verification"]["proof_status"], "failed")
+        self.assertEqual(receipts[0]["payload"]["local_semantic_acceptance"], "pending")
+        self.assertEqual(receipts[0]["payload"]["actor"]["client_id"], "electron-control-plane-approved-patch-bridge")
+
+    def test_initial_verification_result_binds_proof_and_effect_digest(self) -> None:
+        policy = self.install_policy()
+        self.install_verification_exec_policy()
+        action, plan = self.verification_action()
+        request = _approved_patch_bridge_request(action, self.config)
+        _, patch = _admit_approved_patch_policy_request(self.args(), config_path=self.config_path, config=self.config, request=request)
+        for status in ("passed", "failed", "timed_out"):
+            with self.subTest(status=status):
+                result = self.bridge_result(request, policy)
+                proof = {"plan_sha256": _approved_patch_projection_digest(plan), "proof_status": status,
+                         "proof_ids": ["a" * 32] if status == "passed" else [],
+                         "proof_fingerprint": "b" * 64 if status == "passed" else None,
+                         "command_id": "command_initial_0001", "job_id": "job_initial_0001"}
+                result["initial_verification"] = proof
+                result["response_sha256"] = _approved_patch_projection_digest({"file": result["file"], "initial_verification": proof})
+                safe = _safe_approved_patch_bridge_result(result, request, expected_policy_sha256=_policy_digest(policy), expected_patch=patch)
+                self.assertTrue(safe["patch_applied"])
+                self.assertEqual(safe["run_id"], result["run_id"])
+                self.assertEqual(safe["initial_verification"], proof)
+                with self.assertRaisesRegex(RuntimeError, "RESULT_DIGEST_INVALID"):
+                    _safe_approved_patch_bridge_result({**result, "response_sha256": _approved_patch_projection_digest(result["file"])}, request,
+                                                      expected_policy_sha256=_policy_digest(policy), expected_patch=patch)
+                with self.assertRaisesRegex(RuntimeError, "RESULT_PROOF_INVALID"):
+                    _safe_approved_patch_bridge_result({**result, "initial_verification": {**proof, "plan_sha256": "0" * 64}}, request,
+                                                      expected_policy_sha256=_policy_digest(policy), expected_patch=patch)
 
     def test_standing_approved_patch_policy_is_not_bound_to_the_former_ttl(self) -> None:
         policy = _install_approved_patch_policy_values(

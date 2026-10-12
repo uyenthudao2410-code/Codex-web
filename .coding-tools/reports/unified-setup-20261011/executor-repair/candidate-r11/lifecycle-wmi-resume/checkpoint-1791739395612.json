@@ -1,0 +1,84 @@
+{
+  "kind": "r11_lifecycle_operational_checkpoint",
+  "captured_at_ms": 1791739395612,
+  "helper_sha256": "f92e7871fbe6387d4ec14ad89546ea861392739eca616a9c42eb823558eb101d",
+  "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "package_source_matched_files": 11,
+  "package_source_expected_files": 12,
+  "package_source_all_match": false,
+  "historical_hashes": {
+    "runs": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "waves": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce"
+  },
+  "historical_hashes_unchanged": true,
+  "canary_preimage_unchanged": true,
+  "latest_root_read_only_status": {
+    "ok": true,
+    "observed_at_ms": 1791739220728,
+    "runtime_mutated": false,
+    "host": {
+      "pid": 20400,
+      "process_start_token": "134362127609947980",
+      "instance_id": "e289f4d07ed2d9d2fb1d49d7d66b599e"
+    },
+    "readiness": {
+      "fullyReady": false,
+      "localReady": false,
+      "centralConnected": false,
+      "authorityReady": false,
+      "updateIncomplete": true
+    },
+    "epoch": {
+      "id": "activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb",
+      "state": "UPDATE_INCOMPLETE",
+      "admission_open": false,
+      "update_incomplete": true
+    },
+    "native": {
+      "observation_schema_version": 1,
+      "observation_kind": "mcp_identity_read_only",
+      "observed_at": "2026-10-11T17:20:20.734Z",
+      "recovery_host_instance_id": "e289f4d07ed2d9d2fb1d49d7d66b599e",
+      "mcp_process_instance_id": "i9NiVIv9hFBben2i",
+      "mcp_server_instance_id": "doSwkyBa0xMXFRM4",
+      "activation_epoch_id": "activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb",
+      "current_activation_epoch_id": "activation-mv438ehi-cebe9d7cb6af824eb7153869dc4435bb",
+      "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "mcp_ready": true,
+      "identity_current": false,
+      "workspace_read": null
+    }
+  },
+  "latest_status_receipt_sha256": "10e7572cde0199faf7cbb388a80a9966005b7a7c7039e334d4fcbfea3624693c",
+  "latest_status_source": "../current-r11-status.jsonl",
+  "evidence": [
+    {
+      "path": "resume.jsonl",
+      "sha256": "57dd6a3ae03cf39f2365fffcd391c07e9e127c4e3301d8873b614d0e6a6aaaf5"
+    },
+    {
+      "path": "resume-diagnostic.jsonl",
+      "sha256": "24cd4719978721a4aac98f88b73fddc0f72acf7af117d1df5b00af0ca9b70cd5"
+    },
+    {
+      "path": "resume-native-modules.jsonl",
+      "sha256": "28cf19539346b5556fd83f349f9695da6fc0acee4c70e1411cf27669809079cc"
+    },
+    {
+      "path": "host-native-modules-spawn.json",
+      "sha256": "7b31b7d9e09c89621499c2d9f8808331171710245c2a0cb704c2e2d836aaa9ce"
+    },
+    {
+      "path": "exact-wmi-child.jsonl",
+      "sha256": "a3b5a90eaf017af7cf54da0feee991cb6f49635f986d4c0f8542f80c07ed5a91"
+    }
+  ],
+  "agent_launched": false,
+  "canary_dispatched_after_contract_sync": false,
+  "acceptance_performed": false,
+  "authority_expiry_ms": 1791739329910,
+  "authority_expired_at_capture": true,
+  "job_identity_or_durable_supervisor_proven": false,
+  "runtime_mutated_by_this_checkpoint": false,
+  "secret_material_read_or_emitted": false
+}

@@ -1,0 +1,1 @@
+{"action": "execute", "mode": "cold", "evidence": "transport-execute-cold-20261011T130654124612Z.jsonl", "pins_sha256": "28e8dff65226c5001184ad7dbd34fd6e65b2e05af106c10bdb0d73d01aae7b67", "expected_state_sha256": "1639640da36c5b6ab1cd435322d02f69a63c8acff6f0d9291a05091471d9a787", "no_automatic_retry": true}

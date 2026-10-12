@@ -1,0 +1,35 @@
+{
+  "phase": "refresh",
+  "observed_at_ms": 1791758952172,
+  "helper_sha256": "ebfbef3a0d1020e901df21cb80a6f0fae4998191a78849ffbc43922c6418d391",
+  "launcher_identity": {
+    "state": "live",
+    "pid": 18592,
+    "process_start_token": "134362325389665060"
+  },
+  "no_automatic_retry": true,
+  "old_host": {
+    "state": "live",
+    "pid": 18140,
+    "process_start_token": "134362324432460200"
+  },
+  "instance_id": "d3dd85465b62d7dc0d2f24e338aae5f9",
+  "route": {
+    "connected": true,
+    "authorityReady": true,
+    "reason": "CENTRAL_ROUTE_READY",
+    "evidence": {
+      "serverOrigin": "https://svhome.tail0e4032.ts.net",
+      "deviceId": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "endpointId": "executor-72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "credentialGeneration": 1,
+      "serverLastSeenAtMs": 1791758949147,
+      "observedAtMs": 1791758949178,
+      "runtimeReadiness": "degraded",
+      "policyState": "enabled",
+      "policyExpiresAtMs": 1791759009085,
+      "policySha256": "be268e3ff3bf180b682a8ce42599c71c417dbb69d59f218960f7fa31b6772f24",
+      "authorityReady": true
+    }
+  }
+}

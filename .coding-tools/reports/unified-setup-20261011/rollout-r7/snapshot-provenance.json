@@ -1,0 +1,32 @@
+{
+  "archive_name": "codex-control-plane-5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f.tar.gz",
+  "archive_sha256": "ba38f233d2369835bc3d60f4d9af3e0b65f0ed71565303628f7a25ef42120b90",
+  "base_archive_sha256": "e31132a545da55cad564a373c138bb644917c8cbce73e87b724c88dfee6f3b36",
+  "base_git_revision": "beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+  "captured_at_utc": "2026-10-11T10:15:25.227671+00:00",
+  "changed_payload_paths": [
+    "control-plane/control_plane/web_ui.py"
+  ],
+  "deployment_performed": false,
+  "frozen_web_ui_sha256": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b",
+  "git_commit_or_push_performed": false,
+  "identity_algorithm": "SHA256(canonical JSON sorted payload records with path,size_bytes,sha256; excludes derived release-manifest.json)",
+  "identity_type": "source_snapshot_sha256",
+  "local_verification": {
+    "control_plane_schema_version": 28,
+    "file_count": 38,
+    "operation": "control_plane_release_verification",
+    "package_source_sha256": "sha256:bb529f710342bf064fb5d2259ab1ad49e3733a6ca6db0c60b60ed67f119a7566",
+    "release_name": "codex-control-plane-5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f",
+    "source_revision": "5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f"
+  },
+  "manifest_sha256": "f79cba83bdb9843cb95ab4bb7b3f0d1f0e59f26c895c841bf434bbbc2e9fecc6",
+  "operation": "immutable_console_one_file_snapshot_preparation",
+  "package_source_sha256": "sha256:bb529f710342bf064fb5d2259ab1ad49e3733a6ca6db0c60b60ed67f119a7566",
+  "payload_file_count": 38,
+  "python_syntax": "pass",
+  "release_name": "codex-control-plane-5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f",
+  "source_revision": "5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f",
+  "source_revision_is_git_commit": false,
+  "unchanged_payload_file_count": 37
+}

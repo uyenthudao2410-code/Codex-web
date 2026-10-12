@@ -1,0 +1,6 @@
+{
+  "name": "r14-canary-output-reader",
+  "version": "1.0.0",
+  "main": "capture.cjs",
+  "private": true
+}

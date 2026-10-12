@@ -19,9 +19,9 @@ Confirm `package.json` version and the verified `smart-v3` eight-tool surface: `
 Unless a separately accepted policy change says otherwise, `execution_route=auto` remains deterministic/evidence-gated, high-cost routes require acknowledgement, and provider availability does not silently expand write authority. Public schema changes require a connector-refresh/live-contract plan.
 
 Codex-web has one product version across the Electron package and Python MCP
-component. For the current 1.0.3 release, root `package.json`,
+component. For the current 1.0.7 release, root `package.json`,
 `resources/coding-tools-mcp/pyproject.toml`, `coding_tools_mcp.__version__`, and
-product-facing version labels must agree on `1.0.3`. Protocol, schema,
+product-facing version labels must agree on `1.0.7`. Protocol, schema,
 tool-contract, ledger-format, and other compatibility identities remain
 independent and must not be rewritten to the product version.
 
@@ -38,6 +38,22 @@ npm run test:recovery:packaged
 node scripts/installed-recovery-smoke.js
 npm run canary:opencode-flash:preflight
 ```
+
+The maintained Control Plane focused entry points are the files currently
+present in `control-plane/tests`; run them from that package directory so its
+imports resolve consistently on Windows and Ubuntu:
+
+```powershell
+Push-Location control-plane
+python -B -m unittest discover -s tests -p 'test_node_agent_authority_status.py' -q
+python -B -m unittest discover -s tests -p 'test_mcp_oauth.py' -q
+Pop-Location
+```
+
+The historical `test_connected_agent_status.py` example is no longer a
+current test entry point. Use `test_node_agent_authority_status.py` for the
+authority-status coverage and `test_mcp_oauth.py` for OAuth configuration and
+credential-policy coverage.
 
 `npm run canary:opencode-flash` performs real provider dispatch and may incur external cost; run only with explicit authorization. Rust/LSP changes use the smallest affected Rust tests required by `AGENTS.md`.
 
@@ -59,6 +75,17 @@ behavior outside the tests it actually ran.
 ## 5. Controlled activation boundary
 
 Runtime-affecting source tests do not prove the current process loaded new code. Use supported controlled activation and verify expected reconnect, new process/server instance identity, unchanged workspace identity, intended revision/contract, and preserved fail-closed authority state. Do not substitute `taskkill` of the serving MCP for supervised restart.
+
+Before opening a Control Plane scoped pilot after a server update, compare the
+live facade contract from the intended principal's `tools/list` and inventory
+with every installed standing read/edit/exec policy used by that route. Compare
+the exact profile, schema version and SHA; the native smart-v3 fingerprint is a
+separate identity. Synchronizing the metadata context alone does not update
+standing policy contracts. If they differ, reinstall the policies through the
+supported enrollment flow under the existing explicit scope, then verify their
+target, path/argv limits, authority mode and validity before dispatch. Do not
+disable contract comparison. A rejected action is observed and closed; any new
+trial uses separate durable intents and fresh evidence after the cause is fixed.
 
 Explicit central-executor role migration is an operator installation change,
 not accepted-code activation. Its fixed `full_clean_execution_role_handoff`

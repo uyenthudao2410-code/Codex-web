@@ -1,0 +1,3 @@
+{"event":"begin","artifact":"source_with_r7_binaries","command":"node --test tests/control-plane-approved-patch-runtime.test.js","workspace":"E:\\Github\\Tools-Codex-web"}
+{"event":"failure","code":"SANDBOX_HOST_BUSY","details":{"phase":"provision","backend_error_code":"host_busy"}}
+{"event":"manager_cleanup","ok":true}

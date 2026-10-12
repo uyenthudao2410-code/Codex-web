@@ -1,0 +1,94 @@
+{
+  "archive": "E:\\Github\\Tools-Codex-web\\dist\\control-plane-owner-standing-acceptance-20261011T053706Z\\release\\codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd.tar.gz",
+  "archive_sha256": "4ae84292797d93180d30fd938652b604c43ed85cf651f152be8c0b6b9e5955ea",
+  "artifact_verification": {
+    "control_plane_schema_version": 28,
+    "file_count": 37,
+    "operation": "control_plane_release_verification",
+    "package_source_sha256": "sha256:fd5132676f1a68e875348fe790c6803c591f65a73311d793194c20a4e70b7d81",
+    "release_name": "codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd",
+    "source_revision": "70de202d93c9a759befe5d38491ce54e9ef4b3cd"
+  },
+  "base_revision": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "captured_at_utc": "2026-10-11T05:39:18.709052+00:00",
+  "commit_changed_files": [
+    ".coding-tools/delivery-snapshot.json",
+    ".coding-tools/orchestration/ledger.sqlite3",
+    "control-plane/control_plane/store.py",
+    "control-plane/tests/test_mcp_task_sessions.py"
+  ],
+  "deploy_ready_for_operator_review": true,
+  "focused_test_proof": {
+    "command": "python -W error -B -m unittest discover -s tests -p test_mcp_task_sessions.py -k acceptance -v",
+    "result": "4 passed before isolated packaging; unchanged source behavior reused"
+  },
+  "full_release_file_changes": [
+    {
+      "candidate": {
+        "path": "DEPLOYMENT.md",
+        "sha256": "99008bd3351336f49bf7b763cd181153eddf23c90ed622769e1259eb13d8171b",
+        "size_bytes": 3203
+      },
+      "deployed": {
+        "path": "DEPLOYMENT.md",
+        "sha256": "3768d1ec2d43d2791ea6be9e37fd4d2b23fe87dc29453890f9801524f2362681",
+        "size_bytes": 3203
+      },
+      "path": "DEPLOYMENT.md"
+    },
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/store.py",
+        "sha256": "99d3eba656a269886a842bc357a14222eb811bbb7dea8d0538c210d5f3edcf40",
+        "size_bytes": 459335
+      },
+      "deployed": {
+        "path": "control-plane/control_plane/store.py",
+        "sha256": "96db42eda0f332d707341d877e51a4ba178347e17149e019dc57b2abed8b20a4",
+        "size_bytes": 459047
+      },
+      "path": "control-plane/control_plane/store.py"
+    }
+  ],
+  "isolated_branch": "codex/owner-standing-acceptance",
+  "isolated_preparation_recovery": {
+    "clean_source_guard": "unchanged CLI require_clean_source=True; canonical Git blobs used",
+    "initial_checkout": "Windows path length failure; partial checkout preserved under dist",
+    "post_commit_status": "canonical ledger working bytes differ from transactional Git snapshot; release source clean",
+    "resolution": "fresh isolated clone configured core.longpaths=true before checkout"
+  },
+  "isolated_release_source_clean": true,
+  "isolated_runtime_evidence_status": [
+    " M .coding-tools/orchestration/ledger.sqlite3"
+  ],
+  "isolated_source_directory": "E:\\Github\\Tools-Codex-web\\dist\\control-plane-owner-standing-acceptance-20261011T053706Z\\source",
+  "main_head_and_index_preserved": true,
+  "operation": "isolated_owner_standing_acceptance_release_preparation",
+  "package_source_sha256": "sha256:fd5132676f1a68e875348fe790c6803c591f65a73311d793194c20a4e70b7d81",
+  "release_directory": "E:\\Github\\Tools-Codex-web\\dist\\control-plane-owner-standing-acceptance-20261011T053706Z\\release\\codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd",
+  "remote_mutations": false,
+  "review_archive": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\folder-permissions-20261011\\server-acceptance-fix\\codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd.tar.gz",
+  "review_archive_sha256": "4ae84292797d93180d30fd938652b604c43ed85cf651f152be8c0b6b9e5955ea",
+  "review_manifest": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\folder-permissions-20261011\\server-acceptance-fix\\candidate-release-manifest.json",
+  "runtime_and_deploy_file_changes": [
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/store.py",
+        "sha256": "99d3eba656a269886a842bc357a14222eb811bbb7dea8d0538c210d5f3edcf40",
+        "size_bytes": 459335
+      },
+      "deployed": {
+        "path": "control-plane/control_plane/store.py",
+        "sha256": "96db42eda0f332d707341d877e51a4ba178347e17149e019dc57b2abed8b20a4",
+        "size_bytes": 459047
+      },
+      "path": "control-plane/control_plane/store.py"
+    }
+  ],
+  "source_changes": [
+    "control-plane/control_plane/store.py",
+    "control-plane/tests/test_mcp_task_sessions.py"
+  ],
+  "source_revision": "70de202d93c9a759befe5d38491ce54e9ef4b3cd",
+  "unchanged_release_file_count": 35
+}

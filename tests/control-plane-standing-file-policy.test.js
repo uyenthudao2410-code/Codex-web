@@ -59,6 +59,7 @@ function observed(kind, enabled = true) {
     ...installReceipt(kind),
     operation: kind === 'file_read' ? 'control_plane_file_read_policy_observation' : 'control_plane_approved_patch_policy_observation',
     state: enabled ? 'enabled' : 'expired_or_disabled', enabled,
+    facade_contract: facade,
     workspace_id: workspaceId, workspace_generation: workspaceGeneration
   };
 }
@@ -133,10 +134,71 @@ test('policy receipt parsers reject wrong target, stale mode and narrower or fab
     { code: 'CONTROL_PLANE_FILE_POLICY_OUTPUT_INVALID' });
   assert.deepEqual(parseStandingFilePolicyObservation(JSON.stringify(observed('file_read')), 'file_read'), {
     state: 'enabled', enabled: true, workspace_id: workspaceId,
-    workspace_generation: workspaceGeneration, policy_sha256: 'b'.repeat(64)
+    workspace_generation: workspaceGeneration, policy_sha256: 'b'.repeat(64), facade_contract: facade
   });
   assert.equal(parseStandingFilePolicyObservation(JSON.stringify({ ...observed('approved_patch'), allowed_prefixes_sha256: 'f'.repeat(64) }), 'approved_patch').state,
     'not_current_standing');
+});
+
+test('file observations expose installed facade and authenticate one fresh current contract for both lanes', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-file-contract-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const commands = [];
+  const stale = { ...facade, sha256: 'f'.repeat(64) };
+  const service = new ControlPlaneEnrollmentService({ paths: fixturePaths(root),
+    runner: async (_command, args) => {
+      const operation = args[2]; commands.push(operation);
+      const payload = operation === 'inspect-policy-authority' ? authority()
+        : { ...observed(operation === 'inspect-file-read-policy' ? 'file_read' : 'approved_patch'), facade_contract: stale };
+      return { stdout: JSON.stringify(payload) };
+    }
+  });
+  const result = await service.inspectStandingWorkspaceFilePolicies();
+  for (const policy of [result.file_read, result.approved_patch]) {
+    assert.deepEqual(policy.facade_contract, stale);
+    assert.deepEqual(policy.current_facade_contract, facade);
+    assert.ok(Number.isSafeInteger(policy.authority_observed_at_ms));
+  }
+  assert.equal(commands.filter(command => command === 'inspect-policy-authority').length, 1);
+  assert.equal(commands.some(command => command.startsWith('install-')), false);
+});
+
+test('file observations cannot reuse missing, invalid or unavailable current facade evidence', async (t) => {
+  for (const installed of [null, { ...facade, schema_version: 0 }, { ...facade, sha256: 'invalid' }, { ...facade, extra: true }]) {
+    assert.throws(() => parseStandingFilePolicyObservation(JSON.stringify({ ...observed('file_read'), facade_contract: installed }), 'file_read'),
+      { code: 'CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID' });
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-file-contract-unknown-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  for (const freshness of ['stale', 'future', 'unavailable', 'wrong-target']) {
+    const service = new ControlPlaneEnrollmentService({ paths: fixturePaths(root), runner: async (_command, args) => {
+      if (args[2] === 'inspect-policy-authority') {
+        if (freshness === 'unavailable') throw Object.assign(new Error('not returned'), { code: 'AUTHORITY_OFFLINE' });
+        const response = authority();
+        if (freshness === 'stale') response.observed_at_ms = Date.now() - 60_000;
+        if (freshness === 'future') response.observed_at_ms = Date.now() + 60_000;
+        if (freshness === 'wrong-target') response.workspace_generation = 'generation_' + 'f'.repeat(32);
+        return { stdout: JSON.stringify(response) };
+      }
+      return { stdout: JSON.stringify(observed(args[2] === 'inspect-file-read-policy' ? 'file_read' : 'approved_patch')) };
+    } });
+    const result = await service.inspectStandingWorkspaceFilePolicies();
+    assert.equal(result.file_read.current_facade_contract, null, freshness);
+    assert.equal(result.approved_patch.authority_observed_at_ms, null, freshness);
+  }
+});
+
+test('file contract observation preserves the server write admission gate independently of read access', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-file-write-disabled-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const service = new ControlPlaneEnrollmentService({ paths: fixturePaths(root), runner: async (_command, args) => ({
+    stdout: JSON.stringify(args[2] === 'inspect-policy-authority' ? { ...authority(), standing_write_enabled: false }
+      : observed(args[2] === 'inspect-file-read-policy' ? 'file_read' : 'approved_patch'))
+  }) });
+  const result = await service.inspectStandingWorkspaceFilePolicies();
+  assert.deepEqual(result.file_read.current_facade_contract, facade);
+  assert.equal(result.approved_patch.current_facade_contract, null);
+  assert.equal(result.approved_patch.reason, 'CONTROL_PLANE_PATCH_POLICY_NOT_ADMITTED');
 });
 
 test('read-only policy transition disables a previously enabled patch lane before installing a new read lane', async (t) => {

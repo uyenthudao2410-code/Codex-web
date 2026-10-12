@@ -32,7 +32,8 @@ const RUNTIME_ID_RE = /^[A-Za-z0-9_.:@-]{1,256}$/;
 const TASK_ID_RE = /^task_[a-f0-9]{32}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ORCHESTRATION_ID_RE = /^[a-f0-9]{32}$/;
-const COMMAND_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/;
+// Native command IDs are URL-safe opaque tokens and may begin with '-' or '_'.
+const COMMAND_ID_RE = /^[A-Za-z0-9_-][A-Za-z0-9_.:-]{2,255}$/;
 const LOCAL_HANDLE_RE = /^cp_exec_[a-f0-9]{48}$/;
 const EXEC_OPERATIONS = new Set(['exec_run', 'exec_poll', 'exec_stop']);
 const EXEC_SIGNALS = new Set(['TERM', 'KILL', 'INT']);

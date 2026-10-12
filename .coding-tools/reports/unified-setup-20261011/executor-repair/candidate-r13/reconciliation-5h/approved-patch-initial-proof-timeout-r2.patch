@@ -1,0 +1,113 @@
+diff --git a/electron/services/runtimeOrchestrator.js b/electron/services/runtimeOrchestrator.js
+--- a/electron/services/runtimeOrchestrator.js
++++ b/electron/services/runtimeOrchestrator.js
+@@ -2011,6 +2011,9 @@
+     // primitive.  This produces canonical RUN/WAVE/idempotency evidence in
+     // the local ledger.  An exact file patch does not spawn an OS process, so
+     // do not invent a managed-process Job or treat a PID as authorization.
++    const verificationDeadline = verificationPlan
++      ? Date.now() + verificationPlan.timeout_ms + CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS + 30000
++      : null;
+     let structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {
+       task_context_id: localTaskContextId,
+       idempotency_key: localIdempotencyKey,
+@@ -2026,7 +2029,9 @@
+       verification: 'none',
+       ...(verificationPlan ? { initial_verification: verificationPlan,
+         initial_verification_expires_at_ms: admission.expires_at_ms } : {})
+-    }, 'workflow');
++    }, 'workflow', verificationPlan
++      ? Math.max(1, verificationDeadline - Date.now())
++      : CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS);
+     if (verificationPlan && structured?.status === 'running') {
+       const operationId = structured.background_operation?.operation_id;
+       if (typeof operationId !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(operationId)
+@@ -2036,7 +2041,7 @@
+           code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_INVALID'
+         });
+       }
+-      const deadline = Date.now() + verificationPlan.timeout_ms + CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS + 30000;
++      const deadline = verificationDeadline;
+       while (Date.now() < deadline) {
+         const observed = await callLocalTool('task_control', {
+           task_context_id: localTaskContextId, action: 'operation', operation_id: operationId,
+diff --git a/tests/control-plane-approved-patch-runtime.test.js b/tests/control-plane-approved-patch-runtime.test.js
+--- a/tests/control-plane-approved-patch-runtime.test.js
++++ b/tests/control-plane-approved-patch-runtime.test.js
+@@ -195,6 +195,14 @@
+   action.exec_policy_sha256 = 'e'.repeat(64);
+   action.expires_at_ms = Date.now() + 600000;
+   const calls = [];
++  const requestTimeouts = [];
++  const request = http.request;
++  let now = Date.now();
++  t.mock.method(Date, 'now', () => now);
++  t.mock.method(http, 'request', function (options, ...argumentsList) {
++    requestTimeouts.push(options.timeout);
++    return Reflect.apply(request, this, [options, ...argumentsList]);
++  });
+   let workflowArguments;
+   const operationId = 'background_opaque_operation';
+   const proof = { plan_sha256: digest(action.verification), proof_status: 'failed', proof_ids: ['4'.repeat(32)], proof_fingerprint: null,
+@@ -213,6 +221,7 @@
+         assert.deepEqual(workflowArguments.initial_verification, action.verification);
+         assert.equal(workflowArguments.initial_verification_expires_at_ms, action.expires_at_ms);
+         assert.equal(workflowArguments.verification, 'none');
++        now += 325_000; // Simulate elapsed handoff/setup without a real wait.
+         fs.writeFileSync(item.target, action._after, 'utf8');
+         return send(response, body.id, { status: 'running', background_operation: {
+           operation_id: operationId, tool: 'agent_workflow', workspace: item.registeredRoot, status: 'running' } });
+@@ -221,6 +230,7 @@
+       assert.equal(body.params.name, 'task_control');
+       assert.equal(body.params.arguments.action, 'operation');
+       assert.equal(body.params.arguments.operation_id, operationId);
++      assert.equal(body.params.arguments.wait_ms, 5_000);
+       assert.equal(body.params.arguments.task_context_id, workflowArguments.task_context_id);
+       const completed = approvedPatchWorkflowResult(action, workflowArguments.idempotency_key);
+       Object.assign(completed.execution, { ok: false, status: 'failed', initial_verification: proof });
+@@ -239,9 +249,45 @@
+   assert.equal(result.patch_applied, true);
+   assert.equal(result.local_semantic_acceptance, 'pending');
+   assert.equal(result.initial_verification.proof_status, 'failed');
++  assert.deepEqual(requestTimeouts, [12_000, 330_000, 15_000]);
+   assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
+   assert.equal(result.response_sha256, digest({ file: result.file, initial_verification: proof }));
+   assertLocalMcpSchemaAccepts(calls);
++});
++
++test('initial verification expires its original observation budget without another write or poll', async (t) => {
++  const item = fixture(t);
++  const action = admission(item.registeredRoot);
++  action.verification = { argv: ['node', '--test'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };
++  action.exec_policy_sha256 = 'e'.repeat(64);
++  action.expires_at_ms = Date.now() + 600000;
++  let now = Date.now();
++  t.mock.method(Date, 'now', () => now);
++  const calls = [];
++  const server = http.createServer((request, response) => {
++    const chunks = [];
++    request.on('data', chunk => chunks.push(chunk));
++    request.on('end', () => {
++      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
++      calls.push(body);
++      if (calls.length === 1) return send(response, body.id, { workspace: item.registeredRoot });
++      assert.equal(body.params.name, 'agent_workflow');
++      assert.equal(calls.length, 2, 'an exhausted budget must not poll or start another workflow');
++      fs.writeFileSync(item.target, action._after, 'utf8');
++      now += 330_001;
++      send(response, body.id, { status: 'running', background_operation: {
++        operation_id: 'background_expired_operation', tool: 'agent_workflow', workspace: item.registeredRoot, status: 'running' } });
++    });
++  });
++  await listen(server);
++  t.after(() => server.close());
++  const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });
++  await assert.rejects(context.orchestrator.controlPlaneApprovedPatch(action), {
++    code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_UNCONFIRMED'
++  });
++  assert.equal(calls.length, 2);
++  assert.equal(calls.filter(call => call.params.name === 'agent_workflow').length, 1);
++  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
+ });
+ 
+ test('initial verification cannot write before independent local exec admission', async (t) => {

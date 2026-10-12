@@ -1,0 +1,27 @@
+{
+  "kind": "pure_same_expiry_recovery_final_receipt_proof",
+  "helper_sha256": "8f260b9c43da8facda48d2a73c60b3ec298f104890e8ba9e181c1751fa482744",
+  "syntax_passed": true,
+  "receipt_fields_verified": [
+    "source_revision",
+    "package_source_sha256",
+    "service_grant_preserved",
+    "observed_at_ms",
+    "requested_at_ms",
+    "expires_at_ms",
+    "original_pilot_id",
+    "authority_renewed",
+    "original_marker_modified",
+    "service_grant_changed",
+    "command_replayed",
+    "pending_acceptance_changed"
+  ],
+  "prior_guard_proof": "r10-same-expiry-recovery-static-proof.json",
+  "prior_guard_helper_sha256": "c796a36e4747be0a10df46e99e8b0c1c63d0d004e1a95174e30fa238465e3dad",
+  "prior_guard_positive_cases": 2,
+  "prior_guard_negative_cases": 7,
+  "guard_cases_rerun": false,
+  "v3_unchanged": true,
+  "main_invoked": false,
+  "live_operations": false
+}

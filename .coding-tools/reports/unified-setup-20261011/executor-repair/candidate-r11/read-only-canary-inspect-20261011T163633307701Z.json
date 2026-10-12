@@ -1,0 +1,17 @@
+{
+  "ok": false,
+  "phase": "root_read_only_canary_inspection",
+  "ssh_returncode": 2,
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T163335163457Z",
+  "public_receipts": [
+    {
+      "ok": false,
+      "phase": "read_only_inspection_failed",
+      "code": "READ_ONLY_INSPECTION_FAILED",
+      "remote_mutation": false
+    }
+  ],
+  "stderr_disclosed": false,
+  "remote_mutation": false,
+  "receipt_path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r11\\read-only-canary-inspect-20261011T163633307701Z.json"
+}

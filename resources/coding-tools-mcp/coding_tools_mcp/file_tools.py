@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import ToolFailure
+from .approved_patch_verification import require_initial_verification_patch_origin
 from .fs_utils import (
     ResolvedPath,
     DEFAULT_EXCLUDED_NAMES,
@@ -726,6 +727,12 @@ class FileToolsMixin:
             if not affected:
                 raise ToolFailure("PATCH_FAILED", "No files were modified.", category="validation")
             if not dry_run:
+                if args.get("_approved_patch_verification_origin") is not None or args.get("_approved_patch_verification_plan") is not None:
+                    try:
+                        require_initial_verification_patch_origin(self, args)
+                    except ToolFailure as exc:
+                        exc.details = {**exc.details, "workflow_patch_preflight": True}
+                        raise
                 self._commit_staged_files(list(staged.values()))
         return {
             "dry_run": dry_run,

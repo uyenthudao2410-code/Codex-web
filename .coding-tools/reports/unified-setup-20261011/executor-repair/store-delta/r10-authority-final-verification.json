@@ -1,0 +1,19 @@
+{
+  "captured_at_utc": "2026-10-11T12:16:17.306807+00:00",
+  "fixed_deadline_helper_unchanged": true,
+  "guard_cases_failed": 0,
+  "guard_cases_passed": 5,
+  "helper_sha256": "ab182f47b605e5edac1e30cb9cdf48ca53a571f0cbb5367a0f6fb837cbe0c9af",
+  "literal_api_routes": [
+    "/healthz",
+    "/v1/contexts",
+    "/v1/maintenance/admission",
+    "/v1/scoped-pilot-decisions",
+    "/v1/ui/overview"
+  ],
+  "local_whitespace": "pass",
+  "no_policy_grant_or_acceptance_route": true,
+  "operation": "r10_store_authority_final_local_review",
+  "remote_execution": false,
+  "syntax": "pass"
+}

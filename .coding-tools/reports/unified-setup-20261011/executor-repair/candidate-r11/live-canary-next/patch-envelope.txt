@@ -1,0 +1,5 @@
+*** Begin Patch
+*** Write Exact File: tests/fixtures/initial-proof-canary-target.cjs
+@@ encoding=zlib-base64 preimage_sha256=90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650 postimage_sha256=d1edd529d09c7d4f71dfbb9e9b9e53010cc43a616cf1247594ddf4d705b84a1e
++eJxlkMFqAzEMRO/+CvXkBLqbD1hyKPTeQ3srPai23BU4tpHkkBD238t2Cyn0Kr2Z0ch3JVATDuYn5w4HeGk2cAEMgZphCQSJL9aFRnibVxbFuHzBmUS5FuBiVIxrwZyvcGINGVU5Melql5AzRWhSa5rAZgJsTeqZItRCQ+JM0NDCDKeuBqGKUDCwGQ0+acYzVxld6iWsGZvPM2uryutgd9vUT61lpvi4Aa+G1hUWOMJt2cPNAXCC3V8SHo5HMOm0ByHrUsCXagNuWz/9St59Q1WK/mPkEnKPpLs/Efu7WgjjdUhVhvvrfmzuQMtY/OQW50419kwjXVoV0/XMf81gmdw3ucySYQ==
+*** End Patch

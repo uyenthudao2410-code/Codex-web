@@ -1,0 +1,37 @@
+{
+  "action_id": "act_b2335c57472b4d68931d10dda1572ff9",
+  "captured_at_utc": "2026-10-11T22:58:18.345558+00:00",
+  "common_sha256": "25f2d15359ff49a50e1ded411d40f1f029fb6067390c68aff9b93bda0130d986",
+  "files": {
+    "observe-exact-action.py": {
+      "sha256": "e986358941fc7ec8260ff0a4c831f1d57193dbce915a7d0c6e7858139ac653c6",
+      "size_bytes": 9169
+    },
+    "root-query-ssh.py": {
+      "sha256": "86a613eb88f1ebe796820393c782c5f10713ea6faca4fc9ffe7f1201d22cd832",
+      "size_bytes": 2519
+    }
+  },
+  "query_sha256": "e986358941fc7ec8260ff0a4c831f1d57193dbce915a7d0c6e7858139ac653c6",
+  "remote_directory": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T225341342686Z",
+  "remote_mutation": false,
+  "staging": false,
+  "task_id": "task_3b2a2a860ca54ef7889d2efce6923dc7",
+  "validation": {
+    "checks": [
+      "two_python_syntax",
+      "manifest_pins",
+      "readonly_sqlite_uri",
+      "query_only_snapshot_close",
+      "database_bytes_unchanged",
+      "unknown_missing_patch_not_false",
+      "safe_diagnostic_projection",
+      "bounded_completed_proof_projection",
+      "wrong_target_rejected_and_closed"
+    ],
+    "mode": "local synthetic database and compile only",
+    "ok": true,
+    "runtime_effects_by_lane": false,
+    "ssh_executed_by_lane": false
+  }
+}

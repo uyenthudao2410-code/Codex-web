@@ -1,0 +1,42 @@
+{
+  "kind": "r12_windows_activation_packet_local_proof",
+  "observed_at": "2026-10-11T17:47:31.848Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "manifest_sha256": "9cc8757de276c304a77aa4c5445a995b84eedaa8996f9dc4b0ecd6f08d769486",
+  "transition_sha256": "ee99a7340315fce1ae2eedc3278c6f6e9b73f7f9b6ded1075083a944650fb705",
+  "candidate_source_payload_files_matched": 15,
+  "helper_dependencies_source_payload_matched": 7,
+  "checks": [
+    {
+      "name": "synthetic authority and pending/standing-policy guards",
+      "command": "node --test offline-check.cjs",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "name": "Node parse",
+      "passed": true
+    },
+    {
+      "name": "Windows PowerShell parser",
+      "parse_errors": 0
+    },
+    {
+      "name": "query-job.py compile-only",
+      "passed": true
+    },
+    {
+      "name": "scoped whitespace",
+      "passed": true
+    }
+  ],
+  "runtime_queries_performed": false,
+  "runtime_activated": false,
+  "connected_agent_started": false,
+  "server_mutated": false,
+  "semantic_acceptance_performed": false,
+  "source_or_package_edited": false,
+  "committed": false,
+  "pushed": false
+}

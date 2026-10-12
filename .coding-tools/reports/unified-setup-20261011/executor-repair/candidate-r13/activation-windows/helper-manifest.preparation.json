@@ -1,0 +1,33 @@
+{
+  "kind": "r13_windows_activation_helper_manifest",
+  "runtime_activated": false,
+  "server_mutated": false,
+  "approval_required": "Future explicit r13 activation approval; packet preparation does not grant authority",
+  "based_on_r12_transition_sha256": "71972c3aa7f88cb625d44507ef5e3b69ca6921a21d6f2520bde0fff5119f5927",
+  "dependencies": [
+    {
+      "file": "electron/services/runtimePaths.js",
+      "sha256": "a28fe23a10daa10baeb9c437ccee13cff2c1d28585d1c6daa3e5a23844d23474"
+    },
+    {
+      "file": "electron/services/recoveryIpc.js",
+      "sha256": "57e0154c4d9f80bcfc5fa95ec5c4643de436d8fe945e9b3ab884afd9b8faebc2"
+    },
+    {
+      "file": "electron/services/recoveryHostLauncher.js",
+      "sha256": "92cb2478ae940c737a8e8a007181a9fa410b1eeb1e26a06b5bb07e1043ebf60a"
+    },
+    {
+      "file": "electron/services/processIdentity.js",
+      "sha256": "a0ee2b08cbe4108c352ba14b9532ceaf581497f745a2adda7924c819a972809f"
+    },
+    {
+      "file": "electron/services/fullCleanActivation.js",
+      "sha256": "881ffbdc57d4332ec1d6316199d2876d58821447b30cc861eade4c2c3d31baf1"
+    },
+    {
+      "file": "electron/services/controlPlaneRouteEvidence.js",
+      "sha256": "c36e027eaffcdb35d23032ba9a70d49a8838e4585e0136020b94262d4a7665ac"
+    }
+  ]
+}

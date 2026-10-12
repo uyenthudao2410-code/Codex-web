@@ -1,0 +1,273 @@
+{
+  "kind": "r10_controlled_acceptance_evidence_manifest",
+  "schema_version": 1,
+  "captured_at": "2026-10-11T13:43:11.689102+00:00",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "repository_branch": "main",
+  "dirty": true,
+  "checkpoint_at": "2026-10-11T13:38:26.304Z",
+  "claims": {
+    "recovered_initial_tap_pass": 4,
+    "recovered_warm_tap_pass": 4,
+    "fresh_cold_start_proven": false,
+    "vm_cleanup_proven": false,
+    "source_bound_patch_proof_proven": false,
+    "native_semantic_acceptance_proven": false,
+    "timeout_attempted": false,
+    "authority_renewed_during_recovery": false,
+    "source_package_parity_scope": "pre_initial_proof_adapter_snapshot_only"
+  },
+  "root_observed_verifier_results": [
+    {
+      "mode": "original_cold",
+      "verifier": "v2",
+      "ok": true,
+      "artifact_result_retained": true,
+      "evidence_path": "mcp-acceptance/root-witnessed-job-correlations.json",
+      "evidence_class": "root_tool_observation_summary"
+    },
+    {
+      "mode": "recovered_initial",
+      "verifier": "v3",
+      "ok": true,
+      "artifact_result_retained": true,
+      "evidence_path": "mcp-acceptance/root-witnessed-job-correlations.json",
+      "evidence_class": "root_tool_observation_summary"
+    },
+    {
+      "mode": "recovered_warm",
+      "verifier": "v3",
+      "ok": true,
+      "artifact_result_retained": true,
+      "evidence_path": "mcp-acceptance/root-witnessed-job-correlations.json",
+      "evidence_class": "root_tool_observation_summary"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "mcp-acceptance/transport-execute-cold-20261011T133513484505Z.jsonl",
+      "bytes": 5794,
+      "sha256": "378918499ef5d8aedb9fa9b47f9b3827b46e9e514a00f4253aa5a6f33277d239",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/transport-execute-warm-20261011T133649546404Z.jsonl",
+      "bytes": 5794,
+      "sha256": "312a5ad1bca4066aa12039f836fb35acff7662aae9ed1eb8d70c339f71967920",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/transport-discover-20261011T133741062016Z.jsonl",
+      "bytes": 1233,
+      "sha256": "ee9679a025482c983307f427e0a22bea118ebdd23c157b51497efee7d3ec5370",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/transport-execute-cold-20261011T130654124612Z.jsonl",
+      "bytes": 5793,
+      "sha256": "c3ab3f3cb0d80c5023f32efc20a964586fdd3dcfdd7bea361f2e91120eba4e6a",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/native-local-2026-10-11T13-34-05-092Z-985e3873.json",
+      "bytes": 4781,
+      "sha256": "f417cab0a8e1630205b7cd8b9d6aa54942d7c0030509e3f2e10c73fd9a383919",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/native-local-2026-10-11T13-36-25-091Z-6d25b190.json",
+      "bytes": 5302,
+      "sha256": "c77284170c97589222c735e972378e85fd4ef8626fa66be536c88ae6e9dfc8c7",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/pins.root-reviewed.recovered-initial.json",
+      "bytes": 832,
+      "sha256": "76c320ed3892c53745487446d4f33a1da82866cbbc3b1ef2f3057f56642efe6b",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/pins.root-reviewed.recovered-warm.json",
+      "bytes": 832,
+      "sha256": "6865bcf50491165a387e0807509ca06d75acd842586b3cb30ede813aede89a1a",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/verify-r10-native-job-v2.py",
+      "bytes": 10692,
+      "sha256": "693f5783cff04fc2130b9d1085fcdbaf8d60dbcd578d2e763bacaaf5ea02709f",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/verify-r10-native-job-v3.py",
+      "bytes": 11297,
+      "sha256": "7109c9ca8ece117601a2295369884c2d37f04bfd674552844d8cc8be50e6527e",
+      "append_only": false
+    },
+    {
+      "path": "activation/server-recovery-reopened.json",
+      "bytes": 1797,
+      "sha256": "40e3a076fd0bc3a81663576e8e577286b52730414d6f2fb8016d6e562294f0ed",
+      "append_only": false
+    },
+    {
+      "path": "activation/windows-trial-recovery.jsonl",
+      "bytes": 16828,
+      "sha256": "1931fda594528a5d0dfb4c9e823f731b410ea3f04ee0f874ec6102af3c18ce3b",
+      "append_only": true
+    },
+    {
+      "path": "activation/runtime-parent-job-observation-20261011T133219172254Z.json",
+      "bytes": 3493,
+      "sha256": "5c1b36e85ff433b1e8c2eb949704c7afa8cfc3f6c64486c73ea22730df5e319f",
+      "append_only": false
+    },
+    {
+      "path": "activation/runtime-parent-job-observation-20261011T133351132904Z.json",
+      "bytes": 5065,
+      "sha256": "41fdd004413049f3ae29ae3136f3d8fe00cfb356e7fd27f2a21760a8a9a2f2ec",
+      "append_only": false
+    },
+    {
+      "path": "candidate-parity-20261011T115907669Z.json",
+      "bytes": 585157,
+      "sha256": "c9f6fe1313b6004519a61bebf3f8f173a74cfd1d563bef48fce87908ed72f57c",
+      "append_only": false
+    },
+    {
+      "path": "mcp-acceptance/root-witnessed-job-correlations.json",
+      "bytes": 1562,
+      "sha256": "83d9900edaf2467a6c62c956b9a7bf1c296e34d73827e74e5941d054e5872322",
+      "append_only": false,
+      "evidence_class": "root_tool_observation_summary_not_raw_capture"
+    }
+  ],
+  "selected_timestamped_rows": [
+    {
+      "path": "activation/windows-trial-recovery.jsonl",
+      "line": 17,
+      "raw_line_sha256": "fd95d12b419628aa26c97cc4c1bf15684d0602a9a5dd1e93223bee78a49d36f8",
+      "phase": "final_census",
+      "observed_at": "2026-10-11T13:38:25.587Z",
+      "safe_projection": {
+        "observed_at": "2026-10-11T13:38:25.587Z",
+        "helper_sha256": "6c4fe7b6747cb11b330d4f5318a8649eeaef0942241bc44e3b98cc060acf52d8",
+        "phase": "final_census",
+        "tag": "r10",
+        "safe": false,
+        "code": "RUNTIME_BUSY",
+        "counts": {
+          "active_tool_calls": 0,
+          "active_commands": 0,
+          "starting_commands": 0,
+          "active_background_operations": 0,
+          "active_managed_processes": 0,
+          "foreign_heavy_processes": 0,
+          "active_agent_lanes": 0,
+          "threshold_sensitive_stale_candidates": 17,
+          "owned_codex_sidecar_residues": 0
+        },
+        "lifecycle": {
+          "unexplained_active_runs": 0,
+          "unbound_live_resource_residues": 0,
+          "projection_drift": false,
+          "ordinary_active_runs": 18,
+          "awaiting_acceptance_runs": [
+            "95e909f0040a448faa9f1f3257e2ee2c"
+          ],
+          "live_owned_runs": [],
+          "active_p5_runs": [],
+          "blockers": [
+            "live_runtime_state_process"
+          ]
+        },
+        "reason": "live_runtime_state_process",
+        "ledger_mutated": false,
+        "content_free": true,
+        "census_fingerprint": "0a8766f942cda401ec0d216d83c1fe172fa66ebf6d985c95bd2a4090d6f88f9f",
+        "snapshot": {
+          "logical_sha256": "a81f1be72b96edee35c14a1c1897af24662f25b978068d28e6311108b83dbb81",
+          "integrity_check": [
+            "ok"
+          ]
+        }
+      }
+    },
+    {
+      "path": "activation/windows-trial-recovery.jsonl",
+      "line": 18,
+      "raw_line_sha256": "d77174be86d7ed630ca16197f1890994f25305d41dfbe0c677e44e9cef691711",
+      "phase": "final_proof",
+      "observed_at": "2026-10-11T13:38:26.304Z",
+      "safe_projection": {
+        "observed_at": "2026-10-11T13:38:26.304Z",
+        "helper_sha256": "6c4fe7b6747cb11b330d4f5318a8649eeaef0942241bc44e3b98cc060acf52d8",
+        "phase": "final_proof",
+        "tag": "r10",
+        "candidate": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-setup-exec-contract-1011-r10\\win-unpacked",
+        "profile": "web-mcp-assistant",
+        "identities": {
+          "host": {
+            "state": "live",
+            "pid": 25868,
+            "process_start_token": "134361991050098600"
+          },
+          "ui": {
+            "state": "live",
+            "pid": 26252,
+            "process_start_token": "134361991148631080"
+          },
+          "native": {
+            "state": "live",
+            "pid": 17488,
+            "process_start_token": "134361991080061930"
+          },
+          "agent": {
+            "state": "live",
+            "pid": 25208,
+            "process_start_token": "134361991578800960"
+          }
+        },
+        "epoch": {
+          "activation_epoch_id": "activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2",
+          "state": "READY",
+          "admission_open": true,
+          "update_incomplete": false
+        },
+        "fully_ready": true,
+        "local_ready": true,
+        "central_connected": true,
+        "authority_ready": true,
+        "awaiting_acceptance_runs": [
+          "95e909f0040a448faa9f1f3257e2ee2c"
+        ],
+        "pending_acceptance": {
+          "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+          "wave_id": "c101beadfc6d4f2fbc13845052c84693",
+          "run_record_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+          "wave_record_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+          "unchanged": true
+        },
+        "app_asar_sha256": "c39a614d40f551f0ddef4e579bcd8ef5d8d3ad365bbd43e22693df8c1f9672e9",
+        "executable_sha256": "6e34a6705a647aaddda0d24f2152904006a504ab7a29ba516b686c6de29ef09f",
+        "parity_sha256": "c9f6fe1313b6004519a61bebf3f8f173a74cfd1d563bef48fce87908ed72f57c",
+        "ledger_mutated_by_helper": false,
+        "standing_policies_reinstalled": false,
+        "standalone_sandbox_probe_performed": false,
+        "live_sandbox_exec_proven": false,
+        "acceptance_performed": false,
+        "command_replay_performed": false,
+        "vm_termination_performed": false,
+        "windows_restarted": false,
+        "pushed": false
+      }
+    }
+  ],
+  "mutations_by_documentation_lane": {
+    "source": false,
+    "runtime": false,
+    "authority": false,
+    "ledger": false,
+    "commands_repeated": false
+  }
+}

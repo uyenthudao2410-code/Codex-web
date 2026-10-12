@@ -1,0 +1,79 @@
+{
+  "kind": "pure_v3_local_preparation_guard_verification",
+  "helper_sha256": "a312575854fee785158fa21624a096d7b09ae3701ded38f449a7330ba089ebec",
+  "proof_fixture_sha256": "6fa6d9710b7236605cbc9553bf1d84a76fb90ffcd2cb4936a341735f645e61bb",
+  "positive": "genuine emitted schema accepted at synthetic fresh time",
+  "negative_cases": [
+    {
+      "name": "wrong_target",
+      "code": "LOCAL_TARGET_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "wrong_package",
+      "code": "LOCAL_PACKAGE_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "host_pid_reuse",
+      "code": "LOCAL_OWNER_IDENTITY_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "durable_ready_closed",
+      "code": "LOCAL_DURABLE_READY_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "raw_epoch_incomplete",
+      "code": "LOCAL_RAW_EPOCH_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "old_agent_restart",
+      "code": "OLD_AGENT_MUST_REMAIN_ABSENT",
+      "passed": true
+    },
+    {
+      "name": "pending_wave_changed",
+      "code": "LOCAL_PENDING_ACCEPTANCE_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "active_job",
+      "code": "LOCAL_ACTIVE_JOB_OR_LANE",
+      "passed": true
+    },
+    {
+      "name": "sandbox_present",
+      "code": "LOCAL_VM_NOT_ZERO",
+      "passed": true
+    },
+    {
+      "name": "exec_allowlist_changed",
+      "code": "LOCAL_EXEC_ALLOWLIST_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "bad_raw_hash",
+      "code": "LOCAL_PREPARATION_BYTES_CHANGED",
+      "passed": true
+    },
+    {
+      "name": "stale_local_proof",
+      "code": "LOCAL_PREPARATION_NOT_FRESH",
+      "passed": true
+    },
+    {
+      "name": "future_local_proof",
+      "code": "LOCAL_PREPARATION_NOT_FRESH",
+      "passed": true
+    }
+  ],
+  "production_source_modified": false,
+  "runtime_executed": false,
+  "authority_mutated": false,
+  "v2_unchanged": true,
+  "syntax_passed": true,
+  "case_count": 14
+}

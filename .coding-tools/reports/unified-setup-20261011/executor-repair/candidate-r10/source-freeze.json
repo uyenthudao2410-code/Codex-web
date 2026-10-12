@@ -1,0 +1,182 @@
+{
+  "kind": "r10_source_freeze",
+  "observed_at": "2026-10-11T11:43:06.063Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "candidate_tag": "setup-exec-contract-1011-r10",
+  "r9_identity": {
+    "path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-parity-executor-lifecycle-1011-r9-20261011T110727929Z.json",
+    "sha256": "c2427d0ff484a94f4437762700ddf144fc41e7f57412491e4421aa22f0e36ec6",
+    "app_asar_sha256": "3bc75601041ef35b9fd894878b9f1905117512e3fc6f74d6102575b0f1edb226",
+    "executable_sha256": "fadc2feb4bb566b3fa22f22ea918c7175f39fa6b74eb7ccb9d2a1d6bab1b6211"
+  },
+  "source_files": [
+    {
+      "source": "renderer/app.js",
+      "payload": "app.asar/renderer/app.js",
+      "bytes": 215022,
+      "sha256": "151084d77536dd0458ceadd66d7579b2792dec4211ebce397acdc559d0788925"
+    },
+    {
+      "source": "electron/services/runtimeOrchestrator.js",
+      "payload": "app.asar/electron/services/runtimeOrchestrator.js",
+      "bytes": 224666,
+      "sha256": "f55750c3c6a440b5bb94920bbb043cf21147502560a980dd8c14982088abfa97"
+    },
+    {
+      "source": "electron/services/recoveryIpc.js",
+      "payload": "app.asar/electron/services/recoveryIpc.js",
+      "bytes": 25194,
+      "sha256": "57e0154c4d9f80bcfc5fa95ec5c4643de436d8fe945e9b3ab884afd9b8faebc2"
+    },
+    {
+      "source": "electron/services/controlPlaneExecBridge.js",
+      "payload": "app.asar/electron/services/controlPlaneExecBridge.js",
+      "bytes": 25207,
+      "sha256": "a699a8e035f56c9e588c6e1657863b78ca040a149d48424ba464c7a6942b73ff"
+    },
+    {
+      "source": "control-plane/control_plane/node_agent.py",
+      "payload": "resources/resources/control-plane/node_agent.py",
+      "bytes": 478557,
+      "sha256": "9eb1b8d7b82ca62b7275d1374c77a6f4d45b68145bfc396136943f57f0a64f32"
+    },
+    {
+      "source": "control-plane/control_plane/recovery_exec_bridge.cjs",
+      "payload": "resources/resources/control-plane/recovery_exec_bridge.cjs",
+      "bytes": 9604,
+      "sha256": "bba0d07378ca2b9b88ea11ee823822bb00ef718719de0851696f52086e5c1f45"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "bytes": 49365,
+      "sha256": "5a60db0bf9d2ef663d940983f6353114d2ccceefcb30731fcee765a73cba4de3"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_state_aware.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_state_aware.py",
+      "bytes": 50795,
+      "sha256": "c018af475973e7697868a1cdfee08a65aad66c28f21e98b796e2e373cabe1a6b"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_sandbox.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_sandbox.py",
+      "bytes": 50568,
+      "sha256": "60e5e1a029479db24d34a9652846396f45d50c1089da78dd2661bee79909029d"
+    },
+    {
+      "source": "resources/tools/mxc-windows-sandbox/wxc-exec.exe",
+      "payload": "resources/resources/tools/mxc-windows-sandbox/wxc-exec.exe",
+      "bytes": 5959168,
+      "sha256": "8668cf65887b51f2afb167da5fb8476f53ddc09341288e8f558c9e02c5c6e7cb"
+    },
+    {
+      "source": "resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-daemon.exe",
+      "payload": "resources/resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-daemon.exe",
+      "bytes": 1537536,
+      "sha256": "6232c7ee1628321d35aefa50e986805521e61b9b7c7c5bf255091d6250899fcf"
+    },
+    {
+      "source": "resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-guest.exe",
+      "payload": "resources/resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-guest.exe",
+      "bytes": 1422848,
+      "sha256": "c7fcb668abd7139a94145fabbe0d4397dcc2e9302ced11c19767809d14a3f9b5"
+    },
+    {
+      "source": "electron/main.js",
+      "payload": "app.asar/electron/main.js",
+      "bytes": 65792,
+      "sha256": "98e8711e6b7ff129c893b0582d7d41f85c97bec8cb8c92d35f500943c33ba880"
+    },
+    {
+      "source": "electron/preload.js",
+      "payload": "app.asar/electron/preload.js",
+      "bytes": 10298,
+      "sha256": "5178a56b919e27627e0c03a1825293f2edcd5d60390084cfebb3986c8ae0ae5a"
+    },
+    {
+      "source": "electron/browserPreload.js",
+      "payload": "app.asar/electron/browserPreload.js",
+      "bytes": 1552,
+      "sha256": "a1e38ebd018c43bf9bac68962fd4f1e432d633469a83cbbef115686c5dba508d"
+    },
+    {
+      "source": "renderer/index.html",
+      "payload": "app.asar/renderer/index.html",
+      "bytes": 102168,
+      "sha256": "dc7dceb03cae483a2509393225ae8ba1e1209144578ae87396c11eec6f0ae613"
+    },
+    {
+      "source": "renderer/styles.css",
+      "payload": "app.asar/renderer/styles.css",
+      "bytes": 46552,
+      "sha256": "45630138c42b1c5cd01a1811fb55e46e82682052aab251bfb637d39b6b26c360"
+    },
+    {
+      "source": "renderer/settings-compact.css",
+      "payload": "app.asar/renderer/settings-compact.css",
+      "bytes": 18473,
+      "sha256": "e02aa3a8cd77d123fac50c75459be644adeea85444b9496bf0b6d2636e5aa373"
+    },
+    {
+      "source": "renderer/theme-bootstrap.js",
+      "payload": "app.asar/renderer/theme-bootstrap.js",
+      "bytes": 3601,
+      "sha256": "bf26250d09b827622f45db5d4e46b977b826993b5cdba0efd62ac184ea5936a0"
+    }
+  ],
+  "unchanged_source_parity": [
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "source_sha256": "5a60db0bf9d2ef663d940983f6353114d2ccceefcb30731fcee765a73cba4de3",
+      "packaged_sha256": "5a60db0bf9d2ef663d940983f6353114d2ccceefcb30731fcee765a73cba4de3",
+      "bytes": 49365,
+      "byte_identical": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_state_aware.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_state_aware.py",
+      "source_sha256": "c018af475973e7697868a1cdfee08a65aad66c28f21e98b796e2e373cabe1a6b",
+      "packaged_sha256": "c018af475973e7697868a1cdfee08a65aad66c28f21e98b796e2e373cabe1a6b",
+      "bytes": 50795,
+      "byte_identical": true
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_sandbox.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_sandbox.py",
+      "source_sha256": "60e5e1a029479db24d34a9652846396f45d50c1089da78dd2661bee79909029d",
+      "packaged_sha256": "60e5e1a029479db24d34a9652846396f45d50c1089da78dd2661bee79909029d",
+      "bytes": 50568,
+      "byte_identical": true
+    },
+    {
+      "source": "resources/tools/mxc-windows-sandbox/wxc-exec.exe",
+      "payload": "resources/resources/tools/mxc-windows-sandbox/wxc-exec.exe",
+      "source_sha256": "8668cf65887b51f2afb167da5fb8476f53ddc09341288e8f558c9e02c5c6e7cb",
+      "packaged_sha256": "8668cf65887b51f2afb167da5fb8476f53ddc09341288e8f558c9e02c5c6e7cb",
+      "bytes": 5959168,
+      "byte_identical": true
+    },
+    {
+      "source": "resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-daemon.exe",
+      "payload": "resources/resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-daemon.exe",
+      "source_sha256": "6232c7ee1628321d35aefa50e986805521e61b9b7c7c5bf255091d6250899fcf",
+      "packaged_sha256": "6232c7ee1628321d35aefa50e986805521e61b9b7c7c5bf255091d6250899fcf",
+      "bytes": 1537536,
+      "byte_identical": true
+    },
+    {
+      "source": "resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-guest.exe",
+      "payload": "resources/resources/tools/mxc-windows-sandbox/wxc-windows-sandbox-guest.exe",
+      "source_sha256": "c7fcb668abd7139a94145fabbe0d4397dcc2e9302ced11c19767809d14a3f9b5",
+      "packaged_sha256": "c7fcb668abd7139a94145fabbe0d4397dcc2e9302ced11c19767809d14a3f9b5",
+      "bytes": 1422848,
+      "byte_identical": true
+    }
+  ],
+  "helper_sha256": "99e72e40eab53c47c996bdfaf24d69937f2a792958124e47e1dcd2673c14018a",
+  "runtime_activated": false,
+  "server_mutated": false
+}

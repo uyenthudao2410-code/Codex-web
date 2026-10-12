@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-10-11T10:55:58.2031671Z",
+  "source_repository": "https://github.com/microsoft/mxc",
+  "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+  "export_matches_pinned_checkout": true,
+  "nested_git_metadata": false,
+  "product_modified": false,
+  "execution_performed": false,
+  "patch_available": false,
+  "upstream_start_ready_seconds": 420,
+  "files": [
+    {
+      "path": "src/backends/windows_sandbox/lifecycle/src/state_aware.rs",
+      "sha256": "ede49addfe239a4907637b05ae36d2b4dc151946ac6ecc2b009ebda806233aa3",
+      "bytes": 85295
+    },
+    {
+      "path": "src/backends/windows_sandbox/lifecycle/src/vm.rs",
+      "sha256": "297c6be019d5f6a4be3972ca44c803c60a7bdc27b8a7a6c86741aa919dd9a149",
+      "bytes": 13946
+    },
+    {
+      "path": "src/backends/windows_sandbox/lifecycle/src/control_plane.rs",
+      "sha256": "f571d17acf31e537ed295371d644cca5ca13a2d0add6ce4c645b8e6b07274931",
+      "bytes": 53507
+    },
+    {
+      "path": "src/backends/windows_sandbox/lifecycle/src/rendezvous.rs",
+      "sha256": "205be3928efd2c63736da902ff09fc06530b07b70435899ae8c95b4e186c330a",
+      "bytes": 3251
+    },
+    {
+      "path": "src/backends/windows_sandbox/lifecycle/src/bridge.rs",
+      "sha256": "4489bc744d1963ce901def5abd7f449bc8dc18ed729143b999fdd65b9889288a",
+      "bytes": 53745
+    },
+    {
+      "path": "src/backends/windows_sandbox/daemon/src/main.rs",
+      "sha256": "ff5d20919ec95df82e46e45663319f675b6737a09307834bbf118af4b025dd21",
+      "bytes": 29248
+    },
+    {
+      "path": "src/backends/windows_sandbox/guest/src/main.rs",
+      "sha256": "ca64f303f0ba0d33efcd6df274d42766000c7c863995743ad849a84068a37695",
+      "bytes": 1971
+    },
+    {
+      "path": "src/backends/windows_sandbox/guest/src/listener.rs",
+      "sha256": "45c0494931d6d42658e3a31298548d08ad67d29851dbca40655837719091aef1",
+      "bytes": 19920
+    },
+    {
+      "path": "src/backends/windows_sandbox/guest/src/firewall.rs",
+      "sha256": "7336a1aa58ba57ee30beb6d7cd26aeba828e536c181a41e4b4ad8dc3397d04f9",
+      "bytes": 3002
+    },
+    {
+      "path": "src/backends/windows_sandbox/common/src/auth.rs",
+      "sha256": "b5478127f32497c749825f08b7ff0d43643dbe7d216b96a00aff7f05120cffd1",
+      "bytes": 12540
+    }
+  ]
+}

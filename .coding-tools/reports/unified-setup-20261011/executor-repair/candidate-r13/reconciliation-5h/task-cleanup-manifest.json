@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "approval_id": "call_a60e931056bd402b997c6c10b0796d81",
+  "helper_sha256": "ea3c941f4cd5eb49541998a3ead516ee0620c7df1883c1e9e2cbad9c194b17b0",
+  "driver_sha256": "8b8c724d6dec98251bb7d30a6714f7a08763bbb0ab9ee19c335733d0df6d83fe",
+  "tests_sha256": "a52a189548892e8088bbe8a1918ab0c5a5f3421fe35b730e21e34156cd48d365",
+  "ready_for_execution": true,
+  "parent_review": "source API reason bounds, actual task/lease projection, exact before/after preservation and once-only guards reviewed",
+  "syntax_passed": true,
+  "focused_tests_passed": 2,
+  "receipt_post_forbidden": true,
+  "native_acceptance": "pending",
+  "checker_4_of_4": "not_observed",
+  "authority_extension": false,
+  "effects_by_lane": false
+}

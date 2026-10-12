@@ -1,0 +1,25 @@
+{
+  "path": "C:\\Users\\daoth\\AppData\\Roaming\\web-mcp-assistant\\control-plane-read-only-policy.json",
+  "owner": "DaoChienThang\\Dao Chien Thang",
+  "protected": true,
+  "rules": [
+    {
+      "identity": "NT AUTHORITY\\SYSTEM",
+      "rights": "FullControl",
+      "type": "Allow",
+      "inherited": false
+    },
+    {
+      "identity": "BUILTIN\\Administrators",
+      "rights": "FullControl",
+      "type": "Allow",
+      "inherited": false
+    },
+    {
+      "identity": "DaoChienThang\\Dao Chien Thang",
+      "rights": "FullControl",
+      "type": "Allow",
+      "inherited": false
+    }
+  ]
+}

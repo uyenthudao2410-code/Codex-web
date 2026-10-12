@@ -211,9 +211,10 @@ class McpFileReadFacadeTests(unittest.TestCase):
         for arguments in malformed:
             with self.subTest(arguments=arguments):
                 response = self.call(arguments)
-                self.assertIn("error", response)
-                self.assertEqual(response["error"]["code"], -32602)
-                self.assertEqual(response["error"]["data"]["code"], "VALIDATION_ERROR")
+                self.assertNotIn("error", response)
+                self.assertTrue(response["result"]["isError"])
+                self.assertEqual(response["result"]["structuredContent"]["code"], "VALIDATION_ERROR")
+                self.assertEqual(response["result"]["structuredContent"]["execution"], "not_started")
 
         listed = self.call({"operation": "task_list"})
         self.assertEqual(listed["result"]["structuredContent"]["tasks"], [])
@@ -279,7 +280,8 @@ class McpFileReadFacadeTests(unittest.TestCase):
             owner_id=owner_b,
             principal_id=principal_b["principal_id"],
         )
-        self.assertEqual(foreign["error"]["data"]["code"], "NOT_FOUND")
+        self.assertTrue(foreign["result"]["isError"])
+        self.assertEqual(foreign["result"]["structuredContent"]["code"], "NOT_FOUND")
 
         owner_status = self.call({"operation": "read_status", "action_id": action_id})
         content = owner_status["result"]["structuredContent"]

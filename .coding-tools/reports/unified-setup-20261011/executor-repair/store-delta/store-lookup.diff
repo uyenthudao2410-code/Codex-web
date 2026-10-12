@@ -1,0 +1,49 @@
+--- served/control-plane/control_plane/store.py
++++ candidate/control-plane/control_plane/store.py
+@@ -4738,9 +4738,10 @@
+         The owner creates a normal short-lived context for an explicitly bound
+         workspace in the Ubuntu Console; this lookup lets that exact node
+         retrieve the resulting read-only policy template only after its local
+-        owner has selected the matching registered root.  Multiple live
+-        contexts are intentionally ambiguous rather than silently picking a
+-        "latest" authority window.
++        owner has selected the matching registered root.  Multiple live owner
++        assignments are intentionally ambiguous rather than silently picking
++        a "latest" authority window.  Internal contexts created for sealed MCP
++        operations remain action authority, not local policy assignments.
+ 
+         The returned record is an internal server result.  HTTP callers must
+         derive a policy template from it and must not expose ``context_id`` to
+@@ -4780,6 +4781,32 @@
+                   AND n.revoked_at_ms IS NULL
+                   AND c.owner_id = b.owner_id
+                   AND b.owner_id = n.owner_id
++                  AND NOT EXISTS (
++                      SELECT 1
++                      FROM actions AS a
++                      JOIN work_requests AS r ON r.request_id = a.request_id
++                      JOIN (
++                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_file_read_intents
++                          UNION ALL
++                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_approved_patch_intents
++                          UNION ALL
++                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_standing_patch_intents
++                          UNION ALL
++                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_exec_intents
++                          UNION ALL
++                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_artifact_intents
++                          UNION ALL
++                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_document_write_intents
++                      ) AS i ON i.action_id = a.action_id
++                            AND i.request_id = a.request_id
++                            AND i.owner_id = a.owner_id
++                            AND i.binding_id = a.binding_id
++                      WHERE a.context_id = c.context_id
++                        AND a.owner_id = c.owner_id
++                        AND a.binding_id = c.binding_id
++                        AND r.context_id = c.context_id
++                        AND r.owner_id = c.owner_id
++                  )
+                 ORDER BY c.created_at_ms, c.context_id
+                 """,
+                 (device_id, workspace_id, workspace_generation, self.clock()),

@@ -1,0 +1,200 @@
+{
+  "kind": "root_continuation_checkpoint",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "branch": "main",
+  "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "approval_id": "call_VVCZ5vN5tTi8XytTvFyQyHY0",
+  "r14_approved": true,
+  "r14_close_guard_reconciliation": {
+    "original_failed_close_chunk": "32ab38",
+    "read_only_inspection_chunk": "aae8d5",
+    "observed_at_ms": 1791762929114,
+    "live_exact_target_contexts": 1,
+    "expired_unclosed_target_contexts": 1,
+    "remote_phase_intents_or_marker_present": false,
+    "admission": "scoped_pilot",
+    "original_prior_pilot_unrevoked": true,
+    "open_tasks": 0,
+    "open_writers": 0,
+    "original_close_replay_forbidden": true,
+    "next": "correct live-context predicate in a preserved sibling packet, fresh observe and a new guarded close"
+  },
+  "authority_expires_at_ms": 1791776571067,
+  "r13_live": false,
+  "r14_built_and_verified": true,
+  "r14_activated": true,
+  "r14_transition": {
+    "phase": "intake_reopened",
+    "attempt": "r14-same-window-20261012_071700",
+    "activation_epoch_id": "activation-mv4i9feu-9b7a86c37e9c24abc18dbcd5d4adc4c2",
+    "runtime_ready": true,
+    "pilot_id": "pilot_7177a7cd197c4944ae77ebc1c4d433a3",
+    "authority_expires_at_ms": 1791776571067,
+    "prior_intents_and_guard_refusals_preserved": true,
+    "new_canary_dispatched_once": true,
+    "canary_settled_completed": true
+  },
+  "r13_terminal_settlement": {
+    "execution_tool_chunk": "0106ea",
+    "execution_returned_uncertain": true,
+    "read_only_verification_tool_chunk": "6ec8c1",
+    "action_id": "act_b2335c57472b4d68931d10dda1572ff9",
+    "task_id": "task_3b2a2a860ca54ef7889d2efce6923dc7",
+    "action_delivery_state": "settled",
+    "settled_at_ms": 1791760701079,
+    "failed_receipt_id": "rcpt_eea61400c4a3408d88bfec9174b75ec7",
+    "failed_payload_sha256": "b685d64c650b907f9f82d0d1626b0aee7797edea7c83acfdb25a1e56fdb6c8b5",
+    "original_unknown_receipt_preserved": "rcpt_9da35cd224ce47a2843d0a556a059589",
+    "patch_applied": true,
+    "initial_source_bound_proof": "passed",
+    "full_tap": "not_observed",
+    "native_semantic_acceptance": "pending",
+    "task_writer_cleanup": "completed_by_separate_exact_task_only_helper",
+    "task_writer_cleanup_tool_chunk": "a7ade0",
+    "task_closed_at_ms": 1791761892620,
+    "writer_released": true,
+    "no_new_receipt_during_task_cleanup": true,
+    "task_cleanup_history_preserved": true,
+    "settlement_replay_forbidden": true
+  },
+  "ubuntu_deployment_or_service_restart": false,
+  "windows_reboot": false,
+  "commit_push_or_release": false,
+  "prior_r14_transition_checkpoints": [
+    {
+      "attempt": "r14-same-window-20261012_070300",
+      "corrected_close_chunk": "7c7641",
+      "intake": "recovery",
+      "prior_pilot_revoked": true,
+      "context_grant_and_history_preserved": true,
+      "cleanup_request_chunk": "c93d04",
+      "cleanup_epoch": "activation-mv4hj8no-28bda83f04cbbc169673d67d936636a4",
+      "cleanup_epoch_state": "READY",
+      "cleanup_host_pid": 19592,
+      "cleanup_refresh_replay_forbidden": true,
+      "latest_cleanup_status_chunk": "816b26",
+      "latest_blocker": "EXACT_OLD_AGENT_NOT_QUIESCENT_BEFORE_EFFECT",
+      "authoritative_process_observation_chunk": "762836",
+      "authoritative_process_observed_at_ms": 1791763625948,
+      "sandbox_host_count": 0,
+      "sandbox_backend_count": 0,
+      "prior_residual_process": "vmmemWindowsSandbox",
+      "prior_residual_pid": 26852,
+      "prior_residual_exited": true,
+      "auxiliary_zero_query_invalidated": true,
+      "activate_refusal_chunk": "9fab63",
+      "activate_refusal_at_ms": 1791763748218,
+      "activate_intent_preserved": true,
+      "activate_effects_not_performed_verified_by": "816b26",
+      "server_recovery_no_work_verified_by": "6b40cd",
+      "agent_completed_guard_preserved": true,
+      "next": "new reconciled attempt retaining exact cleanup evidence, fresh freeze, wait just-completed agent and activate r14"
+    }
+  ],
+  "observed_at_utc": "2026-10-12T00:38:08.474080+00:00",
+  "current_runtime_tag": "workflow-timeout-1012-r14",
+  "activation_preflight_last_observation": {
+    "active_managed_jobs": 0,
+    "owned_canary_sandbox_backend_present": true,
+    "ready": false,
+    "next": "reviewable server same-window packet, explicit r14 approval and supported owned Sandbox cleanup"
+  },
+  "r14_final": {
+    "strongest_proof": "patch_job_source_bound_proof",
+    "source_proof_captured_before_documentation_update": true,
+    "action_id": "act_f362cf6605b54b02a74df1778bf9c973",
+    "task_id": "task_8bcde5ea58e44d4cb924949f7262ace8",
+    "command_id": "lGPV2j2lGwdS3xvEytEJzShW",
+    "job_id": "94b54216ffb64174a64c68c77b7e08f9",
+    "run_id": "6664f948cfb14a75958518548352896e",
+    "wave_id": "edf9fd5a6cf744dfa15a47d6e6206098",
+    "proof_ids": [
+      "820e07686998402abc95b92ce1063c4a"
+    ],
+    "exit_code": 0,
+    "proof_cache_hit": false,
+    "central_receipt_state": "completed",
+    "central_task_closed": true,
+    "central_writer_released": true,
+    "central_open_tasks": 0,
+    "central_open_writers": 0,
+    "central_target_unsettled_actions": 0,
+    "runtime_readiness": {
+      "fullyReady": true,
+      "localReady": true,
+      "componentsReady": true,
+      "centralConnected": true,
+      "authorityReady": true,
+      "updateIncomplete": false
+    },
+    "native_job_counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "native_lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 20,
+      "awaiting_acceptance_runs": [
+        "6664f948cfb14a75958518548352896e",
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "fbaf4b0700d04794af4062671c1bcd2b"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "vm_counts": {
+      "content_free": true,
+      "host_count": 3,
+      "backend_count": 1
+    },
+    "owned_output_reader_processes": 0,
+    "owned_output_reader_check_tool_chunk": "bd4f88",
+    "full_live_tap": "not_observed",
+    "output_reader_failure": "ISOLATED_READER_30S_TIMEOUT",
+    "output_retention_expired_at_ms": 1791765068027,
+    "native_semantic_acceptance": "pending",
+    "remaining_gaps": [
+      "NATIVE_CHATWEB_ACCEPTANCE_TRANSPORT_UNAVAILABLE",
+      "NATIVE_TAP_OUTPUT_NOT_CAPTURED"
+    ],
+    "canary_or_checker_replayed": false,
+    "next_action": "Genuine ChatWeb controller reviews original result and uses its published supported acceptance surface; no replay or additional rollout.",
+    "evidence": [
+      {
+        "path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r14\\canary-same-window\\final-observation-1791765368847.json",
+        "sha256": "484f1040d8ac2128b3d2d114da18d3bbab810b49b1813c2fafe5ec4dda541fc0"
+      },
+      {
+        "path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r14\\canary-same-window\\correlation-1791764809860445100.json",
+        "sha256": "d33e5404c53950bf8c5d584a2128e237135fe44a3a0ea9c710ad814a6efe9d34"
+      },
+      {
+        "path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r14\\canary-same-window\\remote-receipts\\cleanup-20261012T003108328507Z.json",
+        "sha256": "c72fea80a3218f05ca5b0f8a055333600795498b5d1970f9e9e348aee7009e24"
+      },
+      {
+        "path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r14\\activation-server-same-window\\context-inspection-receipt-20261012T003250247219Z.json",
+        "sha256": "285988643a1c27c5cb5e4139dd6ff1f40d54ab3ea6e3152640c5f3c6d728bf43"
+      }
+    ],
+    "preactivation_observation_refusals": {
+      "native": "CANONICAL_CENSUS_NOT_QUIESCENT",
+      "server": "UNCHANGED_EXACT_CONTEXT_REQUIRED",
+      "effects_performed": false,
+      "reconciled_by_actual_final_query_only_observations": true
+    }
+  },
+  "source_freeze_released_after_correlation": true
+}

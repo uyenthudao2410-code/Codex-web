@@ -1,0 +1,78 @@
+{
+  "ok": true,
+  "phase": "root_read_only_canary_inspection",
+  "ssh_returncode": 0,
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T163335163457Z",
+  "public_receipts": [
+    {
+      "ok": true,
+      "phase": "observe",
+      "provenance": "central_mcp_service_trial",
+      "family": {
+        "task_id": "task_d06d0dcedee9447ca8dca049137295aa",
+        "action_id": "act_a0b6b348fd944ea7b9e1eccf0b4c816f",
+        "request_id": "req_ab7b88ac882647e6bf5b9a7d3661a731",
+        "writer_lease_generation": 1,
+        "state": "settled",
+        "settled": true,
+        "attempt_ids": [
+          "try_d09b633467994d2692082d53c1a6b102"
+        ],
+        "receipt_states": [
+          "rejected"
+        ]
+      },
+      "verified_patch_and_initial_proof_summary": null,
+      "native_semantic_acceptance": "pending",
+      "acceptance_blocker": "NATIVE_CHATWEB_ACCEPTANCE_TRANSPORT_UNAVAILABLE",
+      "replay_forbidden": true,
+      "remote_mutation": false,
+      "read_only_reconciliation": {
+        "reason": "post-dispatch authority cardinality diagnosis; no new effect or acceptance",
+        "observed_at_ms": 1791736654843,
+        "active_target_contexts": [
+          {
+            "context_id": "ctx_71ae5c01e2de4df6874d401263a310c0",
+            "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+            "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+            "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+            "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+            "expires_at_ms": 1791739329910,
+            "closed_at_ms": null
+          },
+          {
+            "context_id": "ctx_40a4b90592004061924c587348ca2706",
+            "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+            "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+            "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+            "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+            "expires_at_ms": 1791737017246,
+            "closed_at_ms": null
+          }
+        ],
+        "exact_action_context": {
+          "context_id": "ctx_40a4b90592004061924c587348ca2706",
+          "expires_at_ms": 1791737017246
+        },
+        "rejection": [
+          {
+            "keys": [
+              "code",
+              "operation_kind",
+              "schema_version"
+            ],
+            "codes": [
+              {
+                "field": "code",
+                "value": "CONTROL_PLANE_APPROVED_PATCH_CONTRACT_MISMATCH"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "stderr_disclosed": false,
+  "remote_mutation": false,
+  "receipt_path": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r11\\read-only-canary-inspect-20261011T163734916215Z.json"
+}

@@ -53,9 +53,17 @@ function renderServiceState(state) {
   const failures = Number(current.failures || 0);
   const transient = current.signalStale === true || current.telemetryAvailable === false
     || current.recovering === true || current.recoveryDeferred === true;
+  const central = current.executionRole === 'central_executor';
   const servicePresentation = (kind) => {
-    const value = kind === 'mcp' ? current.mcpRunning : current.tunnelRunning;
-    if (transient || value == null) return { tone: 'warn', title: `${kind === 'mcp' ? 'MCP' : 'Tunnel'}: Telemetry tạm gián đoạn` };
+    const label = kind === 'mcp' ? 'MCP' : central ? 'Ubuntu' : 'Tunnel';
+    const value = kind === 'mcp' ? current.mcpRunning : central ? current.centralConnected : current.tunnelRunning;
+    if (transient || value == null) return { tone: 'warn', title: `${label}: Telemetry tạm gián đoạn` };
+    if (kind === 'tunnel' && central) {
+      if (value !== true) return { tone: 'warn', title: 'Ubuntu: Chưa xác nhận kết nối trung tâm; không dùng Tunnel Windows' };
+      return { tone: 'ready', title: current.authorityReady === true
+        ? 'Ubuntu: Đã kết nối; quyền thao tác cục bộ đã được xác minh'
+        : 'Ubuntu: Đã kết nối; đang chờ quyền thao tác cục bộ' };
+    }
     if (value === true) return { tone: 'ready', title: `${kind === 'mcp' ? 'MCP' : 'Tunnel'}: Đang hoạt động` };
     if (kind === 'mcp' && current.nativeAlive === true && current.mcpHealthFailureDeterministic !== true) {
       return { tone: 'warn', title: 'MCP: Process còn sống, health check đang được xác minh lại' };
@@ -68,6 +76,7 @@ function renderServiceState(state) {
   [['#mcpState', 'mcp'], ['#tunnelState', 'tunnel']].forEach(([selector, kind]) => {
     const element = $(selector);
     const presentation = servicePresentation(kind);
+    if (kind === 'tunnel') element.lastChild.textContent = central ? 'Ubuntu' : 'Tunnel';
     element.classList.remove('ready', 'warn', 'error');
     element.classList.add(presentation.tone);
     element.title = presentation.title;
@@ -352,8 +361,15 @@ $('#stopTask').onclick = async () => { try { unwrap(await api.stopTask()); await
 $('#addAuthorizedRootQuick').onclick = async () => {
   if (switching) return;
   switching = true;
-  $('#switchState').textContent = 'Vui lòng chọn thư mục bổ sung để ủy quyền…';
   try {
+    // Ubuntu permissions are registered and enabled in the folder manager.
+    // Wait for an explicit legacy role before offering its local root grant.
+    if (lastRuntimeState?.executionRole !== 'direct_legacy') {
+      unwrap(await api.openManager('workspace'));
+      $('#switchState').textContent = 'Đã mở Thư mục & quyền. Chọn thư mục và áp dụng mức quyền tại đây.';
+      return;
+    }
+    $('#switchState').textContent = 'Vui lòng chọn thư mục bổ sung để ủy quyền…';
     const result = unwrap(await api.chooseAuthorizedRoot());
     $('#switchState').textContent = result?.selected ? `Đã ủy quyền: ${baseName(result.selected)}` : '';
   } catch (error) {

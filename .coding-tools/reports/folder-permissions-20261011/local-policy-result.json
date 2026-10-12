@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "enabled": true,
+    "expires_at_ms": 1791699184407,
+    "policy_sha256": "f3399d2b76b174a5486fdc66eee7ec48cbd60ec8b0c981209a37cdc99e2ae143",
+    "runtime_mode": "packaged",
+    "windows_acl_verified": false
+  },
+  "files": {
+    "state": "read_and_patch",
+    "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+    "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+    "file_read": {
+      "kind": "file_read",
+      "authority_mode": "standing",
+      "policy_sha256": "62bd90f00fc6ab196afe07ddea82996a22a2686cd82e7d3c83c12914f99df6e6",
+      "windows_acl_verified": false
+    },
+    "approved_patch": {
+      "kind": "approved_patch",
+      "authority_mode": "standing",
+      "policy_sha256": "3e78ebb89ab90ef2b33964d922bd1294c17fd741c218322cf4efb4ee7f574d2b",
+      "windows_acl_verified": false
+    }
+  },
+  "observed": {
+    "file_read": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "62bd90f00fc6ab196afe07ddea82996a22a2686cd82e7d3c83c12914f99df6e6"
+    },
+    "approved_patch": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "3e78ebb89ab90ef2b33964d922bd1294c17fd741c218322cf4efb4ee7f574d2b"
+    }
+  },
+  "exec": {
+    "policy": {
+      "state": "unavailable",
+      "reason": "CONTROL_PLANE_EXEC_POLICY_MISSING"
+    },
+    "sandbox": {
+      "state": "unavailable",
+      "tier": "base-container",
+      "dacl_fallback": false,
+      "base_container_api": true,
+      "deny_paths_supported": true,
+      "reason": "WINDOWS_SANDBOX_NOT_READY",
+      "backend": "windows_sandbox",
+      "child_process_spawn": false,
+      "binary_sha256": "8668cf65887b51f2afb167da5fb8476f53ddc09341288e8f558c9e02c5c6e7cb",
+      "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+      "release": "microsoft-mxc-source-cbe1774-0.10.0-alpha-experimental"
+    }
+  }
+}

@@ -164,6 +164,11 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   openExternal: (target) => ipcRenderer.invoke('shell:open', target),
   installPython: () => ipcRenderer.invoke('environment:install-python'),
   detectProxy: () => ipcRenderer.invoke('environment:detect-proxy'),
+  onNavigate: (listener) => {
+    const wrapped = (_event, payload) => listener(payload);
+    ipcRenderer.on('manager:navigate', wrapped);
+    return () => ipcRenderer.removeListener('manager:navigate', wrapped);
+  },
   onProgress: (listener) => {
     const wrapped = (_event, payload) => listener(payload);
     ipcRenderer.on('runtime:progress', wrapped);

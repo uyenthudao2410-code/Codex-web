@@ -194,9 +194,24 @@ class CommandHandleMigrationTests(unittest.TestCase):
                         "max_output_bytes": 4096,
                         "verbosity": "full",
                     })
+                    # MXC preparation can consume the initial yield budget;
+                    # running is an observation of this command, not a retry.
+                    stdout = str(payload.get("stdout") or "")
+                    command_id = str(payload["command_id"])
+                    for _ in range(30):
+                        if payload["status"] != "running":
+                            break
+                        payload = runtime.write_stdin({
+                            "command_id": command_id,
+                            "chars": "",
+                            "yield_time_ms": 1000,
+                            "max_output_bytes": 4096,
+                            "verbosity": "full",
+                        })
+                        stdout += str(payload.get("stdout") or "")
                     self.assertEqual(payload["status"], "exited")
                     self.assertEqual(payload["exit_code"], 0)
-                    self.assertIn("bridge-argv-ok", payload["stdout"])
+                    self.assertIn("bridge-argv-ok", stdout)
                 if sys.platform == "win32":
                     self.assertTrue(any(
                         "temporary system-drive junction" in str(warning)

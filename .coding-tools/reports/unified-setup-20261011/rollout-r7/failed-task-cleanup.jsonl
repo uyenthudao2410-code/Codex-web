@@ -1,0 +1,2 @@
+{"observed_at_ms":1791714718880,"phase":"failed_exec_observed_terminal","action_id":"act_2673b93c5bb3483889742dfe3055fd3d","delivery_state":"settled","execution":"local_exec_failed","process_state":"failed","exit_code":null,"attempt_count":1}
+{"observed_at_ms":1791714718915,"phase":"failed_exec_task_closed","ok":true,"task_id":"task_8982097843784d44bcc4bb0440c35141","action_id":"act_2673b93c5bb3483889742dfe3055fd3d","command_replayed":false}

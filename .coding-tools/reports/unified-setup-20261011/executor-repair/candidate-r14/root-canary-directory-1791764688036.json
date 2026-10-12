@@ -1,0 +1,10 @@
+{
+  "authority_changed": false,
+  "mode": "0700",
+  "no_patch_or_job_dispatched": true,
+  "observed_at_ms": 1791764688036,
+  "ok": true,
+  "owner_matches": true,
+  "path": "/home/svhome/.local/state/codex-control-plane/owner-operations/r14-same-window-activation/canary",
+  "phase": "root_r14_exact_canary_private_directory_created"
+}

@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "kind": "tools_codex_web_windows_unpacked_candidate",
+  "observed_at": "2026-10-11T08:11:12.6712505Z",
+  "observed_git_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "branch": "main",
+  "worktree_state": "dirty_source_preserved",
+  "version": "1.0.7",
+  "candidate_tag": "mcp-feedback-1011-r4",
+  "output_root": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4",
+  "app_root": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\win-unpacked",
+  "source_frozen_gate": true,
+  "hash_observation": "post_build_and_post_smoke",
+  "hashes": {
+    "source_node_agent": {
+      "path": "E:\\Github\\Tools-Codex-web\\control-plane\\control_plane\\node_agent.py",
+      "sha256": "3f044fd7883412c54d58fb54755d54dd133810ec0687c32efc6a41f96c23e8c2"
+    },
+    "candidate_node_agent": {
+      "path": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\win-unpacked\\resources\\resources\\control-plane\\node_agent.py",
+      "sha256": "3f044fd7883412c54d58fb54755d54dd133810ec0687c32efc6a41f96c23e8c2"
+    },
+    "candidate_app_asar": {
+      "path": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\win-unpacked\\resources\\app.asar",
+      "sha256": "52a267375bd449c2f2f630814a1fc6382dd683fe8948fa2dd2728dacf1df365a"
+    },
+    "candidate_executable": {
+      "path": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\win-unpacked\\Coding Tools MCP.exe",
+      "sha256": "a02ae9929e078b1e78dc52719d8d10a8ba88c7032bf3c8083de7842668d0b36e"
+    },
+    "previous_node_agent": {
+      "path": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3\\win-unpacked\\resources\\resources\\control-plane\\node_agent.py",
+      "sha256": "ae21a544ed81801f19fa8bf10577e30f385a3699e8a7c16d84029d793dc67938"
+    },
+    "previous_app_asar": {
+      "path": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3\\win-unpacked\\resources\\app.asar",
+      "sha256": "52a267375bd449c2f2f630814a1fc6382dd683fe8948fa2dd2728dacf1df365a"
+    },
+    "source_runtime_orchestrator": {
+      "path": "E:\\Github\\Tools-Codex-web\\electron\\services\\runtimeOrchestrator.js",
+      "sha256": "20c1aa213eba2fe7da3eec90d0f74df31ea07e5da886ff9ea4b4043535fc6bc1"
+    },
+    "source_build_script": {
+      "path": "E:\\Github\\Tools-Codex-web\\scripts\\build-dev-candidate.js",
+      "sha256": "f7f4f87b6ef05cd03462b02ca325846846c27c2583a4c604cfdcc67384566b87"
+    },
+    "source_smoke_script": {
+      "path": "E:\\Github\\Tools-Codex-web\\scripts\\packaged-recovery-smoke.js",
+      "sha256": "568c034408c94e8d6f7c3bb02b5d078e97281e64111ba95458f5c4e32918b592"
+    },
+    "source_package_json": {
+      "path": "E:\\Github\\Tools-Codex-web\\package.json",
+      "sha256": "5e77d79fc39845a082d519f29f063fc84a1134b697eeae905dfa307f79d813b7"
+    }
+  },
+  "build": {
+    "command": "node scripts/build-dev-candidate.js mcp-feedback-1011-r4",
+    "exit_code": 0,
+    "log": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\build.log",
+    "pre_build_hash_receipt_persisted": false,
+    "receipt_capture_note": "Post-build metadata capture failed due to a PowerShell boolean literal typo; no pre-build hash receipt was written. Current hashes were verified after build and smoke."
+  },
+  "comparison_to_running_r3": {
+    "previous_app_root": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3\\win-unpacked",
+    "app_asar_identical": true,
+    "node_agent_changed": true,
+    "scope": "Exact app.asar and node_agent.py comparison only; no full tree equivalence claim."
+  },
+  "smoke": {
+    "command": "CODEX_PACKAGED_APP_ROOT=<app_root> node scripts/packaged-recovery-smoke.js",
+    "attempts": [
+      {
+        "attempt": 1,
+        "started_at": "2026-10-11T08:07:50.7957651Z",
+        "finished_at": "2026-10-11T08:08:40.859107Z",
+        "exit_code": 1,
+        "classification": "startup_descriptor_deadline",
+        "code": "PACKAGED_USER_DATA_ISOLATION_FAILED",
+        "log": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\smoke-attempt-1.log"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-10-11T08:09:37.4678967Z",
+        "finished_at": "2026-10-11T08:09:46.9166332Z",
+        "exit_code": 0,
+        "classification": "passed",
+        "log": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-mcp-feedback-1011-r4\\smoke-attempt-2.log"
+      }
+    ],
+    "result": {
+      "ok": true,
+      "package": {
+        "executable": true,
+        "app_asar": true,
+        "required_resources": 18,
+        "smart_tool_contract": {
+          "profile": "smart-v3",
+          "task_context_id": {
+            "agent_workflow": true,
+            "task_control": true,
+            "workspace_context": true
+          },
+          "tools": [
+            "agent_workflow",
+            "command_control",
+            "document_workflow",
+            "exec_command",
+            "request_permissions",
+            "task_control",
+            "view_image",
+            "workspace_context"
+          ]
+        }
+      },
+      "isolation": {
+        "user_data_isolated": true,
+        "production_descriptor_stable": true
+      },
+      "recovery": {
+        "host_ready": true,
+        "device_identity_present": true,
+        "mode": "independent_mcp_tunnel_v1",
+        "mcp_alive": true
+      },
+      "supervisor": {
+        "healthy": true,
+        "live_owner_fail_closed": true,
+        "hash_mismatch_fail_closed": true,
+        "scheduled_task_mutation": false
+      }
+    },
+    "production_descriptor_identity_preserved": true,
+    "exact_child_cleanup_observed": true,
+    "cleanup_basis": "Harness finally checks each isolated descriptor/plane child PID is no longer alive and rechecks production descriptor identity. Second attempt exited0 after those assertions."
+  },
+  "operations": {
+    "activated": false,
+    "production_runtime_refreshed": false,
+    "windows_restarted": false,
+    "services_restarted": false,
+    "authority_changed": false,
+    "scheduled_task_mutated": false,
+    "installer_created": false,
+    "released": false,
+    "pushed": false
+  },
+  "limits": [
+    "Unpacked development candidate and isolated Recovery/contract proof; not activation, upgrade or reboot proof.",
+    "Smoke did not run an actual remote artifact read or exec command.",
+    "First startup timeout preserved; one retry passed without changing timeout or source."
+  ],
+  "strongest_proof": "unpacked_candidate_with_exact_node_source_parity_and_isolated_packaged_smoke_pass"
+}

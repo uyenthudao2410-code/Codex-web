@@ -1,0 +1,192 @@
+{
+  "observed_at": "2026-10-11T15:10:12.900Z",
+  "helper_sha256": "0499344c5ebea0273fa00cfb8e7aec90755c19185095154bfc37ce620f8fbe21",
+  "phase": "r11_final_runtime_proof",
+  "ok": true,
+  "tag": "r11",
+  "descriptor": {
+    "installation_id": "955c37956bb8afeef8bd771cc5c2d5245d6e69e35ba3fcd05e445e8c1c5f2a1b",
+    "instance_id": "53d1229ec0d4a9964536abf506946c0f",
+    "owner_pid": 27028,
+    "owner_process_start_token": "134362047261230270"
+  },
+  "owner": {
+    "state": "live",
+    "pid": 27028,
+    "process_start_token": "134362047261230270"
+  },
+  "ui": {
+    "identity": {
+      "state": "live",
+      "pid": 19468,
+      "process_start_token": "134362047366071520"
+    },
+    "instance_id": "64120bf4605c9ddcb3effc3c72afe596",
+    "alive": true,
+    "registered": true,
+    "ui_installation_id": "955c37956bb8afeef8bd771cc5c2d5245d6e69e35ba3fcd05e445e8c1c5f2a1b"
+  },
+  "native": {
+    "state": "live",
+    "pid": 24044,
+    "process_start_token": "134362047285524250"
+  },
+  "tunnel": {
+    "state": "absent",
+    "pid": null
+  },
+  "agent": {
+    "identity": {
+      "state": "live",
+      "pid": 25160,
+      "process_start_token": "134362047872041450"
+    },
+    "last_iteration_state": "completed",
+    "last_heartbeat_state": "succeeded",
+    "last_heartbeat_at_ms": 1791731398961,
+    "completed_iterations": null,
+    "device_id": null,
+    "workspace_id": null,
+    "workspace_generation": null,
+    "node_config": {
+      "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "endpoint_id": "executor-72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "server_origin": "https://svhome.tail0e4032.ts.net"
+    }
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv3yg71m-8c2f1e1646c843a8789b4578ad780284",
+    "operation_id": "full-clean-mv3yfymd-ba01fe8406edc4d31528c15c",
+    "state": "READY",
+    "admission_open": true,
+    "update_incomplete": false
+  },
+  "readiness": {
+    "fullyReady": true,
+    "localReady": true,
+    "componentsReady": true,
+    "centralConnected": true,
+    "authorityReady": true,
+    "updateIncomplete": false,
+    "failureKind": "",
+    "centralStatusReason": null
+  },
+  "native_epoch": "activation-mv3yg71m-8c2f1e1646c843a8789b4578ad780284",
+  "revisions": [
+    {
+      "state": "current",
+      "running_revision": "e09d79f26014ffde66041107e6b08a04b342b7b0e032b4d8435ef0b943963d78",
+      "disk_revision": "e09d79f26014ffde66041107e6b08a04b342b7b0e032b4d8435ef0b943963d78",
+      "update_pending": false,
+      "pending_revision": null
+    },
+    {
+      "state": "current",
+      "running_revision": "a6cde0058d937525b6c937a330c60fe3802faa4f1f3ec78c252dd3e9fa87db6f",
+      "disk_revision": "a6cde0058d937525b6c937a330c60fe3802faa4f1f3ec78c252dd3e9fa87db6f",
+      "update_pending": false,
+      "pending_revision": null
+    },
+    {
+      "state": "current",
+      "running_revision": "9657e8ef457e38cdc14f17c6a09e03f61ff98135821b083c9cb4ba516a6511ef",
+      "disk_revision": "9657e8ef457e38cdc14f17c6a09e03f61ff98135821b083c9cb4ba516a6511ef",
+      "update_pending": false,
+      "pending_revision": null
+    }
+  ],
+  "package": {
+    "app_asar_sha256": "2071c0c242bc4b24ebfc22ea21b5c4d066e018505061ebe299cd666c6d2e8a91",
+    "executable_sha256": "d556d6040ced8fd0d6ed52b05cbdbb15a398344d1995402ad3bfcd8efbce94bc",
+    "matched_files": 12,
+    "parity_sha256": "cefbb4daaeda869629594ed311e685de10049ef07445766b73ae4a5113bc0666",
+    "source_freeze_sha256": "3bd561909abf56126ae2a15cc65932181251a48a1a9d47779b506e1b6c359c63"
+  },
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "content_free": true,
+    "ledger_mutated": false,
+    "snapshot": {
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "3a2294fa23f2c2442ddd7d003fa2ccb31c89fdc80710b74be9dc3daa4306c7fb"
+    }
+  },
+  "pending_acceptance": {
+    "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+    "wave_id": "c101beadfc6d4f2fbc13845052c84693",
+    "run_record_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "wave_record_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "unchanged": true
+  },
+  "policies": {
+    "file_hashes": {
+      "controlPlaneFileReadPolicyFile": "284bd75cc62669c42a7a8bbb9d0531d6da7afd344442f457727fdecfde5404db",
+      "controlPlaneApprovedPatchPolicyFile": "63cd7bf31e8db3fed7f99cc3bfdbf5cd522b3accd5d91cbaff2ed2ae0ab71ab8",
+      "controlPlaneExecPolicyFile": "5e38d0067e7d8e7a38ce1dba8378616202d6192ed01b22ffbd1ee8105e257040"
+    },
+    "exec_policy_sha256": "31125fd75f5147770eecde7b926e3c46efd1f5ee83a55b58d180f8b200966367",
+    "authority_mode": "standing",
+    "expires_at_ms": null,
+    "allowed_argv_prefixes": [
+      [
+        "git"
+      ],
+      [
+        "node"
+      ],
+      [
+        "npm"
+      ],
+      [
+        "npx"
+      ],
+      [
+        "python"
+      ],
+      [
+        "python3"
+      ]
+    ],
+    "canary_allowed": true,
+    "standalone_sandbox_probe_performed": false
+  },
+  "vm_zero": {
+    "content_free": true,
+    "host_count": 0,
+    "backend_count": 0,
+    "ok": true,
+    "observed_at_ms": 1791731412900
+  },
+  "acceptance_performed": false,
+  "live_sandbox_exec_proven": false,
+  "windows_rebooted": false,
+  "runtime_activated": true
+}

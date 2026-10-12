@@ -5,6 +5,7 @@ const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
 const { ActivationEpochStore } = require('./activationEpoch');
 const { readJson } = require('./jsonStore');
+const { workspaceKey } = require('./config');
 const { pythonStatus } = require('./environmentService');
 const { isAlive: isAlivePid, requireExactStoredProcessIdentity } = require('./nativeService');
 const { observeProcessIdentityAsync } = require('./processIdentity');
@@ -36,6 +37,9 @@ const EXECUTION_ROLE_HANDOFF_MODE = 'full_clean_execution_role_handoff';
 // after this bounded expiry; this only gives the connector phase its intended
 // post-start window instead of racing the startup deadline.
 const DEFAULT_TTL_MS = 600_000;
+// The owned Sandbox close path has a 215s lock budget and 210s
+// deprovision budget. Observation never extends that one cleanup attempt.
+const EXECUTOR_CLEANUP_BUDGET_MS = 430_000;
 // Coding MCP accepts an activation-preparation fence only inside its own
 // 60-second validation window. Keep a small transport/clock margin while the
 // durable full-clean epoch retains the longer end-to-end deadline above.
@@ -1541,6 +1545,12 @@ class FullCleanActivation {
         || runtime?.safe === true
         || (runtime?.code === 'ACCEPTANCE_PENDING' && allowAcceptancePending === true);
       if (!allowed) throw epochError(runtime?.code || 'ORCHESTRATION_STATE_UNCERTAIN', 'Canonical runtime lifecycle preflight refused full clean activation.', runtime);
+      if (runtime?.code !== 'COMPONENT_STOPPED' && runtime?.executor_cleanup_supported !== true) {
+        throw epochError('SANDBOX_CLEANUP_UNSUPPORTED', 'The running Coding MCP must support confirmed executor cleanup before replacement.', {
+          process_mutated: false,
+          next_action: 'prepare_exact_owned_executor_upgrade'
+        });
+      }
     }
     // When Coding MCP is stopped there is no process left to answer the
     // normal activation preflight endpoint.  Read the canonical ledger through
@@ -1620,24 +1630,74 @@ class FullCleanActivation {
 
   async _prepareFence(operationIdValue, expiresAtUnixMs, sourceCheckpoint, allowAcceptancePending) {
     if (typeof this.orchestrator?.prepareCodeActivation !== 'function') return null;
-    const nowUnixMs = this.now();
-    const prepareExpiresAtUnixMs = Math.min(
-      Number(expiresAtUnixMs || 0),
-      nowUnixMs + MCP_PREPARE_FENCE_TTL_MS
-    );
-    if (!Number.isSafeInteger(prepareExpiresAtUnixMs) || prepareExpiresAtUnixMs <= nowUnixMs) {
-      throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request expired before Coding MCP preparation.');
-    }
-    try {
-      return await this.orchestrator.prepareCodeActivation({
-        operationId: operationIdValue,
-        expiresAtUnixMs: prepareExpiresAtUnixMs,
-        allowAcceptancePending: allowAcceptancePending === true,
-        ...(sourceCheckpoint ? { sourceCheckpoint } : {})
-      });
-    } catch (error) {
-      if (String(error?.code || '') === 'COMPONENT_STOPPED') return { code: 'COMPONENT_STOPPED', safe: true, fenced: false };
-      throw error;
+    let cleanupPin = null;
+    const refuse = (code, message) => {
+      const failure = epochError(code, message, { executor_cleanup_unconfirmed: true });
+      failure.executorCleanupUnconfirmed = true;
+      return failure;
+    };
+    while (true) {
+      const nowUnixMs = this.now();
+      const prepareExpiresAtUnixMs = Math.min(Number(expiresAtUnixMs || 0), nowUnixMs + MCP_PREPARE_FENCE_TTL_MS);
+      if (!Number.isSafeInteger(prepareExpiresAtUnixMs) || prepareExpiresAtUnixMs <= nowUnixMs) {
+        if (cleanupPin) throw refuse('ACTIVATION_REQUEST_EXPIRED', 'Activation expired while observing owned executor cleanup.');
+        throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request expired before Coding MCP preparation.');
+      }
+      let result;
+      try {
+        result = await this.orchestrator.prepareCodeActivation({
+          operationId: operationIdValue,
+          expiresAtUnixMs: prepareExpiresAtUnixMs,
+          allowAcceptancePending: allowAcceptancePending === true,
+          ...(sourceCheckpoint ? { sourceCheckpoint } : {})
+        });
+      } catch (error) {
+        if (String(error?.code || '') === 'SANDBOX_CLEANUP_PENDING') result = error.details;
+        else {
+          if (String(error?.code || '') === 'COMPONENT_STOPPED' && !cleanupPin) return { code: 'COMPONENT_STOPPED', safe: true, fenced: false };
+          // A lost response may follow a started cleanup. Without a confirmed
+          // prepare result the parent must not kill the only executor owner.
+          error.executorCleanupUnconfirmed = true;
+          throw error;
+        }
+      }
+      const cleanup = result?.executor_cleanup;
+      if (result?.code === 'SANDBOX_TEARDOWN_UNCONFIRMED') {
+        throw refuse('SANDBOX_TEARDOWN_UNCONFIRMED', 'Owned executor cleanup could not be confirmed.');
+      }
+      if (result?.code !== 'SANDBOX_CLEANUP_PENDING') {
+        if (cleanupPin && (result?.safe !== true || cleanup?.state !== 'completed' || cleanup?.confirmed !== true
+          || result?.operation_id !== cleanupPin.operation_id || result?.fence_operation_id !== cleanupPin.operation_id
+          || workspaceKey(result?.workspace) !== cleanupPin.workspace
+          || result?.process_instance_id !== cleanupPin.process_instance_id || result?.server_instance_id !== cleanupPin.server_instance_id
+          || cleanup?.started_at_unix_ms !== cleanupPin.started_at_unix_ms || cleanup?.deadline_at_unix_ms !== cleanupPin.deadline_at_unix_ms)) {
+          throw refuse('SANDBOX_CLEANUP_OBSERVATION_INVALID', 'Owned executor cleanup completion changed its identity or omitted confirmation.');
+        }
+        return result;
+      }
+      const observedNow = this.now();
+      const pin = {
+        operation_id: result?.operation_id,
+        workspace: workspaceKey(result?.workspace),
+        process_instance_id: result?.process_instance_id,
+        server_instance_id: result?.server_instance_id,
+        started_at_unix_ms: cleanup?.started_at_unix_ms,
+        deadline_at_unix_ms: cleanup?.deadline_at_unix_ms
+      };
+      if (result?.safe !== false || result?.fenced !== true || result?.fence_operation_id !== text(operationIdValue)
+        || pin.operation_id !== text(operationIdValue) || pin.workspace !== workspaceKey(this._settings().workspace)
+        || !/^[A-Za-z0-9_-]{16,128}$/.test(pin.process_instance_id || '') || !/^[A-Za-z0-9_-]{16,128}$/.test(pin.server_instance_id || '')
+        || cleanup?.state !== 'pending' || !Number.isSafeInteger(pin.started_at_unix_ms) || !Number.isSafeInteger(pin.deadline_at_unix_ms)
+        || pin.started_at_unix_ms > observedNow || pin.deadline_at_unix_ms <= pin.started_at_unix_ms
+        || pin.deadline_at_unix_ms - pin.started_at_unix_ms > EXECUTOR_CLEANUP_BUDGET_MS
+        || !Number.isSafeInteger(cleanup?.retry_after_ms) || cleanup.retry_after_ms < 1 || cleanup.retry_after_ms > 5_000
+        || (cleanupPin && JSON.stringify(cleanupPin) !== JSON.stringify(pin))) {
+        throw refuse('SANDBOX_CLEANUP_OBSERVATION_INVALID', 'Owned executor cleanup observation is not bound to the prepared operation.');
+      }
+      cleanupPin = pin;
+      const remaining = Math.min(Number(expiresAtUnixMs), pin.deadline_at_unix_ms) - observedNow;
+      if (remaining <= 0) throw refuse('SANDBOX_CLEANUP_TIMEOUT', 'Owned executor cleanup did not confirm before its fixed deadline.');
+      await this.wait(Math.min(cleanup.retry_after_ms, remaining));
     }
   }
 
@@ -1652,6 +1712,11 @@ class FullCleanActivation {
         `Full clean activation requires an exact checkpoint-bound runtime fence ${stage}.`,
         { fence, operation_id: expectedOperationId, stage }
       );
+    }
+    if (fence.executor_cleanup?.confirmed !== true || !['not_required', 'completed'].includes(fence.executor_cleanup?.state)) {
+      const failure = epochError('SANDBOX_TEARDOWN_UNCONFIRMED', 'Full clean activation requires confirmed owned executor cleanup before stopping processes.');
+      failure.executorCleanupUnconfirmed = true;
+      throw failure;
     }
     return fence;
   }
@@ -2056,6 +2121,7 @@ class FullCleanActivation {
       throw error;
     }
     const epochId = record.activation_epoch_id;
+    let executorStopSafe = false;
     try {
       // The exclusive application ledger gate spans the second census and the
       // durable epoch create. Releasing it is the commit boundary: supported
@@ -2066,6 +2132,7 @@ class FullCleanActivation {
       const fence = await this._prepareFence(operation_id, expiresAtUnixMs, options.sourceCheckpoint || null, options.allowAcceptancePending);
       const runtimeRunning = preflight.runtime?.code !== 'COMPONENT_STOPPED';
       if (runtimeRunning) this._requireExactPreparedFence(fence, operation_id, 'before stopping processes');
+      executorStopSafe = true;
       if (!runtimeRunning && preflight.safe !== true) {
         throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Stopped runtime did not provide a safe canonical preflight receipt.');
       }
@@ -2108,7 +2175,9 @@ class FullCleanActivation {
       });
       return pending || { accepted: true, state: 'HANDOFF', activation_epoch_id: epochId, operation_id, admission_open: false, fully_ready: false };
     } catch (error) {
-      await this._failClosedOwnedRuntime(epochId);
+      // A cleanup failure must keep its owned process and native admission
+      // barrier alive for observation; force termination would lose the VM owner.
+      if (executorStopSafe && error?.executorCleanupUnconfirmed !== true) await this._failClosedOwnedRuntime(epochId);
       this._failEpoch(epochId, error);
       this.log?.error?.(error.message, { stage: 'full-clean-activation', activationEpochId: epochId, code: error?.code || '' });
       throw error;

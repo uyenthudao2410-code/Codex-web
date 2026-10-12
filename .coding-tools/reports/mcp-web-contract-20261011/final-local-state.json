@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "observation_kind": "sanitized_local_final_state",
+  "observation_completed_at_utc": "2026-10-11T08:09:28Z",
+  "workspace": "E:/Github/Tools-Codex-web",
+  "git_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "git_state": "dirty_main_preserved",
+  "census_command": "node scripts/run-python.js -B resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace E:/Github/Tools-Codex-web --summary",
+  "census_exit_code": 0,
+  "census": {
+    "content_free": true,
+    "mutated_canonical_ledger": false,
+    "observed_at_unix_seconds": 1791705945.887907,
+    "projection": {
+      "available": true,
+      "bound_relevant_run_count": 1,
+      "classification": "CONTEXTUAL_PROJECTIONS",
+      "conflicting_run_count": 0,
+      "context_count": 1083,
+      "contextual_sha256": "6130192384e1f2e339690454977a7ae0b8f56ea193e2b8e4fda4a88247469bb2",
+      "malformed_context_projection": false,
+      "missing_run_count": 0,
+      "mode": "contextual",
+      "orchestration_state": "",
+      "relevant_run_count": 1,
+      "run_id": "",
+      "unprojected_historical_acceptance_count": 0,
+      "wave_id": ""
+    },
+    "read_contract": {
+      "canonical_writer_instantiated": false,
+      "execution_resource_governor_instantiated": false,
+      "ledger_facts_fact_load_statements": 8,
+      "lifecycle_facts_fact_load_statements": 14,
+      "runtime_instantiated": false
+    },
+    "schema_version": 1,
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": ["ok"],
+      "logical_sha256": "4cee6dd1de7077b2df36e9e9cbcb4856d8394da55245f4c3b00ce72a88741b0b",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "54a13b8785c72fd62131948cf9c73d523cae82b2e967d7745bca7a9147e8d51a",
+      "size_bytes": 97779712,
+      "snapshot_at": "2026-10-11T08:05:48.669Z"
+    },
+    "summary": {
+      "managed_job_classification_counts": {},
+      "ordinary_active_runs": 18,
+      "p5_epochs": 6,
+      "projection_drift": false,
+      "run_classification_counts": {
+        "AWAITING_ACCEPTANCE": 1,
+        "P5_EXPERIMENT_ANCHOR": 6,
+        "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 17
+      },
+      "stale_background_operation_residues": 0,
+      "unbound_live_resource_residues": 0,
+      "unexplained_active_runs": 0
+    }
+  },
+  "job_state_interpretation": {
+    "ordinary_active_run_records": 18,
+    "awaiting_acceptance_count": 1,
+    "stale_candidate_count": 17,
+    "managed_job_classifications_observed": 0,
+    "active_command_count": null,
+    "active_background_operation_count": null,
+    "active_managed_process_count": null,
+    "active_agent_lane_count": null,
+    "note": "The requested summary does not expose per-resource active counts. Eighteen active run records are classified as seventeen stale candidates and one awaiting acceptance; this is not eighteen executing jobs or proof that all OS jobs are absent."
+  },
+  "process_observations": [
+    {
+      "pid": 10668,
+      "present": true,
+      "name": "python",
+      "start_time_utc": "2026-10-11T07:14:19.0469421Z",
+      "executable_path": "E:/Github/Tools-Codex-web/dist/windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3/win-unpacked/resources/resources/native-python/python.exe",
+      "expected_role": "connected_agent",
+      "start_time_matches_prior_agent_record": true
+    },
+    {
+      "pid": 12036,
+      "present": true,
+      "name": "Coding Tools MCP",
+      "start_time_utc": "2026-10-11T05:24:31.1179058Z",
+      "executable_path": "E:/Github/Tools-Codex-web/dist/windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3/win-unpacked/Coding Tools MCP.exe",
+      "expected_role": "recovery_host"
+    },
+    {
+      "pid": 20308,
+      "present": true,
+      "name": "Coding Tools MCP",
+      "start_time_utc": "2026-10-11T05:24:29.5339831Z",
+      "executable_path": "E:/Github/Tools-Codex-web/dist/windows-candidate-mxc-wsb-cbe1774-folders-unified-1011-r3/win-unpacked/Coding Tools MCP.exe",
+      "expected_role": "electron_ui"
+    }
+  ],
+  "process_observation_window_utc": {
+    "after": "2026-10-11T08:05:48.669Z",
+    "before": "2026-10-11T08:09:28Z"
+  },
+  "process_observation_limits": "Only the three explicitly identified PIDs were observed through read-only OS process metadata. No command lines, credentials, private configuration or service health endpoints were read. Process presence does not establish current runtime readiness.",
+  "historical_patch_reconciliation": {
+    "action_id": "act_16f5443e532942019fa7bb43868b34b0",
+    "attempt_id": "try_5239ead2bf2b459e8e175c623362b8cc",
+    "operation_id": "HAt4M_RQNok1GYYb",
+    "pre_effect_error_code": "BACKGROUND_OPERATION_FAILED",
+    "pre_effect_error_message": "arguments.include_diff is not a recognized argument.",
+    "worker_terminalized": true,
+    "fixture_sha256_at_failure": "742976da6d38a49f35c48b5824eea2badc1e98258dd74d8c34720f08f09a14cb",
+    "fixture_unchanged_at_failure": true,
+    "server_receipt_id": "rcpt_1e2053b50cd1497589265e569e0ee027",
+    "receipt_state": "rejected",
+    "delivery_state": "settled",
+    "replayed": false,
+    "original_journal_preserved": true,
+    "retry_performed_this_observation": false,
+    "evidence": [
+      ".coding-tools/reports/folder-permissions-20261011/pre-effect-rejection.json",
+      ".coding-tools/reports/folder-permissions-20261011/terminal-reconciliation-receipt.json"
+    ]
+  },
+  "operations_performed": {
+    "canonical_ledger_mutation": false,
+    "service_poll": false,
+    "service_restart": false,
+    "process_termination": false,
+    "authority_change": false,
+    "source_edit": false,
+    "git_stage_commit_push": false
+  }
+}

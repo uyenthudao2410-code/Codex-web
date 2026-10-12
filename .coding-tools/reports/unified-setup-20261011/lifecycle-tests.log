@@ -1,0 +1,166 @@
+TAP version 13
+# (node:23672) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: development lifecycle keeps the operator UI visible while helper signals stay hidden
+ok 1 - development lifecycle keeps the operator UI visible while helper signals stay hidden
+  ---
+  duration_ms: 4.5629
+  type: 'test'
+  ...
+# Subtest: dev:control-center opens the manager through the exact current Electron instance
+ok 2 - dev:control-center opens the manager through the exact current Electron instance
+  ---
+  duration_ms: 1.5082
+  type: 'test'
+  ...
+# Subtest: start bootstraps an absent or dead host through the guarded full-clean lifecycle
+    # Subtest: ENOENT
+    ok 1 - ENOENT
+      ---
+      duration_ms: 1.9323
+      type: 'test'
+      ...
+    # Subtest: RECOVERY_DESCRIPTOR_STALE
+    ok 2 - RECOVERY_DESCRIPTOR_STALE
+      ---
+      duration_ms: 0.236
+      type: 'test'
+      ...
+    1..2
+ok 3 - start bootstraps an absent or dead host through the guarded full-clean lifecycle
+  ---
+  duration_ms: 2.5702
+  type: 'test'
+  ...
+# Subtest: dev:status reports lifecycle state without signaling or activating the UI
+ok 4 - dev:status reports lifecycle state without signaling or activating the UI
+  ---
+  duration_ms: 0.6122
+  type: 'test'
+  ...
+# Subtest: all mutating lifecycle actions fail closed for another installation
+ok 5 - all mutating lifecycle actions fail closed for another installation
+  ---
+  duration_ms: 0.6139
+  type: 'test'
+  ...
+# Subtest: dev lifecycle reads the explicit UI runtime mode instead of the Recovery Host mode
+ok 6 - dev lifecycle reads the explicit UI runtime mode instead of the Recovery Host mode
+  ---
+  duration_ms: 0.1756
+  type: 'test'
+  ...
+# Subtest: Recovery Host exposes bounded UI lifecycle identity without exposing its descriptor token
+ok 7 - Recovery Host exposes bounded UI lifecycle identity without exposing its descriptor token
+  ---
+  duration_ms: 0.625
+  type: 'test'
+  ...
+# Subtest: Electron main makes duplicate start actionable and accepts only exact UI lifecycle signals
+ok 8 - Electron main makes duplicate start actionable and accepts only exact UI lifecycle signals
+  ---
+  duration_ms: 0.9916
+  type: 'test'
+  ...
+# Subtest: Ubuntu toolbar opens the shared folder manager without changing local roots
+ok 9 - Ubuntu toolbar opens the shared folder manager without changing local roots
+  ---
+  duration_ms: 4.0601
+  type: 'test'
+  ...
+# Subtest: an unobserved execution role opens the folder manager without granting a legacy root
+ok 10 - an unobserved execution role opens the folder manager without granting a legacy root
+  ---
+  duration_ms: 2.3395
+  type: 'test'
+  ...
+# Subtest: failed manager navigation does not fall back to a local permission change
+ok 11 - failed manager navigation does not fall back to a local permission change
+  ---
+  duration_ms: 1.2409
+  type: 'test'
+  ...
+# Subtest: a new folder manager loads the workspace page in its initial hash
+not ok 12 - a new folder manager loads the workspace page in its initial hash
+  ---
+  duration_ms: 1.9149
+  type: 'test'
+  location: 'E:\\Github\\Tools-Codex-web\\tests\\toolbar-folder-navigation.test.js:122:1'
+  failureType: 'testCodeFailure'
+  error: 'showChatWindow is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    Object.openManagerWindow (evalmachine.<anonymous>:11:24)
+    Object.open (E:\Github\Tools-Codex-web\tests\toolbar-folder-navigation.test.js:119:54)
+    TestContext.<anonymous> (E:\Github\Tools-Codex-web\tests\toolbar-folder-navigation.test.js:124:27)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: an existing manager receives navigation without reloading its state
+not ok 13 - an existing manager receives navigation without reloading its state
+  ---
+  duration_ms: 2.1915
+  type: 'test'
+  location: 'E:\\Github\\Tools-Codex-web\\tests\\toolbar-folder-navigation.test.js:131:1'
+  failureType: 'testCodeFailure'
+  error: 'showChatWindow is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    Object.openManagerWindow (evalmachine.<anonymous>:11:24)
+    Object.open (E:\Github\Tools-Codex-web\tests\toolbar-folder-navigation.test.js:119:54)
+    TestContext.<anonymous> (E:\Github\Tools-Codex-web\tests\toolbar-folder-navigation.test.js:133:27)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: navigation during initial manager loading waits for its renderer and ignores a closed window
+not ok 14 - navigation during initial manager loading waits for its renderer and ignores a closed window
+  ---
+  duration_ms: 1.4089
+  type: 'test'
+  location: 'E:\\Github\\Tools-Codex-web\\tests\\toolbar-folder-navigation.test.js:144:1'
+  failureType: 'testCodeFailure'
+  error: 'showChatWindow is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    Object.openManagerWindow (evalmachine.<anonymous>:11:24)
+    Object.open (E:\Github\Tools-Codex-web\tests\toolbar-folder-navigation.test.js:119:54)
+    TestContext.<anonymous> (E:\Github\Tools-Codex-web\tests\toolbar-folder-navigation.test.js:146:27)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: manager shortcuts reject unrecognized pages before opening or navigating a window
+ok 15 - manager shortcuts reject unrecognized pages before opening or navigating a window
+  ---
+  duration_ms: 1.9073
+  type: 'test'
+  ...
+# Subtest: preload forwards folder navigation and cleans up its manager event subscription
+ok 16 - preload forwards folder navigation and cleans up its manager event subscription
+  ---
+  duration_ms: 2.6958
+  type: 'test'
+  ...
+1..16
+# tests 18
+# suites 0
+# pass 15
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 173.384

@@ -1,0 +1,19 @@
+{
+  "phase": "root_r14_same_window_server_close",
+  "public_receipts": [
+    {
+      "code": "UNCHANGED_EXACT_CONTEXT_REQUIRED",
+      "ok": false,
+      "operation": "close",
+      "phase": "r14_same_window_transition_failed",
+      "raw_error_disclosed": false,
+      "remote_mutation_possible": true,
+      "replay_forbidden": true,
+      "stage": "input"
+    }
+  ],
+  "raw_error_disclosed": false,
+  "remote_mutation_possible": true,
+  "replay_forbidden": true,
+  "ssh_returncode": 2
+}

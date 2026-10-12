@@ -1,0 +1,60 @@
+{
+  "all_external_operations_owner": "root",
+  "approved_main_source": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "approved_recovery_source": "81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb",
+  "archives": [
+    {
+      "name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c.tar.gz",
+      "relative_path": "../../initial-proof-server/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c.tar.gz",
+      "sha256": "7d1a0b015208b4fc257a52bc888cd8a15f559ce33cf04846953d533002b7c273",
+      "size_bytes": 273660
+    },
+    {
+      "name": "codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb.tar.gz",
+      "relative_path": "../../initial-proof-server/rollback-preparation/codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb.tar.gz",
+      "sha256": "7059225a0c7663b0a28899afc3d8603d496af85fb3d32789a5b8a9a2d055b3fc",
+      "size_bytes": 270001
+    }
+  ],
+  "authority_duration_ms": 3600000,
+  "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+  "captured_at_utc": "2026-10-11T15:11:40.905817+00:00",
+  "derived_from_directory": "../activation-server",
+  "derived_from_manifest_sha256": "d764e36dbbabdfb8f3b5202b95f108e90b43bbf2aed0682be19aed10b734c95e",
+  "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+  "helpers": {
+    "r11_common.py": {
+      "sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+      "size_bytes": 22388
+    },
+    "ubuntu-r11-authority.py": {
+      "sha256": "5ebb015298ba0442599af08ae31909fbb0af04294e1c95036455f8819d3743fd",
+      "size_bytes": 10143
+    },
+    "ubuntu-r11-recovery.py": {
+      "sha256": "329422e156165be0bdb45b431e763f0fda164b4a65a47495d8eb0887dabea712",
+      "size_bytes": 6317
+    },
+    "ubuntu-r11-rollout.py": {
+      "sha256": "3a453738d7f9194c1da29b1da8c21dbfd0f53cf658bd0ca906e979d765ed5385",
+      "size_bytes": 10109
+    }
+  },
+  "host": "100.116.112.22",
+  "local_transport_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba",
+  "operation": "local_approved_r11_policy_observation_guard_reconciliation",
+  "original_schema": 28,
+  "original_source": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5",
+  "parent_authority_sha256": "16185e4b36ce415ea3fbddc2c6c396a6822c6afe8bee40942d21ff2094ece760",
+  "prepared_only": true,
+  "profile": "web-mcp-assistant",
+  "remote_execution_performed": false,
+  "root": "E:\\Github\\Tools-Codex-web",
+  "semantic_delta": "Reopen validates standing heartbeat observation TTL independently of unchanged anchored60m context/pilot authority",
+  "service": "codex-control-plane.service",
+  "standing_policy_observation_ttl_ms": 60000,
+  "target_schema": 29,
+  "user": "svhome",
+  "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+  "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788"
+}

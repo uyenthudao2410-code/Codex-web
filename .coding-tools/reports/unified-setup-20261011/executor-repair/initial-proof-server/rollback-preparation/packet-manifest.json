@@ -1,0 +1,50 @@
+{
+  "archive_name": "codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb.tar.gz",
+  "archive_sha256": "7059225a0c7663b0a28899afc3d8603d496af85fb3d32789a5b8a9a2d055b3fc",
+  "authority_renewal_performed": false,
+  "base_archive_sha256": "bf76625554e32478202191c29ccdea0790448a47971db30af54a7aa5959d9061",
+  "base_manifest_sha256": "c608465e22c2a1e4f5801cf93cb416c5bec9c66b412834f0bfed619a1f01ec8d",
+  "base_source_revision": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5",
+  "captured_at_utc": "2026-10-11T14:19:54.863068+00:00",
+  "changed_payload_paths": [
+    "control-plane/control_plane/store.py"
+  ],
+  "denied_store_entry_points": [
+    "set_admission_mode",
+    "create_scoped_pilot_decision",
+    "renew_scoped_pilot_decision",
+    "create_context",
+    "create_work_request",
+    "create_mcp_access_grant",
+    "create_mcp_service_grant",
+    "renew_mcp_service_grant",
+    "record_mcp_patch_acceptance",
+    "record_owner_mcp_patch_acceptance",
+    "_admission_decision"
+  ],
+  "deployment_performed": false,
+  "diff_sha256": "2f5b9599beb744b844f152c59d0156f32d46cc6ff810e8848e42364ac47586e2",
+  "git_commit_or_push_performed": false,
+  "git_head_observed": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "local_release_verification": {
+    "control_plane_schema_version": 29,
+    "file_count": 38,
+    "operation": "control_plane_release_verification",
+    "package_source_sha256": "sha256:a3cdac42954c17199888bb85c32631ada4da55682cb62d57101999da1989bf8a",
+    "release_name": "codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb",
+    "source_revision": "81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb"
+  },
+  "manifest_sha256": "0b9bbc26d22f46dc4004be4b8150fdb72a06f870941a8b680344f5bd9d11ddd2",
+  "migration_or_database_restore": false,
+  "new_grants_or_authority_enabled": false,
+  "new_intake_or_dispatch_enabled": false,
+  "operation": "offline_closed_schema29_recovery_preparation",
+  "package_source_sha256": "sha256:a3cdac42954c17199888bb85c32631ada4da55682cb62d57101999da1989bf8a",
+  "release_name": "codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb",
+  "semantic_acceptance_enabled": false,
+  "service_operation_performed": false,
+  "source_revision": "81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb",
+  "source_revision_is_git_commit": false,
+  "supported_state": "existing schema29 database with persisted admission_mode=recovery and nullable verification_json columns",
+  "unchanged_payload_file_count": 37
+}

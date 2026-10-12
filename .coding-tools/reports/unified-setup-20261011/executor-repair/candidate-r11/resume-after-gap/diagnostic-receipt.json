@@ -1,0 +1,15 @@
+{
+  "current_parent_job": {
+    "associated": true,
+    "breakaway_allowed": true,
+    "limit_flags": 10240
+  },
+  "external_mutation": false,
+  "historical_disappearance_cause": "unproven",
+  "manifest_exists": false,
+  "manifest_matches_r11": false,
+  "observed_at_utc": "2026-10-11T16:08:19.8977535+00:00",
+  "query_only": true,
+  "task_exists_unproven": true,
+  "task_query_available": false
+}

@@ -1,0 +1,10 @@
+{"event":"begin","artifact":"r7","command":"node --test tests/control-plane-approved-patch-runtime.test.js","workspace":"E:\\Github\\Tools-Codex-web"}
+{"event":"phase_begin","phase":"provision"}
+{"event":"phase_end","phase":"provision","ok":true,"elapsed_ms":78}
+{"event":"phase_begin","phase":"start"}
+{"event":"backend_classification","categories":["daemon","ready"],"hresults":[],"message_length":39}
+{"event":"phase_end","phase":"start","ok":false,"code":"SANDBOX_STATE_PHASE_FAILED","details":{"phase":"start","backend_error_code":"backend_error"},"elapsed_ms":127421}
+{"event":"phase_begin","phase":"deprovision"}
+{"event":"phase_end","phase":"deprovision","ok":true,"elapsed_ms":78}
+{"event":"failure","code":"SANDBOX_STATE_PHASE_FAILED","details":{"phase":"start","backend_error_code":"backend_error"}}
+{"event":"manager_cleanup","ok":true}

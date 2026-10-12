@@ -35,7 +35,7 @@ class MxcWindowsSandboxStateAwareTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
 
-    def _runner(self, sandbox_ids: list[str], *, fail_deprovision: bool = False):
+    def _runner(self, sandbox_ids: list[str], *, fail_deprovision: bool = False, fail_start: bool = False):
         calls: list[dict[str, object]] = []
         identities = iter(sandbox_ids)
 
@@ -45,7 +45,7 @@ class MxcWindowsSandboxStateAwareTests(unittest.TestCase):
             if config["phase"] == "provision":
                 payload = {"result": {"sandboxId": next(identities)}}
                 exit_code = 0
-            elif config["phase"] == "deprovision" and fail_deprovision:
+            elif (config["phase"] == "deprovision" and fail_deprovision) or (config["phase"] == "start" and fail_start):
                 payload = {"error": {"code": "backend_error", "message": "redacted"}}
                 exit_code = 1
             else:
@@ -59,6 +59,7 @@ class MxcWindowsSandboxStateAwareTests(unittest.TestCase):
     def _manager(self) -> MxcWindowsSandboxManager:
         manager = MxcWindowsSandboxManager(executor_directory=self.root / "tools")
         manager._environment = lambda: {"PATH": "C:\\Windows\\System32"}  # type: ignore[method-assign]
+        manager._host_process_count = lambda: 0  # type: ignore[method-assign]
         return manager
 
     def test_phase_contract_keeps_mapping_immutable_after_provision(self) -> None:
@@ -74,6 +75,61 @@ class MxcWindowsSandboxStateAwareTests(unittest.TestCase):
             "wsb:deadbeef",
         )
         self.assertNotIn("filesystem", _phase_config("exec", "wsb:deadbeef", process={"timeout": 5000}))
+
+    def test_cold_start_refuses_lingering_host_vm_without_provision_or_replay(self) -> None:
+        manager = self._manager()
+        manager._host_process_count = lambda: 1
+        with patch.object(state_aware, "verify_mxc_windows_sandbox_candidate", return_value={}):
+            with patch.object(state_aware.subprocess, "run") as run:
+                with self.assertRaises(ToolFailure) as observed:
+                    manager.acquire(self.root, [])
+        self.assertEqual(observed.exception.code, "SANDBOX_HOST_BUSY")
+        run.assert_not_called()
+        self.assertIsNone(manager._active)
+        self.assertTrue(manager._lock.acquire(timeout=0.1))
+        manager._lock.release()
+
+    def test_warm_owned_vm_reuses_lease_without_foreign_host_guard(self) -> None:
+        runner, calls = self._runner(["wsb:11111111"])
+        manager = self._manager()
+        with patch.object(state_aware, "verify_mxc_windows_sandbox_candidate", return_value={}):
+            with patch.object(state_aware.subprocess, "run", side_effect=runner):
+                first = manager.acquire(self.root, [])
+                manager.release()
+                manager._host_process_count = Mock(side_effect=AssertionError("owned VM must not be rejected"))
+                second = manager.acquire(self.root, [])
+                manager.release()
+        self.assertEqual(first, second)
+        manager._host_process_count.assert_not_called()
+        self.assertEqual([call["phase"] for call in calls], ["provision", "start"])
+
+    def test_host_observation_accepts_only_bounded_numeric_process_count(self) -> None:
+        manager = self._manager()
+        with patch.object(state_aware, "_system_root", return_value=self.root):
+            with patch.object(state_aware.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, stdout=b"2\r\n")) as run:
+                self.assertEqual(MxcWindowsSandboxManager._host_process_count(manager), 2)
+        self.assertIn("vmmemWindowsSandbox", run.call_args.args[0][-1])
+        self.assertNotIn("shell", run.call_args.kwargs)
+        for status, output in ((1, b"0"), (0, b"-1"), (0, b"private arbitrary output")):
+            with self.subTest(status=status, output=output):
+                with patch.object(state_aware, "_system_root", return_value=self.root):
+                    with patch.object(state_aware.subprocess, "run", return_value=subprocess.CompletedProcess([], status, stdout=output)):
+                        with self.assertRaises(ToolFailure) as observed:
+                            MxcWindowsSandboxManager._host_process_count(manager)
+                self.assertEqual(observed.exception.code, "SANDBOX_HOST_STATE_UNAVAILABLE")
+                self.assertNotIn("private arbitrary output", observed.exception.message)
+
+    def test_unavailable_host_observation_never_provisions(self) -> None:
+        manager = self._manager()
+        manager._host_process_count = Mock(side_effect=ToolFailure("SANDBOX_HOST_STATE_UNAVAILABLE", "Unavailable."))
+        with patch.object(state_aware, "verify_mxc_windows_sandbox_candidate", return_value={}):
+            with patch.object(state_aware.subprocess, "run") as run:
+                with self.assertRaises(ToolFailure) as observed:
+                    manager.acquire(self.root, [])
+        self.assertEqual(observed.exception.code, "SANDBOX_HOST_STATE_UNAVAILABLE")
+        run.assert_not_called()
+        self.assertTrue(manager._lock.acquire(timeout=0.1))
+        manager._lock.release()
 
     def test_launcher_process_cwd_uses_the_same_guest_path_as_the_request_payload(self) -> None:
         workdir = self.root / "src"
@@ -423,6 +479,48 @@ class MxcWindowsSandboxStateAwareTests(unittest.TestCase):
                 manager._lock.release()
         self.assertEqual(context.exception.code, "SANDBOX_TEARDOWN_UNCONFIRMED")
         self.assertTrue(manager._uncertain)
+
+    def test_start_failure_retains_cause_and_deprovisions_once_without_replay(self) -> None:
+        runner, calls = self._runner(["wsb:11111111"], fail_start=True)
+        manager = self._manager()
+        with patch.object(state_aware, "verify_mxc_windows_sandbox_candidate", return_value={}):
+            with patch.object(state_aware.subprocess, "run", side_effect=runner):
+                with self.assertRaises(ToolFailure) as observed:
+                    manager.acquire(self.root, [])
+        self.assertEqual(observed.exception.code, "SANDBOX_STATE_PHASE_FAILED")
+        self.assertEqual(observed.exception.details, {"phase": "start", "backend_error_code": "backend_error"})
+        self.assertEqual([call["phase"] for call in calls], ["provision", "start", "deprovision"])
+        self.assertIsNone(manager._active)
+        self.assertFalse(manager._uncertain)
+        self.assertTrue(manager._lock.acquire(timeout=0.1))
+        manager._lock.release()
+
+    def test_backend_ready_timeout_is_distinct_from_adapter_timeout_and_private_text(self) -> None:
+        manager = self._manager()
+        def run(argv, **kwargs):
+            payload = {"error": {"code": "backend_error", "message": "daemon did not become ready within 120s"}}
+            kwargs["stdout"].write(json.dumps(payload).encode())
+            return subprocess.CompletedProcess(argv, 1)
+        with patch.object(state_aware, "verify_mxc_windows_sandbox_candidate", return_value={}):
+            with patch.object(state_aware.subprocess, "run", side_effect=run):
+                with self.assertRaises(ToolFailure) as observed:
+                    manager._run_envelope(_phase_config("start", "wsb:11111111"))
+        self.assertEqual(observed.exception.code, "SANDBOX_STATE_START_READY_TIMEOUT")
+        self.assertEqual(observed.exception.details, {"phase": "start", "backend_error_code": "start_ready_timeout"})
+        self.assertNotIn("120s", observed.exception.message)
+
+    def test_start_failure_with_unconfirmed_cleanup_blocks_next_acquire(self) -> None:
+        runner, calls = self._runner(["wsb:11111111"], fail_start=True, fail_deprovision=True)
+        manager = self._manager()
+        with patch.object(state_aware, "verify_mxc_windows_sandbox_candidate", return_value={}):
+            with patch.object(state_aware.subprocess, "run", side_effect=runner):
+                with self.assertRaises(ToolFailure) as observed:
+                    manager.acquire(self.root, [])
+                self.assertEqual(observed.exception.details["phase"], "start")
+                with self.assertRaises(ToolFailure) as blocked:
+                    manager.acquire(self.root, [])
+        self.assertEqual(blocked.exception.code, "SANDBOX_STATE_UNCERTAIN")
+        self.assertEqual([call["phase"] for call in calls], ["provision", "start", "deprovision"])
 
     def test_launcher_hides_request_path_in_a_cmd_safe_base64_argument(self) -> None:
         launcher = _build_launcher_command(

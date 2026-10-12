@@ -1,0 +1,45 @@
+{
+  "kind": "r12_windows_activation_packet_local_proof",
+  "observed_at": "2026-10-11T17:51:36.126Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "manifest_sha256": "3b4e3afe80f87ed59ce64d69717faeff4259f1f2cdc918242e5bfface1698292",
+  "transition_sha256": "efe2f17f8d7215f50ed9a38d49db7ad89f7c51562c416c7243bddf76cafa25b2",
+  "candidate_source_payload_files_matched": 15,
+  "helper_dependencies_source_payload_matched": 7,
+  "checks": [
+    {
+      "name": "synthetic authority and pending/standing-policy guards",
+      "command": "node --test offline-check.cjs",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "name": "Node parse",
+      "passed": true
+    },
+    {
+      "name": "Windows PowerShell parser",
+      "parse_errors": 0
+    },
+    {
+      "name": "query-job.py compile-only",
+      "passed": true
+    },
+    {
+      "name": "scoped whitespace",
+      "passed": true
+    }
+  ],
+  "runtime_queries_performed": false,
+  "runtime_activated": false,
+  "connected_agent_started": false,
+  "server_mutated": false,
+  "semantic_acceptance_performed": false,
+  "source_or_package_edited": false,
+  "committed": false,
+  "pushed": false,
+  "supersedes_receipt_sha256": "2a89402d7214027ca41d835dae330432e3fdbd394e230e347372f7df4eee59dc",
+  "reviewer_gap_fixed": "fresh server trial/window/exact target bound to immutable renewal",
+  "recovery_plane_lifecycle_limitation_recorded": true
+}

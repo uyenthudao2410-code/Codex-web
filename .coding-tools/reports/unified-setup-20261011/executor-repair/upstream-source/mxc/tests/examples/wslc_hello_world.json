@@ -1,0 +1,14 @@
+{
+  "version": "0.9.0-alpha",
+  "containerId": "wslc-hello-world",
+  "containment": "wslc",
+  "process": {
+    "commandLine": "echo 'Hello from WSL Container!' && uname -a"
+  },
+  "network": {
+    "egress": { "default": "deny" }
+  },
+  "wslc": {
+    "image": "alpine:latest"
+  }
+}

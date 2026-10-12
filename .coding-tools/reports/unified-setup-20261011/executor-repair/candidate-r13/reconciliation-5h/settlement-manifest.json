@@ -1,0 +1,52 @@
+{
+  "action_id": "act_b2335c57472b4d68931d10dda1572ff9",
+  "approval_id": "call_a60e931056bd402b997c6c10b0796d81",
+  "checker_4_of_4": "not_observed",
+  "duration_ms": 18000000,
+  "execution_by_lane": false,
+  "files": {
+    "root-native-identity-read.cjs": {
+      "sha256": "af83560e2b6bac7784dbe9125459aefcc7a8f1579111715b7cd234c98ad90f17",
+      "size_bytes": 4037
+    },
+    "root-settle-after-effect-ssh.py": {
+      "sha256": "def3c0ae02f437393956fafee33893be6687084d0dce1e7a43a276a86af43be6",
+      "size_bytes": 11944
+    },
+    "settle-exact-after-effect.py": {
+      "sha256": "30f0169c0acb39bb888178e1326a220d175d936a39208397f358eb1eb0b0ed0f",
+      "size_bytes": 21172
+    },
+    "settlement-design.md": {
+      "sha256": "fcdc769db9d7fc1016d00cbbdd5d439fba747d71c0aab19140ec7e405fa616a5",
+      "size_bytes": 5510
+    },
+    "settlement-offline-proof.json": {
+      "sha256": "9f4e8807e0d8b06225c4ffee60e2a93435c50130b01cbbdce33e13f245192cec",
+      "size_bytes": 481
+    },
+    "test_settle_after_effect.py": {
+      "sha256": "6a55f07cf1b3fa2fe0ce46df620aded0367a384c1965d3a6981166cf8764cfed",
+      "size_bytes": 12704
+    }
+  },
+  "helper_sha256": "30f0169c0acb39bb888178e1326a220d175d936a39208397f358eb1eb0b0ed0f",
+  "local_semantic_acceptance": "pending",
+  "native_capsule_sha256": "8c081b83dfcb075e3b8f7588cb15d9dbc4274d472d5551c0e60985b4a1beaa6c",
+  "offline_proof": {
+    "failures": 0,
+    "syntax": true,
+    "tests": 13
+  },
+  "parent_review": {
+    "captured_at_utc": "2026-10-11T23:16:31.844399+00:00",
+    "notes": "No substantive blocker; identity, truthful failed-after-effect, exact unknown/history/lease preservation and once-only boundary reviewed. Root alone executes.",
+    "reviewer": "/root/initial_proof_server",
+    "verdict": "ready"
+  },
+  "patch_applied": true,
+  "ready_for_execution": true,
+  "schema_version": 1,
+  "task_id": "task_3b2a2a860ca54ef7889d2efce6923dc7",
+  "terminal_receipt_state": "failed"
+}

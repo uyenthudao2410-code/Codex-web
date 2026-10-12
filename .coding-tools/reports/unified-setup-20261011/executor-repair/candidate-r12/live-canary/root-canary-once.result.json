@@ -1,0 +1,1 @@
+{"phase":"root_r12_canary_once","ok":false,"dispatch_replay_forbidden":true,"acceptance_performed":false,"stderr_disclosed":false,"code":"ROOT_ONCE_DRIVER_REFUSED_RECONCILE_CURRENT_STAGE_NO_REPLAY","last_phase":"native_preflight","next_action":"READ_ONLY_RECONCILE_INTENT_MANIFEST_AND_EXACT_CANARY_FAMILY_DO_NOT_RERUN_DRIVER"}

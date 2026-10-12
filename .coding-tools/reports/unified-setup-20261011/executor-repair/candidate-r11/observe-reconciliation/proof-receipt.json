@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "scope": "local-only exact rejected canary observation and root-authorized cleanup",
+  "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "captured_at_utc": "2026-10-11T16:43:22.4378347Z",
+  "files": [
+    {
+      "path": "observe-r11.py",
+      "bytes": 9755,
+      "sha256": "6525b2c6069c474c1c0c6e45084f19e4700246d2262b087c633e3692983caf73"
+    },
+    {
+      "path": "cleanup-r11.py",
+      "bytes": 4019,
+      "sha256": "1d679771282690585912b83782cd3ff5f9d3f06e3b5ab78aa3de10e110266610"
+    },
+    {
+      "path": "root-observe-ssh.py",
+      "bytes": 5015,
+      "sha256": "09e31fa7ca1a719509a18d64060decfd7a2d6bf20ae8ac65bb27499b4a5b8630"
+    },
+    {
+      "path": "test_observe_r11.py",
+      "bytes": 7311,
+      "sha256": "fead4503655f9d7c5989bf9a5920c60e00bb6c6b793682fdbf1dd11a679dc7ad"
+    },
+    {
+      "path": "test_cleanup_r11.py",
+      "bytes": 1689,
+      "sha256": "7981b43db322cf9dd484c41d61c71ffa18ac72d13303d742fd6a156782da8645"
+    },
+    {
+      "path": "test_transport.py",
+      "bytes": 2191,
+      "sha256": "9fcbc59dd5dd09014efdfe0a5a2c0b2b5debc0b9ab046eff99a6fd390dffc332"
+    }
+  ],
+  "proof": {
+    "observer_tests": 9,
+    "cleanup_tests": 3,
+    "transport_tests": 3,
+    "passed": 15,
+    "resolved_fixture_failure": "Windows temporary test databases remained open after transaction context exit; fixtures now use closing; live readonly helper already closed its connections",
+    "independent_review": "no concrete defects",
+    "external_effects_by_lane": false
+  },
+  "fixed_action": "act_a0b6b348fd944ea7b9e1eccf0b4c816f",
+  "fixed_task": "task_d06d0dcedee9447ca8dca049137295aa",
+  "fixed_original_remote": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T163335163457Z",
+  "native_semantic_acceptance": "pending"
+}

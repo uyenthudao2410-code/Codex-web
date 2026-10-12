@@ -1,0 +1,55 @@
+{
+  "kind": "root_observed_candidate_validation",
+  "candidate_tag": "workflow-timeout-1012-r14",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "git_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "branch": "main",
+  "source_test": {
+    "command": "node --test --test-name-pattern=initial verification tests/control-plane-approved-patch-runtime.test.js",
+    "tool_chunk_id": "87110f",
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "skipped": 0,
+    "duration_ms": 458.3366,
+    "scoped_diff_check_passed": true
+  },
+  "build": {
+    "command": "node scripts/build-dev-candidate.js workflow-timeout-1012-r14",
+    "session_id": 42755,
+    "exit_code": 0,
+    "existing_candidate_overwritten": false
+  },
+  "packaged_smoke": {
+    "command": "node scripts/packaged-recovery-smoke.js",
+    "tool_chunk_id": "68b80e",
+    "candidate_root": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-workflow-timeout-1012-r14\\win-unpacked",
+    "exit_code": 0,
+    "ok": true,
+    "required_resources": 18,
+    "smart_tool_profile": "smart-v3",
+    "user_data_isolated": true,
+    "production_descriptor_stable": true,
+    "recovery_host_ready": true,
+    "recovery_mcp_alive": true,
+    "supervisor_healthy": true,
+    "live_owner_fail_closed": true,
+    "hash_mismatch_fail_closed": true,
+    "scheduled_task_mutation": false
+  },
+  "package_parity": {
+    "matched_files": 17,
+    "receipt_sha256": "59e4a0af303424a42db59831f83e8205420f6143a446f530bd9a9a272d4ae51a",
+    "app_asar_sha256": "f2a1e77b08f7109ccbd4072055da8d281a339dd5f32f154285d3696ad11f6324",
+    "executable_sha256": "8270535a8149b54527172f9b774ea1fd6ed975fde44e4bb91022bdde31dea154"
+  },
+  "claims": {
+    "candidate_built_and_locally_verified": true,
+    "candidate_activated": false,
+    "live_runtime": "source-fingerprint-1012-r13",
+    "ubuntu_deployed_or_restarted": false,
+    "windows_rebooted": false,
+    "native_semantic_acceptance_performed": false,
+    "commit_push_or_release_performed": false
+  }
+}

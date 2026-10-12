@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "product_source_modified": false,
+  "patch_sha256": "5614539fdda1a5fd22a880a65a26d06f46c2741c649e3a1a68e0b045d643cf88",
+  "supersedes_patch_sha256": "d5253bfd9e06cb9337d7e8e6f85d3bdec098efd55ab7355b351897f5f70cdcf4",
+  "test_command": "node --test --test-name-pattern=\"initial verification (observes|expires)\" .coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r13/reconciliation-5h/approved-patch-timeout-r2-candidate.test.cjs",
+  "test_exit_code": 0,
+  "tests": 2,
+  "pass": 2,
+  "fail": 0,
+  "source_validation": "exact product hashes checked before and after in-memory compilation",
+  "behavior_verified": [
+    "one deadline established before initial workflow HTTP request",
+    "initial request timeout 330000ms for a 60000ms verification plan",
+    "after simulated 325000ms handoff, operation wait limited to remaining 5000ms",
+    "after simulated 330001ms handoff, original deadline refuses any operation poll",
+    "both cases invoke the original workflow exactly once and retain the applied patch",
+    "workspace binding remains 12000ms; operation HTTP remains 15000ms"
+  ],
+  "patch_apply_check_exit_code": 0,
+  "preparation_note": "An interim r2 manual diff had overlapping context and failed git apply --check. The final difflib patch passed. No product source was edited during either attempt."
+}

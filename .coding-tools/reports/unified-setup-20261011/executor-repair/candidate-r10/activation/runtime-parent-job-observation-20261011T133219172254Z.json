@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-11T13:32:19.172254+00:00",
+  "phase": "post_recovery_spawn_pre_refresh",
+  "descriptor_sha256": "27c74daac0755a2957bb84171631211021c4f177e33ef700718ec53ec1be064f",
+  "installation_id": "36cd3af6fe1da4607cfe3035d48becd97dc12265901b480401bf44389ff1d1dc",
+  "host_instance_id": "4d3c42c864437d33fb43f647939d4e35",
+  "activation_epoch_id": "activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2",
+  "targets": [
+    {
+      "role": "recovery_host",
+      "pid": 25868,
+      "expected_start_token": "134361991050098600",
+      "identity_matches_pin": false,
+      "ancestry": [
+        {
+          "pid": 25868,
+          "parent_pid": 9172,
+          "name": "Coding Tools MCP.exe",
+          "created": "2026-10-11T13:31:45.0098600Z",
+          "state": "observed",
+          "process_start_token": "134361991050098609",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 9172,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [],
+      "lifetime_independence_proven": false
+    },
+    {
+      "role": "spawned_ui_candidate",
+      "pid": 23792,
+      "expected_start_token": null,
+      "identity_matches_pin": null,
+      "ancestry": [
+        {
+          "pid": 23792,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [],
+      "lifetime_independence_proven": false
+    },
+    {
+      "role": "native_receipt",
+      "pid": 17488,
+      "expected_start_token": "134361991080061930",
+      "identity_matches_pin": false,
+      "ancestry": [
+        {
+          "pid": 17488,
+          "parent_pid": 25868,
+          "name": "pythonw.exe",
+          "created": "2026-10-11T13:31:48.0061930Z",
+          "state": "observed",
+          "process_start_token": "134361991080061933",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 25868,
+          "parent_pid": 9172,
+          "name": "Coding Tools MCP.exe",
+          "created": "2026-10-11T13:31:45.0098600Z",
+          "state": "observed",
+          "process_start_token": "134361991050098609",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 9172,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [
+        true
+      ],
+      "lifetime_independence_proven": false
+    },
+    {
+      "role": "agent_receipt",
+      "pid": 3584,
+      "expected_start_token": "134361969912419610",
+      "identity_matches_pin": false,
+      "ancestry": [
+        {
+          "pid": 3584,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [],
+      "lifetime_independence_proven": false
+    }
+  ],
+  "runtime_mutated": false,
+  "authority_mutated": false,
+  "source_mutated": false,
+  "notes": [
+    "IsProcessInJob reports membership in any Windows Job, not that Job limits or owner.",
+    "Parent ancestry is rejected as a causal chain when a parent was created after the child.",
+    "No command lines, environment variables or credentials were collected."
+  ]
+}

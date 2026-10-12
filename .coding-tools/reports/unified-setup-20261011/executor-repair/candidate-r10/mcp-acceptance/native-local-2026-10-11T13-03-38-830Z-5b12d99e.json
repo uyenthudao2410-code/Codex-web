@@ -1,0 +1,9 @@
+{
+  "kind": "r10_native_local_read_only_failed_v2",
+  "observed_at": "2026-10-11T13:03:38.830Z",
+  "ok": false,
+  "code": "ENOENT",
+  "boundary": "IMMUTABLE_PACKAGE_PROVENANCE",
+  "live_command_invoked": false,
+  "mutations_requested": false
+}

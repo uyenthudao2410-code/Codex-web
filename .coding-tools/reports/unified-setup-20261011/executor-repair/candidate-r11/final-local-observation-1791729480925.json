@@ -1,0 +1,70 @@
+{
+  "content_free": true,
+  "mutated_canonical_ledger": false,
+  "observed_at_unix_seconds": 1791729480.925633,
+  "pending_records": {
+    "runs": {
+      "id": "95e909f0040a448faa9f1f3257e2ee2c",
+      "sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+      "unchanged": true
+    },
+    "waves": {
+      "id": "c101beadfc6d4f2fbc13845052c84693",
+      "sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+      "unchanged": true
+    }
+  },
+  "pending_records_unchanged": true,
+  "projection": {
+    "available": true,
+    "bound_relevant_run_count": 1,
+    "classification": "CONTEXTUAL_PROJECTIONS",
+    "conflicting_run_count": 0,
+    "context_count": 1091,
+    "contextual_sha256": "7df7a0c2e996916ff4f3556661dff6f391e62156838ad66ffaac1725c6c50ee9",
+    "malformed_context_projection": false,
+    "missing_run_count": 0,
+    "mode": "contextual",
+    "orchestration_state": "",
+    "relevant_run_count": 1,
+    "run_id": "",
+    "unprojected_historical_acceptance_count": 0,
+    "wave_id": ""
+  },
+  "read_contract": {
+    "canonical_writer_instantiated": false,
+    "execution_resource_governor_instantiated": false,
+    "ledger_facts_fact_load_statements": 8,
+    "lifecycle_facts_fact_load_statements": 14,
+    "runtime_instantiated": false
+  },
+  "schema_version": 1,
+  "snapshot": {
+    "backup_api_copy": true,
+    "foreign_key_check_rows": 0,
+    "immutable": true,
+    "integrity_check": [
+      "ok"
+    ],
+    "logical_sha256": "06fb2393004928bfd9167449d783e1824f3174ce80a628698ab6cb59c8562df5",
+    "query_only": true,
+    "schema_version": 12,
+    "sha256": "b04fb5dbfe3ffcf93a4adf953633e44d245bac4011a7c0feae5367320956ec98",
+    "size_bytes": 97800192,
+    "snapshot_at": "2026-10-11T14:38:04.365Z"
+  },
+  "summary": {
+    "managed_job_classification_counts": {},
+    "ordinary_active_runs": 18,
+    "p5_epochs": 6,
+    "projection_drift": false,
+    "run_classification_counts": {
+      "AWAITING_ACCEPTANCE": 1,
+      "P5_EXPERIMENT_ANCHOR": 6,
+      "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 17
+    },
+    "stale_background_operation_residues": 0,
+    "unbound_live_resource_residues": 0,
+    "unexplained_active_runs": 0
+  }
+}

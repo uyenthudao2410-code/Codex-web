@@ -1,0 +1,23 @@
+{
+  "kind": "helper_crypto_material_protected_relocation",
+  "schema_version": 1,
+  "observed_at": "2026-10-11T15:05:48.4088159Z",
+  "source": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\unified-setup-20261011\\executor-repair\\candidate-r11\\activation-windows\\isolated-cleanup-user-data",
+  "destination": "C:\\Users\\daoth\\AppData\\Local\\CodingToolsOperatorHelpers\\r11-20261011T150547345Z",
+  "reason": "Helper-generated protected crypto key in Local State must remain outside repository evidence; sanitized relocation receipt preserves chronology.",
+  "operation": "Move-Item -LiteralPath",
+  "inventory": [
+    {
+      "relative_path": "Local State",
+      "sha256": "e2586ecc722a66b6c4b88491cf26ee297c5f70ce0fa1362962976a4d516f6581",
+      "preserved_sha256": "e2586ecc722a66b6c4b88491cf26ee297c5f70ce0fa1362962976a4d516f6581"
+    }
+  ],
+  "helper_processes_using_source": 0,
+  "source_absent": true,
+  "destination_acl_protected": true,
+  "credential_contents_emitted": false,
+  "files_deleted": false,
+  "existing_destination_overwritten": false,
+  "production_runtime_operations_performed": false
+}

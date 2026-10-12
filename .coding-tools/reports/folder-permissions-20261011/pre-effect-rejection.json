@@ -1,0 +1,20 @@
+{
+  "kind": "independent_pre_effect_rejection_proof",
+  "observed_at": "2026-10-11",
+  "operation_id": "HAt4M_RQNok1GYYb",
+  "status": "failed",
+  "run_id": "",
+  "wave_id": "",
+  "finished_at": "2026-10-11T05:18:18.273Z",
+  "request_id": "control-plane-approved-patch-workflow-46f19dc2e6ddfea9549cb93b",
+  "error": {
+    "category": "runtime",
+    "code": "BACKGROUND_OPERATION_FAILED",
+    "message": "arguments.include_diff is not a recognized argument.",
+    "retryable": false
+  },
+  "worker_terminalized": true,
+  "fixture_sha256": "742976da6d38a49f35c48b5824eea2badc1e98258dd74d8c34720f08f09a14cb",
+  "action_id": "act_16f5443e532942019fa7bb43868b34b0",
+  "attempt_id": "try_5239ead2bf2b459e8e175c623362b8cc"
+}

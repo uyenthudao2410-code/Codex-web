@@ -1,0 +1,50 @@
+diff --git a/electron/services/runtimeOrchestrator.js b/electron/services/runtimeOrchestrator.js
+--- a/electron/services/runtimeOrchestrator.js
++++ b/electron/services/runtimeOrchestrator.js
+@@ -2026,8 +2026,10 @@
+       verification: 'none',
+       ...(verificationPlan ? { initial_verification: verificationPlan,
+         initial_verification_expires_at_ms: admission.expires_at_ms } : {})
+-    }, 'workflow');
+-    if (verificationPlan && structured?.status === 'running') {
++    }, 'workflow', verificationPlan
++      ? verificationPlan.timeout_ms + CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS + 30000
++      : CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS);
++    if (verificationPlan && structured?.status === 'running') {
+       const operationId = structured.background_operation?.operation_id;
+       if (typeof operationId !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(operationId)
+         || structured.background_operation.tool !== 'agent_workflow'
+diff --git a/tests/control-plane-approved-patch-runtime.test.js b/tests/control-plane-approved-patch-runtime.test.js
+--- a/tests/control-plane-approved-patch-runtime.test.js
++++ b/tests/control-plane-approved-patch-runtime.test.js
+@@ -194,9 +194,15 @@
+   action.verification = { argv: ['node', '--test', 'tests/fixture.test.js'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };
+   action.exec_policy_sha256 = 'e'.repeat(64);
+   action.expires_at_ms = Date.now() + 600000;
+-  const calls = [];
+-  let workflowArguments;
+-  const operationId = 'background_opaque_operation';
++  const calls = [];
++  const requestTimeouts = [];
++  const request = http.request;
++  t.mock.method(http, 'request', function (options, ...argumentsList) {
++    requestTimeouts.push(options.timeout);
++    return Reflect.apply(request, this, [options, ...argumentsList]);
++  });
++  let workflowArguments;
++  const operationId = 'background_opaque_operation';
+   const proof = { plan_sha256: digest(action.verification), proof_status: 'failed', proof_ids: ['4'.repeat(32)], proof_fingerprint: null,
+     command_id: '-original-command', job_id: '_original-job' };
+   const server = http.createServer((request, response) => {
+@@ -238,8 +244,9 @@
+   assert.equal(calls.filter(call => call.params.name === 'agent_workflow').length, 1);
+   assert.equal(result.patch_applied, true);
+   assert.equal(result.local_semantic_acceptance, 'pending');
+-  assert.equal(result.initial_verification.proof_status, 'failed');
+-  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
++  assert.equal(result.initial_verification.proof_status, 'failed');
++  assert.deepEqual(requestTimeouts, [12_000, 330_000, 15_000]);
++  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
+   assert.equal(result.response_sha256, digest({ file: result.file, initial_verification: proof }));
+   assertLocalMcpSchemaAccepts(calls);
+ });

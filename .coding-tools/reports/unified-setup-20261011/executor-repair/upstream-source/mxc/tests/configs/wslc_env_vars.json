@@ -1,0 +1,15 @@
+{
+  "version": "0.9.0-alpha",
+  "containerId": "wslc-env-vars",
+  "containment": "wslc",
+  "process": {
+    "commandLine": "echo MY_VAR=$MY_VAR && echo GREETING=$GREETING",
+    "env": ["MY_VAR=hello_from_host", "GREETING=world"]
+  },
+  "network": {
+    "egress": { "default": "deny" }
+  },
+  "wslc": {
+    "image": "alpine:latest"
+  }
+}

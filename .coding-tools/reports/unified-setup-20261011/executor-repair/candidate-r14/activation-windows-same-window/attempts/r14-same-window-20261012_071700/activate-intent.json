@@ -1,0 +1,24 @@
+{
+  "phase": "activate",
+  "observed_at_ms": 1791764280080,
+  "helper_sha256": "b875e90526322528ae4406492b7915ed9ce049a28943d9c5f661e26fd07e0d74",
+  "launcher_identity": {
+    "state": "live",
+    "pid": 3368,
+    "process_start_token": "134362378785000420"
+  },
+  "no_automatic_retry": true,
+  "old_host": {
+    "state": "live",
+    "pid": 19592,
+    "process_start_token": "134362368051350210"
+  },
+  "old_descriptor": {
+    "installation_id": "991540a792ef1f5c0997f74d1bfbbcc66ffd72bb165ac51479381df26b97598e",
+    "instance_id": "4fd65f1a9517cf6a172e0cb294ec7e44",
+    "owner_pid": 19592,
+    "owner_process_start_token": "134362368051350210",
+    "activation_epoch_id": "activation-mv4hj8no-28bda83f04cbbc169673d67d936636a4"
+  },
+  "authority_expires_at_ms": 1791776571067
+}

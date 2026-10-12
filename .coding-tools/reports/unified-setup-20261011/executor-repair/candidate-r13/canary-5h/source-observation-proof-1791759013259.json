@@ -1,0 +1,15 @@
+{
+  "all_status_records": 3614,
+  "executed_command": false,
+  "kind": "r13_5h_actual_query_only_source_observation",
+  "network_calls": 0,
+  "observed_at_ms": 1791759013259,
+  "ok": true,
+  "runtime_ledger_mutated": false,
+  "source_identity": {
+    "base_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "worktree_fp": "545355bb3e59c42183edd6376cc8c20af7fff3f47f880330739fc850a1ff49ce"
+  },
+  "source_observation_bytes": 5234,
+  "source_status_records": 109
+}

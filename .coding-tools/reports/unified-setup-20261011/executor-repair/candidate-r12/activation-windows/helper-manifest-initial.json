@@ -1,0 +1,58 @@
+{
+  "kind": "r12_windows_activation_helper_manifest",
+  "observed_at": "2026-10-11T17:46:48.776Z",
+  "runtime_activated": false,
+  "server_mutated": false,
+  "helper_files": [
+    {
+      "file": "transition-r12.cjs",
+      "sha256": "ee99a7340315fce1ae2eedc3278c6f6e9b73f7f9b6ded1075083a944650fb705"
+    },
+    {
+      "file": "launch-child.ps1",
+      "sha256": "7ebfbf9af61b43a5eecb1b16256c525a58b82a32c97f4703a88d6277eda1816b"
+    },
+    {
+      "file": "query-job.py",
+      "sha256": "5c957000e82f816b0ba7754e816503f364ec035ff0fe55ae914f28d843599144"
+    },
+    {
+      "file": "offline-check.cjs",
+      "sha256": "7e5ff5c2bded606daf14f697fb80b433ebae54be65b2bd8e5625e21031bcb1ba"
+    },
+    {
+      "file": "README.md",
+      "sha256": "76c9582700da2d2608d0ec28ef17196d980d238f5919f17e77e8c0c0d95732c9"
+    }
+  ],
+  "dependencies": [
+    {
+      "file": "electron/services/runtimePaths.js",
+      "sha256": "a28fe23a10daa10baeb9c437ccee13cff2c1d28585d1c6daa3e5a23844d23474"
+    },
+    {
+      "file": "electron/services/recoveryIpc.js",
+      "sha256": "57e0154c4d9f80bcfc5fa95ec5c4643de436d8fe945e9b3ab884afd9b8faebc2"
+    },
+    {
+      "file": "electron/services/recoveryHostLauncher.js",
+      "sha256": "92cb2478ae940c737a8e8a007181a9fa410b1eeb1e26a06b5bb07e1043ebf60a"
+    },
+    {
+      "file": "electron/services/processIdentity.js",
+      "sha256": "a0ee2b08cbe4108c352ba14b9532ceaf581497f745a2adda7924c819a972809f"
+    },
+    {
+      "file": "electron/services/fullCleanActivation.js",
+      "sha256": "881ffbdc57d4332ec1d6316199d2876d58821447b30cc861eade4c2c3d31baf1"
+    },
+    {
+      "file": "electron/services/controlPlaneEnrollment.js",
+      "sha256": "8855a46f64833b5a464ff82fc91f5a7af2058d61f493725ca4f64b701e841cfe"
+    },
+    {
+      "file": "electron/services/controlPlaneRouteEvidence.js",
+      "sha256": "c36e027eaffcdb35d23032ba9a70d49a8838e4585e0136020b94262d4a7665ac"
+    }
+  ]
+}

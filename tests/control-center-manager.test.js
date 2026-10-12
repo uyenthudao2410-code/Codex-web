@@ -2,20 +2,221 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-test('manager primary navigation is operator-first while advanced tools remain reachable from System', () => {
+function managerHeartbeatFixture(executionRole) {
+  const source = read('renderer/app.js');
+  const elements = new Map();
+  const snapshot = { settings: { executionRole }, status: {} };
+  const context = vm.createContext({
+    state: { snapshot },
+    $: (selector) => {
+      if (!elements.has(selector)) elements.set(selector, { textContent: '' });
+      return elements.get(selector);
+    },
+    setDot: (element, tone) => { element.tone = tone; },
+    renderRecoveryTunnelSettings() {},
+    renderDevice() {},
+    renderRuntimeSourceStatus() {}
+  });
+  for (const [start, end] of [
+    ['function isCentralExecutor', 'const CENTRAL_WORKSPACE_PRESETS'],
+    ['function centralRoutePresentation', 'function centralSetupGuidance'],
+    ['function applyHeartbeat', 'async function loadLogs']
+  ]) {
+    const startIndex = source.indexOf(start);
+    const endIndex = source.indexOf(end, startIndex);
+    assert.ok(startIndex >= 0 && endIndex > startIndex);
+    vm.runInContext(source.slice(startIndex, endIndex), context);
+  }
+  return { snapshot, elements, apply: (status) => context.applyHeartbeat(status) };
+}
+
+function connectionGuidanceFixture() {
+  const source = read('renderer/app.js');
+  const elements = new Map();
+  const snapshot = {
+    settings: { executionRole: 'central_executor', workspace: 'E:\\existing-workspace' },
+    current_ui_runtime: { mode: 'development' },
+    status: { centralConnected: false },
+    device: { display_name: 'test-device' }
+  };
+  const state = {
+    snapshot,
+    centralEnrollmentStatus: { state: 'unconfigured' },
+    centralAuthorityStatus: { state: 'unknown' },
+    centralEnrollmentReceipt: null,
+    busy: false,
+    centralEnrollmentBusy: false
+  };
+  const makeElement = () => {
+    const children = new Map();
+    return {
+      hidden: false,
+      disabled: false,
+      textContent: '',
+      querySelector: (selector) => {
+        if (selector !== 'b' && selector !== 'p') return null;
+        if (!children.has(selector)) children.set(selector, { textContent: '' });
+        return children.get(selector);
+      }
+    };
+  };
+  const context = vm.createContext({
+    state,
+    isCentralExecutor: (settings) => settings?.executionRole === 'central_executor',
+    api: { chooseWorkspace: async () => 'E:\\chosen-workspace' },
+    unwrap: (value) => value,
+    toast() {},
+    cancelSetupContinuation() {},
+    renderCentralExecutorMode() {},
+    $: (selector) => {
+      if (!elements.has(selector)) elements.set(selector, makeElement());
+      return elements.get(selector);
+    },
+    renderControlPlaneConsoleLink() {}
+  });
+  for (const [start, end] of [
+    ['function centralSetupGuidance', 'function centralSetupDevelopmentBlocked'],
+    ['function centralSetupDevelopmentBlocked', 'function renderConnectionGuidance'],
+    ['async function chooseControlPlaneWorkspace', 'async function registerControlPlaneWorkspace'],
+    ['function renderConnectionGuidance', 'function renderControlPlaneConsoleLink']
+  ]) {
+    const startIndex = source.indexOf(start);
+    const endIndex = source.indexOf(end, startIndex);
+    assert.ok(startIndex >= 0 && endIndex > startIndex);
+    vm.runInContext(source.slice(startIndex, endIndex), context);
+  }
+  return {
+    snapshot,
+    state,
+    elements,
+    context,
+    render: () => context.renderConnectionGuidance(snapshot)
+  };
+}
+
+test('workspace setup notice follows packaged runtime boundary', () => {
+  const fixture = connectionGuidanceFixture();
+
+  const developmentGuidance = fixture.render();
+  const connectionNotice = fixture.elements.get('#setupDevelopmentNotice');
+  const workspaceNotice = fixture.elements.get('#workspaceSetupDevelopmentNotice');
+  assert.equal(developmentGuidance.key, 'development');
+  assert.equal(connectionNotice.hidden, false);
+  assert.equal(workspaceNotice.hidden, false);
+  assert.match(workspaceNotice.querySelector('b').textContent, /bản phát triển/);
+  assert.match(workspaceNotice.querySelector('p').textContent, /Chọn thư mục, đăng ký workspace/);
+
+  fixture.snapshot.current_ui_runtime = {
+    mode: 'packaged',
+    installation_id: 'a'.repeat(64)
+  };
+  fixture.snapshot.recoveryHost = {
+    electron_ui_recovery: {
+      recovery_host_runtime_mode: 'packaged',
+      recovery_host_installation_id: 'a'.repeat(64)
+    }
+  };
+  fixture.snapshot.recovery_host_connection = { state: 'connected' };
+  fixture.snapshot.status.centralConnected = true;
+  fixture.state.centralEnrollmentStatus = { fresh: true, state: 'approved' };
+  fixture.state.centralAuthorityStatus = { fresh: true, state: 'ready' };
+
+  const packagedGuidance = fixture.render();
+  assert.equal(packagedGuidance.key, 'approved');
+  assert.equal(connectionNotice.hidden, true);
+  assert.equal(workspaceNotice.hidden, true);
+});
+
+test('packaged workspace chooser returns a candidate without changing the active workspace or granting authority', async () => {
+  const fixture = connectionGuidanceFixture();
+  let calls = 0;
+  fixture.context.api.chooseWorkspace = async () => {
+    calls += 1;
+    return 'E:\\chosen-workspace';
+  };
+  await assert.rejects(fixture.context.chooseControlPlaneWorkspace(), /cần runtime packaged hợp lệ/);
+  assert.equal(calls, 0);
+
+  fixture.snapshot.current_ui_runtime = { mode: 'packaged', installation_id: 'a'.repeat(64) };
+  fixture.snapshot.recoveryHost = {
+    electron_ui_recovery: { recovery_host_runtime_mode: 'packaged', recovery_host_installation_id: 'a'.repeat(64) }
+  };
+  fixture.snapshot.recovery_host_connection = { state: 'connected' };
+  const beforeSettings = JSON.stringify(fixture.snapshot.settings);
+  assert.equal(await fixture.context.chooseControlPlaneWorkspace(), 'E:\\chosen-workspace');
+  assert.equal(calls, 1);
+  assert.equal(fixture.state.centralWorkspaceCandidate, 'E:\\chosen-workspace');
+  assert.equal(JSON.stringify(fixture.snapshot.settings), beforeSettings);
+  assert.equal(fixture.state.centralWorkspaceBusy, false);
+  assert.equal(fixture.state.centralPolicyReceipt, null);
+});
+
+test('manager heartbeat retains Ubuntu presentation and replaces central route evidence', () => {
+  const fixture = managerHeartbeatFixture('central_executor');
+  fixture.apply({
+    executionRole: 'central_executor', mcpRunning: true, tunnelRunning: false,
+    fullyReady: true, centralConnected: true, authorityReady: true,
+    centralStatusReason: null
+  });
+  assert.equal(fixture.elements.get('#sideTunnel').textContent, 'UBUNTU');
+  assert.equal(fixture.elements.get('#tunnelStatus').textContent, 'Do Ubuntu quản lý');
+  assert.equal(fixture.elements.get('#tunnelDot').tone, 'ready');
+  assert.match(fixture.elements.get('#tunnelMeta').textContent, /Đã sẵn sàng qua Ubuntu/);
+  assert.equal(fixture.snapshot.status.centralConnected, true);
+
+  fixture.apply({
+    executionRole: 'central_executor', mcpRunning: true, tunnelRunning: false,
+    fullyReady: false, centralConnected: false, authorityReady: false,
+    centralStatusReason: 'CENTRAL_ROUTE_EVIDENCE_STALE'
+  });
+  assert.equal(fixture.elements.get('#tunnelDot').tone, 'warn');
+  assert.match(fixture.elements.get('#tunnelMeta').textContent, /Heartbeat Ubuntu đã cũ/);
+  assert.equal(fixture.snapshot.status.centralConnected, false);
+
+  fixture.apply({ mcpRunning: true, tunnelRunning: false, fullyReady: false });
+  assert.equal(Object.hasOwn(fixture.snapshot.status, 'centralConnected'), false);
+  assert.equal(Object.hasOwn(fixture.snapshot.status, 'authorityReady'), false);
+  assert.equal(Object.hasOwn(fixture.snapshot.status, 'centralStatusReason'), false);
+  assert.equal(fixture.elements.get('#tunnelDot').tone, 'warn');
+});
+
+test('manager heartbeat distinguishes direct Tunnel and uncertain telemetry', () => {
+  const fixture = managerHeartbeatFixture('local_executor');
+  fixture.apply({ mcpRunning: true, tunnelRunning: true, fullyReady: true });
+  assert.equal(fixture.elements.get('#sideTunnel').textContent, 'ON');
+  assert.equal(fixture.elements.get('#tunnelStatus').textContent, 'Đã kết nối');
+  assert.equal(fixture.elements.get('#tunnelDot').tone, 'ready');
+  fixture.apply({ mcpRunning: true, tunnelRunning: false, fullyReady: false });
+  assert.equal(fixture.elements.get('#sideTunnel').textContent, 'OFF');
+  assert.equal(fixture.elements.get('#tunnelDot').tone, 'error');
+  fixture.apply({ signalStale: true, telemetryAvailable: false });
+  assert.equal(fixture.elements.get('#tunnelStatus').textContent, 'Đang chờ heartbeat mới');
+  assert.equal(fixture.elements.get('#tunnelDot').tone, 'warn');
+});
+
+test('manager primary navigation keeps execution central and combines connection and folder setup in System', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
   for (const page of ['overview', 'task', 'device', 'system']) {
     assert.match(nav, new RegExp(`data-page="${page}"`), `missing primary page ${page}`);
   }
-  for (const legacy of ['build', 'health', 'guide', 'logs', 'settings', 'deploy', 'workspace']) {
+  for (const legacy of ['build', 'health', 'guide', 'logs', 'settings']) {
     assert.doesNotMatch(nav, new RegExp(`data-page="${legacy}"`), `${legacy} should not compete in primary navigation`);
     assert.match(html, new RegExp(`data-nav="${legacy}"`), `${legacy} must remain reachable from System`);
     assert.match(html, new RegExp(`data-page-view="${legacy}"`), `${legacy} page must be preserved`);
+  }
+  const setupPage = html.match(/<section class="page" data-page-view="system">[\s\S]*?(?=<section class="page" data-page-view=)/)?.[0] || '';
+  for (const section of ['setupConnectionSection', 'setupFolderSection', 'setupExecutionSection']) {
+    assert.match(setupPage, new RegExp(`id="${section}"`), `${section} belongs in the single setup page`);
+  }
+  for (const obsoletePage of ['deploy', 'workspace']) {
+    assert.doesNotMatch(nav, new RegExp(`data-page="${obsoletePage}"`));
+    assert.doesNotMatch(html, new RegExp(`data-page-view="${obsoletePage}"`), `${obsoletePage} must not create a second setup flow`);
   }
   assert.match(html, /control-center\.css/);
   assert.match(html, /control-center\.js/);
@@ -162,8 +363,8 @@ test('central workspace row installs standing file policy only for its exact loc
   const preload = read('electron/preload.js');
   const main = read('electron/main.js');
   const service = read('electron/services/controlPlaneEnrollment.js');
-  assert.match(html, /bấm “Bật đọc\/sửa file” ngay tại thư mục đã chọn/);
-  assert.match(html, /Chạy lệnh là quyền riêng, chưa được bật/);
+  assert.match(html, /Bật quyền đã đăng ký chỉ cần một lần xác nhận/);
+  assert.match(html, /sandbox và quyền tài khoản vẫn được kiểm tra/);
   assert.match(app, /filePolicy\.textContent = capabilities\.write === true \? 'Bật đọc\/sửa file' : 'Bật đọc file'/);
   assert.match(app, /api\.installControlPlaneStandingFilePolicies\(\{/);
   assert.match(app, /api\.inspectControlPlaneStandingFilePolicies\(\)/);
@@ -175,7 +376,8 @@ test('central workspace row installs standing file policy only for its exact loc
   assert.match(app, /Chưa xác minh liên kết ID/);
   const targetMatch = app.slice(app.indexOf('function centralDispatchableTargetForLocalWorkspace'), app.indexOf('function centralWorkspaceCapabilitiesFromUi'));
   assert.doesNotMatch(targetMatch, /return entry\.display_name ===/);
-  assert.match(app, /const workspacePath = await chooseControlPlaneWorkspace\(\)/);
+  const replacement = app.slice(app.indexOf('async function replaceControlPlaneWorkspace'), app.indexOf('async function refreshControlPlaneWorkspaces'));
+  assert.doesNotMatch(replacement, /chooseControlPlaneWorkspace\(|workspacePath,/);
   assert.match(app, /workspaceId: workspace\.workspace_id,[\s\S]*workspaceGeneration: workspace\.workspace_generation/);
   assert.match(preload, /installControlPlaneStandingFilePolicies:.*control-plane:install-standing-file-policies/);
   assert.match(preload, /inspectControlPlaneStandingFilePolicies:.*control-plane:inspect-standing-file-policies/);

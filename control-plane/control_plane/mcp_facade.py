@@ -16,7 +16,8 @@ import json
 import re
 from typing import Any
 
-from .node_agent import APPROVED_PATCH_MAX_FILE_BYTES, safe_workspace_summary
+from .node_agent import APPROVED_PATCH_MAX_FILE_BYTES, safe_workspace_summary, _safe_approved_patch_initial_verification
+from .mcp_status import terminal_failure
 from .store import (
     MCP_APPROVED_PATCH_MAX_BYTES,
     MCP_APPROVED_PATCH_OPERATION,
@@ -28,6 +29,7 @@ from .store import (
     MCP_PATCH_PERMISSION_OPERATION,
     MCP_PATCH_PERMISSION_TOOL_NAME,
     MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
+    _mcp_patch_verification,
     ControlPlaneError,
     ControlPlaneStore,
     MCP_SERVICE_READ_SCOPE,
@@ -396,11 +398,12 @@ def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
             "description": "Required for status. Only a request created by the authenticated OAuth principal may be observed.",
         },
     }
+    properties["verification"] = _patch_verification_schema()
     return _operation_union_input_schema(properties, {
         "request_patch": (
             (
                 "binding_id", "path", "preimage_sha256", "patch_sha256",
-                "validation_profile", "idempotency_key", "expected_facade_contract", "task_id",
+                "validation_profile", "idempotency_key", "expected_facade_contract", "task_id", "verification",
             ),
             (
                 "binding_id", "path", "preimage_sha256", "patch_sha256",
@@ -409,6 +412,20 @@ def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
         ),
         "status": (("permission_request_id",), ("permission_request_id",)),
     })
+
+
+def _patch_verification_schema() -> dict[str, Any]:
+    return {
+        "type": "object", "additionalProperties": False,
+        "required": ["argv", "cwd", "timeout_ms", "max_output_bytes"],
+        "properties": {
+            "argv": {"type": "array", "minItems": 1, "maxItems": 8,
+                     "items": {"type": "string", "minLength": 1, "maxLength": 256}},
+            "cwd": {"type": "string", "maxLength": 512},
+            "timeout_ms": {"type": "integer", "minimum": 5000, "maximum": 300000},
+            "max_output_bytes": {"type": "integer", "minimum": 1024, "maximum": 65536},
+        },
+    }
 
 
 def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> dict[str, Any]:
@@ -461,12 +478,13 @@ def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> di
                 "description": "Required for patch_status. Only an action created by the authenticated OAuth principal may be observed.",
             },
         }
+        properties["verification"] = _patch_verification_schema()
         apply_fields = (
             "binding_id", "task_id", "path", "preimage_sha256", "patch_sha256",
             "validation_profile", "patch_envelope", "idempotency_key", "expected_facade_contract",
         )
         return _operation_union_input_schema(properties, {
-            "apply_patch": (apply_fields, apply_fields),
+            "apply_patch": ((*apply_fields, "verification"), apply_fields),
             "patch_status": (("action_id",), ("action_id",)),
         })
 
@@ -516,11 +534,12 @@ def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> di
             "description": "Required for patch_status. Only an action created by the authenticated OAuth principal may be observed.",
         },
     }
+    properties["verification"] = _patch_verification_schema()
     required_apply_fields = (
         "permission_request_id", "patch_envelope", "idempotency_key", "expected_facade_contract",
     )
     return _operation_union_input_schema(properties, {
-        "apply_patch": (("task_id", *required_apply_fields), required_apply_fields),
+        "apply_patch": (("task_id", "verification", *required_apply_fields), required_apply_fields),
         "patch_status": (("action_id",), ("action_id",)),
     })
 
@@ -1019,7 +1038,7 @@ def _central_lifecycle_state(action: dict[str, Any]) -> str:
         return "settled_without_receipt"
     latest = receipts[-1]
     receipt_state = latest.get("receipt_state") if isinstance(latest, dict) else None
-    if receipt_state in {"completed", "rejected", "failed"}:
+    if receipt_state in {"completed", "rejected", "failed", "stopped"}:
         return str(receipt_state)
     return "settled_with_nonterminal_receipt"
 
@@ -1349,6 +1368,13 @@ def _completed_approved_patch_relay(
     base_action_fields = {
         "operation", "permission_request_id", "path", "preimage_sha256", "patch_sha256", "validation_profile",
     }
+    plan_sha256 = expected_file.get("verification_sha256")
+    if plan_sha256 is not None:
+        if not isinstance(plan_sha256, str) or re.fullmatch(r"[a-f0-9]{64}", plan_sha256) is None:
+            return None
+        base_action_fields.add("verification_sha256")
+        if action_arguments.get("verification_sha256") != plan_sha256:
+            return None
     expected_path = _safe_bounded_relative_path(expected_file.get("path"))
     expected_preimage_sha256 = expected_file.get("preimage_sha256")
     expected_postimage_sha256 = expected_file.get("postimage_sha256")
@@ -1401,13 +1427,19 @@ def _completed_approved_patch_relay(
             payload = json.loads(raw_payload)
         except (TypeError, ValueError):
             continue
+        initial_verification = None
+        if plan_sha256 is not None:
+            try:
+                initial_verification = _safe_approved_patch_initial_verification(payload.get("initial_verification"), plan_sha256)
+            except (AttributeError, RuntimeError):
+                continue
         if (
             not isinstance(payload, dict)
-            or set(payload) != {
+            or set(payload) != ({
                 "schema_version", "operation_kind", "patch_applied", "local_handle", "policy_sha256",
                 "local_semantic_acceptance", "task_id", "writer_lease_generation", "run_id", "wave_id",
                 "actor", "runtime_identity", "facade_contract", "file", "response_sha256",
-            }
+            } | ({"initial_verification"} if plan_sha256 is not None else set()))
             or payload.get("schema_version") != 1
             or payload.get("operation_kind") != "control_plane_approved_patch"
             or payload.get("patch_applied") is not True
@@ -1479,7 +1511,8 @@ def _completed_approved_patch_relay(
             "bytes_written": bytes_written,
         }
         expected_response_sha256 = hashlib.sha256(
-            _canonical_json(safe_file).encode("utf-8")
+            _canonical_json({"file": safe_file, "initial_verification": initial_verification}
+                            if initial_verification is not None else safe_file).encode("utf-8")
         ).hexdigest()
         if payload["response_sha256"].lower() != expected_response_sha256:
             continue
@@ -1493,6 +1526,7 @@ def _completed_approved_patch_relay(
             "wave_id": payload.get("wave_id"),
             "file": safe_file,
             "response_sha256": expected_response_sha256,
+            **({"initial_verification": initial_verification} if initial_verification is not None else {}),
         }
     return None
 
@@ -1688,6 +1722,8 @@ def _completed_artifact_relay(action: dict[str, Any], contract: dict[str, int | 
             if mime == "image/png" and not raw.startswith(b"\x89PNG\r\n\x1a\n"):
                 continue
             if mime == "image/jpeg" and not raw.startswith(b"\xff\xd8\xff"):
+                continue
+            if mime == "image/webp" and not (len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"):
                 continue
             expected = hashlib.sha256(_canonical_json(
                 {"path": payload.get("path"), "mime": mime, "data_base64": data_b64}).encode()).hexdigest()
@@ -2077,9 +2113,88 @@ class ControlPlaneMcpFacade:
     def _call_error(*, code: str, message: str, tool_name: str) -> dict[str, Any]:
         return {
             "content": [{"type": "text", "text": message}],
-            "structuredContent": {"code": code, "tool_name": tool_name, "execution": "not_implemented"},
+            "structuredContent": {"code": code, "message": message, "tool_name": tool_name, "execution": "not_implemented"},
             "isError": True,
         }
+
+    def _relay_capabilities(self) -> dict[str, Any]:
+        """Expose discovery facts to clients that do not forward MCP _meta."""
+        result = {}
+        for tool in self.contract["tools"]:
+            metadata = tool["_meta"]["control_plane"]
+            operations = metadata.get("implemented_operations", [])
+            result[tool["name"]] = {
+                "capability_state": metadata["capability_state"],
+                "implemented_operations": operations,
+                "execution": metadata["execution"],
+                "relay_enabled": bool(operations),
+                # Registered capabilities and metadata heartbeat policy are
+                # not evidence that any local file/exec lane can admit work.
+                "local_admission": "not_applicable" if not operations or tool["name"] == "task_control" else "unverified",
+            }
+        return result
+
+    def _tool_failure(self, name: str, arguments: dict[str, Any], error: ControlPlaneError) -> dict[str, Any]:
+        """Return tool validation/domain errors as model-visible MCP results.
+
+        Malformed protocol envelopes remain JSON-RPC errors. Diagnostics name
+        only advertised fields; arbitrary input values and keys are not echoed.
+        """
+        schema = next(tool["inputSchema"] for tool in self.contract["tools"] if tool["name"] == name)
+        properties = schema.get("properties", {})
+        operation = arguments.get("operation")
+        known_operations = properties.get("operation", {}).get("enum", [])
+        selected = schema
+        for branch in schema.get("oneOf", []):
+            if operation in branch.get("properties", {}).get("operation", {}).get("enum", []):
+                selected = branch
+                break
+        known_fields = {field for tool in self.contract["tools"] for field in tool["inputSchema"].get("properties", {})}
+        missing = sorted(set(selected.get("required", [])) - set(arguments))
+        unexpected = sorted({
+            field if field in known_fields else "<unknown>"
+            for field in set(arguments) - set(selected.get("properties", {}))
+        })
+        invalid = []
+        if "operation" in properties and operation not in known_operations:
+            invalid.append("operation")
+        # Parsers already enforce types, ranges, path and digest rules. Read
+        # their fixed field names without duplicating or relaxing validation.
+        message = str(error)
+        for field in properties:
+            if message.startswith(field + " ") or message.startswith(field + "/"):
+                invalid.append(field)
+        if "path" in properties and message.startswith("bounded file path "):
+            invalid.append("path")
+        if error.code == "CONTRACT_MISMATCH":
+            invalid.append("expected_facade_contract")
+        next_action = (
+            "refresh_inventory_contract" if error.code == "CONTRACT_MISMATCH"
+            else "correct_arguments" if error.code == "VALIDATION_ERROR"
+            else "inspect_authority" if error.code == "FORBIDDEN"
+            else "observe_existing_action" if error.code == "CONFLICT"
+            else "inspect_target"
+        )
+        contract = _contract_metadata(self.contract)
+        feedback: dict[str, Any] = {
+            "code": error.code,
+            "message": message,
+            "tool_name": name,
+            "operation": operation if operation in known_operations else None,
+            "execution": "not_started",
+            "retryable": False,
+            "tool_contract": contract,
+            "validation": {"missing_fields": missing, "unexpected_fields": unexpected, "invalid_fields": sorted(set(invalid))},
+            "next_action": next_action,
+        }
+        if error.code == "CONTRACT_MISMATCH":
+            supplied = arguments.get("expected_facade_contract")
+            feedback["expected_facade_contract"] = contract
+            feedback["mismatch_fields"] = sorted(
+                field for field, value in contract.items()
+                if not isinstance(supplied, dict) or supplied.get(field) != value
+            )
+        return {"content": [{"type": "text", "text": _canonical_json(feedback)}], "structuredContent": feedback, "isError": True}
 
     def _arguments(self, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         name = params.get("name")
@@ -2088,6 +2203,8 @@ class ControlPlaneMcpFacade:
         arguments = params.get("arguments")
         if not isinstance(arguments, dict):
             raise ValidationError("tools/call arguments must be an object.")
+        if "operation" in arguments and not isinstance(arguments["operation"], str):
+            raise ValidationError("operation must be a string.")
         if name == "task_control" and self.oauth_enabled and self.oauth_file_read_enabled:
             operation = arguments.get("operation")
             if operation not in {"task_observe", "writer_claim", "writer_release"}:
@@ -2113,7 +2230,7 @@ class ControlPlaneMcpFacade:
                     "operation", "binding_id", "path", "preimage_sha256", "patch_sha256",
                     "validation_profile", "idempotency_key", "expected_facade_contract",
                 }
-                allowed = required | {"task_id"}
+                allowed = required | {"task_id", "verification"}
                 if not required <= set(arguments) or not set(arguments) <= allowed:
                     raise ValidationError("request_patch requires one exact target, patch digests, validation profile, idempotency key and expected facade contract.")
                 binding_id = arguments.get("binding_id")
@@ -2155,6 +2272,7 @@ class ControlPlaneMcpFacade:
                     "idempotency_key": key.strip(),
                     "task_id": task_id,
                     "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                    **({"verification": _mcp_patch_verification(arguments["verification"])} if "verification" in arguments else {}),
                 }
             if operation == "status":
                 if set(arguments) != {"operation", "permission_request_id"}:
@@ -2173,7 +2291,7 @@ class ControlPlaneMcpFacade:
                         "patch_sha256", "validation_profile", "patch_envelope", "idempotency_key",
                         "expected_facade_contract",
                     }
-                    if set(arguments) != required:
+                    if not required <= set(arguments) or not set(arguments) <= required | {"verification"}:
                         raise ValidationError(
                             "standing apply_patch requires one exact binding, task, path, digests, patch envelope, idempotency key and expected facade contract."
                         )
@@ -2217,12 +2335,13 @@ class ControlPlaneMcpFacade:
                         "patch_envelope": patch_envelope,
                         "idempotency_key": key.strip(),
                         "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                        **({"verification": _mcp_patch_verification(arguments["verification"])} if "verification" in arguments else {}),
                     }
                 required = {
                     "operation", "permission_request_id", "patch_envelope",
                     "idempotency_key", "expected_facade_contract",
                 }
-                allowed = required | {"task_id"}
+                allowed = required | {"task_id", "verification"}
                 if not required <= set(arguments) or not set(arguments) <= allowed:
                     raise ValidationError("apply_patch requires one approved permission request, exact patch envelope, idempotency key and expected facade contract.")
                 permission_request_id = arguments.get("permission_request_id")
@@ -2250,6 +2369,7 @@ class ControlPlaneMcpFacade:
                     "idempotency_key": key.strip(),
                     "task_id": task_id,
                     "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                    **({"verification": _mcp_patch_verification(arguments["verification"])} if "verification" in arguments else {}),
                 }
             if operation == "patch_status":
                 if set(arguments) != {"operation", "action_id"}:
@@ -2710,10 +2830,14 @@ class ControlPlaneMcpFacade:
             ]
             message = "Exact delegated service target inventory only; no workspace was accessed and no task authority was created."
         return {
-            "content": [{"type": "text", "text": message}],
+            "content": [{"type": "text", "text": message + " Use this exact tool_contract for expected_facade_contract: " + _canonical_json(_contract_metadata(self.contract))
+                         + ". File paths are relative POSIX paths from the selected workspace root; the node contract_version is a different contract. Registered capabilities do not prove local file or exec admission."}],
             "structuredContent": {
                 "schema_version": self.contract["schema_version"],
                 "observation_kind": "control_plane_account_target_inventory",
+                "tool_contract": _contract_metadata(self.contract),
+                "relay_capabilities": self._relay_capabilities(),
+                "path_format": "workspace_relative_posix",
                 "workspace_accessed": False,
                 "execution": "no_local_execution",
                 "local_admission": "not_requested",
@@ -2727,7 +2851,7 @@ class ControlPlaneMcpFacade:
     def _action_lifecycle_projection(action: dict[str, Any]) -> dict[str, Any]:
         """Expose lifecycle evidence without sealed arguments or local handles."""
 
-        return {
+        observation = {
             "action_id": action["action_id"],
             "action_digest": action["action_digest"],
             "tool_name": action["tool_name"],
@@ -2754,6 +2878,10 @@ class ControlPlaneMcpFacade:
                 for receipt in action["receipts"]
             ],
         }
+        failure = terminal_failure(action)
+        if failure is not None:
+            observation["local_failure"] = failure
+        return observation
 
     def _request_bounded_file_read(
         self,
@@ -2941,6 +3069,10 @@ class ControlPlaneMcpFacade:
         if relay is not None:
             observation["file_read"] = relay
             content = "The selected local Windows node read one policy-bounded file and relayed its verified receipt."
+        elif (failure := terminal_failure(action)) is not None:
+            state = _central_lifecycle_state(action)
+            observation.update({"execution": "local_file_read_" + state, "local_admission": state, "local_failure": failure})
+            content = "File read ended with " + failure["code"] + "; inspect this action before retrying."
         return {
             "content": [{"type": "text", "text": content}],
             "structuredContent": observation,
@@ -2970,6 +3102,7 @@ class ControlPlaneMcpFacade:
             idempotency_key=arguments["idempotency_key"],
             facade_contract=current_contract,
             task_id=arguments.get("task_id"),
+            verification=arguments.get("verification"),
         )
         return {
             "content": [{
@@ -3039,6 +3172,7 @@ class ControlPlaneMcpFacade:
             idempotency_key=arguments["idempotency_key"],
             facade_contract=current_contract,
             task_id=arguments["task_id"],
+            verification=arguments.get("verification"),
         )
         action = self.store.mcp_approved_patch_action_observation(
             owner_id=owner_id,
@@ -3088,6 +3222,7 @@ class ControlPlaneMcpFacade:
             idempotency_key=arguments["idempotency_key"],
             facade_contract=current_contract,
             task_id=arguments.get("task_id"),
+            verification=arguments.get("verification"),
         )
         action = self.store.mcp_approved_patch_action_observation(
             owner_id=owner_id,
@@ -3183,8 +3318,24 @@ class ControlPlaneMcpFacade:
             "action": self._action_lifecycle_projection(action),
         }
         content = "Approved patch action has no verified completed local receipt yet."
+        if relay is None and (failure := terminal_failure(action)) is not None:
+            state = _central_lifecycle_state(action)
+            observation.update({
+                "execution": "local_patch_" + state,
+                "local_admission": state,
+                "local_failure": failure,
+                "local_semantic_acceptance": "unverified",
+            })
+            if state in {"failed", "stopped"}:
+                observation["patch_applied"] = None
+            content = "Patch action ended with " + failure["code"] + ". No patch effect is verified; inspect the exact action and do not replay it automatically."
         if relay is not None:
             observation["patch"] = relay
+            proof = relay.get("initial_verification")
+            if proof is not None:
+                observation["initial_verification"] = proof
+                observation["proof_status"] = proof["proof_status"]
+                observation["execution"] = "effect_applied_initial_verification_" + proof["proof_status"] + "_pending_local_acceptance"
             try:
                 acceptance = self.store.get_mcp_patch_acceptance(owner_id=owner_id, action_id=action["action_id"])
             except Exception:
@@ -3196,15 +3347,20 @@ class ControlPlaneMcpFacade:
                     "Its local Coding Tools RUN still requires separate proof and semantic acceptance. "
                     "Record acceptance via the owner Console; rejection never reverts the file."
                 )
+                if proof is not None:
+                    content = ("The exact patch effect is verified. Its initial verification " + proof["proof_status"]
+                               + "; native semantic acceptance remains pending. Observe this action; do not replay the patch or check automatically.")
             else:
-                observation["local_semantic_acceptance"] = acceptance["decision"]
+                # The owner Console records a central verdict. There is no
+                # relay completing the local RUN/WAVE acceptance checkpoint.
+                observation["central_owner_acceptance"] = acceptance["decision"]
                 observation["acceptance"] = acceptance
                 if acceptance["decision"] == "accepted":
-                    observation["execution"] = "effect_applied_local_accepted"
-                    content = "Patch effect was verified and the owner recorded semantic acceptance."
+                    observation["execution"] = "effect_applied_owner_accepted_local_pending"
+                    content = "Patch effect was verified and the owner accepted it centrally. The local Coding Tools RUN still awaits its own proof and semantic acceptance checkpoint."
                 else:
-                    observation["execution"] = "effect_applied_local_rejected_needs_correction"
-                    content = "Patch effect was verified but the owner rejected the result. The file was not reverted; queue a corrective patch instead."
+                    observation["execution"] = "effect_applied_owner_rejected_local_pending"
+                    content = "Patch effect was verified but the owner rejected it centrally. The file was not reverted and the local RUN is still pending; inspect the result before any corrective patch."
         return {
             "content": [{"type": "text", "text": content}],
             "structuredContent": observation,
@@ -3277,6 +3433,11 @@ class ControlPlaneMcpFacade:
         if relay is not None:
             observation["exec"] = {k: relay[k] for k in ("receipt_id", "received_at_ms", "local_handle", "exit_code", "truncated", "output_bytes", "response_sha256")}
             content = f"Exec finished with exit {relay['exit_code']}. Use command_control exec_output for paged output."
+        elif (failure := terminal_failure(action)) is not None:
+            state = _central_lifecycle_state(action)
+            observation.update({"execution": "local_exec_" + state, "process_state": state,
+                                "local_admission": state, "local_failure": failure})
+            content = "Exec action ended with " + failure["code"] + "; no exit code or output is verified. Do not start a replacement automatically."
         return {"content": [{"type": "text", "text": content}], "structuredContent": observation, "isError": False}
 
     def _exec_output(self, *, owner_id: str, principal_id: str, action_id: str, cursor: int, max_bytes: int) -> dict[str, Any]:
@@ -3420,8 +3581,15 @@ class ControlPlaneMcpFacade:
         }
         if relay is not None:
             observation["document"] = relay
+        elif (failure := terminal_failure(action)) is not None:
+            state = _central_lifecycle_state(action)
+            observation.update({"execution": "local_document_write_" + state, "local_admission": state,
+                                "local_failure": failure})
+        content = "The node relayed one verified document workflow result." if relay else "Document write has no verified completed receipt yet."
+        if "local_failure" in observation:
+            content = "Document write ended with " + observation["local_failure"]["code"] + "; inspect this action before any new write."
         return {
-            "content": [{"type": "text", "text": "The node relayed one verified document workflow result." if relay else "Document write has no verified completed receipt yet."}],
+            "content": [{"type": "text", "text": content}],
             "structuredContent": observation,
             "isError": False,
         }
@@ -3450,8 +3618,13 @@ class ControlPlaneMcpFacade:
         }
         content = f"Scoped {kind} has no verified completed receipt yet."
         if relay is not None:
-            observation["artifact"] = {k: v for k, v in relay.items() if k != "content" or True}
+            observation["artifact"] = relay
             content = f"The node relayed one verified {kind} artifact."
+        elif (failure := terminal_failure(action)) is not None:
+            state = _central_lifecycle_state(action)
+            observation.update({"execution": "local_artifact_" + state, "local_admission": state,
+                                "local_failure": failure})
+            content = "Artifact read ended with " + failure["code"] + "; inspect this action before retrying."
         return {"content": [{"type": "text", "text": content}], "structuredContent": observation, "isError": False}
 
     @staticmethod
@@ -3460,6 +3633,27 @@ class ControlPlaneMcpFacade:
             raise PermissionError("MCP client access grant does not cover context_id.")
 
     def _call_tool(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        granted_context_id: str | None,
+        oauth_scopes: frozenset[str],
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        name = params.get("name")
+        arguments = params.get("arguments")
+        if not isinstance(name, str) or name not in PUBLIC_TOOL_NAMES:
+            raise ValidationError("tools/call name is unsupported.")
+        if not isinstance(arguments, dict):
+            raise ValidationError("tools/call arguments must be an object.")
+        try:
+            return self._dispatch_tool(owner_id=owner_id, principal_id=principal_id,
+                                       granted_context_id=granted_context_id, oauth_scopes=oauth_scopes, params=params)
+        except ControlPlaneError as error:
+            return self._tool_failure(name, arguments, error)
+
+    def _dispatch_tool(
         self,
         *,
         owner_id: str,
@@ -3507,6 +3701,8 @@ class ControlPlaneMcpFacade:
                     tool_name=name,
                 )
             if arguments["operation"] == "request_patch":
+                if "verification" in arguments and not self.oauth_exec_enabled:
+                    return self._call_error(code="INITIAL_VERIFICATION_EXEC_DISABLED", message="Initial verification requires the enabled structured exec surface.", tool_name=name)
                 return self._request_patch_permission(
                     owner_id=owner_id,
                     principal_id=principal_id,
@@ -3525,6 +3721,8 @@ class ControlPlaneMcpFacade:
                     tool_name=name,
                 )
             if arguments["operation"] == "apply_patch":
+                if "verification" in arguments and not self.oauth_exec_enabled:
+                    return self._call_error(code="INITIAL_VERIFICATION_EXEC_DISABLED", message="Initial verification requires the enabled structured exec surface.", tool_name=name)
                 if self.oauth_standing_write_enabled:
                     return self._request_standing_patch(
                         owner_id=owner_id,
@@ -3589,9 +3787,15 @@ class ControlPlaneMcpFacade:
                     pass
             return self._artifact_status(owner_id=owner_id, principal_id=principal_id, kind=kind, action_id=arguments["action_id"])
         if name != "workspace_context":
+            if name == "request_permissions" and self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
+                return self._call_error(
+                    code="LOCAL_ADMISSION_BRIDGE_REQUIRED",
+                    message="This private service uses the selected workspace's standing local policies. Configure permissions in the owner's folder manager; request_permissions does not grant local authority in this profile.",
+                    tool_name=name,
+                )
             return self._call_error(
                 code="LOCAL_ADMISSION_BRIDGE_REQUIRED",
-                message="This tool is advertised as unavailable until its local admission bridge and relay scope are implemented.",
+                message="This tool's relay is disabled in the current server profile. Read inventory.relay_capabilities and refresh tool discovery; a registered node capability does not enable this relay.",
                 tool_name=name,
             )
         if self.oauth_enabled:

@@ -18,6 +18,7 @@ from control_plane.store import (
     PermissionError,
     SCHEMA_VERSION,
     ValidationError,
+    _mcp_patch_verification,
 )
 
 
@@ -118,6 +119,101 @@ class McpPermissionRequestTests(unittest.TestCase):
         self.store.approve_mcp_permission_request(owner_id=self.owner_id, permission_request_id=request_id)
         return request_id, patch
 
+    def test_initial_verification_is_exact_and_requires_exec_surface_and_capability(self) -> None:
+        plan = {"argv": ["node", "--test", "tests/fixture.test.js"], "cwd": "", "timeout_ms": 60000, "max_output_bytes": 32768}
+        for changes in ({"argv": "node --test"}, {"timeout_ms": True}, {"max_output_bytes": 131072},
+                        {"cwd": None}, {"argv": ["node", "a;shutdown"]}, {"extra": 1}):
+            with self.subTest(changes=changes), self.assertRaises(ValidationError):
+                _mcp_patch_verification({**plan, **changes})
+        response = self._call({**self._request_arguments(), "verification": plan})
+        self.assertEqual(response["result"]["structuredContent"]["code"], "INITIAL_VERIFICATION_EXEC_DISABLED")
+        with self.assertRaisesRegex(PermissionError, "exec capability"):
+            self.store.request_mcp_patch_permission(
+                owner_id=self.owner_id, principal_id=self.principal["principal_id"], binding_id=self.binding["binding_id"],
+                path="src/fixture.txt", preimage_sha256="a" * 64, patch_sha256="b" * 64,
+                validation_profile="targeted", idempotency_key="initial-verification-no-exec-capability",
+                facade_contract=self._expected_contract(), verification=plan,
+            )
+        self.assertEqual(self.store.health()["counts"]["actions"], 0)
+        self.assertEqual(self.store.health()["counts"]["mcp_permission_requests"], 0)
+
+    def test_initial_verification_is_bound_to_reviewed_permission_and_action_digest(self) -> None:
+        plan = {"argv": ["node", "--test", "tests/fixture.test.js"], "cwd": "", "timeout_ms": 60000, "max_output_bytes": 32768}
+        self.store.register_node_workspace(
+            device_id=self.node["device_id"], workspace_id="proof-workspace-0001", workspace_generation="proof-generation-0001",
+            display_name="Proof workspace", capabilities={"read": True, "write": True, "exec": True},
+        )
+        binding = self.store.create_binding(
+            owner_id=self.owner_id, device_id=self.node["device_id"], workspace_id="proof-workspace-0001",
+            workspace_generation="proof-generation-0001", display_name="Proof workspace",
+        )
+        patch = self._exact_patch()
+        arguments = dict(owner_id=self.owner_id, principal_id=self.principal["principal_id"], binding_id=binding["binding_id"],
+                         path="src/fixture.txt", preimage_sha256="a" * 64, patch_sha256=hashlib.sha256(patch.encode()).hexdigest(),
+                         validation_profile="targeted", idempotency_key="initial-verification-reviewed-key",
+                         facade_contract=self._expected_contract(), verification=plan)
+        permission = self.store.request_mcp_patch_permission(**arguments)
+        self.assertEqual(permission["verification"], plan)
+        self.store.approve_mcp_permission_request(owner_id=self.owner_id, permission_request_id=permission["permission_request_id"])
+        action_arguments = dict(owner_id=self.owner_id, principal_id=self.principal["principal_id"],
+                                permission_request_id=permission["permission_request_id"], patch_envelope=patch,
+                                idempotency_key="initial-verification-reviewed-action", facade_contract=self._expected_contract())
+        for verification in (None, {**plan, "argv": ["node", "--test", "tests/other.test.js"]}):
+            with self.subTest(verification=verification), self.assertRaisesRegex(ConflictError, "reviewed patch permission"):
+                self.store.request_mcp_approved_patch(**action_arguments, verification=verification)
+        queued = self.store.request_mcp_approved_patch(**action_arguments, verification=plan)
+        replay = self.store.request_mcp_approved_patch(**action_arguments, verification=plan)
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(replay["action_id"], queued["action_id"])
+        observation = self.store.mcp_approved_patch_action_observation(
+            owner_id=self.owner_id, principal_id=self.principal["principal_id"], action_id=queued["action_id"],
+        )
+        expected = hashlib.sha256(json.dumps(plan, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+        self.assertEqual(json.loads(observation["arguments_json"])["verification_sha256"], expected)
+        sealed = self.store.mcp_approved_patch_expected_file(owner_id=self.owner_id, principal_id=self.principal["principal_id"], action_id=queued["action_id"])
+        self.assertEqual(sealed["verification_sha256"], expected)
+        self.assertNotIn("argv", json.loads(observation["arguments_json"]))
+
+    def test_v28_initial_verification_columns_preserve_legacy_history_and_immutable_digests(self) -> None:
+        permission_request_id, patch = self._approved_permission(key="legacy-verification-migration-permission")
+        queued = self.store.request_mcp_approved_patch(
+            owner_id=self.owner_id, principal_id=self.principal["principal_id"], permission_request_id=permission_request_id,
+            patch_envelope=patch, idempotency_key="legacy-verification-migration-action", facade_contract=self._expected_contract(),
+        )
+        tables = ("mcp_permission_requests", "mcp_approved_patch_intents", "mcp_standing_patch_intents", "actions", "contexts", "work_requests", "events")
+        with closing(sqlite3.connect(self.store.path)) as connection:
+            columns = {table: [row[1] for row in connection.execute(f"PRAGMA table_info({table})") if row[1] != "verification_json"] for table in tables}
+            def rows():
+                return {table: connection.execute(f"SELECT {','.join(columns[table])} FROM {table} ORDER BY rowid").fetchall() for table in tables}
+            before = rows()
+            permission = dict(zip(columns["mcp_permission_requests"], before["mcp_permission_requests"][0]))
+            legacy_immutable = {
+                "kind": "mcp_facade_approved_patch_v1", "owner_id": self.owner_id, "principal_id": self.principal["principal_id"],
+                "permission_request_id": permission_request_id, "permission_digest": permission["permission_digest"],
+                "binding_id": self.binding["binding_id"], "task_id": None, "path": "src/fixture.txt", "preimage_sha256": "a" * 64,
+                "patch_sha256": hashlib.sha256(patch.encode()).hexdigest(), "validation_profile": "targeted",
+                "idempotency_key": "legacy-verification-migration-action", "facade_contract": self._expected_contract(),
+            }
+            legacy_digest = hashlib.sha256(json.dumps(legacy_immutable, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            self.assertEqual(queued["intent_digest"], legacy_digest)
+            for table in tables[:3]:
+                connection.execute(f"ALTER TABLE {table} DROP COLUMN verification_json")
+            connection.execute("PRAGMA user_version = 28")
+            connection.commit()
+        migrated = ControlPlaneStore(self.store.path, clock=lambda: self.now)
+        self.assertEqual(migrated.health()["schema_version"], 29)
+        with closing(sqlite3.connect(self.store.path)) as connection:
+            after = {table: connection.execute(f"SELECT {','.join(columns[table])} FROM {table} ORDER BY rowid").fetchall() for table in tables}
+            self.assertEqual(before, after)
+            for table in tables[:3]:
+                self.assertEqual(connection.execute(f"SELECT COUNT(*) FROM {table} WHERE verification_json IS NOT NULL").fetchone()[0], 0)
+        replay = migrated.request_mcp_approved_patch(
+            owner_id=self.owner_id, principal_id=self.principal["principal_id"], permission_request_id=permission_request_id,
+            patch_envelope=patch, idempotency_key="legacy-verification-migration-action", facade_contract=self._expected_contract(),
+        )
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(replay["intent_digest"], legacy_digest)
+
     def test_request_is_precise_but_creates_no_action_context_or_local_effect(self) -> None:
         response = self._call(self._request_arguments())
         content = response["result"]["structuredContent"]
@@ -158,19 +254,22 @@ class McpPermissionRequestTests(unittest.TestCase):
         changed = self._request_arguments()
         changed["patch_sha256"] = "c" * 64
         conflict = self._call(changed)
-        self.assertEqual(conflict["error"]["data"]["code"], "CONFLICT")
+        self.assertTrue(conflict["result"]["isError"])
+        self.assertEqual(conflict["result"]["structuredContent"]["code"], "CONFLICT")
         self.assertEqual(self.store.health()["counts"]["mcp_permission_requests"], 1)
 
         stale_contract = self._request_arguments(key="permission-request-key-0002")
         stale_contract["expected_facade_contract"] = {**self._expected_contract(), "sha256": "d" * 64}
         rejected = self._call(stale_contract)
-        self.assertEqual(rejected["error"]["data"]["code"], "CONTRACT_MISMATCH")
+        self.assertTrue(rejected["result"]["isError"])
+        self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONTRACT_MISMATCH")
         self.assertEqual(self.store.health()["counts"]["mcp_permission_requests"], 1)
 
         malformed_path = self._request_arguments(key="permission-request-key-malformed-path")
         malformed_path["path"] = chr(0xD800)
         malformed = self._call(malformed_path)
-        self.assertEqual(malformed["error"]["data"]["code"], "VALIDATION_ERROR")
+        self.assertTrue(malformed["result"]["isError"])
+        self.assertEqual(malformed["result"]["structuredContent"]["code"], "VALIDATION_ERROR")
         self.assertEqual(self.store.health()["counts"]["mcp_permission_requests"], 1)
 
     def test_approval_is_owner_scoped_and_still_has_no_execution_effect(self) -> None:
@@ -215,7 +314,8 @@ class McpPermissionRequestTests(unittest.TestCase):
         arguments = self._request_arguments(key="permission-request-key-readonly")
         arguments["binding_id"] = no_write_binding["binding_id"]
         rejected = self._call(arguments)
-        self.assertEqual(rejected["error"]["data"]["code"], "FORBIDDEN")
+        self.assertTrue(rejected["result"]["isError"])
+        self.assertEqual(rejected["result"]["structuredContent"]["code"], "FORBIDDEN")
 
         pending = self._call(self._request_arguments(key="permission-request-key-revoke"))
         request_id = pending["result"]["structuredContent"]["permission_request"]["permission_request_id"]
@@ -236,7 +336,8 @@ class McpPermissionRequestTests(unittest.TestCase):
             {"operation": "status", "permission_request_id": request_id},
             principal_id=other["principal_id"],
         )
-        self.assertEqual(observed["error"]["data"]["code"], "NOT_FOUND")
+        self.assertTrue(observed["result"]["isError"])
+        self.assertEqual(observed["result"]["structuredContent"]["code"], "NOT_FOUND")
 
         foreign = self._request_arguments()
         foreign["idempotency_key"] = "permission-request-key-other"

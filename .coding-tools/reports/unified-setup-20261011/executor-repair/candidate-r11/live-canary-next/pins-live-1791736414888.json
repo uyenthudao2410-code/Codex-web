@@ -1,0 +1,22 @@
+{
+  "requested_at_ms": 1791735729910,
+  "expires_at_ms": 1791739329910,
+  "context_id": "ctx_71ae5c01e2de4df6874d401263a310c0",
+  "pilot_id": "pilot_b294f82a6cf64b098268322b9106d8c7",
+  "service_instance_id": "cp_339c7a19bc2443eeab35583addfef543",
+  "activation_epoch": "activation-mv41dwd7-2d04fcff5a63f38940d0e99aea872251",
+  "runtime_instance_id": "JSKtd-MweBjIMZ0p",
+  "mcp_server_instance_id": "Vx0DhMwsMsmnY7E1",
+  "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "native_preflight": {
+    "observed_at_ms": 1791736414888,
+    "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "preimage_sha256": "90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650",
+    "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+    "old_run_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "old_wave_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "no_active_jobs": true,
+    "receipt_sha256": "a04db1b84b6aa73eec8380d0e7bf72d467f206c25f90cb009e442b6a6096fc67"
+  }
+}

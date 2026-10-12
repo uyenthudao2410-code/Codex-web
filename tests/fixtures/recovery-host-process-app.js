@@ -43,6 +43,7 @@ function activationLifecycle(operationId, sourceCheckpoint, fenced) {
     },
     source_checkpoint: { ok: true, code: 'ACTIVATABLE', ...sourceCheckpoint },
     fenced: fenced === true,
+    executor_cleanup: { state: 'not_required', confirmed: true },
     fence_operation_id: fenced === true ? operationId : null
   };
 }
@@ -189,7 +190,7 @@ async function runHost(paths, dataRoot, reportFile, errorFile, nodeExecutable) {
       codingMcpRevision,
       activationMode === 'coding-mcp' ? NEXT_REVISION : codingMcpRevision
     ),
-    inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: dataRoot }),
+    inspectCodeActivation: async () => ({ executor_cleanup_supported: true, safe: true, code: 'READY', workspace: dataRoot }),
     prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
       ...activationLifecycle(operationId, sourceCheckpoint, true)
     }),

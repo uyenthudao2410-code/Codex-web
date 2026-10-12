@@ -1,0 +1,36 @@
+{
+  "captured_at_utc": "2026-10-11T12:14:45.013453+00:00",
+  "cases": [
+    {
+      "guard_code": "EXPLICIT_R10_STORE_60M_OWNER_APPROVAL_REQUIRED",
+      "name": "missing_operator_approval",
+      "result": "pass"
+    },
+    {
+      "guard_code": "EXPECTED_SERVICE_INSTANCE_REQUIRED",
+      "name": "wrong_service_instance",
+      "result": "pass"
+    },
+    {
+      "guard_code": "EXPECTED_FRESH_R9_PREDECESSOR_REQUIRED_FOR_AUTHORITY_PREPARATION",
+      "name": "wrong_predecessor_epoch",
+      "result": "pass"
+    },
+    {
+      "guard_code": "EXPECTED_FRESH_R9_PREDECESSOR_REQUIRED_FOR_AUTHORITY_PREPARATION",
+      "name": "stale_predecessor_heartbeat",
+      "result": "pass"
+    },
+    {
+      "guard_code": "NEW_R10_ACTIVATION_REQUIRED_FOR_REOPEN",
+      "name": "reopen_rejects_predecessor",
+      "result": "pass"
+    }
+  ],
+  "failed": 0,
+  "helper_sha256": "ab182f47b605e5edac1e30cb9cdf48ca53a571f0cbb5367a0f6fb837cbe0c9af",
+  "operation": "r10_authority_local_negative_guard_verification",
+  "passed": 5,
+  "real_mutation_boundary_reached": false,
+  "remote_execution": false
+}

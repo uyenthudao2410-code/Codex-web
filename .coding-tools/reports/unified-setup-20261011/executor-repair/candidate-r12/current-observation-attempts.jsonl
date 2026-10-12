@@ -1,0 +1,2 @@
+{"kind":"root_observed_read_only_helper_attempt","date_local":"2026-10-12","attempt":1,"ok":false,"code":"ERR_INVALID_ARG_TYPE","cause":"Helper treated RuntimePaths.dataRoot method as a path. Corrected to descriptor parent directory.","runtime_mutated":false,"authority_mutated":false}
+{"kind":"root_observed_read_only_helper_attempt","attempt":2,"ok":true,"receipt":"current-observation-1791740326987.json","runtime_mutated":false,"authority_mutated":false}

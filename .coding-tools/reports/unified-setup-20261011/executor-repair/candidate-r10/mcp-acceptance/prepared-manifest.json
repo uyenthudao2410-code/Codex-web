@@ -1,0 +1,26 @@
+{
+  "kind": "r10_mcp_canary_prepared_packet",
+  "captured_at_utc": "2026-10-11T12:32:56.374751+00:00",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "branch": "main",
+  "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "worktree": "dirty_preserved",
+  "prepared_static_only": true,
+  "execution_accepted": false,
+  "helper_main_invoked": false,
+  "live_operations": false,
+  "modes": [
+    "cold",
+    "warm"
+  ],
+  "timeout_mode_excluded": true,
+  "native_job_correlation_required_before_acceptance": true,
+  "terminal_cleanup_finally": true,
+  "files": {
+    "r10-mcp-canary.py": "ea1fc0a414f235f89fb1e703e7c5728fee72ac3bab15798c68f8dbaef872da13",
+    "verify-r10-native-job.py": "b620253eb7cd1851fd38c862cfaa3be2abc407c2ddd3ad8534af96739048baf5",
+    "check-prepared-canary.py": "22cc506329798ec047043c4f0cc52e7ea208a1fb4306d78267960b7e1744ee2c",
+    "static-proof.jsonl": "984abac299759aa20d97d31be81a816c69706b9077642a70eae0201633634c2e",
+    "README.md": "c7c486dcdb6b3a572d0c851a8f649d270058e8f9e69ff8e65d055cdddb8e5fe0"
+  }
+}

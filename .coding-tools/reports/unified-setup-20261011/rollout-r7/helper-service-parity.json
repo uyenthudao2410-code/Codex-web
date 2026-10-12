@@ -1,0 +1,37 @@
+{
+  "phase": "activation_helper_service_source_parity",
+  "observed_at": "2026-10-11T10:23:25.564Z",
+  "ok": true,
+  "files": [
+    {
+      "file": "electron\\services\\runtimePaths.js",
+      "matches": true,
+      "sha256": "a28fe23a10daa10baeb9c437ccee13cff2c1d28585d1c6daa3e5a23844d23474"
+    },
+    {
+      "file": "electron\\services\\recoveryIpc.js",
+      "matches": true,
+      "sha256": "c9c451c36b764cf4a23cc22f9c435507f0505e65858170560de38cbe2651684b"
+    },
+    {
+      "file": "electron\\services\\recoveryHostLauncher.js",
+      "matches": true,
+      "sha256": "92cb2478ae940c737a8e8a007181a9fa410b1eeb1e26a06b5bb07e1043ebf60a"
+    },
+    {
+      "file": "electron\\services\\processIdentity.js",
+      "matches": true,
+      "sha256": "a0ee2b08cbe4108c352ba14b9532ceaf581497f745a2adda7924c819a972809f"
+    },
+    {
+      "file": "electron\\services\\fullCleanActivation.js",
+      "matches": true,
+      "sha256": "286df402bad9414b8414fb1800dacf7f35cac6795fee0971e9d04ce6839e7c1d"
+    },
+    {
+      "file": "electron\\services\\controlPlaneEnrollment.js",
+      "matches": true,
+      "sha256": "c72766572150b5f2ce1e7ed7f976eb408ff3a75a7191951fddf0ccb7a28c6405"
+    }
+  ]
+}

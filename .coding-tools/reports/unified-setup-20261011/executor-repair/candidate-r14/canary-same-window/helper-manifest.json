@@ -1,0 +1,91 @@
+{
+  "kind": "r14_same_window_new_canary_helper_manifest",
+  "observed_at": "2026-10-11T23:46:45.024Z",
+  "prior_manifest_sha256": "fa4f926fca886903cfa50a0880d7e6400a7d6f2b64db1a765636911310f413d9",
+  "existing_window": {
+    "context_id": "ctx_1e7e2fec6f0e43018db7a51c6980e5c2",
+    "requested_at_ms": 1791758571067,
+    "expires_at_ms": 1791776571067
+  },
+  "activation_helper_manifest_sha256": "77ab6e95eef25874c309d6233cf0f3f855f7b8f39ed14ffe03455e55de76b389",
+  "target": "tests/fixtures/initial-proof-canary-target.cjs",
+  "preimage_sha256": "d1edd529d09c7d4f71dfbb9e9b9e53010cc43a616cf1247594ddf4d705b84a1e",
+  "postimage_sha256": "0ae4bfe07e94d171e8885a464f3bf8f3e0d9b49a444b144b1aed2e4963ab4496",
+  "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+  "plan_sha256": "235ecd2dc1bf8b49b21648ffd24df378088916e65e2420cb383fa79a6439afe7",
+  "prepared_only": true,
+  "fixture_mutated": false,
+  "checker_executed": false,
+  "runtime_contacted": false,
+  "credentials_read": false,
+  "canary_dispatched": false,
+  "authority_extended": false,
+  "semantic_acceptance": false,
+  "files": [
+    {
+      "path": "r14_same_window_mcp_canary.py",
+      "sha256": "7ea169aa07707d94e271752f0fc8294643cb0f717e4dc2ad446cbbca1c112e1e",
+      "bytes": 41391
+    },
+    {
+      "path": "root-canary-ssh.py",
+      "sha256": "c1c5fbe403be46beddaeb8dd1b851899c719977d3f45de2f901d855e963476c2",
+      "bytes": 15886
+    },
+    {
+      "path": "native-preflight.cjs",
+      "sha256": "5ccf4b3cf21d4ba66e1dc6d26ae778eb7bf089bde01885be16cbc227ef9958a0",
+      "bytes": 7301
+    },
+    {
+      "path": "make-pins.cjs",
+      "sha256": "fe885e01db6d35c9a5b4eae03d08aef44c725c98f5cb46c7a3533ce8fd551b2b",
+      "bytes": 4137
+    },
+    {
+      "path": "root-capture.cjs",
+      "sha256": "9316657dc9f7d320c136e6c60c5848b9055495f0870607f45b62c8a77c8b9240",
+      "bytes": 4042
+    },
+    {
+      "path": "correlate_r14_same_window.py",
+      "sha256": "b8d14a3cfa989ad776728685c0f5c0ea23ef98f3d0e28cf15c6801b82d3903e0",
+      "bytes": 26757
+    },
+    {
+      "path": "output-reader-app/capture.cjs",
+      "sha256": "31ae0a1326c14bf71d47f3119d989aaa22ec39a1ecd8e051a322db26480731a7",
+      "bytes": 13736
+    },
+    {
+      "path": "output-reader-app/package.json",
+      "sha256": "bd6fa54ff869e3d933f7c03cef818511d96236e7e3cbb68b8d13560e4dbf3f67",
+      "bytes": 107
+    },
+    {
+      "path": "output-reader-binary-pin.json",
+      "sha256": "e81ec6e50b2f71c76665cd6e5399b99fad4d071b95003fc7e63bb2a058a83c4f",
+      "bytes": 288
+    },
+    {
+      "path": "patch-envelope.txt",
+      "sha256": "4abb1d97a6da4ac507c70b0af1e1902160609597e3efe4096c6a8d96b19cb9b2",
+      "bytes": 627
+    },
+    {
+      "path": "prepared-target-postimage.cjs",
+      "sha256": "0ae4bfe07e94d171e8885a464f3bf8f3e0d9b49a444b144b1aed2e4963ab4496",
+      "bytes": 406
+    },
+    {
+      "path": "static-preparation.json",
+      "sha256": "525c5346cfde76afa4b419aed869def610315a5247ce3b58cfc77edb4d75a062",
+      "bytes": 1135
+    },
+    {
+      "path": "README.md",
+      "sha256": "5695929eec17c6e830b349716bda5c98e4bb62a456fae0f63c9d544a2cb07586",
+      "bytes": 7396
+    }
+  ]
+}

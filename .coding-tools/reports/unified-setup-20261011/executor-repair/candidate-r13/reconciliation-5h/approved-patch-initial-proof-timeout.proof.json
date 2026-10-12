@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "product_source_modified": false,
+  "patch_sha256": "d5253bfd9e06cb9337d7e8e6f85d3bdec098efd55ab7355b351897f5f70cdcf4",
+  "source_validation": "exact hashes checked before and after in-memory candidate compilation",
+  "test_command": "node --test --test-name-pattern=\"initial verification observes the original background workflow\" .coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r13/reconciliation-5h/approved-patch-timeout-candidate.test.cjs",
+  "test_exit_code": 0,
+  "tests": 1,
+  "pass": 1,
+  "fail": 0,
+  "observed_request_timeouts_ms": [12000, 330000, 15000],
+  "behavior_verified": [
+    "initial workflow timeout covers verification and bounded Sandbox provisioning",
+    "workspace binding and background observation preserve their short timeouts",
+    "original workflow invoked once",
+    "failed proof retains original applied patch and pending semantic acceptance"
+  ],
+  "patch_apply_check_exit_code": 0,
+  "note": "An initial patch format without context was rejected by git apply --check; regenerated with three context lines and the final patch passed. Product bytes were never edited."
+}

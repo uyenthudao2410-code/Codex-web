@@ -1,0 +1,62 @@
+{
+  "kind": "r10_native_local_observer_prepared_packet_v3",
+  "captured_at_utc": "2026-10-11T13:07:17.495Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "branch": "main",
+  "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "worktree": "dirty_preserved",
+  "prepared_static_only": true,
+  "evidence_scope": "preparing_worker",
+  "execution_accepted": false,
+  "helper_main_invoked": false,
+  "runtime_ipc_called": false,
+  "host_processes_observed": false,
+  "live_operations": false,
+  "syntax_check_passed": true,
+  "focused_pure_validation_cases": 15,
+  "packaged_equivalent_modules": 9,
+  "source_module_hashes_match_immutable_packaged_parity": true,
+  "raw_archive_reader": "electron_original_fs",
+  "phase_hints_only": true,
+  "native_job_correlation_required_before_acceptance": true,
+  "daemon_record_read": false,
+  "daemon_record_hashed": false,
+  "root_reported_prior_failure_receipts": [
+    {
+      "file": "native-local-2026-10-11T12-57-35-829Z-4e0193a7.json",
+      "sha256": "9cf00af3dced8210008e466642eaecd63e687785fd401c10f7a82b6164751313"
+    },
+    {
+      "file": "native-local-2026-10-11T13-03-38-830Z-5b12d99e.json",
+      "sha256": "161999593331307e6f6e5e14b4daf8bb445c29e3935825582657e509794aa8f7"
+    },
+    {
+      "file": "observer-provenance-diagnosis.json",
+      "sha256": "dec49f32094f80b51b7bf757b76efff7a413c07e3d05a013bb779242229d0403"
+    }
+  ],
+  "original_packets": [
+    {
+      "manifest": "prepared-manifest.json",
+      "sha256": "8347c7f5fc0a3d9cd786001dd1500a7be0cfdd18ce30c9fb246885cc1d72e9a3",
+      "files_byte_identical": true
+    },
+    {
+      "manifest": "prepared-manifest-v2.json",
+      "sha256": "5e5cf4d893be27dde40ac1965195ecee7ec0e790facdf9deab474cb31b9d3109",
+      "files_byte_identical": true
+    },
+    {
+      "manifest": "native-observer-manifest.json",
+      "sha256": "8e07c06d7a138c7d5024572a53a377ecdae1676bcfa0bdad41874cfa23fd32d6",
+      "files_byte_identical": true
+    }
+  ],
+  "files": {
+    "observe-r10-native-local-v3.cjs": "1800ec6dfd07532e39ca6b05b3cd4c98561cb8cd8da3c1d119beb82e5314eb29",
+    "check-native-observer-static-v3.cjs": "66d524310e6836f3434e5306c1391d0aacaffbf348f34db48a12b0df860a131f",
+    "native-observer-static-proof-v3.jsonl": "4f45d0d2a2c6d9c7a8a3e0d4a8797f080570e902f0a838261ae1caa9d95d52ad",
+    "README-native-observer-v3.md": "64c14f8972e58156d5f6124fb199f4045b8abf44d35b69b073a811b12a8058f6"
+  },
+  "root_v3_live_result": "not_observed_by_preparing_worker_at_sealing"
+}

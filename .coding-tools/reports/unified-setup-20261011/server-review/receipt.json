@@ -1,0 +1,56 @@
+{
+  "operation": "local_console_one_file_review_preparation",
+  "captured_at_utc": "2026-10-11T09:57:19.023645+00:00",
+  "git_head_observed": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "base": {
+    "archive": ".coding-tools/reports/mcp-web-contract-20261011/codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90.tar.gz",
+    "archive_sha256": "e31132a545da55cad564a373c138bb644917c8cbce73e87b724c88dfee6f3b36",
+    "archive_members_safely_inspected": 43,
+    "archive_file_member": "codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90/control-plane/control_plane/web_ui.py",
+    "source_revision_as_declared_by_base_manifest": "beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+    "package_source_sha256_as_declared_by_base_manifest": "sha256:acb5ae4713844015e32ee5005001583ae4c04e650c68fb599b22309c65dd2835",
+    "frozen_file": "web_ui.base-073bde8624c5d6ff76ddfae8633acb7c1c4118b05aa458b4be1b21b3ae8181aa.py",
+    "sha256": "073bde8624c5d6ff76ddfae8633acb7c1c4118b05aa458b4be1b21b3ae8181aa",
+    "bytes": 76754,
+    "crlf_count": 0
+  },
+  "candidate_delta": {
+    "scope": [
+      "control-plane/control_plane/web_ui.py"
+    ],
+    "frozen_file": "web_ui.current-03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b.py",
+    "sha256": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b",
+    "bytes": 91103,
+    "crlf_count": 989,
+    "new_git_revision": null,
+    "full_release_built": false,
+    "source_current_at_capture": true
+  },
+  "patches": {
+    "exact": {
+      "file": "web_ui.exact.patch",
+      "sha256": "8f0027f3fffb3b3110cb6b61d538ccf5776d5010412fdab419690a87f6edb2f3",
+      "replay_byte_sha256": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b",
+      "check_and_replay": "pass"
+    },
+    "review_lf": {
+      "file": "web_ui.review-lf.patch",
+      "sha256": "c27afd8e9037a55b2f9352557f08bc5219aa4f4da1758bc7e35712529f924f52",
+      "replay_lf_sha256": "437e9f9910f615ebfe422b2a610eec90d15916be8b80ead7d2c78bf00eef68d3",
+      "replay": "pass",
+      "normalization": "CRLF to LF for compact textual review only"
+    }
+  },
+  "target_for_next_approved_rollout": {
+    "ssh": "svhome@100.116.112.22",
+    "service": "codex-control-plane.service",
+    "service_manager": "systemd user",
+    "expected_base_release_to_reverify": "codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+    "expected_release_location_to_reverify": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90"
+  },
+  "deployment_performed": false,
+  "service_operations_performed": false,
+  "authority_mutations_performed": false,
+  "commit_or_push_performed": false,
+  "remaining_gate": "Owner-approved rollout; fresh target/baseline/quiescence check; a real new immutable release identity and regenerated manifest/package validation before any service switch."
+}

@@ -1,0 +1,17 @@
+{"phase":"discovery","contract":{"schema_version":32,"profile":"control-plane-private-tunnel-service-v1","sha256":"274af168c29bc7a10eb35e2314632badddabe456c2c645cda7a7767480fc2e32"}}
+{"phase":"task_open","task_id":"task_5a5753f9344d405b95bbbd6365e9333c"}
+{"phase":"read_status","action_id":"act_ce6733a3fe3441dbbd41cafcdf8a7a16","execution":"local_admission_pending_or_unverified","delivery_state":"queued","receipt_status":null}
+{"phase":"read_status","action_id":"act_ce6733a3fe3441dbbd41cafcdf8a7a16","execution":"local_admission_pending_or_unverified","delivery_state":"dispatch_unconfirmed","receipt_status":null}
+{"phase":"read_status","action_id":"act_ce6733a3fe3441dbbd41cafcdf8a7a16","execution":"completed_file_read_relay","delivery_state":"settled","receipt_status":null}
+{"phase":"file_verified","action_id":"act_ce6733a3fe3441dbbd41cafcdf8a7a16","content_sha256":"742976da6d38a49f35c48b5824eea2badc1e98258dd74d8c34720f08f09a14cb","content_matches":true}
+{"phase":"patch_status","action_id":"act_45ac771eec124a6a9a043b3c471902dd","execution":"local_patch_receipt_pending_or_unverified","delivery_state":"queued","receipt_status":null}
+{"phase":"patch_status","action_id":"act_45ac771eec124a6a9a043b3c471902dd","execution":"local_patch_receipt_pending_or_unverified","delivery_state":"dispatch_unconfirmed","receipt_status":null}
+{"phase":"patch_status","action_id":"act_45ac771eec124a6a9a043b3c471902dd","execution":"effect_applied_pending_local_acceptance","delivery_state":"settled","receipt_status":null}
+{"phase":"patch_verified","action_id":"act_45ac771eec124a6a9a043b3c471902dd","postimage_sha256":"14c82d572e3416dc67c06046ed33455ccfbaee4af1b1160196d97083def600a2"}
+{"phase":"read_status","action_id":"act_0b45e700091d455d9df3f1919b5e0956","execution":"local_admission_pending_or_unverified","delivery_state":"queued","receipt_status":null}
+{"phase":"read_status","action_id":"act_0b45e700091d455d9df3f1919b5e0956","execution":"local_admission_pending_or_unverified","delivery_state":"dispatch_unconfirmed","receipt_status":null}
+{"phase":"read_status","action_id":"act_0b45e700091d455d9df3f1919b5e0956","execution":"completed_file_read_relay","delivery_state":"settled","receipt_status":null}
+{"phase":"file_verified","action_id":"act_0b45e700091d455d9df3f1919b5e0956","content_sha256":"14c82d572e3416dc67c06046ed33455ccfbaee4af1b1160196d97083def600a2","content_matches":true}
+{"phase":"proof","ok":true,"task_id":"task_5a5753f9344d405b95bbbd6365e9333c","patch_action_id":"act_45ac771eec124a6a9a043b3c471902dd","expected_local_sha256":"14c82d572e3416dc67c06046ed33455ccfbaee4af1b1160196d97083def600a2"}
+{"phase":"writer_release","task_id":"task_5a5753f9344d405b95bbbd6365e9333c","closed":false}
+{"phase":"task_close","task_id":"task_5a5753f9344d405b95bbbd6365e9333c","closed":true}

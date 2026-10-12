@@ -12,6 +12,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { URL } = require('node:url');
+const { admitExecBridgeRequest } = require('./controlPlaneExecBridge');
 
 const POLICY_SCHEMA_VERSION = 3;
 const EXACT_POLICY_SCHEMA_VERSION = 2;
@@ -419,6 +420,7 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
   // request shape for existing callers and fixtures.
   const standing = policy?.authority_mode === STANDING_AUTHORITY_MODE;
   if (standing) expected.push('authority_mode');
+  if (Object.prototype.hasOwnProperty.call(request || {}, 'verification')) expected.push('verification');
   if (!exactKeys(request, expected)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID', 'control-plane approved-patch request has an invalid schema.');
   }
@@ -448,6 +450,9 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
     expires_at_ms: expiry(request.expires_at_ms, now, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_EXPIRED'),
     facade_contract: facadeContract(request.facade_contract, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID')
   };
+  if (Object.prototype.hasOwnProperty.call(request, 'verification')) {
+    candidate.verification = normaliseInitialVerificationPlan(request.verification);
+  }
   if (standing && request.authority_mode !== STANDING_AUTHORITY_MODE) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_TOOL_DENIED', 'standing approved-patch requests must declare standing authority.');
   }
@@ -588,9 +593,63 @@ function verifyExactRegisteredPatchPostimage(workspaceRoot, admission) {
   });
 }
 
+function normaliseInitialVerificationPlan(value) {
+  const code = 'CONTROL_PLANE_APPROVED_PATCH_VERIFICATION_INVALID';
+  if (!exactKeys(value, ['argv', 'cwd', 'timeout_ms', 'max_output_bytes'])
+    || !Array.isArray(value.argv) || value.argv.length < 1 || value.argv.length > 32
+    || value.argv.some(item => typeof item !== 'string' || !item || item !== item.trim()
+      || /[\u0000-\u001f\u007f]/.test(item) || Buffer.byteLength(item, 'utf8') > 2048
+      || [';', '&&', '||', '`', '$(', '|', '>', '<'].some(token => item.includes(token)))
+    || Buffer.byteLength(value.argv.join('\0'), 'utf8') > 8192
+    || /[\\/:]/.test(value.argv[0])
+    || typeof value.cwd !== 'string' || value.cwd.includes('\\') || value.cwd.includes(':')
+    || /[\u0000-\u001f\u007f]/.test(value.cwd) || Buffer.byteLength(value.cwd, 'utf8') > 512
+    || (value.cwd !== '' && value.cwd.split('/').some(part => !part || part === '.' || part === '..'))
+    || !Number.isSafeInteger(value.timeout_ms) || value.timeout_ms < 5000 || value.timeout_ms > 300000
+    || !Number.isSafeInteger(value.max_output_bytes) || value.max_output_bytes < 1024 || value.max_output_bytes > 65536) {
+    throw bridgeError(code, 'approved-patch verification must be one bounded structured invocation.');
+  }
+  return Object.freeze({ argv: Object.freeze([...value.argv]), cwd: value.cwd,
+    timeout_ms: value.timeout_ms, max_output_bytes: value.max_output_bytes });
+}
+
+function admitInitialVerificationExecPolicy(policy, admission, { now = Date.now() } = {}) {
+  const plan = normaliseInitialVerificationPlan(admission.verification);
+  // Validation only. The workflow keeps its approved-patch actor and owns the
+  // actual check; no exec request or synthetic exec actor is dispatched.
+  const request = Object.fromEntries(['server_origin', 'owner_id', 'device_id', 'endpoint_id', 'workspace_id',
+    'workspace_generation', 'context_id', 'binding_id', 'action_id', 'attempt_id', 'task_id',
+    'writer_lease_generation', 'expires_at_ms', 'facade_contract'].map(key => [key, admission[key]]));
+  Object.assign(request, plan, { tool_name: 'exec_command', operation: 'exec_run',
+    command_id: null, job_id: null, local_handle: null, consumer_id: null, yield_time_ms: null,
+    signal: null, wait_ms: null, run_id: null, wave_id: null });
+  return admitExecBridgeRequest(policy, request, { now }).policy_sha256;
+}
+
+function normaliseInitialVerificationResult(value, plan) {
+  const code = 'CONTROL_PLANE_APPROVED_PATCH_PROOF_INVALID';
+  const expected = ['plan_sha256', 'proof_status', 'proof_ids', 'proof_fingerprint'];
+  const hasJob = Object.prototype.hasOwnProperty.call(value || {}, 'command_id')
+    || Object.prototype.hasOwnProperty.call(value || {}, 'job_id');
+  if (hasJob) expected.push('command_id', 'job_id');
+  if (!exactKeys(value, expected) || value.plan_sha256 !== digest(normaliseInitialVerificationPlan(plan))
+    || !['passed', 'failed', 'timed_out'].includes(value.proof_status)
+    || !Array.isArray(value.proof_ids) || value.proof_ids.length > 8
+    || value.proof_ids.some(id => typeof id !== 'string' || !/^[a-f0-9]{32}$/.test(id))
+    || new Set(value.proof_ids).size !== value.proof_ids.length
+    || (value.proof_status === 'passed'
+      ? !value.proof_ids.length || !SHA256_RE.test(value.proof_fingerprint || '')
+      : value.proof_fingerprint !== null)
+    || (hasJob && [value.command_id, value.job_id].some(id => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(id)))) {
+    throw bridgeError(code, 'approved-patch proof does not match its immutable verification plan.');
+  }
+  return Object.freeze({ ...value, proof_ids: Object.freeze([...value.proof_ids]) });
+}
+
 function normaliseApprovedPatchWorkflowResult(value, {
   path: expectedPath,
-  idempotency_key: expectedIdempotencyKey
+  idempotency_key: expectedIdempotencyKey,
+  verification: verificationPlan
 } = {}) {
   // ``agent_workflow`` is the local write primitive for this bridge.  Its
   // response can contain a full local task/report, so this validator returns
@@ -625,13 +684,23 @@ function normaliseApprovedPatchWorkflowResult(value, {
   }
 
   const summary = record.summary;
+  const initialVerification = verificationPlan
+    ? normaliseInitialVerificationResult(summary?.initial_verification, verificationPlan) : null;
+  const proofPassed = !initialVerification || initialVerification.proof_status === 'passed';
+  const expectedState = proofPassed ? 'ACCEPTING' : 'REPLAN';
   if (!summary || typeof summary !== 'object' || Array.isArray(summary)
-    || summary.execution_ok !== true || summary.execution_status !== 'passed'
+    || summary.execution_ok !== proofPassed || summary.execution_status !== (proofPassed ? 'passed' : 'failed')
     || text(summary.run_id).toLowerCase() !== runId
     || text(summary.wave_id).toLowerCase() !== waveId
-    || summary.orchestration_state !== 'ACCEPTING') {
+    || summary.orchestration_state !== expectedState) {
     invalid();
   }
+
+  const exactUpdate = (files) => Array.isArray(files) && files.length === 1
+    && files[0] && typeof files[0] === 'object' && !Array.isArray(files[0])
+    && files[0].path === expectedFile && files[0].operation === 'update';
+  if (initialVerification && (summary.patch_effect?.applied !== true
+    || !exactUpdate(summary.patch_effect.affected_files))) invalid();
 
   if (value.deduplicated === true) {
     return Object.freeze({
@@ -639,6 +708,7 @@ function normaliseApprovedPatchWorkflowResult(value, {
       wave_id: waveId,
       idempotency_request_hash: requestHash,
       local_semantic_acceptance: LOCAL_SEMANTIC_ACCEPTANCE_PENDING,
+      ...(initialVerification ? { initial_verification: initialVerification } : {}),
       deduplicated: true
     });
   }
@@ -649,18 +719,13 @@ function normaliseApprovedPatchWorkflowResult(value, {
   if (!orchestration || typeof orchestration !== 'object' || Array.isArray(orchestration)
     || text(orchestration.run_id).toLowerCase() !== runId
     || text(orchestration.wave_id).toLowerCase() !== waveId
-    || orchestration.orchestration_state !== 'ACCEPTING'
+    || orchestration.orchestration_state !== expectedState
     || !execution || typeof execution !== 'object' || Array.isArray(execution)
-    || execution.ok !== true || execution.status !== 'passed') {
+    || execution.ok !== proofPassed || execution.status !== (proofPassed ? 'passed' : 'failed')) {
     invalid();
   }
-  const exactUpdate = (files) => Array.isArray(files)
-    && files.length === 1
-    && files[0]
-    && typeof files[0] === 'object'
-    && !Array.isArray(files[0])
-    && files[0].path === expectedFile
-    && files[0].operation === 'update';
+  if (initialVerification && canonicalJson(normaliseInitialVerificationResult(execution.initial_verification, verificationPlan))
+    !== canonicalJson(initialVerification)) invalid();
   const patchResults = execution.patch_results;
   if (!exactUpdate(execution.affected_files)
     || !Array.isArray(patchResults) || patchResults.length !== 1
@@ -675,6 +740,7 @@ function normaliseApprovedPatchWorkflowResult(value, {
     wave_id: waveId,
     idempotency_request_hash: requestHash,
     local_semantic_acceptance: LOCAL_SEMANTIC_ACCEPTANCE_PENDING,
+    ...(initialVerification ? { initial_verification: initialVerification } : {}),
     deduplicated: false
   });
 }
@@ -686,6 +752,11 @@ function normaliseApprovedPatchResult(value, admission) {
   const identity = value.runtime_identity;
   const actor = value.actor;
   const file = value.file;
+  const initialVerification = admission?.verification
+    ? normaliseInitialVerificationResult(value.initial_verification, admission.verification) : null;
+  if (!initialVerification && Object.prototype.hasOwnProperty.call(value, 'initial_verification')) {
+    throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_PROOF_INVALID', 'unrequested verification result is invalid.');
+  }
   if (!identity || typeof identity !== 'object' || Array.isArray(identity)
     || !file || typeof file !== 'object' || Array.isArray(file)
     || value.schema_version !== 1 || value.operation_kind !== OPERATION_KIND
@@ -732,7 +803,8 @@ function normaliseApprovedPatchResult(value, admission) {
     postimage_sha256: postimage,
     bytes_written: file.bytes_written
   };
-  if (text(value.response_sha256).toLowerCase() !== digest(safeFile)) {
+  const responseDigest = digest(initialVerification ? { file: safeFile, initial_verification: initialVerification } : safeFile);
+  if (text(value.response_sha256).toLowerCase() !== responseDigest) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_RESULT_DIGEST_INVALID', 'approved-patch receipt integrity is invalid.');
   }
   return Object.freeze({
@@ -756,8 +828,9 @@ function normaliseApprovedPatchResult(value, admission) {
       tool_contract_sha256: text(identity.tool_contract_sha256).toLowerCase()
     },
     facade_contract: facadeContract(value.facade_contract, 'CONTROL_PLANE_APPROVED_PATCH_RESULT_CONTRACT_INVALID'),
+    ...(initialVerification ? { initial_verification: initialVerification } : {}),
     file: safeFile,
-    response_sha256: digest(safeFile)
+    response_sha256: responseDigest
   });
 }
 
@@ -790,5 +863,8 @@ module.exports = {
   resolveExactRegisteredPatchTarget,
   verifyExactRegisteredPatchPostimage,
   normaliseApprovedPatchWorkflowResult,
+  normaliseInitialVerificationPlan,
+  normaliseInitialVerificationResult,
+  admitInitialVerificationExecPolicy,
   normaliseApprovedPatchResult
 };

@@ -1,0 +1,21 @@
+{
+  "approval_id": "call_1KzUkF0gMn6uVpHd3QisTzXF",
+  "files": {
+    "root-settle-ssh.py": {
+      "sha256": "32230b79d0ffe4f126600a6cdbc266550fb6232ce1ea9e3d034ebf021afec0b0",
+      "size_bytes": 5869
+    },
+    "settle-exact-pre-effect.py": {
+      "sha256": "cd25d48b858381454987e311ee4668b6cfe19b25f0bc51352fc0ff73067d1350",
+      "size_bytes": 14304
+    },
+    "test_settlement_guards.py": {
+      "sha256": "0b9e8ebab8cb00fa2c3b2b146a157644a9262f2f54c2754a5b68810103231578",
+      "size_bytes": 4235
+    }
+  },
+  "helper_sha256": "cd25d48b858381454987e311ee4668b6cfe19b25f0bc51352fc0ff73067d1350",
+  "proof": "AST compile and 8 offline response/digest/history guard tests passed",
+  "remote_effects_performed_by_lane": false,
+  "scope": "actual approved r12 one exact pre-effect rejection+taskclose only"
+}

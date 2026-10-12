@@ -2,6 +2,16 @@
 
 This roadmap describes the current **Tools-Codex-web Windows Desktop Execution Hub**, not the historical WebCodex product roadmap. For exact current-state precedence, see [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
+## Code execution completion sequence — 11-10-2026
+
+The current proposed implementation sequence for setup and the Ubuntu-to-Windows
+code workflow is [CODE_EXECUTION_COMPLETION_PLAN](CODE_EXECUTION_COMPLETION_PLAN.md).
+It reuses the r7 UI source and existing runtime/Job/authority primitives, closes
+patch-to-proof-to-local-acceptance linkage, then verifies daily authority,
+failure recovery and supported Windows installation. A real problem outcome is
+the finish line. The plan does not authorize activation, deployment or new
+authority, and does not supersede the convergence/evidence rules below.
+
 ## Current convergence directive — 2026-09-04
 
 **Do not build more system.** G2-style provenance closure is a convergence mechanism, not authorization for a new orchestration, governance, routing, memory, or intelligence layer. The next decisions must come from real continuity and economics evidence on the mechanisms that already exist.

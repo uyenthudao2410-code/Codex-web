@@ -1,0 +1,18 @@
+{
+  "version": "0.10.0-alpha",
+  "containerId": "CLI-Experimental-Hello-LXC",
+  "containment": "lxc",
+  "process": {
+    "commandLine": "echo 'Hello from LXC experimental!'"
+  },
+  "lifecycle": {
+    "destroyOnExit": true
+  },
+  "lxc": {
+    "distribution": "alpine",
+    "release": "3.23"
+  },
+  "test": {
+    "message": "Test feature from LXC experimental!"
+  }
+}

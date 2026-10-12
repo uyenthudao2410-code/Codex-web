@@ -1,0 +1,35 @@
+{
+  "approval_id": "r13-same-window-transition",
+  "authority_extended": false,
+  "context_created": false,
+  "deploy_restart_requested": false,
+  "files": {
+    "README.md": {
+      "sha256": "67a57e35e1b8636bb089d341afba6d283ebec7212f7e7a69844e3ed0557fcbc9",
+      "size_bytes": 5669
+    },
+    "contract-proof.json": {
+      "sha256": "078ee1434bc9f882a290fa4816d242a332712a5677a3cebbf758ff8fc70ef6f7",
+      "size_bytes": 765
+    },
+    "prove-supported-admission.py": {
+      "sha256": "13c15888b6828b408afad67cd1b27f7f235e3698cd604f3fdc89b6b3726f304e",
+      "size_bytes": 3020
+    },
+    "root-intake-ssh.py": {
+      "sha256": "e63792cf3ceed5dda8893b138fe5824d0e151057916c5545446ce745f75fda76",
+      "size_bytes": 4805
+    },
+    "test_intake_transition.py": {
+      "sha256": "526c93d0909bdeb6b83dd1c0f72351fb7e1671dbceba93a56610ee7da4c55cbf",
+      "size_bytes": 8081
+    },
+    "transition-intake.py": {
+      "sha256": "bf5307c357cfcc4f1535ddb6f52bd02a01996e299e36945e6543730a89051c2a",
+      "size_bytes": 16195
+    }
+  },
+  "proof": "preserved deployed AST proof and 3 offline guard/mock-API tests passed",
+  "remote_effects_performed_by_lane": false,
+  "scope": "NEW r13 approval required: supported recovery -> one replacement pilot same ctx/window -> exact ready reopen"
+}

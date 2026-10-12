@@ -1,0 +1,63 @@
+{
+  "action": "deploy",
+  "captured_at_utc": "2026-10-11T14:53:02.482589+00:00",
+  "public_receipts": [
+    {
+      "database_restored": false,
+      "ok": true,
+      "phase": "backup_verified",
+      "protected_backup_directory": "/home/svhome/.local/state/codex-control-plane/deployment-backups/r11-initial-verification-20261011T145259978298Z",
+      "snapshot_sha256": "d2dd8ef9d8838d23751436d0df4d42f077cccf914666597f5815006dc64d89d0"
+    },
+    {
+      "admission": "recovery",
+      "authority_renewed": false,
+      "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+      "database_restored": false,
+      "file_count": 38,
+      "host": "100.116.112.22",
+      "next_action": "FRESH_R11_OBSERVE_THEN_EXACT60M_RENEWAL_AND_WINDOWS_POLICY_ACTIVATION",
+      "observed_at_ms": 1791730382411,
+      "ok": true,
+      "package_source_sha256": "sha256:80a2e82115714f8e5e32cc7144e180b1f83ee8738e2af1e4821de8048128f7e8",
+      "phase": "deployment_complete",
+      "protected_backup_directory": "/home/svhome/.local/state/codex-control-plane/deployment-backups/r11-initial-verification-20261011T145259978298Z",
+      "recovery_activated": false,
+      "recovery_source_revision": "81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb",
+      "release_delta": [
+        "control-plane/control_plane/mcp_facade.py",
+        "control-plane/control_plane/node_agent.py",
+        "control-plane/control_plane/recovery_approved_patch_bridge.cjs",
+        "control-plane/control_plane/store.py"
+      ],
+      "remote_mutation": true,
+      "service": "codex-control-plane.service",
+      "service_grant_sha256": "edf2dfc4d6001c7f78d6160e2ca3c49ae30e4296d158662a827eaf49268017d8",
+      "service_instance_id": "cp_339c7a19bc2443eeab35583addfef543",
+      "snapshot_sha256": "d2dd8ef9d8838d23751436d0df4d42f077cccf914666597f5815006dc64d89d0",
+      "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+      "staged_recovery_release": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb",
+      "state": {
+        "acceptances": 1,
+        "accepted_actions": 0,
+        "actions": 40,
+        "all_action_task_intent_families_sha256": "eeeb4a336ab04edd42d15647ef495bc3c3416b5ac33bd66136d497469435a62d",
+        "contexts_sha256": "a3376df7d6bf21d472f05b5908b40c6df912f184d814c0d088cc82df5831bd8e",
+        "historical_action_families_sha256": "825c437a6f420df0221f01bf74685c4fe3caf46268a62506497942aff9d52aed",
+        "open_tasks": 0,
+        "open_writers": 0,
+        "patch_acceptances_sha256": "52be68a0dac2b56af51271fb8278bae1b04187f4573266c0051beabbec349309",
+        "queued_actions": 0,
+        "schema_version": 29,
+        "target_unsettled_actions": 0,
+        "tasks": 12,
+        "unsettled_acceptances": 0,
+        "unsettled_actions": 13
+      },
+      "state_sha256": "7700996de03f6f9182a0ded2f84251e2bc5c9f7f47d2ed82abe4a1279ec6f5d3"
+    }
+  ],
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T145116647004Z",
+  "ssh_returncode": 0,
+  "stderr_disclosed": false
+}

@@ -1,0 +1,29 @@
+{
+  "checks": [
+    {
+      "initial_mode": "scoped_pilot",
+      "recovery_revokes_existing_pilot": true
+    },
+    {
+      "initial_mode": "recovery",
+      "recovery_revokes_existing_pilot": true
+    },
+    {
+      "same_scoped_pilot_mode_pauses_intake": false
+    },
+    {
+      "denied": true,
+      "unsupported_mode": "paused"
+    },
+    {
+      "denied": true,
+      "unsupported_mode": "suspended"
+    }
+  ],
+  "ok": true,
+  "phase": "r13_supported_intake_contract_proof",
+  "remote_effects": false,
+  "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "store_sha256": "f50ddce70d5821bd82a32b12640ce5609ec510409cac18a312f6ffd23d56d513",
+  "unchanged_pilot_pause_reopen_supported": false
+}

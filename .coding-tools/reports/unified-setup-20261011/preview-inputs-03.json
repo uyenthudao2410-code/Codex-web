@@ -1,0 +1,97 @@
+{
+  "kind": "static_preview_only",
+  "observedAt": "2026-10-11T09:54:02.989Z",
+  "files": [
+    {
+      "file": "renderer/index.html",
+      "bytes": 102168,
+      "sha256": "dc7dceb03cae483a2509393225ae8ba1e1209144578ae87396c11eec6f0ae613"
+    },
+    {
+      "file": "renderer/app.js",
+      "bytes": 214785,
+      "sha256": "cfa81a5ec5d9f1f7299f55c18e212361be717e1a676850786f24fd36e339273d"
+    },
+    {
+      "file": "renderer/styles.css",
+      "bytes": 46552,
+      "sha256": "45630138c42b1c5cd01a1811fb55e46e82682052aab251bfb637d39b6b26c360"
+    },
+    {
+      "file": "renderer/settings-compact.css",
+      "bytes": 18473,
+      "sha256": "e02aa3a8cd77d123fac50c75459be644adeea85444b9496bf0b6d2636e5aa373"
+    },
+    {
+      "file": "renderer/fonts.css",
+      "bytes": 2397,
+      "sha256": "071795468aae10770f2bed19a03db25d3b16ab85cd93255398935bddd72a6652"
+    },
+    {
+      "file": "renderer/theme-bootstrap.js",
+      "bytes": 3601,
+      "sha256": "bf26250d09b827622f45db5d4e46b977b826993b5cdba0efd62ac184ea5936a0"
+    },
+    {
+      "file": "renderer/p5-a0.js",
+      "bytes": 4333,
+      "sha256": "be16b672eafca73847f5d9208062014c3bb224468281f00d66d7c66a5693f098"
+    },
+    {
+      "file": "renderer/control-center.js",
+      "bytes": 51085,
+      "sha256": "6be5e290b3592b5be8835a3c8c4bc837be36d7fe451b4e1a2bf84ca6ba6b0170"
+    },
+    {
+      "file": "renderer/control-center.css",
+      "bytes": 23494,
+      "sha256": "8c75800b2bc58ff5ddc4e968da53d0d73a2b836f48ddf0a4335b2b73a28becc5"
+    },
+    {
+      "file": "renderer/dashboard.js",
+      "bytes": 117597,
+      "sha256": "283153c27de14266d91ca9ffa8aca17a08331bf1317c9e1f4391e4dc78c5a56a"
+    },
+    {
+      "file": "renderer/dashboard.css",
+      "bytes": 51777,
+      "sha256": "f6ef677aa3279d0ab51ef380f8ed44ba88b08805ca59f20efa782d15793ddc58"
+    },
+    {
+      "file": "renderer/app-icon.png",
+      "bytes": 155028,
+      "sha256": "7758684a18ad65ca4b917ef7d267f7d2266e9317bedbba47b783534426ca0988"
+    },
+    {
+      "file": "renderer/fonts/JetBrainsMono-latin-ext.woff2",
+      "bytes": 15196,
+      "sha256": "79bfdab9ba467e26eea4122e6f2567e188dd8a09a8c730d501fc487c4ab99c6e"
+    },
+    {
+      "file": "renderer/fonts/JetBrainsMono-latin.woff2",
+      "bytes": 40404,
+      "sha256": "18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e"
+    },
+    {
+      "file": "renderer/fonts/JetBrainsMono-vietnamese.woff2",
+      "bytes": 7504,
+      "sha256": "2288795da89dd97e648954b96e22b4501bd85dfc453264460b252f888b582ca2"
+    },
+    {
+      "file": "renderer/fonts/PlusJakartaSans-latin-ext.woff2",
+      "bytes": 21728,
+      "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f"
+    },
+    {
+      "file": "renderer/fonts/PlusJakartaSans-latin.woff2",
+      "bytes": 27348,
+      "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79"
+    },
+    {
+      "file": "renderer/fonts/PlusJakartaSans-vietnamese.woff2",
+      "bytes": 8352,
+      "sha256": "b275d1258601dda240fc6a1d4a6cad56e691d898f5cdf1b0e4fd6ca0022d8e40"
+    }
+  ],
+  "note": "Fake renderer API, synthetic device/workspace/policy. No live authority or execution proof."
+}

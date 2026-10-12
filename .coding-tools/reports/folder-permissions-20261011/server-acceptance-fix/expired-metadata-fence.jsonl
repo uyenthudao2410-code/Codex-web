@@ -1,0 +1,1 @@
+{"phase":"fence-expired-metadata","ok":true,"action_id":"act_1a188ee0d0d7472aa21e6d566ce9793e","context_id":"ctx_d77efea247d449c3ab73d1fa370d1374","delivery_state":"settled","attempt_count":0,"workspace_effect_performed":false,"reason":"expired_context_closed_before_dispatch"}

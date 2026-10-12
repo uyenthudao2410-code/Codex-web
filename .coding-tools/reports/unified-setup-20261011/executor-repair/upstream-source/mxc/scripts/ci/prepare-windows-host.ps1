@@ -1,0 +1,646 @@
+#Requires -Version 7.0
+
+<#
+.SYNOPSIS
+    Prepares a Windows host for a backend's artifact-only test suite.
+
+.PARAMETER Backend
+    Matrix backend id.
+
+.PARAMETER BinaryDirectory
+    Directory holding the downloaded build artifact.
+
+.EXAMPLE
+    ./scripts/ci/prepare-windows-host.ps1 -Backend process-t3 -BinaryDirectory artifacts/bin
+#>
+
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [ValidateSet(
+        'process-t1',
+        'process-t3',
+        'isolation-session',
+        'wslc',
+        'windows-sandbox',
+        'microvm',
+        'hyperlight'
+    )]
+    [string]$Backend,
+
+    [Parameter(Mandatory)]
+    [string]$BinaryDirectory
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+$script:WingetPath = $null
+
+function Exit-WithError {
+    param([Parameter(Mandatory)][string]$Message)
+
+    Write-Host "::error::$Message"
+    exit 1
+}
+
+function Assert-RequiredFile {
+    param(
+        [Parameter(Mandatory)][string[]]$RelativePath
+    )
+
+    $missing = $RelativePath | Where-Object { -not (Test-Path (Join-Path $BinaryDirectory $_)) }
+    if ($missing) {
+        Exit-WithError "Missing binaries: $($missing -join ', ')"
+    }
+
+    $leaves = $RelativePath | ForEach-Object { Split-Path $_ -Leaf }
+    Get-ChildItem $BinaryDirectory -Include $leaves -Recurse | Format-Table FullName, Length
+}
+
+# Read a Windows optional feature's state without throwing, so both the
+# diagnostic and assertion paths can share one query. A host that cannot answer
+# (querying needs elevation) reports the reason as its state rather than
+# aborting, which keeps the failure message actionable.
+function Get-OptionalFeatureState {
+    param([Parameter(Mandatory)][string]$Name)
+
+    try {
+        $feature = Get-WindowsOptionalFeature -Online -FeatureName $Name -ErrorAction Stop
+    } catch {
+        return "query-failed: $($_.Exception.Message.Trim())"
+    }
+
+    if ($null -eq $feature) {
+        return 'unknown'
+    }
+    return [string]$feature.State
+}
+
+# Require every named optional feature to be Enabled. Enabling one needs a
+# reboot the runner cannot take mid-job, so this verifies rather than installs:
+# a mis-imaged pool fails here with a pointed message instead of surfacing
+# later as an opaque backend error. $Remedy names the image-level fix.
+function Assert-RequiredFeature {
+    param(
+        [Parameter(Mandatory)][string[]]$Name,
+        [Parameter(Mandatory)][string]$Remedy
+    )
+
+    $notEnabled = @()
+    foreach ($feature in $Name) {
+        $state = Get-OptionalFeatureState -Name $feature
+        Write-Host "  $feature = $state"
+        if ($state -ne 'Enabled') {
+            $notEnabled += "$feature ($state)"
+        }
+    }
+
+    if ($notEnabled) {
+        Exit-WithError "Required Windows optional feature(s) not enabled: $($notEnabled -join '; '). $Remedy"
+    }
+}
+
+# Report the hypervisor state a VM-backed backend depends on. Purely
+# diagnostic: never fails, so a hypervisor problem surfaces as the explicit
+# check below rather than as an unexplained collection error.
+function Write-HypervisorDiagnostic {
+    Write-Host '=== Hypervisor Diagnostics ==='
+    Write-Host "OS: $([System.Environment]::OSVersion)"
+
+    $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+    $hypervisorPresent = if ($null -eq $computerSystem) { 'unknown' } else { $computerSystem.HypervisorPresent }
+    Write-Host "HypervisorPresent: $hypervisorPresent"
+    Write-Host "WinHvPlatform.dll exists: $(Test-Path "$env:SystemRoot\System32\WinHvPlatform.dll")"
+    Write-Host '=== end diagnostics ==='
+}
+
+# The feature can be enabled while the hypervisor is not actually running (for
+# example when a host reboot is still pending), so both are required.
+function Assert-HypervisorPlatform {
+    Assert-RequiredFeature -Name 'HypervisorPlatform' `
+        -Remedy 'This backend requires Windows Hypervisor Platform on the runner image.'
+
+    $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+    if ($null -eq $computerSystem -or -not $computerSystem.HypervisorPresent) {
+        Exit-WithError 'HypervisorPresent is false - WHP feature is enabled but hypervisor is not running.'
+    }
+
+    Write-Host 'WHP is enabled and hypervisor is present.'
+}
+
+# The matrix schedules by pool name, so this is the only evidence in the log
+# that a pool really booted the release it advertises. Which tier a
+# process-container job selects is a function of that build.
+function Write-HostOsVersion {
+    $key = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+    $values = @{}
+    foreach ($name in 'ProductName', 'DisplayVersion', 'ReleaseId', 'CurrentBuild', 'UBR', 'EditionID') {
+        try {
+            $values[$name] = (Get-ItemProperty -Path $key -Name $name -ErrorAction Stop).$name
+        } catch {
+            $values[$name] = $null
+        }
+    }
+
+    # Win32_OperatingSystem is the only reliable product name: the registry's
+    # ProductName still reads "Windows 10" on Windows 11 hosts.
+    $caption = $null
+    try {
+        $caption = (Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop).Caption
+    } catch {
+        Write-Host "Could not query Win32_OperatingSystem ($($_.Exception.Message)); falling back to the registry product name."
+        $caption = $values['ProductName']
+    }
+
+    $release = if ($values['DisplayVersion']) { $values['DisplayVersion'] } else { $values['ReleaseId'] }
+    $build = if ($null -ne $values['UBR']) {
+        "$($values['CurrentBuild']).$($values['UBR'])"
+    } else {
+        $values['CurrentBuild']
+    }
+
+    Write-Host "Host OS: $caption"
+    Write-Host "Host OS release: $release (build $build)"
+    Write-Host "Host OS edition: $($values['EditionID']); architecture: $env:PROCESSOR_ARCHITECTURE"
+}
+
+function Initialize-ProcessContainerHost {
+    $hostPrep = Join-Path $BinaryDirectory 'wxc-host-prep.exe'
+    if (-not (Test-Path $hostPrep)) {
+        Exit-WithError "wxc-host-prep.exe not found in $BinaryDirectory"
+    }
+
+    # The AppContainer tier needs the system-drive ACEs and the \Device\Null
+    # security descriptor. --no-sacl keeps the descriptor within what a CI host
+    # can grant without SeSecurityPrivilege.
+    #
+    # This runs for process-t1 as well as process-t3. A T1 host selects
+    # BaseContainer for most policies, but the suite deliberately drives the
+    # AppContainer fallback tiers too (and an unprepared host fails the launch
+    # with WIN32_ERROR(5) rather than reporting a policy result), so the T1 job
+    # needs the same preparation to test anything beyond config validation.
+    & $hostPrep prepare-system-drive
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "wxc-host-prep prepare-system-drive failed with exit code $LASTEXITCODE"
+    }
+
+    & $hostPrep prepare-null-device --no-sacl
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "wxc-host-prep prepare-null-device failed with exit code $LASTEXITCODE"
+    }
+}
+
+# Verify the interpreters test suites drive inside the sandbox, following
+# the same verify-never-install rule as the optional-feature assertions above:
+# a missing one is an image problem, not something the job can fix mid-run.
+function Assert-WorkloadInterpreters {
+    $interpreters = @(
+        @{ Name = 'pwsh';    Candidates = @('pwsh');              Required = $true;  Remedy = 'install PowerShell 7 in the image' },
+        @{ Name = 'git';     Candidates = @('git');               Required = $false; Remedy = 'install Git for Windows in the image' },
+        @{ Name = 'node';    Candidates = @('node');              Required = $false; Remedy = 'install Node.js in the image' },
+        @{ Name = 'npm';     Candidates = @('npm');               Required = $false; Remedy = 'install Node.js in the image (npm ships with it)' },
+        @{ Name = 'npx';     Candidates = @('npx');               Required = $false; Remedy = 'install Node.js in the image (npx ships with it)' },
+        @{ Name = 'python';  Candidates = @('python', 'python3'); Required = $false; Remedy = 'install Python in the image' },
+        @{ Name = 'pip';     Candidates = @('pip', 'pip3');       Required = $false; Remedy = 'install Python in the image (pip ships with it)' },
+        @{ Name = 'dotnet';  Candidates = @('dotnet');            Required = $false; Remedy = 'install the .NET SDK in the image' },
+        @{ Name = 'az';      Candidates = @('az');                Required = $false; Remedy = 'install the Azure CLI in the image' },
+        @{ Name = 'gh';      Candidates = @('gh');                Required = $false; Remedy = 'install the GitHub CLI in the image' },
+        @{ Name = 'openssl'; Candidates = @('openssl');           Required = $false; Remedy = 'only published as a packaged application, so it is installed by Install-PackagedTooling rather than baked into the image' },
+        # Windows-only
+        @{ Name = 'nuget';   Candidates = @('nuget');             Required = $false; Remedy = 'install the NuGet CLI in the image' },
+        @{ Name = 'winapp';  Candidates = @('winapp');            Required = $false; Remedy = 'only published as a packaged application, so it is installed by Install-PackagedTooling rather than baked into the image' },
+        @{ Name = 'winget';  Candidates = @('winget');            Required = $false; AllowStoreAlias = $true; Remedy = 'install the Windows Package Manager (App Installer) in the image' },
+        @{ Name = 'scoop';   Candidates = @('scoop');             Required = $false; Remedy = 'install Scoop in the image' },
+        @{ Name = 'choco';   Candidates = @('choco');             Required = $false; Remedy = 'install Chocolatey in the image' }
+    )
+
+    $missing = @()
+    foreach ($tool in $interpreters) {
+        $resolved = $null
+        foreach ($candidate in $tool.Candidates) {
+            $found = Get-Command $candidate -ErrorAction SilentlyContinue
+            # A command resolving into WindowsApps is normally a Microsoft Store
+            # AppExecutionAlias stub: a 0-byte redirect that opens the Store
+            # rather than running, which the suite deliberately ignores.
+            #
+            # WindowsApps is also how App Installer legitimately delivers winget,
+            # and a working alias is indistinguishable from a stub by path or by
+            # size (both are 0-byte reparse points). So entries that ship that
+            # way opt out of the filter via AllowStoreAlias; blanket-filtering
+            # them reports an installed tool as missing.
+            if ($found -and ($tool['AllowStoreAlias'] -or $found.Source -notlike '*\WindowsApps\*')) {
+                $resolved = $found.Source
+                break
+            }
+        }
+        if ($resolved) {
+            Write-Host "Workload interpreter '$($tool.Name)' found at $resolved"
+        } elseif ($tool.Required) {
+            $missing += "$($tool.Name) ($($tool.Remedy))"
+        } else {
+            Write-Host "::warning::Workload interpreter '$($tool.Name)' is absent ($($tool.Remedy))"
+        }
+    }
+
+    if ($missing) {
+        Exit-WithError "Workload interpreters missing from this image: $($missing -join '; ')"
+    }
+}
+
+# Returns whether winget can actually run, which is not the same as being on
+# PATH: an unregistered App Installer leaves an alias that resolves and then
+# fails to launch. The explicit alias path is a second candidate because
+# PowerShell caches command lookups, so a repair inside this process is not
+# guaranteed to be visible through Get-Command.
+function Test-WingetOperational {
+    $candidates = @()
+    $command = Get-Command winget -ErrorAction SilentlyContinue
+    if ($command) { $candidates += $command.Source }
+    $candidates += Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+
+    foreach ($candidate in $candidates) {
+        if (-not $candidate) { continue }
+        try {
+            $version = & $candidate --version 2>&1
+            if ($LASTEXITCODE -eq 0 -and $version) {
+                Write-Host "winget is operational ($($version | Select-Object -First 1)) at $candidate"
+                $script:WingetPath = $candidate
+                return $true
+            }
+        } catch {
+            # A broken alias throws rather than returning an exit code.
+        }
+    }
+    return $false
+}
+
+# winget ships as an AppExecutionAlias belonging to the App Installer package.
+# CI images routinely carry the package while leaving it unregistered for the
+# account the job runs as, which produces an alias that resolves on PATH but
+# fails with "The file cannot be accessed by the system". Registering the
+# package already on the image is the documented repair and downloads nothing.
+#
+# This is the one exception to the verify-never-install rule above, and only
+# barely: it installs nothing, it re-registers what the image already shipped.
+# It is best effort — winget is optional, so nothing here fails the job.
+function Repair-Winget {
+    if (Test-WingetOperational) {
+        return
+    }
+
+    Write-Host "winget did not run; checking whether the App Installer package is present."
+
+    $package = $null
+    try {
+        $package = Get-AppxPackage -Name Microsoft.DesktopAppInstaller -ErrorAction Stop |
+            Select-Object -First 1
+    } catch {
+        # PowerShell 7 builds without the native Appx binary module have to
+        # reach these cmdlets through Windows PowerShell.
+        try {
+            Import-Module Appx -UseWindowsPowerShell -ErrorAction Stop -WarningAction SilentlyContinue
+            $package = Get-AppxPackage -Name Microsoft.DesktopAppInstaller -ErrorAction Stop |
+                Select-Object -First 1
+        } catch {
+            Write-Host "::warning::Could not query Appx packages, so winget cannot be repaired: $($_.Exception.Message)"
+            return
+        }
+    }
+
+    if (-not $package) {
+        Write-Host "::warning::winget is unavailable and the App Installer package is absent; install it in the image."
+        return
+    }
+
+    Write-Host "App Installer $($package.Version) is present (status $($package.Status)); registering it for the current user."
+    try {
+        # PackageFamilyName is Microsoft.DesktopAppInstaller_8wekyb3d8bbwe, read
+        # off the package rather than hard-coded.
+        Add-AppxPackage -RegisterByFamilyName -MainPackage $package.PackageFamilyName -ErrorAction Stop
+    } catch {
+        Write-Host "::warning::Could not register the App Installer package: $($_.Exception.Message)"
+        return
+    }
+
+    if (Test-WingetOperational) {
+        Write-Host "winget is operational after registering App Installer."
+    } else {
+        Write-Host "::warning::winget is still not operational after registering App Installer."
+    }
+}
+
+# Appends the registry PATH entries this process has not picked up yet, so a
+# directory an installer just published becomes visible to a process that
+# otherwise keeps the PATH it started with.
+function Update-ProcessPath {
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($entry in $env:Path -split ';') {
+        if ($entry) { [void]$seen.Add($entry.TrimEnd('\')) }
+    }
+
+    foreach ($scope in 'Machine', 'User') {
+        $value = [Environment]::GetEnvironmentVariable('Path', $scope)
+        if (-not $value) { continue }
+        foreach ($entry in $value -split ';') {
+            if ($entry -and $seen.Add($entry.TrimEnd('\'))) {
+                $env:Path = "$env:Path;$entry"
+            }
+        }
+    }
+}
+
+# Resolves a command the way Assert-WorkloadInterpreters does, so a tool this
+# step installs is judged by the same rule that reports it later.
+function Resolve-Interpreter {
+    param([Parameter(Mandatory)][string[]]$Candidates)
+
+    foreach ($candidate in $Candidates) {
+        $found = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($found -and $found.Source -notlike '*\WindowsApps\*') {
+            return $found.Source
+        }
+    }
+    return $null
+}
+
+# openssl and the Windows App Development CLI are the two workload interpreters
+# that cannot be baked into an image: both are published only as packaged
+# applications, and no packaged application can be registered while an image is
+# being provisioned. They are installed here instead, on the running machine,
+# which is the first point at which winget works.
+#
+# This is the second exception to the verify-never-install rule above. It is
+# best effort: both tools are optional, so a failure warns here and the
+# inventory that follows reports what the machine actually ended up with.
+function Install-PackagedTooling {
+    # 0 is success; the other two are "already installed" and "no applicable
+    # upgrade", which both mean the tool is present and are equally fine.
+    $success = @(0, -1978335135, -1978335189)
+
+    $packages = @(
+        @{
+            Name       = 'winapp'
+            Candidates = @('winapp')
+            Id         = 'Microsoft.WinAppCli'
+            # This package publishes a packaged build and a portable one. The
+            # packaged build installs behind an execution alias in WindowsApps,
+            # which is indistinguishable from a Store stub and is therefore not
+            # counted as present. The portable build puts a real executable on
+            # PATH instead, so it is the one to ask for.
+            Extra      = @('--installer-type', 'zip')
+            PathHints  = @(
+                (Join-Path $env:ProgramFiles 'WinGet\Links'),
+                (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links')
+            )
+        },
+        @{
+            Name       = 'openssl'
+            Candidates = @('openssl')
+            Id         = 'ShiningLight.OpenSSL.Light'
+            Extra      = @()
+            # This installer does not publish its own bin directory.
+            PathHints  = @(
+                (Join-Path $env:ProgramFiles 'OpenSSL-Win64\bin'),
+                (Join-Path $env:ProgramFiles 'OpenSSL\bin')
+            )
+        }
+    )
+
+    $wanted = $packages | Where-Object { -not (Resolve-Interpreter -Candidates $_.Candidates) }
+    if (-not $wanted) {
+        Write-Host "Packaged workload tooling is already present."
+        $global:LASTEXITCODE = 0
+        return
+    }
+
+    if (-not $script:WingetPath) {
+        Write-Host "::warning::winget is unavailable, so $(($wanted.Name) -join ' and ') cannot be installed."
+        $global:LASTEXITCODE = 0
+        return
+    }
+
+    foreach ($package in $wanted) {
+        Write-Host "Installing $($package.Name) ($($package.Id))."
+        $arguments = @(
+            'install', '--id', $package.Id, '--exact', '--silent',
+            '--disable-interactivity', '--accept-source-agreements',
+            '--accept-package-agreements'
+        ) + $package.Extra
+
+        try {
+            $output = & $script:WingetPath @arguments 2>&1
+            $code = $LASTEXITCODE
+        } catch {
+            Write-Host "::warning::Could not install $($package.Name): $(($_.Exception.Message -split "`r?`n" | Select-Object -First 1).Trim())"
+            continue
+        }
+
+        if ($success -notcontains $code) {
+            $detail = ($output | Select-Object -Last 3 | Out-String).Trim()
+            if ($detail) { Write-Host $detail }
+            Write-Host "::warning::Installing $($package.Name) reported exit code $code."
+            continue
+        }
+
+        Update-ProcessPath
+        foreach ($hint in $package.PathHints) {
+            if ((Test-Path -LiteralPath $hint) -and (($env:Path -split ';') -notcontains $hint)) {
+                $env:Path = "$env:Path;$hint"
+            }
+        }
+
+        $resolved = Resolve-Interpreter -Candidates $package.Candidates
+        if ($resolved) {
+            Write-Host "$($package.Name) is available at $resolved"
+        } else {
+            Write-Host "::warning::$($package.Name) installed but still does not resolve on PATH."
+        }
+    }
+
+    $global:LASTEXITCODE = 0
+}
+
+function Initialize-MicroVmHost {
+    # Staged next to wxc-exec.exe by the --features microvm build, so their
+    # absence means a broken artifact rather than a host problem. Snapshots are
+    # excluded: they are a warm-start cache the runner regenerates on demand.
+    Assert-RequiredFile @(
+        'wxc-exec.exe',
+        'nanvixd.exe',
+        'nanvix_rootfs.img',
+        'python3.initrd',
+        'bin\kernel.elf'
+    )
+
+    # NanVix boots a VM from these images on every invocation; Defender scanning
+    # them can push boot past its timeout.
+    Add-MpPreference -ExclusionPath $BinaryDirectory
+    Write-Host "Added Defender exclusion for $BinaryDirectory"
+
+    Write-HypervisorDiagnostic
+    Assert-HypervisorPlatform
+}
+
+# The optional features must be baked into the pool image (enabling one needs a
+# reboot this job cannot take), but the WSL runtime package is installed here if
+# missing. Container images are pulled by the suite itself
+# (tests/scripts/run_wslc_all_tests.ps1).
+function Initialize-WslcHost {
+    # wslcsdk.dll ships beside wxc-exec.exe only in a --features wslc build.
+    Assert-RequiredFile @('wxc-exec.exe', 'wslcsdk.dll')
+
+    Assert-RequiredFeature -Name 'Microsoft-Windows-Subsystem-Linux', 'VirtualMachinePlatform' `
+        -Remedy 'WSL2 must be baked into the runner image; enabling these features requires a host reboot this job cannot take.'
+
+    Write-Host "=== wsl.exe presence + status ==="
+    $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
+    if ($wsl) {
+        Write-Host "wsl.exe: $($wsl.Source)"
+    } else {
+        Write-Host "wsl.exe NOT found on PATH"
+        Exit-WithError 'WSL2 is not installed on this runner. The runner image must include WSL2 for this backend.'
+    }
+
+    $previousEncoding = [Console]::OutputEncoding
+    [Console]::OutputEncoding = [System.Text.Encoding]::Unicode
+    $output = wsl.exe --status  2>&1 | Out-String
+    Write-Host $output
+    [Console]::OutputEncoding = $previousEncoding
+
+    # # if unicode output mentions wsl.exe --install, skip version check for now
+    if ($output -match 'wsl.exe --install') {
+        Exit-WithError 'WSL2 is not installed on this runner. The runner image must include WSL2 for this backend.'
+    }
+
+    if ((Invoke-Wsl @('--version') -Quiet) -ne 0) {
+        Write-Host 'version command failed, so WSL2 is installed but not updated.'
+        Write-Host "=== updating inbox WSL to modern version ==="    
+
+        if ((Invoke-Wsl @('--update', '--web-download') -Quiet) -ne 0 -and
+            (Invoke-Wsl @('--update')) -ne 0) {
+            Exit-WithError 'wsl --update failed; the WSL2 runtime could not be installed on this runner.'
+        }
+
+        if ((Invoke-Wsl @('--version') -Quiet) -ne 0) {
+            Exit-WithError 'wsl --version failed after updating; the WSL2 runtime is not usable on this runner.'
+        }
+
+        Write-Host 'WSL2 is installed and updated (not prerelease, yet)'
+       
+    }
+
+    # WSLC needs a runtime at least as new as the pinned WSLC SDK, and those
+    # builds ship only on the pre-release ring — the stable ring lands well
+    # behind it. Without this the SDK fails at run time with
+    # "WSLC runtime unavailable. Missing components: WslPackage".
+    $required = Get-RequiredWslVersion
+    $installed = Get-InstalledWslVersion
+    if ($null -ne $required -and ($null -eq $installed -or $installed -lt $required)) {
+        Write-Host "WSL $installed is older than the $required WSLC requires; updating to pre-release..."
+        if ((Invoke-Wsl @('--update', '--pre-release', '--web-download') -Quiet) -ne 0 -and
+            (Invoke-Wsl @('--update', '--pre-release')) -ne 0) {
+            Exit-WithError "wsl --update --pre-release failed; WSLC requires WSL $required or newer."
+        }
+        $installed = Get-InstalledWslVersion
+    }
+
+    if ($null -eq $installed) {
+        Exit-WithError 'wsl --version failed after updating; the WSL2 runtime is not usable on this runner.'
+    }
+    if ($null -ne $required -and $installed -lt $required) {
+        Exit-WithError "WSL $installed is installed, but WSLC requires $required or newer."
+    }
+    Write-Host "WSL runtime $installed is ready (WSLC requires $required or newer)."
+
+    Write-Host "=== done. ===" 
+}
+
+# Minimum WSL runtime for WSLC, read from the pinned SDK version so the two
+# cannot drift. The SDK's own runtime error names this same version.
+function Get-RequiredWslVersion {
+    $buildScript = Join-Path $PSScriptRoot '..\..\src\backends\wslc\common\build.rs'
+    if (-not (Test-Path $buildScript)) {
+        Write-Host "WARNING: $buildScript not found; skipping the WSL version gate."
+        return $null
+    }
+
+    $match = [regex]::Match((Get-Content $buildScript -Raw), 'WSLC_SDK_VERSION:\s*&str\s*=\s*"([0-9]+(?:\.[0-9]+)+)"')
+    if (-not $match.Success) {
+        Write-Host 'WARNING: could not parse WSLC_SDK_VERSION; skipping the WSL version gate.'
+        return $null
+    }
+    return [version]$match.Groups[1].Value
+}
+
+# Installed modern-runtime version, or $null when wsl.exe is the legacy inbox
+# build (no --version) or otherwise unusable.
+function Get-InstalledWslVersion {
+    $result = Invoke-WslCapture -Arguments @('--version')
+    if ($result.ExitCode -ne 0) {
+        return $null
+    }
+
+    $match = [regex]::Match($result.Output, '(?im)^\s*WSL version:\s*([0-9]+(?:\.[0-9]+)+)')
+    if (-not $match.Success) {
+        return $null
+    }
+    return [version]$match.Groups[1].Value
+}
+
+
+# wsl.exe emits UTF-16LE, which the default console encoding renders as
+# null-separated garbage. Returns @{ ExitCode; Output } with the output decoded.
+function Invoke-WslCapture {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    $previousEncoding = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [System.Text.Encoding]::Unicode
+        $output = & wsl.exe @Arguments 2>&1 | Out-String
+        return @{ ExitCode = $LASTEXITCODE; Output = $output }
+    } catch {
+        return @{ ExitCode = 1; Output = "wsl.exe could not be run: $($_.Exception.Message)" }
+    } finally {
+        [Console]::OutputEncoding = $previousEncoding
+    }
+}
+
+# Run wsl.exe and return its exit code. -Quiet suppresses output for probes,
+# where the legacy wsl.exe dumps its whole usage text on an unknown switch.
+function Invoke-Wsl {
+    param(
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [switch]$Quiet
+    )
+
+    $result = Invoke-WslCapture -Arguments $Arguments
+    if (-not $Quiet -and $result.Output.Trim()) {
+        Write-Host $result.Output.Trim()
+    }
+    return $result.ExitCode
+}
+
+if (-not (Test-Path $BinaryDirectory)) {
+    Exit-WithError "Binary directory not found: $BinaryDirectory"
+}
+$BinaryDirectory = (Resolve-Path $BinaryDirectory).Path
+
+Write-Host "Preparing Windows host for backend '$Backend' using $BinaryDirectory"
+
+Write-HostOsVersion
+
+# Run for every backend: this is host inventory, not a backend prerequisite.
+# The winget repair comes first so the packaged-tooling install below can use
+# it, and the inventory reports the state after both.
+Repair-Winget
+Install-PackagedTooling
+Assert-WorkloadInterpreters
+
+switch ($Backend) {
+    'process-t1' { Initialize-ProcessContainerHost }
+    'process-t3' { Initialize-ProcessContainerHost }
+    'microvm' { Initialize-MicroVmHost }
+    'wslc' { Initialize-WslcHost }
+    default { Write-Host "$Backend has no artifact-only Windows test prerequisites yet." }
+}

@@ -7,6 +7,19 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
+function sectionByAttribute(html, attribute) {
+  const start = html.indexOf(`<section ${attribute}`);
+  assert.ok(start >= 0, `section ${attribute} must exist`);
+  const tags = /<section\b[^>]*>|<\/section>/g;
+  tags.lastIndex = start;
+  let depth = 0;
+  for (let match = tags.exec(html); match; match = tags.exec(html)) {
+    depth += match[0].startsWith('</') ? -1 : 1;
+    if (depth === 0) return html.slice(start, tags.lastIndex);
+  }
+  assert.fail(`section ${attribute} must close`);
+}
+
 test('Settings has one obvious entry and a resumable four-step setup surface', () => {
   const html = read('renderer/index.html');
   assert.match(html, /data-page="system"[^>]*>.*?<span>Cài đặt<\/span>/s);
@@ -57,11 +70,49 @@ test('Common settings stay compact and technical controls are in a collapsed dis
   assert.doesNotMatch(disclosureTag, /\bopen\b/, 'advanced settings must start collapsed');
 });
 
-test('Setup subpages hide the large overview but keep the setup navigation available', () => {
+test('Connection, folder and execution controls share one setup page without duplicate forms', () => {
   const html = read('renderer/index.html');
-  const css = read('renderer/settings-compact.css');
-  assert.match(html, /<nav class="setup-navigation"[\s\S]*?data-nav="settings"/);
-  assert.match(css, /body\[data-setup-view\]:not\(\[data-setup-view="system"\]\) \[data-page-view="system"\]>\.section-header,\s*body\[data-setup-view\]:not\(\[data-setup-view="system"\]\) \[data-page-view="system"\] #setupSummary\{display:none\}/);
+  const system = sectionByAttribute(html, 'class="page" data-page-view="system"');
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(new Set(ids).size, ids.length, 'DOM IDs must stay unique');
+  const sections = ['setupConnectionSection', 'setupFolderSection', 'setupExecutionSection'];
+  const positions = sections.map((id) => system.indexOf(`id="${id}"`));
+  assert.ok(positions.every((position) => position >= 0));
+  assert.ok(positions[0] < positions[1] && positions[1] < positions[2], 'setup must follow connection, scope, execution order');
+
+  for (const id of ['controlPlaneServerUrl', 'requestControlPlaneEnrollment', 'openControlPlaneConsole', 'controlPlaneAuthorityStatusCard']) {
+    assert.match(system.slice(positions[0], positions[1]), new RegExp(`id="${id}"`));
+  }
+  for (const id of ['controlPlaneWorkspaceRegistrations', 'chooseControlPlaneWorkspace', 'registerControlPlaneWorkspace', 'controlPlaneCapabilityExec']) {
+    assert.match(system.slice(positions[1], positions[2]), new RegExp(`id="${id}"`));
+  }
+  for (const id of ['setupExecutionChecklist', 'setupReadCheck', 'setupPatchCheck', 'setupExecCheck', 'setupContinueAction', 'setupContinueStatus', 'setupCancelContinuation']) {
+    assert.match(system.slice(positions[2]), new RegExp(`id="${id}"`));
+  }
+  assert.match(system, /id="setupContinueStatus"[^>]*role="status"/);
+  assert.doesNotMatch(html, /data-page-view="(?:deploy|workspace)"/);
+  assert.match(system, /data-nav="deploy"/);
+  assert.match(system, /data-nav="workspace"/);
+  assert.match(system, /data-nav="settings"/);
+});
+
+test('Execution setup starts unverified and legacy credentials stay in a collapsed disclosure', () => {
+  const html = read('renderer/index.html');
+  const system = sectionByAttribute(html, 'class="page" data-page-view="system"');
+  for (const id of ['setupReadCheck', 'setupPatchCheck', 'setupExecCheck']) {
+    assert.match(system, new RegExp(`id="${id}" data-state="unknown"`));
+  }
+  const legacyStart = system.indexOf('<details class="setup-legacy"');
+  const legacy = system.slice(legacyStart);
+  assert.ok(legacyStart > 0);
+  assert.doesNotMatch(legacy.match(/^<details[^>]*>/)[0], /\bopen\b/);
+  for (const id of ['runtimeKeyInput', 'tunnelIdInput', 'proxyModeSelect', 'mcpPortInput', 'saveWorkspaceRestart']) {
+    assert.doesNotMatch(system.slice(0, legacyStart), new RegExp(`id="${id}"`));
+    assert.match(legacy, new RegExp(`id="${id}"`));
+  }
+  assert.match(html, /id="executionWorkspaceLabel"/);
+  assert.match(html, /id="executionAccessSummary"/);
+  assert.match(html, /id="executionNextAction"/);
 });
 
 test('Changing the theme applies it immediately and saves only the theme preference', async () => {
@@ -88,7 +139,7 @@ test('Changing the theme applies it immediately and saves only the theme prefere
   const saved = [];
   const context = {
     $: (selector) => selector === '#themeSelect' ? themeSelect : null,
-    document: { body },
+    document: { body, documentElement: { dataset: {} } },
     savePreference: async (field, value) => { saved.push([field, value]); }
   };
   vm.runInNewContext(`${app.slice(applyStart, applyEnd)}\n${app.slice(bindStart, bindEnd)}`, context);
@@ -98,8 +149,13 @@ test('Changing the theme applies it immediately and saves only the theme prefere
   await themeSelect.listener();
 
   assert.equal(body.dataset.theme, 'dark');
+  assert.equal(context.document.documentElement.dataset.theme, 'dark');
   assert.equal(themeSelect.value, 'dark');
   assert.deepEqual(saved, [['theme', 'dark']]);
+  themeSelect.value = 'light';
+  await themeSelect.listener();
+  assert.equal(body.dataset.theme, 'light');
+  assert.equal(context.document.documentElement.dataset.theme, 'light');
 });
 
 test('Static preview preserves the theme selected by theme-bootstrap', () => {
@@ -180,14 +236,15 @@ test('Central target readiness fails closed on stale authority, offline/degraded
   assert.equal(ready(authority, null).state, 'workspace_target_mismatch');
 });
 
-test('System setup is the only primary settings entry and old setup pages remain subordinate links', () => {
+test('System setup is the only primary settings entry and preferences remain subordinate', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
   assert.match(nav, /data-page="system"[^>]*>[\s\S]*?Cài đặt/);
   assert.doesNotMatch(nav, /data-page="(?:deploy|workspace|settings)"/);
-  for (const page of ['deploy', 'workspace', 'settings']) {
+  for (const page of ['deploy', 'workspace']) {
     assert.match(html, new RegExp(`class="setup-section-link" data-nav="${page}"`));
   }
+  assert.match(html, /class="setup-preferences-link"[\s\S]*?data-nav="settings"/);
 });
 
 test('Central workspace setup uses understandable presets and keeps opaque IDs out of normal UI', () => {
@@ -249,14 +306,14 @@ test('Central setup supports personal ChatGPT without Business IDs or mandatory 
   const html = read('renderer/index.html');
   const app = read('renderer/app.js');
   const centralStart = html.indexOf('<div id="centralExecutorNotice"');
-  const centralEnd = html.indexOf('<div id="centralExecutorHandoff"', centralStart);
+  const centralEnd = html.indexOf('id="setupFolderSection"', centralStart);
   assert.ok(centralStart >= 0 && centralEnd > centralStart);
   const centralSetup = html.slice(centralStart, centralEnd);
   assert.match(centralSetup, /id="personalChatGptConnectionHelp"/);
   assert.match(centralSetup, /ChatGPT cá nhân/);
-  assert.match(centralSetup, /đã hiện trong mục Apps, hãy dùng lại kết nối đó/);
-  assert.match(centralSetup, /không cần nhập Organization ID hoặc ChatGPT Workspace ID ở đây/);
-  assert.match(centralSetup, /quyền từng thao tác tùy theo tài khoản ChatGPT và policy Ubuntu/);
+  assert.match(centralSetup, /dùng app Ubuntu Control Plane đã kết nối/);
+  assert.match(centralSetup, /không cần Organization ID hoặc ChatGPT Workspace ID/);
+  assert.match(centralSetup, /Quyền từng thao tác do Ubuntu quyết định/);
   assert.match(centralSetup, /data-nav="guide">Cách dùng trong ChatGPT Plus/);
   assert.doesNotMatch(centralSetup, /<input\b[^>]*(?:organization|chatgptWorkspace|tunnelId|runtimeKey)/i);
   assert.match(html, /id="centralExecutorGuide"[^>]*>[\s\S]*?ChatGPT web[\s\S]*?Developer mode\/Apps[\s\S]*?workspace_context[\s\S]*?inventory[\s\S]*?bấm Refresh[\s\S]*?Quy trình này không cần gói Business, Organization ID, ChatGPT Workspace ID hoặc cài Codex Desktop/);

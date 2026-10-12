@@ -1,0 +1,13 @@
+{
+  "observed_at": "2026-10-11T16:48:06.622Z",
+  "kind": "r11_contract_reconciliation_offline_proof",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "tests_passed": 9,
+  "tests_failed": 0,
+  "command": "node --test .coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r11/policy-contract-reconciliation/test-reconcile.cjs",
+  "helper_sha256": "0d36cb184e10ab608c877699bd4b676a2a331276d2b9ddd179cf6ad7ef0abd2e",
+  "live_policy_mutated": false,
+  "live_api_mutated": false,
+  "sandbox_started": false,
+  "source_edited": false
+}

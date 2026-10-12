@@ -1,0 +1,30 @@
+{
+  "captured_at_utc": "2026-10-11T14:53:38.826901+00:00",
+  "checks_passed": [
+    "strict_hostcheck_batchmode_fixed_argv",
+    "binary_tar_all4_helpers_and_both_pinned_archives",
+    "shell_argument_roundtrip",
+    "immutable_public_only_receipt",
+    "stderr_never_disclosed"
+  ],
+  "external_mutation": false,
+  "manifest_sha256": "d764e36dbbabdfb8f3b5202b95f108e90b43bbf2aed0682be19aed10b734c95e",
+  "network_or_ssh_used": false,
+  "operation": "offline_binary_ssh_transport_smoke",
+  "staged_in_fixture": [
+    {
+      "files": [
+        "codex-control-plane-81303f7cf4d006c5e6e2eeaffb578b57446b9dbd6730c9f34b2a7bec98b8c0cb.tar.gz",
+        "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c.tar.gz",
+        "r11_common.py",
+        "ubuntu-r11-authority.py",
+        "ubuntu-r11-recovery.py",
+        "ubuntu-r11-rollout.py"
+      ],
+      "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T000000Z",
+      "stdin_bytes": 604160
+    }
+  ],
+  "temporary_receipts_removed": true,
+  "transport_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba"
+}

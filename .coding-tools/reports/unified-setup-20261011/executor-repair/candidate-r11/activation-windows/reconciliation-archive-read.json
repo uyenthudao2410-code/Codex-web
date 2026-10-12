@@ -1,0 +1,16 @@
+{
+  "kind": "r11_isolated_cleanup_archive_read_reconciliation",
+  "schema_version": 1,
+  "classification": "PRE_EFFECT_VALIDATION_FAILURE",
+  "failures": [
+    {"observed_at": "2026-10-11T14:52:11.640Z", "helper_sha256": "ee1ddb5bae697ee66b5de1614e32e468b52153ee12cdecfff8cb893ea81bf4a5", "code": "ENOENT"},
+    {"observed_at": "2026-10-11T14:54:20.160Z", "helper_sha256": "3553bb3c494817e37a643569975c5a444dad92e93c14cc1877c7d0d1139a9bc0", "code": "ENOENT", "errno": -2, "stack_sequence": ["node_init", "transition-r11.cjs:22", "transition-r11.cjs:37", "transition-r11.cjs:117", "transition-r11.cjs:127", "owned-cleanup-electron.cjs:13"]}
+  ],
+  "cause": "Electron ASAR filesystem redirection intercepted complete archive hashing in verifyCandidate before owned cleanup operation creation",
+  "fix": "Set process.noAsar=true in isolated Electron entrypoint before loading transition helper",
+  "fixed_worker_sha256": "f9f394bb15a1ffa0d946ae0a932665fd1c5503c1a53132ccf6256667b9cbea33",
+  "transition_sha256": "3553bb3c494817e37a643569975c5a444dad92e93c14cc1877c7d0d1139a9bc0",
+  "validation": {"worker_node_check": "PASS", "transition_node_check": "PASS"},
+  "boundary": {"native_prepare_started_in_failed_attempts": false, "cleanup_operation_created_in_failed_attempts": false, "production_process_noAsar_modified": false, "candidate_bytes_modified": false, "private_error_message_emitted": false, "runtime_operation_performed_by_preparation_agent": false},
+  "remaining": "Root executes isolated helper with pinned fresh recovery receipt and observes exact cleanup operation; this repair is not live teardown proof"
+}

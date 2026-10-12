@@ -1,0 +1,110 @@
+{
+  "kind": "immutable_r7_identity_pin_for_r9",
+  "observed_at": "2026-10-11T11:18:18.165Z",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "parity_sha256": "c2427d0ff484a94f4437762700ddf144fc41e7f57412491e4421aa22f0e36ec6",
+  "installation_id": "9862462f5eeaedcd4ddc434a5bb8f3880dd8c4fef78a00dcf143a8b42a6044ae",
+  "instance_id": "d13ed41f95d0a3b640b125fdd65a7857",
+  "owner_pid": 19212,
+  "owner_process_start_token": "134361878014696250",
+  "owner": {
+    "state": "live",
+    "pid": 19212,
+    "process_start_token": "134361878014696250"
+  },
+  "ui": {
+    "state": "live",
+    "pid": 4732,
+    "process_start_token": "134361878127657510",
+    "instance_id": "e67f982e1cfedc7193dd58c5f2535064"
+  },
+  "native": {
+    "state": "live",
+    "pid": 23728,
+    "process_start_token": "134361878037852560"
+  },
+  "agent": {
+    "state": "live",
+    "pid": 15524,
+    "process_start_token": "134361878086798840"
+  },
+  "agent_receipt": {
+    "identity": {
+      "state": "live",
+      "pid": 15524,
+      "process_start_token": "134361878086798840"
+    },
+    "node_agent": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-unified-setup-1011-r7\\win-unpacked\\resources\\resources\\control-plane\\node_agent.py"
+  },
+  "policies": {
+    "file_read": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "62bd90f00fc6ab196afe07ddea82996a22a2686cd82e7d3c83c12914f99df6e6"
+    },
+    "approved_patch": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "3e78ebb89ab90ef2b33964d922bd1294c17fd741c218322cf4efb4ee7f574d2b"
+    },
+    "exec": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+      "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+      "policy_sha256": "31125fd75f5147770eecde7b926e3c46efd1f5ee83a55b58d180f8b200966367",
+      "allowed_argv_prefix_count": 6,
+      "allowed_argv_prefixes_sha256": "6c67e3aa54d9dae49c41feff2d2b5c56100760b60cdef6a2a4eca392d9063597"
+    },
+    "sandbox": {
+      "state": "unproven_live_exec_required",
+      "standalone_probe_performed": false
+    },
+    "workspace_root_verified": true
+  },
+  "census": {
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "reason": "live_runtime_state_process",
+    "ledger_mutated": false,
+    "content_free": true,
+    "census_fingerprint": "f81e9894e9c1ef56e6e89ffe5827ba8e63e5d3b7516757b5f4cf4a989ebe2fc4",
+    "snapshot": {
+      "logical_sha256": "cab44834dc5c7a85b23415ba11485937f0ccda2be1ec81ffe464bb4ab5225098",
+      "integrity_check": [
+        "ok"
+      ]
+    }
+  },
+  "runtime_mutated": false,
+  "server_mutated": false
+}

@@ -2176,7 +2176,7 @@ class Runtime(
         scope_root = self._workspace_root_for_identity(workspace_identity.get("root_id")) or self.workspace.root
         self.request_context.workspace_root = str(scope_root)
         try:
-            status = self.git_status({"path": str(resolved.path), "max_entries": 2000})
+            status = self.git_status({"path": str(resolved.path), "max_entries": 2000}, source_identity_only=True)
         except ToolFailure:
             raise
         except (OSError, ValueError) as exc:

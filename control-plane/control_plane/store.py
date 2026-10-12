@@ -27,7 +27,7 @@ TASK_ID_PATTERN = re.compile(r"^task_[a-f0-9]{32}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
 NODE_ROTATION_STATES = frozenset({"prepared", "activated", "completed", "aborted"})
-SCHEMA_VERSION = 28
+SCHEMA_VERSION = 29
 MCP_SERVICE_GRANT_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000
 SCOPED_PILOT_MAX_TTL_MS = 24 * 60 * 60 * 1000
 PRIVATE_TUNNEL_SERVICE_ISSUER = "private_tunnel_service"
@@ -273,6 +273,24 @@ def _mcp_patch_permission_scope(
         "preimage_sha256": normalized_hashes["preimage_sha256"],
         "patch_sha256": normalized_hashes["patch_sha256"],
         "validation_profile": MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
+    }
+
+
+def _mcp_patch_verification(value: Any) -> dict[str, Any]:
+    """Normalize one immutable structured initial check, never shell text."""
+
+    if not isinstance(value, dict) or set(value) != {"argv", "cwd", "timeout_ms", "max_output_bytes"}:
+        raise ValidationError("verification requires exact argv, cwd, timeout_ms and max_output_bytes.")
+    if not isinstance(value["cwd"], str):
+        raise ValidationError("verification cwd is invalid.")
+    timeout_ms, max_output_bytes = _mcp_exec_limits(
+        timeout_ms=value["timeout_ms"], max_output_bytes=value["max_output_bytes"],
+    )
+    return {
+        "argv": _mcp_exec_argv(value["argv"]),
+        "cwd": _mcp_exec_cwd(value["cwd"]),
+        "timeout_ms": timeout_ms,
+        "max_output_bytes": max_output_bytes,
     }
 
 
@@ -1504,6 +1522,10 @@ class ControlPlaneStore:
                     connection.execute("ALTER TABLE mcp_approved_patch_intents ADD COLUMN task_id TEXT")
                 if "writer_lease_generation" not in approved_patch_columns:
                     connection.execute("ALTER TABLE mcp_approved_patch_intents ADD COLUMN writer_lease_generation INTEGER")
+                for table in ("mcp_permission_requests", "mcp_approved_patch_intents", "mcp_standing_patch_intents"):
+                    columns = {str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})")}
+                    if "verification_json" not in columns:
+                        connection.execute(f"ALTER TABLE {table} ADD COLUMN verification_json TEXT")
                 exec_columns = {
                     str(row["name"])
                     for row in connection.execute("PRAGMA table_info(mcp_exec_intents)").fetchall()
@@ -4738,9 +4760,10 @@ class ControlPlaneStore:
         The owner creates a normal short-lived context for an explicitly bound
         workspace in the Ubuntu Console; this lookup lets that exact node
         retrieve the resulting read-only policy template only after its local
-        owner has selected the matching registered root.  Multiple live
-        contexts are intentionally ambiguous rather than silently picking a
-        "latest" authority window.
+        owner has selected the matching registered root.  Multiple live owner
+        assignments are intentionally ambiguous rather than silently picking
+        a "latest" authority window.  Internal contexts created for sealed MCP
+        operations remain action authority, not local policy assignments.
 
         The returned record is an internal server result.  HTTP callers must
         derive a policy template from it and must not expose ``context_id`` to
@@ -4780,6 +4803,32 @@ class ControlPlaneStore:
                   AND n.revoked_at_ms IS NULL
                   AND c.owner_id = b.owner_id
                   AND b.owner_id = n.owner_id
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM actions AS a
+                      JOIN work_requests AS r ON r.request_id = a.request_id
+                      JOIN (
+                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_file_read_intents
+                          UNION ALL
+                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_approved_patch_intents
+                          UNION ALL
+                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_standing_patch_intents
+                          UNION ALL
+                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_exec_intents
+                          UNION ALL
+                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_artifact_intents
+                          UNION ALL
+                          SELECT owner_id, binding_id, request_id, action_id FROM mcp_document_write_intents
+                      ) AS i ON i.action_id = a.action_id
+                            AND i.request_id = a.request_id
+                            AND i.owner_id = a.owner_id
+                            AND i.binding_id = a.binding_id
+                      WHERE a.context_id = c.context_id
+                        AND a.owner_id = c.owner_id
+                        AND a.binding_id = c.binding_id
+                        AND r.context_id = c.context_id
+                        AND r.owner_id = c.owner_id
+                  )
                 ORDER BY c.created_at_ms, c.context_id
                 """,
                 (device_id, workspace_id, workspace_generation, self.clock()),
@@ -6089,6 +6138,8 @@ class ControlPlaneStore:
         }
         if include_principal:
             result["principal_id"] = row["principal_id"]
+        if row["verification_json"] is not None:
+            result["verification"] = _mcp_patch_verification(json.loads(row["verification_json"]))
         return result
 
     def _mcp_patch_permission_binding(
@@ -6098,6 +6149,7 @@ class ControlPlaneStore:
         owner_id: str,
         binding_id: str,
         expected: sqlite3.Row | None = None,
+        require_exec: bool = False,
     ) -> sqlite3.Row:
         """Validate the exact C4 target without treating it as local authority."""
 
@@ -6140,6 +6192,8 @@ class ControlPlaneStore:
         # mutation; central approval never changes that policy.
         if capabilities["write"] is not True:
             raise PermissionError("selected binding does not advertise write capability.")
+        if require_exec and capabilities["exec"] is not True:
+            raise PermissionError("selected binding does not advertise exec capability.")
         self._require_current_workspace_registration(
             connection,
             device_id=str(live["device_id"]),
@@ -6169,6 +6223,7 @@ class ControlPlaneStore:
         idempotency_key: str,
         facade_contract: dict[str, Any],
         task_id: str | None = None,
+        verification: Any = None,
     ) -> dict[str, Any]:
         """Record one owner-reviewable C4 patch permission request.
 
@@ -6189,6 +6244,7 @@ class ControlPlaneStore:
             validation_profile=validation_profile,
         )
         facade_contract = _facade_contract(facade_contract)
+        verification = _mcp_patch_verification(verification) if verification is not None else None
         if task_id is not None and (not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None):
             raise ValidationError("task_id is invalid.")
         now = self.clock()
@@ -6205,6 +6261,8 @@ class ControlPlaneStore:
             "expires_at_ms": expires_at_ms,
             "facade_contract": facade_contract,
         }
+        if verification is not None:
+            immutable["verification"] = verification
         permission_digest = _digest(immutable)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -6243,7 +6301,11 @@ class ControlPlaneStore:
                     connection,
                     owner_id=owner_id,
                     binding_id=binding_id,
+                    require_exec=verification is not None,
                 )
+                if verification is not None:
+                    self._admission_decision(connection, owner_id=owner_id, principal_id=principal_id,
+                                             binding_id=binding_id, lane="bounded_exec", now=self.clock(), task_id=task_id)
                 permission_request_id = f"permreq_{uuid.uuid4().hex}"
                 connection.execute(
                     """
@@ -6274,6 +6336,11 @@ class ControlPlaneStore:
                     "mcp_patch_permission_requested",
                     {"binding_id": binding_id, "permission_digest": permission_digest, "task_id": task_id},
                 )
+                if verification is not None:
+                    connection.execute(
+                        "UPDATE mcp_permission_requests SET verification_json = ? WHERE permission_request_id = ?",
+                        (_canonical_json(verification), permission_request_id),
+                    )
                 row = connection.execute(
                     "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
                     (permission_request_id,),
@@ -6384,16 +6451,23 @@ class ControlPlaneStore:
     ) -> dict[str, Any]:
         """Owner Console acceptance without requiring the OAuth principal handle.
 
-        The principal is resolved from the sealed approved-patch intent so the
-        Console never needs to copy a principal token. Owner, target and
-        receipt gates are identical to the principal path.
+        The principal is resolved from the sealed owner-review or standing
+        patch intent so the Console never needs to copy a principal token.
+        Owner, target and receipt gates are identical to the principal path.
         """
         owner_id = _text(owner_id, "owner_id")
         action_id = _text(action_id, "action_id")
         with self._connection() as connection:
             intent = connection.execute(
-                "SELECT principal_id FROM mcp_approved_patch_intents WHERE action_id = ?",
-                (action_id,),
+                """
+                SELECT principal_id FROM mcp_approved_patch_intents
+                WHERE owner_id = ? AND action_id = ?
+                UNION ALL
+                SELECT principal_id FROM mcp_standing_patch_intents
+                WHERE owner_id = ? AND action_id = ?
+                LIMIT 1
+                """,
+                (owner_id, action_id, owner_id, action_id),
             ).fetchone()
         if intent is None:
             raise NotFoundError("approved-patch action does not exist.")
@@ -6530,6 +6604,7 @@ class ControlPlaneStore:
         idempotency_key: str,
         facade_contract: dict[str, Any],
         task_id: str | None = None,
+        verification: Any = None,
     ) -> dict[str, Any]:
         """Atomically seal one approved exact-file patch for the patch lane.
 
@@ -6578,6 +6653,13 @@ class ControlPlaneStore:
                     expected_preimage_sha256=str(permission["preimage_sha256"]),
                     expected_patch_sha256=str(permission["patch_sha256"]),
                 )
+                verification = _mcp_patch_verification(verification) if verification is not None else None
+                reviewed_verification = (
+                    _mcp_patch_verification(json.loads(permission["verification_json"]))
+                    if permission["verification_json"] is not None else None
+                )
+                if verification != reviewed_verification:
+                    raise ConflictError("verification does not match the reviewed patch permission.")
                 permission_task_id = permission["task_id"] if "task_id" in permission.keys() else None
                 effective_task_id = task_id if task_id is not None else permission_task_id
                 if permission_task_id is not None and task_id is not None and task_id != permission_task_id:
@@ -6597,6 +6679,8 @@ class ControlPlaneStore:
                     "idempotency_key": idempotency_key,
                     "facade_contract": facade_contract,
                 }
+                if verification is not None:
+                    immutable["verification"] = verification
                 intent_digest = _digest(immutable)
                 existing = connection.execute(
                     """
@@ -6657,7 +6741,12 @@ class ControlPlaneStore:
                     owner_id=owner_id,
                     binding_id=str(permission["binding_id"]),
                     expected=permission,
+                    require_exec=verification is not None,
                 )
+                if verification is not None:
+                    self._admission_decision(connection, owner_id=owner_id, principal_id=principal_id,
+                                             binding_id=str(permission["binding_id"]), lane="bounded_exec", now=now,
+                                             task_id=str(effective_task_id) if effective_task_id is not None else None)
                 expires_at_ms = int(permission["expires_at_ms"])
                 action_arguments = {
                     "operation": MCP_APPROVED_PATCH_OPERATION,
@@ -6670,6 +6759,8 @@ class ControlPlaneStore:
                 action_idempotency_key = "mcpap_" + hashlib.sha256(
                     f"{principal_id}\0{idempotency_key}".encode("utf-8")
                 ).hexdigest()
+                if verification is not None:
+                    action_arguments["verification_sha256"] = _digest(verification)
                 action_immutable = {
                     "request_id": request_id,
                     "context_id": context_id,
@@ -6786,6 +6877,11 @@ class ControlPlaneStore:
                         now,
                     ),
                 )
+                if verification is not None:
+                    connection.execute(
+                        "UPDATE mcp_approved_patch_intents SET verification_json = ? WHERE action_id = ?",
+                        (_canonical_json(verification), action_id),
+                    )
                 self._event(
                     connection,
                     "work_request",
@@ -6833,6 +6929,7 @@ class ControlPlaneStore:
         idempotency_key: str,
         facade_contract: dict[str, Any],
         task_id: str,
+        verification: Any = None,
     ) -> dict[str, Any]:
         """Queue one exact patch under the node's standing local policy.
 
@@ -6863,6 +6960,7 @@ class ControlPlaneStore:
             expected_patch_sha256=scope["patch_sha256"],
         )
         facade_contract = _facade_contract(facade_contract)
+        verification = _mcp_patch_verification(verification) if verification is not None else None
         now = self.clock()
         expires_at_ms = now + MCP_STANDING_PATCH_ACTION_TTL_MS
         immutable = {
@@ -6879,6 +6977,8 @@ class ControlPlaneStore:
             "idempotency_key": idempotency_key,
             "facade_contract": facade_contract,
         }
+        if verification is not None:
+            immutable["verification"] = verification
         intent_digest = _digest(immutable)
         permission_digest = _digest({"kind": "mcp_standing_write_scope_v1", **immutable})
         request_id = f"req_{uuid.uuid4().hex}"
@@ -6949,7 +7049,11 @@ class ControlPlaneStore:
                     connection,
                     owner_id=owner_id,
                     binding_id=binding_id,
+                    require_exec=verification is not None,
                 )
+                if verification is not None:
+                    self._admission_decision(connection, owner_id=owner_id, principal_id=principal_id,
+                                             binding_id=binding_id, lane="bounded_exec", now=now, task_id=task_id)
                 action_arguments = {
                     "operation": MCP_APPROVED_PATCH_OPERATION,
                     "authority_mode": "standing",
@@ -6984,6 +7088,8 @@ class ControlPlaneStore:
                     "facade_contract": facade_contract,
                     "writer_lease_generation": writer_lease_generation,
                 }
+                if verification is not None:
+                    action_arguments["verification_sha256"] = _digest(verification)
                 action_digest = _digest(action_immutable)
                 conflicting_action = connection.execute(
                     "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
@@ -7048,6 +7154,11 @@ class ControlPlaneStore:
                         request_id, action_id, now,
                     ),
                 )
+                if verification is not None:
+                    connection.execute(
+                        "UPDATE mcp_standing_patch_intents SET verification_json = ? WHERE action_id = ?",
+                        (_canonical_json(verification), action_id),
+                    )
                 self._event(
                     connection,
                     "work_request",
@@ -7143,13 +7254,13 @@ class ControlPlaneStore:
                 """
                 SELECT relative_path, preimage_sha256, patch_sha256, patch_envelope,
                        facade_schema_version, facade_profile, facade_contract_sha256,
-                       'owner_review' AS authority_mode
+                       'owner_review' AS authority_mode, verification_json
                 FROM mcp_approved_patch_intents
                 WHERE owner_id = ? AND principal_id = ? AND action_id = ?
                 UNION ALL
                 SELECT relative_path, preimage_sha256, patch_sha256, patch_envelope,
                        facade_schema_version, facade_profile, facade_contract_sha256,
-                       authority_mode
+                       authority_mode, verification_json
                 FROM mcp_standing_patch_intents
                 WHERE owner_id = ? AND principal_id = ? AND action_id = ?
                 LIMIT 1
@@ -7175,7 +7286,7 @@ class ControlPlaneStore:
             postimage_sha256 = metadata["postimage_sha256"]
         except (KeyError, ValidationError, ConflictError) as error:
             raise RuntimeError("stored approved patch intent is invalid.") from error
-        return {
+        result = {
             "path": str(intent["relative_path"]),
             "preimage_sha256": str(intent["preimage_sha256"]),
             "postimage_sha256": postimage_sha256,
@@ -7187,6 +7298,9 @@ class ControlPlaneStore:
                 "sha256": str(intent["facade_contract_sha256"]),
             },
         }
+        if intent["verification_json"] is not None:
+            result["verification_sha256"] = _digest(_mcp_patch_verification(json.loads(intent["verification_json"])))
+        return result
 
     def request_mcp_exec(
         self,
@@ -8138,6 +8252,7 @@ class ControlPlaneStore:
                     COALESCE(p.patch_sha256, s.patch_sha256) AS mcp_approved_patch_sha256,
                     COALESCE(p.validation_profile, s.validation_profile) AS mcp_approved_patch_validation_profile,
                     COALESCE(p.patch_envelope, s.patch_envelope) AS mcp_approved_patch_envelope,
+                    COALESCE(p.verification_json, s.verification_json) AS mcp_approved_patch_verification_json,
                     COALESCE(p.task_id, s.task_id) AS mcp_approved_patch_task_id,
                     COALESCE(p.writer_lease_generation, s.writer_lease_generation) AS mcp_approved_patch_writer_lease_generation,
                     COALESCE(p.facade_schema_version, s.facade_schema_version) AS mcp_approved_patch_facade_schema_version,

@@ -1,0 +1,5 @@
+
+> coding-tools-mcp@1.0.7 stage:coding-tools-delivery
+> node scripts/run-python.js scripts/stage-coding-tools-delivery.py
+
+coding-tools delivery stage: PASS ledger_blob=7682a011ec825029a810361c7a36763111bd9882 size_bytes=97751040 user_version=12

@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "kind": "r13_5h_query_only_native_preflight",
+  "observed_at_ms": 1791759207280,
+  "native_preflight": {
+    "observed_at_ms": 1791759207280,
+    "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "preimage_sha256": "90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650",
+    "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+    "old_run_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "old_wave_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "no_active_jobs": true
+  },
+  "package": {
+    "candidate_tag": "source-fingerprint-1012-r13",
+    "app_asar_sha256": "2bd2bed8d9389a9381b49c92eeca6864cd6230db16d3dcff1822742f062888b1",
+    "executable_sha256": "797d4d00d855c05da17117471816ebafc7e2b3397d09c738eea49cf7368bfbb8",
+    "python_sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a",
+    "source_freeze_sha256": "e9351a360eaa7c016514015a27ea06c762604e12c2a5ca436a550abbf09f29ff",
+    "matched_files": 17
+  },
+  "authenticated_identity_observation": true,
+  "attestation_claimed": false,
+  "acceptance_performed": false,
+  "activation_epoch": "activation-mv4f0vbd-d6ff8f434f6de1929cedd4266c042dcd",
+  "runtime_instance_id": "6UTUCFZxzWswLzYo",
+  "mcp_server_instance_id": "N-RYdpKzr66ftnM5",
+  "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0
+    },
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "af988a428efb3a42849104961838d68381e45137d0f99ed4cf51b98813862623",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "1ae1b5c491d9d12b7a02d29c302c0a672bc9e6524325774e30a825d8084a0d35",
+      "size_bytes": 97800192,
+      "snapshot_at": "2026-10-11T22:53:25.657Z"
+    },
+    "blockers": [
+      "live_runtime_state_process"
+    ],
+    "mutated_canonical_ledger": false
+  },
+  "source_unchanged": true,
+  "external_mutation": false
+}

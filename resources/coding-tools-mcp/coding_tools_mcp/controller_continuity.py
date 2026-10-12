@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from .errors import ToolFailure
+from .errors import ControllerContinuityError, ToolFailure
 from .goal_pursuit import GoalPursuitError
 from .runtime_behavior_identity import stable_python_code_sha256
 from .controller_reattach import (
@@ -69,23 +69,6 @@ CONTINUITY_OMISSION_ORDER = (
 
 _OPAQUE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@/+\-=]{0,511}$")
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
-
-
-class ControllerContinuityError(ValueError):
-    def __init__(
-        self,
-        code: str,
-        message: str,
-        *,
-        category: str = "validation",
-        retryable: bool = False,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.code = code
-        self.category = category
-        self.retryable = retryable
-        self.details = dict(details or {})
 
 
 def _json(value: Any) -> str:

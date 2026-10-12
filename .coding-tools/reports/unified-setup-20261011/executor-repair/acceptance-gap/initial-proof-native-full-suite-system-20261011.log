@@ -1,0 +1,445 @@
+............................s........................................... [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 23%]
+..............F......................................................... [ 29%]
+........................................................................ [ 35%]
+........................................................................ [ 41%]
+........................................................................ [ 46%]
+........................................................................ [ 52%]
+........................................................................ [ 58%]
+...........................s............................................ [ 64%]
+..........................FF....F............................s.......... [ 70%]
+........................................................................ [ 76%]
+........................................................................ [ 82%]
+........................................................................ [ 87%]
+........................................................................ [ 93%]
+......F................................................................. [ 99%]
+.ss.                                                                     [100%]
+================================== FAILURES ===================================
+_ EfficiencyRuntimeTests.test_workspace_context_exposes_non_secret_runtime_activation_identity _
+
+self = <test_efficiency_runtime.EfficiencyRuntimeTests testMethod=test_workspace_context_exposes_non_secret_runtime_activation_identity>
+
+    def test_workspace_context_exposes_non_secret_runtime_activation_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {
+            "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+            "CODING_TOOLS_MCP_NATIVE_LSP_URL": "",
+            "CODING_TOOLS_MCP_NATIVE_LSP_CREDENTIAL_FILE": "",
+            "APPDATA": "",
+        }):
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                compact = runtime.workspace_context({"detail": "compact"})
+                self.assertNotIn("runtime", compact)
+                context = runtime.workspace_context({"detail": "full"})
+                identity = context["runtime"]
+                self.assertTrue(identity["runtime_version"])
+                self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
+                self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
+                self.assertEqual(identity["performance_trace_version"], 6)
+                self.assertEqual(identity["idempotency_policy_epoch"], "task_epoch_v1")
+                self.assertIn("git_head", identity["source"])
+                self.assertIn("worktree_fp", identity["source"])
+                self.assertEqual(identity["stale_run_threshold_seconds"], runtime.stale_run_seconds)
+                contract = identity["tool_contract"]
+                self.assertEqual(contract["schema_version"], 1)
+                self.assertEqual(contract["profile"], "smart-v3")
+                self.assertEqual(contract["tool_count"], 8)
+                self.assertEqual(len(contract["sha256"]), 64)
+>               self.assertEqual(contract["sha256"], "bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0")
+E               AssertionError: '0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4' != 'bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0'
+E               - 0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4
+E               + bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0
+
+tests\test_efficiency_runtime.py:690: AssertionError
+_ RunContinuationSurfaceTests.test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting _
+
+self = <test_run_continuation.RunContinuationSurfaceTests testMethod=test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting>
+
+    def test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting(self) -> None:
+        with mxc_workspace_temporary_directory("continuation-repair-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(directory)
+            (root / "target.py").write_text("before\n", encoding="utf-8")
+            (root / "checks").mkdir()
+            runtime = Runtime(root)
+            try:
+                identity = runtime._orchestration_workspace_identity(".")
+                ctx = runtime.orchestration_control.begin(
+                    objective="repair one failed continuation proof without another controller request",
+                    task_id="task-test",
+                    execution_mode="deep_single_lane",
+                    base_head=str(identity.get("base_head") or ""),
+                    worktree_fp=str(identity.get("worktree_fp") or ""),
+                    contract_fp="b" * 64,
+                )
+                check = {
+                    "check_id": "postimage-proof",
+                    "argv": [
+                        sys.executable,
+                        "-c",
+                        "from pathlib import Path; assert Path('../target.py').read_text(encoding='utf-8') == 'correct\\n'",
+                    ],
+                    "cwd": "checks",
+                    "environment_hash": continuation_execution_environment_hash(),
+                }
+                check["definition_hash"] = digest(check)
+                behavior = runtime._loaded_behavior_identity()
+                continuation_policy = build_run_continuation_policy(
+                    grant_request(
+                        read_paths=["target.py"],
+                        write_paths=["target.py"],
+                        protected_paths=["resources/coding-tools-mcp/coding_tools_mcp/server.py"],
+                        approved_checks=[check],
+                        max_patch_attempts=2,
+                    ),
+                    run_id=ctx.run_id,
+                    workspace_id="workspace-test",
+                    problem_id="problem-test",
+                    problem_revision=1,
+                    contract_fingerprint="b" * 64,
+                    tool_contract_sha256=str(runtime.tool_contract["sha256"]),
+                    runtime_behavior_fingerprint=str(behavior["fingerprint"]),
+                    activation_epoch_id="epoch-test",
+                    activation_admission="open",
+                    issuer_client_id="chatweb-test",
+                )
+                runtime.orchestration_ledger.issue_run_continuation(
+                    run_id=ctx.run_id, policy=continuation_policy, issuer_receipt_sha256="e" * 64,
+                )
+                claim = runtime.orchestration_ledger.claim_run_continuation(
+                    run_id=ctx.run_id,
+                    runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+                    expected_generation=0,
+                )
+                generation = int(claim["continuation"]["driver_generation"])
+                first = runtime.orchestration_ledger.reserve_run_continuation_action(
+                    run_id=ctx.run_id,
+                    driver_generation=generation,
+                    runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+                    action_kind="proposal",
+                    request_hash="9" * 64,
+                    evidence_hash="a" * 64,
+                    evidence_paths=["target.py"],
+                    expected_action_seq=1,
+                )
+                first_action_id = str(first["action_id"])
+                runtime.orchestration_ledger.set_run_continuation_dispatch(
+                    run_id=ctx.run_id,
+                    driver_generation=generation,
+                    runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+                    action_id=first_action_id,
+                    lane_id="lane-test",
+                    thread_id="thread-test",
+                    turn_id="turn-one",
+                )
+                first_record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert first_record is not None
+                wrong_patch = {
+                    "kind": "PATCH",
+                    "reason": "The exact preimage is replaced with the first bounded repair candidate.",
+                    "evidence_hash": "a" * 64,
+                    "replacements": [{"path": "target.py", "old": "before", "new": "wrong"}],
+                    "new_files": [],
+                    "selected_check_hashes": [check["definition_hash"]],
+                }
+                original_wave_id = ctx.wave_id
+                with (
+                    patch.object(runtime, "_run_continuation_current_evidence", return_value=({}, "a" * 64)),
+                    patch.object(runtime._codex_bridge, "owns_thread", return_value=True),
+                    patch.object(runtime._codex_bridge, "continue_thread", return_value={"thread_id": "thread-test", "turn_id": "turn-two"}) as continued,
+                ):
+>                   failed = runtime._run_continuation_apply_patch(
+                        record=first_record,
+                        action_id=first_action_id,
+                        proposal=wrong_patch,
+                        consumed_event_seq=4,
+                    )
+
+tests\test_run_continuation.py:2378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+coding_tools_mcp\continuation_driver.py:1216: in _run_continuation_apply_patch
+    return self._run_continuation_complete_proof(
+coding_tools_mcp\continuation_driver.py:1002: in _run_continuation_complete_proof
+    result, proof_id = self._run_continuation_run_check(check=check, ctx=ctx, record=record, action_id=action_id)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+coding_tools_mcp\continuation_driver.py:951: in _run_continuation_run_check
+    result, proof_id = self.proof_ledger.run_cached(
+coding_tools_mcp\proof_ledger.py:235: in run_cached
+    result = runner()
+             ^^^^^^^^
+coding_tools_mcp\continuation_driver.py:896: in runner
+    payload = self.exec_command({
+coding_tools_mcp\exec_tools.py:463: in exec_command
+    invocation = build_mxc_windows_sandbox_invocation(
+coding_tools_mcp\windows_mxc_state_aware.py:735: in build_mxc_windows_sandbox_invocation
+    sandbox_id = manager.acquire(root, roots)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+coding_tools_mcp\windows_mxc_state_aware.py:643: in acquire
+    return self._ensure_active(workspace_root, readonly_roots)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <coding_tools_mcp.windows_mxc_state_aware.MxcWindowsSandboxManager object at 0x0000025919A55910>
+root = WindowsPath('E:/continuation-repair-nieuuqeq')
+readonly_roots = [WindowsPath('E:/Github/Tools-Codex-web/resources/native-python'), WindowsPath('C:/Program Files/nodejs'), WindowsPath...), WindowsPath('C:/Program Files/PowerShell/7'), WindowsPath('C:/Users/daoth/AppData/Local/Programs/Python/Python311')]
+
+    def _ensure_active(self, root: Path, readonly_roots: list[Path]) -> str:
+        identity = tuple(_windows_path_key(item) for item in readonly_roots)
+        if self._uncertain:
+            raise _failure("SANDBOX_STATE_UNCERTAIN", "A prior Windows Sandbox teardown could not be confirmed; automatic execution stays disabled.")
+        if self._active is not None:
+            active_identity = tuple(_windows_path_key(item) for item in self._active.readonly_roots)
+            if _windows_path_key(self._active.workspace_root) == _windows_path_key(root) and active_identity == identity:
+                return self._active.sandbox_id
+            try:
+                self._deprovision_id(self._active.sandbox_id)
+            except ToolFailure as error:
+                self._uncertain = True
+                raise _failure("SANDBOX_TEARDOWN_UNCONFIRMED", "The prior Windows Sandbox could not be safely deprovisioned; no new workspace will be mounted.", retryable=True) from error
+            self._active = None
+    
+        if self._host_process_count():
+>           raise _failure("SANDBOX_HOST_BUSY",
+                "Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.",
+                retryable=True, phase="provision", backend_error_code="host_busy")
+E           coding_tools_mcp.errors.ToolFailure: Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.
+
+coding_tools_mcp\windows_mxc_state_aware.py:619: ToolFailure
+_ RunContinuationSurfaceTests.test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch _
+
+self = <test_run_continuation.RunContinuationSurfaceTests testMethod=test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch>
+
+    def test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch(self) -> None:
+        with mxc_workspace_temporary_directory("continuation-argv-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                with self.assertRaises(ToolFailure) as denied:
+                    runtime.exec_command({"_argv": [sys.executable, "--version"]})
+                self.assertEqual(denied.exception.code, "INTERNAL_STRUCTURED_ARGV_DENIED")
+>               payload = runtime.exec_command({
+                    "_continuation_internal": True,
+                    "_argv": [sys.executable, "-c", "import sys; print(sys.argv[1])", "literal&&not-a-command"],
+                    "yield_time_ms": 30_000,
+                })
+
+tests\test_run_continuation.py:1817: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+coding_tools_mcp\exec_tools.py:463: in exec_command
+    invocation = build_mxc_windows_sandbox_invocation(
+coding_tools_mcp\windows_mxc_state_aware.py:735: in build_mxc_windows_sandbox_invocation
+    sandbox_id = manager.acquire(root, roots)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+coding_tools_mcp\windows_mxc_state_aware.py:643: in acquire
+    return self._ensure_active(workspace_root, readonly_roots)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <coding_tools_mcp.windows_mxc_state_aware.MxcWindowsSandboxManager object at 0x000002591AC688D0>
+root = WindowsPath('E:/continuation-argv-sls2rhku')
+readonly_roots = [WindowsPath('E:/Github/Tools-Codex-web/resources/native-python'), WindowsPath('C:/Program Files/nodejs'), WindowsPath...), WindowsPath('C:/Program Files/PowerShell/7'), WindowsPath('C:/Users/daoth/AppData/Local/Programs/Python/Python311')]
+
+    def _ensure_active(self, root: Path, readonly_roots: list[Path]) -> str:
+        identity = tuple(_windows_path_key(item) for item in readonly_roots)
+        if self._uncertain:
+            raise _failure("SANDBOX_STATE_UNCERTAIN", "A prior Windows Sandbox teardown could not be confirmed; automatic execution stays disabled.")
+        if self._active is not None:
+            active_identity = tuple(_windows_path_key(item) for item in self._active.readonly_roots)
+            if _windows_path_key(self._active.workspace_root) == _windows_path_key(root) and active_identity == identity:
+                return self._active.sandbox_id
+            try:
+                self._deprovision_id(self._active.sandbox_id)
+            except ToolFailure as error:
+                self._uncertain = True
+                raise _failure("SANDBOX_TEARDOWN_UNCONFIRMED", "The prior Windows Sandbox could not be safely deprovisioned; no new workspace will be mounted.", retryable=True) from error
+            self._active = None
+    
+        if self._host_process_count():
+>           raise _failure("SANDBOX_HOST_BUSY",
+                "Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.",
+                retryable=True, phase="provision", backend_error_code="host_busy")
+E           coding_tools_mcp.errors.ToolFailure: Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.
+
+coding_tools_mcp\windows_mxc_state_aware.py:619: ToolFailure
+_ RunContinuationSurfaceTests.test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting _
+
+self = <test_run_continuation.RunContinuationSurfaceTests testMethod=test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting>
+
+    def test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting(self) -> None:
+        with mxc_workspace_temporary_directory("continuation-proof-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(directory)
+            (root / "target.py").write_text("before\n", encoding="utf-8")
+            (root / "checks").mkdir()
+            runtime = Runtime(root)
+            try:
+                identity = runtime._orchestration_workspace_identity(".")
+                ctx = runtime.orchestration_control.begin(
+                    objective="apply one bounded continuation patch",
+                    task_id="task-test",
+                    execution_mode="deep_single_lane",
+                    base_head=str(identity.get("base_head") or ""),
+                    worktree_fp=str(identity.get("worktree_fp") or ""),
+                    contract_fp="b" * 64,
+                )
+                check = {
+                    "check_id": "postimage-proof",
+                    "argv": [
+                        sys.executable,
+                        "-c",
+                        "from pathlib import Path; assert Path('../target.py').read_text(encoding='utf-8') == 'after\\n'",
+                    ],
+                    "cwd": "checks",
+                    "environment_hash": continuation_execution_environment_hash(),
+                }
+                check["definition_hash"] = digest(check)
+                request = grant_request(
+                    read_paths=["target.py"],
+                    write_paths=["target.py"],
+                    protected_paths=["resources/coding-tools-mcp/coding_tools_mcp/server.py"],
+                    approved_checks=[check],
+                )
+                behavior = runtime._loaded_behavior_identity()
+                continuation_policy = build_run_continuation_policy(
+                    request,
+                    run_id=ctx.run_id,
+                    workspace_id="workspace-test",
+                    problem_id="problem-test",
+                    problem_revision=1,
+                    contract_fingerprint="b" * 64,
+                    tool_contract_sha256=str(runtime.tool_contract["sha256"]),
+                    runtime_behavior_fingerprint=str(behavior["fingerprint"]),
+                    activation_epoch_id="epoch-test",
+                    activation_admission="open",
+                    issuer_client_id="chatweb-test",
+                )
+                runtime.orchestration_ledger.issue_run_continuation(
+                    run_id=ctx.run_id, policy=continuation_policy, issuer_receipt_sha256="e" * 64,
+                )
+                claim = runtime.orchestration_ledger.claim_run_continuation(
+                    run_id=ctx.run_id, runtime_instance_id=runtime._run_continuation_runtime_instance_id(), expected_generation=0,
+                )
+                generation = int(claim["continuation"]["driver_generation"])
+                reserved = runtime.orchestration_ledger.reserve_run_continuation_action(
+                    run_id=ctx.run_id, driver_generation=generation, runtime_instance_id=runtime._run_continuation_runtime_instance_id(), action_kind="proposal", request_hash="9" * 64,
+                    evidence_hash="a" * 64, evidence_paths=["target.py"], expected_action_seq=1,
+                )
+                record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert record is not None
+                proposal = {
+                    "kind": "PATCH",
+                    "reason": "replace the one supplied preimage and run the approved proof",
+                    "evidence_hash": "a" * 64,
+                    "replacements": [{"path": "target.py", "old": "before", "new": "after"}],
+                    "new_files": [],
+                    "selected_check_hashes": [check["definition_hash"]],
+                }
+                with patch.object(runtime, "_run_continuation_current_evidence", return_value=({}, "a" * 64)):
+>                   result = runtime._run_continuation_apply_patch(
+                        record=record,
+                        action_id=str(reserved["action_id"]),
+                        proposal=proposal,
+                        consumed_event_seq=7,
+                    )
+
+tests\test_run_continuation.py:2257: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+coding_tools_mcp\continuation_driver.py:1216: in _run_continuation_apply_patch
+    return self._run_continuation_complete_proof(
+coding_tools_mcp\continuation_driver.py:1002: in _run_continuation_complete_proof
+    result, proof_id = self._run_continuation_run_check(check=check, ctx=ctx, record=record, action_id=action_id)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+coding_tools_mcp\continuation_driver.py:951: in _run_continuation_run_check
+    result, proof_id = self.proof_ledger.run_cached(
+coding_tools_mcp\proof_ledger.py:235: in run_cached
+    result = runner()
+             ^^^^^^^^
+coding_tools_mcp\continuation_driver.py:896: in runner
+    payload = self.exec_command({
+coding_tools_mcp\exec_tools.py:463: in exec_command
+    invocation = build_mxc_windows_sandbox_invocation(
+coding_tools_mcp\windows_mxc_state_aware.py:735: in build_mxc_windows_sandbox_invocation
+    sandbox_id = manager.acquire(root, roots)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+coding_tools_mcp\windows_mxc_state_aware.py:643: in acquire
+    return self._ensure_active(workspace_root, readonly_roots)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <coding_tools_mcp.windows_mxc_state_aware.MxcWindowsSandboxManager object at 0x000002591A093850>
+root = WindowsPath('E:/continuation-proof-re10dkrf')
+readonly_roots = [WindowsPath('E:/Github/Tools-Codex-web/resources/native-python'), WindowsPath('C:/Program Files/nodejs'), WindowsPath...), WindowsPath('C:/Program Files/PowerShell/7'), WindowsPath('C:/Users/daoth/AppData/Local/Programs/Python/Python311')]
+
+    def _ensure_active(self, root: Path, readonly_roots: list[Path]) -> str:
+        identity = tuple(_windows_path_key(item) for item in readonly_roots)
+        if self._uncertain:
+            raise _failure("SANDBOX_STATE_UNCERTAIN", "A prior Windows Sandbox teardown could not be confirmed; automatic execution stays disabled.")
+        if self._active is not None:
+            active_identity = tuple(_windows_path_key(item) for item in self._active.readonly_roots)
+            if _windows_path_key(self._active.workspace_root) == _windows_path_key(root) and active_identity == identity:
+                return self._active.sandbox_id
+            try:
+                self._deprovision_id(self._active.sandbox_id)
+            except ToolFailure as error:
+                self._uncertain = True
+                raise _failure("SANDBOX_TEARDOWN_UNCONFIRMED", "The prior Windows Sandbox could not be safely deprovisioned; no new workspace will be mounted.", retryable=True) from error
+            self._active = None
+    
+        if self._host_process_count():
+>           raise _failure("SANDBOX_HOST_BUSY",
+                "Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.",
+                retryable=True, phase="provision", backend_error_code="host_busy")
+E           coding_tools_mcp.errors.ToolFailure: Windows Sandbox is active or still shutting down. Wait for it to finish before starting a new command.
+
+coding_tools_mcp\windows_mxc_state_aware.py:619: ToolFailure
+_ CommandHandleMigrationTests.test_control_plane_structured_argv_requires_attested_bridge_identity _
+
+self = <test_wave_a_runtime.CommandHandleMigrationTests testMethod=test_control_plane_structured_argv_requires_attested_bridge_identity>
+
+    def test_control_plane_structured_argv_requires_attested_bridge_identity(self) -> None:
+        try:
+            temporary_workspace = tempfile.TemporaryDirectory(dir=str(Path(__file__).resolve().anchor))
+        except OSError as error:
+            self.skipTest(f"The Windows drive root is not writable for the isolated sandbox fixture: {error}")
+        with temporary_workspace as temp:
+            # The admission assertion is platform-neutral; use the explicit
+            # dangerous fixture mode so Linux's standalone Landlock helper is
+            # not part of this bridge-identity test.
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                with self.assertRaises(Exception) as denied:
+                    runtime.exec_command({
+                        "cmd": "echo",
+                        "argv": ["echo", "must-not-run"],
+                        "yield_time_ms": 1000,
+                    })
+                self.assertEqual(
+                    getattr(denied.exception, "code", ""),
+                    "CONTROL_PLANE_STRUCTURED_ARGV_DENIED",
+                )
+    
+                runtime.request_context.hub_client = {
+                    "client_id": "electron-control-plane-exec-bridge",
+                    "client_type": "electron",
+                    "attestation_verified": True,
+                }
+                with patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False):
+                    payload = runtime.exec_command({
+                        "cmd": sys.executable,
+                        "argv": [sys.executable, "-c", "print('bridge-argv-ok')"],
+                        "yield_time_ms": 1000,
+                        "max_output_bytes": 4096,
+                        "verbosity": "full",
+                    })
+>                   self.assertEqual(payload["status"], "exited")
+E                   AssertionError: 'running' != 'exited'
+E                   - running
+E                   + exited
+
+tests\test_wave_a_runtime.py:197: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_workspace_context_exposes_non_secret_runtime_activation_identity
+FAILED tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting
+FAILED tests/test_run_continuation.py::RunContinuationSurfaceTests::test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch
+FAILED tests/test_run_continuation.py::RunContinuationSurfaceTests::test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting
+FAILED tests/test_wave_a_runtime.py::CommandHandleMigrationTests::test_control_plane_structured_argv_requires_attested_bridge_identity
+5 failed, 1218 passed, 5 skipped in 523.00s (0:08:43)

@@ -1,0 +1,45 @@
+{
+  "kind": "r10_native_local_observer_prepared_packet",
+  "captured_at_utc": "2026-10-11T12:54:54.118Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "branch": "main",
+  "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "worktree": "dirty_preserved",
+  "prepared_static_only": true,
+  "execution_accepted": false,
+  "helper_main_invoked": false,
+  "runtime_ipc_called": false,
+  "host_processes_observed": false,
+  "live_operations": false,
+  "syntax_check_passed": true,
+  "focused_pure_validation_cases": 15,
+  "runtime_identity_read_api": "packaged RecoveryIpcClient.identityObservation",
+  "phases": [
+    "cold",
+    "warm",
+    "observe"
+  ],
+  "phase_hints_only": true,
+  "native_job_correlation_required_before_acceptance": true,
+  "daemon_record_read": false,
+  "daemon_record_hashed": false,
+  "descriptor_private_material_exported": false,
+  "original_packets": [
+    {
+      "manifest": "prepared-manifest.json",
+      "sha256": "8347c7f5fc0a3d9cd786001dd1500a7be0cfdd18ce30c9fb246885cc1d72e9a3",
+      "files_byte_identical": true
+    },
+    {
+      "manifest": "prepared-manifest-v2.json",
+      "sha256": "5e5cf4d893be27dde40ac1965195ecee7ec0e790facdf9deab474cb31b9d3109",
+      "files_byte_identical": true
+    }
+  ],
+  "files": {
+    "observe-r10-native-local.cjs": "855ba8b51e07d27653e5b690e80b3f7ead6e7038028730414d07b8928536f487",
+    "check-native-observer-static.cjs": "da1044d2604130aa8dd5569cf1fb55d2511515995fb9b890bcc4ec4404b12c72",
+    "native-observer-static-proof.jsonl": "ce0ef2e7795ea97bf078cca0ed324561df3afd378abd84faa8e52104083dc352",
+    "README-native-observer.md": "80d86943ea3417667fc67cf664c376ea53509f86ff7dfa8b8da98342c5ee94dd"
+  }
+}

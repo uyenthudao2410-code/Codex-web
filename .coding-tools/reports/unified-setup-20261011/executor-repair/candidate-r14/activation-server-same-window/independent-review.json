@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "phase": "r14_server_packet_focused_independent_review",
+  "status": "READY",
+  "reviewer": "/root/initial_proof_server/next_canary_review",
+  "helper_sha256": "33c1090a30bf16132b79d299451b43484e5c09d8a59b69e2a36a05bf1d0448e9",
+  "driver_sha256": "1bd09687a04dddefd2fd1ee0b28019c0e5fbb00a3e824deb420fef43ea4b6a09",
+  "actual_windows_producer_and_consumer_alignment": true,
+  "all_target_fields_persisted_and_validated": true,
+  "same_window_context_grant_and_history_preservation": true,
+  "explicit_future_r14_approval_and_no_replay_guards": true,
+  "remaining_concrete_blockers": [],
+  "external_effects_performed_by_review": false,
+  "credential_reads_performed_by_review": false
+}

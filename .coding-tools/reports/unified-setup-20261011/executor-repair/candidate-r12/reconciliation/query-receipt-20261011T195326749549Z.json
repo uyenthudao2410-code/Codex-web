@@ -1,0 +1,53 @@
+{
+  "phase": "root_r12_exact_action_read_only_query",
+  "public_receipts": [
+    {
+      "action_context_id": "ctx_5538d8c4eb3147fdb3a5d3b06266815f",
+      "action_id": "act_6aa1329b96c146f38c807f9926b3e684",
+      "attempts": [
+        {
+          "attempt_id": "try_4178cd41d2f3424a81dcb3c4cc706ed1",
+          "attempt_number": 1,
+          "dispatched_at_ms": 1791748211450
+        }
+      ],
+      "cleanup_authorized_by_this_query": false,
+      "created_at_ms": 1791748195010,
+      "database_query_only": true,
+      "delivery_state": "reconcile_required",
+      "dispatch_dispositions": [],
+      "effect_classification": "effect_unknown_requires_exact_native_file_and_journal_observation",
+      "expires_at_ms": 1791748795010,
+      "host": "100.116.112.22",
+      "observed_at_ms": 1791748406720,
+      "ok": true,
+      "phase": "r12_exact_action_read_only_reconciliation",
+      "raw_error_disclosed": false,
+      "raw_payload_disclosed": false,
+      "receipts": [
+        {
+          "code": "CONTROL_PLANE_APPROVED_PATCH_EFFECT_UNKNOWN",
+          "diagnostic_code": "CONTROL_PLANE_APPROVED_PATCH_MCP_REJECTED",
+          "local_semantic_acceptance": null,
+          "operation_kind": "control_plane_approved_patch",
+          "payload_sha256": "09b5eeb50c371e333d23da019ec4d443d8e22d9aaaf2914472c802cbbacb38c2",
+          "receipt_id": "rcpt_9117fdebb06b4e8e8b1b5cd1b65ed2b1",
+          "receipt_state": "unknown",
+          "received_at_ms": 1791748213246
+        }
+      ],
+      "reconciliations": [],
+      "remote_mutation": false,
+      "replay_forbidden": true,
+      "request_id": "req_d7095232b7d94c82ba3df6232e6f2cd2",
+      "service": "codex-control-plane.service",
+      "service_instance_id": "cp_339c7a19bc2443eeab35583addfef543",
+      "settled_at_ms": null,
+      "task_id": "task_d2c1dd3bff4042d084b045e9bc5a381b"
+    }
+  ],
+  "remote_mutation": false,
+  "ssh_returncode": 0,
+  "staged_files": false,
+  "stderr_disclosed": false
+}

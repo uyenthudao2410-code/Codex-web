@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { workspaceKey } = require('./config');
 const { RuntimeOrchestrator } = require('./runtimeOrchestrator');
 const { RecoveryPlaneService } = require('./recoveryPlaneService');
 const { HealthService } = require('./healthService');
@@ -23,6 +24,7 @@ const {
   loadApprovedPatchBridgePolicy,
   resolveRegisteredWorkspaceRoot: resolveApprovedPatchWorkspaceRoot,
   admitApprovedPatchBridgeRequest,
+  admitInitialVerificationExecPolicy,
   normaliseApprovedPatchResult
 } = require('./controlPlaneApprovedPatchBridge');
 const {
@@ -780,7 +782,14 @@ class RecoveryHost {
         try {
           await this.exactProcessTerminator(identity, {
             observeProcessIdentity: this.lifecycleProcessIdentityObserver,
-            timeoutMs: 5000
+            timeoutMs: 5000,
+            // Recovery Host is commonly spawned detached by this UI.  A
+            // Windows `/T` kill of the UI would therefore kill the host that
+            // is serving this full-clean RPC before it can spawn its
+            // replacement.  Keep the exact PID/start-token proof and wait,
+            // but terminate only the UI root; descendants are left for their
+            // own lifecycle owners.
+            includeDescendants: false
           });
         } catch (error) {
           throw Object.assign(new Error('Electron UI exact process termination failed.'), {
@@ -2178,7 +2187,17 @@ class RecoveryHost {
       );
     }
     const workspaceRoot = resolveApprovedPatchWorkspaceRoot(this.paths, policy);
-    const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
+    let execPolicySha256;
+    if (admitted.verification) {
+      const execPolicy = loadExecBridgePolicy(this.paths);
+      const execRoot = resolveExecWorkspaceRoot(this.paths, execPolicy);
+      if (workspaceKey(execRoot) !== workspaceKey(workspaceRoot)) {
+        throw controlPlaneBridgeError('CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH', 'verification workspace differs from patch workspace.');
+      }
+      execPolicySha256 = admitInitialVerificationExecPolicy(execPolicy, admitted);
+    }
+    const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot,
+      ...(execPolicySha256 ? { exec_policy_sha256: execPolicySha256 } : {}) });
 
     const runtime = await this.orchestrator.lightweightSnapshot();
     if (!strictControlPlaneBridgeRuntime(runtime)) {

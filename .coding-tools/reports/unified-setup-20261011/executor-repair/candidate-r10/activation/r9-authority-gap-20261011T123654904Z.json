@@ -1,0 +1,118 @@
+{
+  "kind": "read_only_r9_authority_gap_observation",
+  "observed_at": "2026-10-11T12:36:54.904Z",
+  "helper_sha256": "1679f56a603b9d2d411ba9788fb72a27185cc4b3e57c5f78aef3fea35547cab1",
+  "descriptor": {
+    "installation_id": "e65d60602938af2f1c6e8cd9e8c59352ff2a5e24a268a45a98114726cdd8210d",
+    "instance_id": "6006092b7a061f47b20a0b27c1f34f1d",
+    "owner_pid": 1128,
+    "owner_process_start_token": "134361911908524600"
+  },
+  "durable": {
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+    "operation_id": "full-clean-mv3qdvfq-a83d4dacc8a5de0588fb6ba5",
+    "state": "READY",
+    "admission_state": "OPEN",
+    "ready_commit_digest": "f85415b88bd6b9b1442a40fbb308d69d6aa4d7e0a8c9ee690a86ef5a5f22fe3e",
+    "ready_at_unix_ms": 1791717631230,
+    "expires_at_unix_ms": 1791718178343
+  },
+  "durable_error_code": null,
+  "raw_epoch": {
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+    "operation_id": "full-clean-mv3qdvfq-a83d4dacc8a5de0588fb6ba5",
+    "state": "READY",
+    "admission_open": true,
+    "update_incomplete": false,
+    "ready_commit_digest": "f85415b88bd6b9b1442a40fbb308d69d6aa4d7e0a8c9ee690a86ef5a5f22fe3e",
+    "error_code": null
+  },
+  "projection": {
+    "executionRole": "central_executor",
+    "fullyReady": false,
+    "localReady": true,
+    "componentsReady": true,
+    "centralConnected": false,
+    "authorityReady": false,
+    "centralStatusReason": "CENTRAL_ROUTE_EVIDENCE_STALE",
+    "updateIncomplete": true,
+    "failureKind": ""
+  },
+  "projected_epoch": {
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+    "operation_id": "full-clean-mv3qdvfq-a83d4dacc8a5de0588fb6ba5",
+    "state": "READY",
+    "admission_open": false,
+    "update_incomplete": true,
+    "error_code": "RUNTIME_READINESS_INCOMPLETE"
+  },
+  "host_runtime": {
+    "execution_role": "central_executor",
+    "central_connected": false,
+    "authority_ready": false,
+    "central_status_reason": "CENTRAL_ROUTE_EVIDENCE_STALE",
+    "fully_ready": false,
+    "update_incomplete": true,
+    "recovering": false
+  },
+  "full_clean": {
+    "available": true,
+    "state": "current",
+    "running_revision": "919e2fd308bc6c0f408accdb04a9039c0d418e9d96b8a94696622e9702f67b5d",
+    "disk_revision": "919e2fd308bc6c0f408accdb04a9039c0d418e9d96b8a94696622e9702f67b5d",
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7"
+  },
+  "ready_adoption": {
+    "state": "adopted",
+    "code": null
+  },
+  "bootstrap": {
+    "state": null,
+    "operation_id": null,
+    "error_code": null
+  },
+  "code_revision": {
+    "state": "current",
+    "running_revision": "919e2fd308bc6c0f408accdb04a9039c0d418e9d96b8a94696622e9702f67b5d",
+    "disk_revision": "919e2fd308bc6c0f408accdb04a9039c0d418e9d96b8a94696622e9702f67b5d",
+    "pending_revision": null,
+    "update_pending": false,
+    "updatePending": null
+  },
+  "ui_revision": {
+    "state": "current",
+    "running_revision": "9a3c20b510aebd92b7806b6cb6e5dd64a4cd4d00219b269e152bb4021d27e868",
+    "disk_revision": "9a3c20b510aebd92b7806b6cb6e5dd64a4cd4d00219b269e152bb4021d27e868",
+    "pending_revision": null,
+    "update_pending": false,
+    "updatePending": null
+  },
+  "native_revision": {
+    "state": "current",
+    "running_revision": "17c21f8e7783c05572f42f662adf60b1ad94eb33be7e8e7f155bfbd2e90314c7",
+    "disk_revision": "17c21f8e7783c05572f42f662adf60b1ad94eb33be7e8e7f155bfbd2e90314c7",
+    "pending_revision": null,
+    "update_pending": false,
+    "updatePending": null
+  },
+  "metadata_policy": {
+    "enabled": true,
+    "expires_at_ms": 1791721156518,
+    "context_id": null,
+    "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+    "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6"
+  },
+  "route": {
+    "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "endpoint_id": "executor-72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "observed_at_ms": 1791721223562,
+    "runtime_readiness": "ready",
+    "policy_state": "enabled",
+    "policy_expires_at_ms": 1791721283485,
+    "policy_sha256": "19f282a78ea29aa3ecb42da83455b0d70495c362b084f6e9ce82b986d18930ed"
+  },
+  "runtime_mutated": false,
+  "authority_mutated": false,
+  "sandbox_probe_performed": false
+}

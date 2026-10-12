@@ -1,0 +1,12 @@
+{"phase":"discovery","contract":{"schema_version":32,"profile":"control-plane-private-tunnel-service-v1","sha256":"274af168c29bc7a10eb35e2314632badddabe456c2c645cda7a7767480fc2e32"}}
+{"phase":"task_open","task_id":"task_8152a79fd4f24aeebfc7e32cb5ad8b16"}
+{"phase":"read_status","action_id":"act_0d8fa18077164d779a6ad74d8b960d0f","execution":"local_admission_pending_or_unverified","delivery_state":"queued","receipt_status":null}
+{"phase":"read_status","action_id":"act_0d8fa18077164d779a6ad74d8b960d0f","execution":"local_admission_pending_or_unverified","delivery_state":"dispatch_unconfirmed","receipt_status":null}
+{"phase":"read_status","action_id":"act_0d8fa18077164d779a6ad74d8b960d0f","execution":"completed_file_read_relay","delivery_state":"settled","receipt_status":null}
+{"phase":"file_verified","action_id":"act_0d8fa18077164d779a6ad74d8b960d0f","content_sha256":"742976da6d38a49f35c48b5824eea2badc1e98258dd74d8c34720f08f09a14cb","content_matches":true}
+{"phase":"patch_status","action_id":"act_16f5443e532942019fa7bb43868b34b0","execution":"local_patch_receipt_pending_or_unverified","delivery_state":"queued","receipt_status":null}
+{"phase":"patch_status","action_id":"act_16f5443e532942019fa7bb43868b34b0","execution":"local_patch_receipt_pending_or_unverified","delivery_state":"dispatch_unconfirmed","receipt_status":null}
+{"phase":"patch_status","action_id":"act_16f5443e532942019fa7bb43868b34b0","execution":"local_patch_effect_unknown_reconcile_required","delivery_state":"reconcile_required","receipt_status":null}
+{"phase":"proof","ok":false,"error":"ACTION_RECONCILIATION_REQUIRED"}
+{"phase":"writer_release","ok":false,"task_id":"task_8152a79fd4f24aeebfc7e32cb5ad8b16","error":"CLEANUP_FAILED"}
+{"phase":"task_close","ok":false,"task_id":"task_8152a79fd4f24aeebfc7e32cb5ad8b16","error":"CLEANUP_FAILED"}

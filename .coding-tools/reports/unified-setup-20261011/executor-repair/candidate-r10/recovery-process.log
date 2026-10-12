@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: real Electron client can be killed and reattach without replacing Recovery Host runtime ownership
+ok 1 - real Electron client can be killed and reattach without replacing Recovery Host runtime ownership
+  ---
+  duration_ms: 13974.7321
+  type: 'test'
+  ...
+# Subtest: real Safe Code Activation replaces Coding MCP process while preserving Tunnel and gateway
+ok 2 - real Safe Code Activation replaces Coding MCP process while preserving Tunnel and gateway
+  ---
+  duration_ms: 6008.6935
+  type: 'test'
+  ...
+# Subtest: real Recovery Host activation hands ownership to a new Electron host without replacing MCP or Tunnel
+ok 3 - real Recovery Host activation hands ownership to a new Electron host without replacing MCP or Tunnel
+  ---
+  duration_ms: 6639.2221
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 26809.5187

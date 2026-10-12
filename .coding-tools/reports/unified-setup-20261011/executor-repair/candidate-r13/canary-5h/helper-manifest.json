@@ -1,0 +1,74 @@
+{
+  "approval_id": "call_a60e931056bd402b997c6c10b0796d81",
+  "duration_ms": 18000000,
+  "effects_by_lane": false,
+  "files": [
+    {
+      "bytes": 4815,
+      "path": "README.md",
+      "sha256": "97323d986ead22e8045af4328dc2b7a246989bcb5dc67c02ff8772e432f99685"
+    },
+    {
+      "bytes": 24197,
+      "path": "correlate_r13_5h.py",
+      "sha256": "8b6181ca7660a250f486afae26c8a68dff31a0e2abe1ef46595dc26c87b0dea4"
+    },
+    {
+      "bytes": 24532,
+      "path": "correlate_r13_5h_source_identity.py",
+      "sha256": "8dd49d77566f64ea846746af8b23455257cf8bf11b75fa2ab4ef176a060b4c76"
+    },
+    {
+      "bytes": 11770,
+      "path": "native-output-read.cjs",
+      "sha256": "49c27f1ff5eced141902545591b74ba6f789f9dfd166eb96435caec0dc10baee"
+    },
+    {
+      "bytes": 11064,
+      "path": "native-preflight.cjs",
+      "sha256": "56753a534109f4f0d4833ed6e6983b34f3848706c833ee4a019fd2bb4e76f3f8"
+    },
+    {
+      "bytes": 639,
+      "path": "patch-envelope.txt",
+      "sha256": "77f2c282c91f3627e721d0d68bf1fa821bad21575ec136204353894b18ce5e4a"
+    },
+    {
+      "bytes": 1394,
+      "path": "pins.template.json",
+      "sha256": "df853eca4b66b3fb23e9d9ac8cd47574e1734b4e502c52b773634f5eafeac978"
+    },
+    {
+      "bytes": 41645,
+      "path": "r13_5h_mcp_canary.py",
+      "sha256": "cd91a622d76f19873adc4c7671f6b72d59ba99cac639957c04a1413cb06df104"
+    },
+    {
+      "bytes": 15190,
+      "path": "root-canary-ssh.py",
+      "sha256": "942e0f324e3ba92aef9abf38f269af0eb49d3c47b6401acb03e52d82e47636b9"
+    },
+    {
+      "bytes": 15174,
+      "path": "test_canary_r13_5h.py",
+      "sha256": "0e208c732fb6364ff34cf88ee22b94425953ec575cb66c03f239c005352e8579"
+    },
+    {
+      "bytes": 2954,
+      "path": "test_source_identity_r13_5h.py",
+      "sha256": "ac10e4f7bd77434758ed02ed723b75c5880f4d24b28e18ed1b3607ac5fd6ef23"
+    },
+    {
+      "bytes": 5394,
+      "path": "test_transport_r13_5h.py",
+      "sha256": "e4068e2ee5745c1ae77933454b623c6bc146237316b61d4dab2f07854b132098"
+    }
+  ],
+  "prior_manifest_sha256": "934ca5c29915e0472b4ca9d94d7deaea7a730783bac6895973792810e5cedf0d",
+  "proof": "Prior 19 canary+4 local bundle tests and AST/Node syntax/package parity remain valid; new2source-observation tests and actual query-only source observation passed; independent derivative review clear",
+  "schema_version": 1,
+  "source_observation_proof": {
+    "path": "source-observation-proof-1791759013259.json",
+    "sha256": "b32b8c4fdfdcc46c6793d89e7da033df72b741a9e5e98e75b3beb0e293bcd10a"
+  }
+}

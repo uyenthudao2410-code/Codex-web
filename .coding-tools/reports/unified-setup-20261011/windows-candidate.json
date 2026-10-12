@@ -1,0 +1,84 @@
+{
+  "kind": "isolated_candidate_source_parity",
+  "observed_at": "2026-10-11T09:59:42.854Z",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "candidate": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-unified-setup-1011-r7\\win-unpacked",
+  "app_asar_sha256": "16151d40c7b1735be9d0502ed14c6885656bfaf41f82a4148e07c03caa123c67",
+  "executable_sha256": "e2c20f9e93f43604fdd3d7ee6a366f0feecf8b00b5a4d410a7ca60a08a7bc871",
+  "files": [
+    {
+      "file": "electron/main.js",
+      "source_sha256": "98e8711e6b7ff129c893b0582d7d41f85c97bec8cb8c92d35f500943c33ba880",
+      "packaged_sha256": "98e8711e6b7ff129c893b0582d7d41f85c97bec8cb8c92d35f500943c33ba880",
+      "bytes": 65792,
+      "matches": true
+    },
+    {
+      "file": "electron/preload.js",
+      "source_sha256": "5178a56b919e27627e0c03a1825293f2edcd5d60390084cfebb3986c8ae0ae5a",
+      "packaged_sha256": "5178a56b919e27627e0c03a1825293f2edcd5d60390084cfebb3986c8ae0ae5a",
+      "bytes": 10298,
+      "matches": true
+    },
+    {
+      "file": "electron/browserPreload.js",
+      "source_sha256": "a1e38ebd018c43bf9bac68962fd4f1e432d633469a83cbbef115686c5dba508d",
+      "packaged_sha256": "a1e38ebd018c43bf9bac68962fd4f1e432d633469a83cbbef115686c5dba508d",
+      "bytes": 1552,
+      "matches": true
+    },
+    {
+      "file": "renderer/index.html",
+      "source_sha256": "dc7dceb03cae483a2509393225ae8ba1e1209144578ae87396c11eec6f0ae613",
+      "packaged_sha256": "dc7dceb03cae483a2509393225ae8ba1e1209144578ae87396c11eec6f0ae613",
+      "bytes": 102168,
+      "matches": true
+    },
+    {
+      "file": "renderer/app.js",
+      "source_sha256": "f6fe53ff2a2b6e05612b8859af41097c7f6ef3d5c3d949c77c1395f622f0d5c2",
+      "packaged_sha256": "f6fe53ff2a2b6e05612b8859af41097c7f6ef3d5c3d949c77c1395f622f0d5c2",
+      "bytes": 215293,
+      "matches": true
+    },
+    {
+      "file": "renderer/styles.css",
+      "source_sha256": "45630138c42b1c5cd01a1811fb55e46e82682052aab251bfb637d39b6b26c360",
+      "packaged_sha256": "45630138c42b1c5cd01a1811fb55e46e82682052aab251bfb637d39b6b26c360",
+      "bytes": 46552,
+      "matches": true
+    },
+    {
+      "file": "renderer/settings-compact.css",
+      "source_sha256": "e02aa3a8cd77d123fac50c75459be644adeea85444b9496bf0b6d2636e5aa373",
+      "packaged_sha256": "e02aa3a8cd77d123fac50c75459be644adeea85444b9496bf0b6d2636e5aa373",
+      "bytes": 18473,
+      "matches": true
+    },
+    {
+      "file": "renderer/theme-bootstrap.js",
+      "source_sha256": "bf26250d09b827622f45db5d4e46b977b826993b5cdba0efd62ac184ea5936a0",
+      "packaged_sha256": "bf26250d09b827622f45db5d4e46b977b826993b5cdba0efd62ac184ea5936a0",
+      "bytes": 3601,
+      "matches": true
+    }
+  ],
+  "package_identity": {
+    "source_sha256": "5e77d79fc39845a082d519f29f063fc84a1134b697eeae905dfa307f79d813b7",
+    "packaged_sha256": "4d83d0a28c689f8c6c1551984aaf0c1caef4c184972ba01873e62aa342fd519c",
+    "expected_packaged_keys": [
+      "name",
+      "version",
+      "description",
+      "author",
+      "license",
+      "main",
+      "dependencies"
+    ],
+    "matches": true,
+    "note": "electron-builder removes scripts, devDependencies and build from packaged package.json."
+  },
+  "ok": true,
+  "live_activation": false,
+  "note": "This checks packaged code identity; it does not prove live ChatGPT execution or owner authority."
+}

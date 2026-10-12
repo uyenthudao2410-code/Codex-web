@@ -1,0 +1,35 @@
+{
+  "captured_at_utc": "2026-10-11T14:50:50.085666+00:00",
+  "check_count": 5,
+  "checks_passed": [
+    "all_helpers_compile",
+    "nullable_schema29_plan_columns_preserve_legacy_execution_permission_context_fingerprints",
+    "one_exact60m_window_retry_creates_no_duplicate_context_pilot_or_grant",
+    "wrong_target_pilot_rejected",
+    "binary_ssh_transport_rejects_private_stdout_fields"
+  ],
+  "external_mutation": false,
+  "fixture_retry_resolved": "empty historical fixture expected the real13 historical count; fixed count derives from the pinned13-ID set; SQLite connections explicitly close",
+  "helpers": {
+    "r11_common.py": {
+      "sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+      "size_bytes": 22388
+    },
+    "ubuntu-r11-authority.py": {
+      "sha256": "16185e4b36ce415ea3fbddc2c6c396a6822c6afe8bee40942d21ff2094ece760",
+      "size_bytes": 9859
+    },
+    "ubuntu-r11-recovery.py": {
+      "sha256": "329422e156165be0bdb45b431e763f0fda164b4a65a47495d8eb0887dabea712",
+      "size_bytes": 6317
+    },
+    "ubuntu-r11-rollout.py": {
+      "sha256": "3a453738d7f9194c1da29b1da8c21dbfd0f53cf658bd0ca906e979d765ed5385",
+      "size_bytes": 10109
+    }
+  },
+  "local_transport_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba",
+  "network_or_ssh_used": false,
+  "operation": "offline_r11_activation_helpers_proof",
+  "proof_script_sha256": "e345e7b3b24430f4641e7fe983f3353f4d246c34d9745ab509e643c5512895da"
+}

@@ -86,6 +86,20 @@ class PrivateTunnelServiceFacadeTests(unittest.TestCase):
                 denied = self._call("workspace_context", {"operation": "inventory"}, verified_scopes)
                 self.assertEqual(denied["result"]["structuredContent"]["code"], "SERVICE_SCOPE_REQUIRED")
 
+    def test_private_service_permission_review_is_unavailable_as_tool_result(self) -> None:
+        by_name = {tool["name"]: tool for tool in self.facade.contract["tools"]}
+        self.assertEqual(
+            by_name["request_permissions"]["_meta"]["control_plane"]["implemented_operations"],
+            [],
+        )
+        denied = self._call("request_permissions", {}, frozenset({READ_SCOPE, CONTENT_SCOPE, WRITE_SCOPE}))
+        self.assertNotIn("error", denied)
+        self.assertTrue(denied["result"]["isError"])
+        self.assertEqual(denied["result"]["structuredContent"]["code"], "LOCAL_ADMISSION_BRIDGE_REQUIRED")
+        self.assertEqual(denied["result"]["structuredContent"]["execution"], "not_implemented")
+        self.assertEqual(denied["result"]["structuredContent"]["tool_name"], "request_permissions")
+        self.assertEqual(self.store.health()["counts"]["mcp_permission_requests"], 0)
+
     def test_shared_service_inventory_shows_only_current_delegated_binding(self) -> None:
         targets = [
             {"binding_id": "bind-selected", "binding_state": "active", "workspace_state": "active", "node_state": "active"},

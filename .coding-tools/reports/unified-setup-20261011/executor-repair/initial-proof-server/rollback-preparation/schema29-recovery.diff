@@ -1,0 +1,140 @@
+--- Store395/control-plane/control_plane/store.py
++++ schema29-recovery/control-plane/control_plane/store.py
+@@ -27,7 +27,7 @@
+ SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+ NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
+ NODE_ROTATION_STATES = frozenset({"prepared", "activated", "completed", "aborted"})
+-SCHEMA_VERSION = 28
++SCHEMA_VERSION = 29
+ MCP_SERVICE_GRANT_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000
+ SCOPED_PILOT_MAX_TTL_MS = 24 * 60 * 60 * 1000
+ PRIVATE_TUNNEL_SERVICE_ISSUER = "private_tunnel_service"
+@@ -904,6 +904,22 @@
+             connection.close()
+ 
+     def _initialize(self) -> None:
++        # Emergency recovery supports only an existing, closed schema29 database.
++        # Do not run the legacy initializer, migrate, downgrade, or rewrite history.
++        if not self.path.is_file():
++            raise RuntimeError("schema29 recovery requires an existing database.")
++        with self._connection() as connection:
++            if int(connection.execute("PRAGMA user_version").fetchone()[0]) != 29:
++                raise RuntimeError("schema29 recovery requires exact database schema29.")
++            state = connection.execute("SELECT state_value FROM control_plane_state WHERE state_key = 'admission_mode'").fetchone()
++            if state is None or state["state_value"] != "recovery":
++                raise RuntimeError("schema29 recovery requires persisted closed admission.")
++            for table in ("mcp_permission_requests", "mcp_approved_patch_intents", "mcp_standing_patch_intents"):
++                columns = {row["name"]: row for row in connection.execute(f"PRAGMA table_info({table})")}
++                column = columns.get("verification_json")
++                if column is None or column["type"].upper() != "TEXT" or column["notnull"]:
++                    raise RuntimeError("schema29 recovery requires nullable verification_json columns.")
++        return
+         with self._connection() as connection:
+             connection.execute("PRAGMA journal_mode = WAL")
+             connection.execute("PRAGMA synchronous = FULL")
+@@ -1585,6 +1601,8 @@
+             "SELECT state_value FROM control_plane_state WHERE state_key = 'admission_mode'"
+         ).fetchone()
+         mode = str(row["state_value"]) if row is not None else "recovery"
++        if row is None or row["state_value"] != "recovery":
++            raise ConflictError("schema29 recovery cannot operate after admission drift.")
+         return mode if mode in {"open", "recovery", "scoped_pilot"} else "recovery"
+ 
+     def admission_status(self) -> dict[str, Any]:
+@@ -1599,6 +1617,7 @@
+         }
+ 
+     def set_admission_mode(self, *, mode: str) -> dict[str, Any]:
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         mode = str(mode or "").strip().lower()
+         if mode not in {"open", "recovery", "scoped_pilot"}:
+             raise ValidationError("admission mode is invalid.")
+@@ -1649,6 +1668,7 @@
+         Creating the decision does not open admission. The owner must separately
+         select scoped_pilot; the node's local policy remains authoritative.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         owner_id = _text(owner_id, "owner_id")
+         principal_id = _text(principal_id, "principal_id")
+         binding_id = _text(binding_id, "binding_id")
+@@ -2010,6 +2030,7 @@
+         issuance, and never opens admission.  Expired or revoked decisions
+         require a fresh recovery-time decision instead of being resurrected.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+ 
+         owner_id = _text(owner_id, "owner_id")
+         decision_id = _text(decision_id, "decision_id")
+@@ -2107,6 +2128,7 @@
+         task_id: str | None = None,
+     ) -> str | None:
+         """Return the decision pinned to a new pilot action, or reject intake."""
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         mode = self._admission_mode(connection)
+         principal = connection.execute(
+             "SELECT owner_id, principal_kind, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+@@ -4606,6 +4628,7 @@
+         be accepted until local reconciliation replaces UNKNOWN with a
+         verified receipt.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         owner_id = _text(owner_id, "owner_id")
+         principal_id = _text(principal_id, "principal_id")
+         action_id = _text(action_id, "action_id")
+@@ -4706,6 +4729,7 @@
+         return row
+ 
+     def create_context(self, *, owner_id: str, binding_id: str, expires_at_ms: int) -> dict[str, Any]:
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         owner_id = _text(owner_id, "owner_id")
+         binding_id = _text(binding_id, "binding_id")
+         expires_at_ms = int(expires_at_ms)
+@@ -4841,6 +4865,7 @@
+         return [dict(row) for row in rows]
+ 
+     def create_work_request(self, *, owner_id: str, context_id: str, objective: str, criteria: dict[str, Any], scope: dict[str, Any], expires_at_ms: int) -> dict[str, Any]:
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         owner_id = _text(owner_id, "owner_id")
+         context_id = _text(context_id, "context_id")
+         objective = str(objective or "").strip()
+@@ -5121,6 +5146,7 @@
+         revoking its binding/node makes the bearer unusable even before the
+         recorded expiry.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+ 
+         owner_id = _text(owner_id, "owner_id")
+         context_id = _text(context_id, "context_id")
+@@ -5316,6 +5342,7 @@
+         never carries workspace authority by itself; every requested action
+         still passes the existing binding, policy, and node admission checks.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+ 
+         owner_id = _text(owner_id, "owner_id")
+         principal_id = _text(principal_id, "principal_id")
+@@ -5462,6 +5489,7 @@
+         issuance. An expired or revoked grant cannot be resurrected; callers
+         must issue a new bearer and replace the protected tunnel header.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+ 
+         owner_id = _text(owner_id, "owner_id")
+         grant_id = _text(grant_id, "grant_id")
+@@ -6415,6 +6443,7 @@
+         patch intent so the Console never needs to copy a principal token.
+         Owner, target and receipt gates are identical to the principal path.
+         """
++        raise ConflictError("schema29 recovery artifact prohibits new authority, intake, and semantic acceptance.")
+         owner_id = _text(owner_id, "owner_id")
+         action_id = _text(action_id, "action_id")
+         with self._connection() as connection:
+@@ -8043,6 +8072,8 @@
+         an old compact-metadata worker from dequeuing a new file payload before
+         its separate policy/bridge has been installed.
+         """
++        # Recovery is observation/receipt only; never allocate another attempt.
++        return []
+ 
+         device_id = _text(device_id, "device_id")
+         limit = max(1, min(int(limit), 50))

@@ -1,0 +1,11 @@
+{
+  "agent_instance_id": "1c866fdb722e417fbe9d56b85ceedc84",
+  "agent_started_at_ms": 1791702859403,
+  "last_attempt_at_ms": 1791702876169,
+  "last_iteration": 2,
+  "last_iteration_state": "completed",
+  "last_heartbeat_state": "succeeded",
+  "last_heartbeat_at_ms": 1791702876733,
+  "last_error_scope": null,
+  "last_error_code": null
+}

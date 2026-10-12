@@ -1,0 +1,30 @@
+{
+  "kind": "guarded_r10_transition_v2_frozen_packet",
+  "observed_at": "2026-10-11T12:42:07.668Z",
+  "helper": "activate-r10-v2.cjs",
+  "helper_sha256": "4b689f8533f1de77130257543b408aec43b3f91e79579015a7a10a054db06b05",
+  "readme": "README-v2.md",
+  "readme_sha256": "3f8639d4f67f80fd7c3409d2c469d92537ab06431ab8ff2bb4a2eeadcb84c1e6",
+  "preserved_helper_sha256": "8af0a6ac4a2dda2fc1a41dd075185fe609a0b1032ca1a81bbd517be24c009104",
+  "preserved_pin_sha256": "c82a566d793278e0e831e20e8153fa48dbdb8d04db7fe3e1162c8245bbbab24b",
+  "server_helper": "../../store-delta/ubuntu-r10-store-authority-v3-local-proof.py",
+  "server_helper_sha256": "a312575854fee785158fa21624a096d7b09ae3701ded38f449a7330ba089ebec",
+  "authorization_sha256": "e33649df5d4127d941fe77c8a0ee45b8dc0fc1f6aa0708bf953551fc49f3cdf7",
+  "authorization_evidence": "call_8GGm5LuAszEUDuMUjOBPBFFF",
+  "reason": "Fresh durable/raw r9 READY OPEN/current local component proof distinguishes authority-only expired/stale read-model closure; no readiness forgery or r9-agent bootstrap.",
+  "required_fresh_proof_kind": "r9_local_authority_preparation_v1",
+  "server_freshness_ms": 60000,
+  "local_preparation_evidence_examples": [
+    "r9-authority-gap-20261011T123654904Z.json",
+    "server-preparation-proof-20261011T123902944Z.json"
+  ],
+  "example_proofs_predate_final_freeze_and_cannot_authorize_mutation": true,
+  "syntax": "pass",
+  "product_source_changed": false,
+  "public_api_changed": false,
+  "runtime_mutated_by_lane": false,
+  "authority_mutated_by_lane": false,
+  "acceptance_performed": false,
+  "vm_termination": false,
+  "server_deploy_by_root_already_completed": true
+}

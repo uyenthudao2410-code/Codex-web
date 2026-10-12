@@ -1843,6 +1843,8 @@ test('heartbeat code clears omitted closure and connector receipts instead of re
     renderRecoveryTunnelSettings() {},
     renderDevice() {},
     renderRuntimeSourceStatus() {},
+    isCentralExecutor: () => false,
+    centralRoutePresentation: () => ({ state: 'waiting', label: 'Chờ Ubuntu', detail: '' }),
     setDot() {},
     $: () => ({ textContent: '' })
   });
@@ -1867,7 +1869,7 @@ test('heartbeat code clears omitted closure and connector receipts instead of re
   assert.equal(Object.hasOwn(snapshot.status, 'connectorRefreshRequired'), false);
 });
 
-test('chat toolbar renders transient or stale service telemetry as warning instead of false red', () => {
+function browserServiceStateFixture() {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'renderer', 'browser.js'), 'utf8');
   const start = source.indexOf('function renderServiceState');
   const end = source.indexOf('function renderWorkspaceHealth');
@@ -1882,8 +1884,12 @@ test('chat toolbar renders transient or stale service telemetry as warning inste
     },
     dataset: {},
     title: '',
-    textContent: '',
-    setAttribute() {}
+    childNodes: [{ nodeName: 'I', textContent: '' }, { nodeName: '#text', textContent: '' }],
+    attributes: new Map(),
+    get lastChild() { return this.childNodes.at(-1); },
+    get textContent() { return this.childNodes.map((node) => node.textContent).join(''); },
+    set textContent(value) { this.childNodes = [{ nodeName: '#text', textContent: value }]; },
+    setAttribute(name, value) { this.attributes.set(name, value); }
   });
   for (const selector of ['#mcpState', '#tunnelState', '#recoveryTunnelState', '#deviceState', '#deviceStateName', '#gitState', '#gitStateText']) {
     const value = element();
@@ -1901,6 +1907,14 @@ test('chat toolbar renders transient or stale service telemetry as warning inste
     renderWorkspaceHealth() {}
   });
   vm.runInContext(source.slice(start, end), context, { filename: 'renderer/browser-service-state.js' });
+  return { context, elements, render(status) {
+    context.__heartbeat = status;
+    vm.runInContext('renderServiceState(__heartbeat)', context);
+  } };
+}
+
+test('chat toolbar renders transient or stale service telemetry as warning instead of false red', () => {
+  const { context, elements } = browserServiceStateFixture();
   context.__healthy = {
     mcpRunning: true,
     nativeAlive: true,
@@ -1936,4 +1950,56 @@ test('chat toolbar renders transient or stale service telemetry as warning inste
   assert.equal(elements.get('#tunnelState').classes.has('error'), false);
   assert.equal(elements.get('#recoveryTunnelState').classes.has('warn'), true);
   assert.equal(elements.get('#recoveryTunnelState').classes.has('error'), false);
+});
+
+test('chat toolbar shows the central Ubuntu route without requiring a Windows Tunnel', () => {
+  const { elements, render } = browserServiceStateFixture();
+  const badge = elements.get('#tunnelState');
+  const indicator = badge.childNodes[0];
+  const central = {
+    executionRole: 'central_executor',
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false,
+    centralConnected: true,
+    authorityReady: true,
+    telemetryAvailable: true,
+    device: { device_id: 'device-toolbar-0001', online: true, git: {} }
+  };
+  render(central);
+  assert.equal(badge.textContent, 'Ubuntu');
+  assert.equal(badge.classes.has('ready'), true);
+  assert.equal(badge.classes.has('error'), false);
+  assert.match(badge.title, /Ubuntu: Đã kết nối.*quyền thao tác.*xác minh/);
+  assert.equal(badge.attributes.get('aria-label'), badge.title);
+  assert.equal(badge.childNodes[0], indicator, 'changing the label preserves the CSS indicator');
+  assert.equal(central.tunnelRunning, false, 'route display must not invent a Windows Tunnel');
+
+  render({ ...central, authorityReady: false });
+  assert.equal(badge.classes.has('ready'), true, 'connected route remains distinct from pending action authority');
+  assert.match(badge.title, /Đã kết nối.*chờ quyền/);
+
+  render({ ...central, centralConnected: false });
+  assert.equal(badge.classes.has('warn'), true);
+  assert.equal(badge.classes.has('ready'), false, 'authority cannot substitute for central connectivity');
+  assert.equal(badge.classes.has('error'), false);
+  assert.match(badge.title, /Chưa xác nhận kết nối trung tâm/);
+
+  render({ ...central, centralConnected: undefined, tunnelRunning: true });
+  assert.equal(badge.classes.has('warn'), true);
+  assert.equal(badge.classes.has('ready'), false, 'a local Tunnel does not prove the central route');
+
+  for (const uncertainty of [{ signalStale: true, telemetryAvailable: false }, { recovering: true }, { recoveryDeferred: true }]) {
+    render({ ...central, ...uncertainty });
+    assert.equal(badge.textContent, 'Ubuntu');
+    assert.equal(badge.classes.has('warn'), true);
+    assert.equal(badge.classes.has('ready'), false);
+    assert.equal(badge.classes.has('error'), false);
+    assert.match(badge.title, /Telemetry tạm gián đoạn/);
+  }
+
+  render({ ...central, executionRole: 'direct_legacy', tunnelRunning: false });
+  assert.equal(badge.textContent, 'Tunnel');
+  assert.equal(badge.classes.has('error'), true, 'direct mode still reports a stopped Tunnel');
+  assert.equal(badge.childNodes[0], indicator);
 });

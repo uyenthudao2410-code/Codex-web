@@ -23,6 +23,8 @@ function runGit(root, args, options = {}) {
   const result = spawnSync('git', ['-C', root, ...args], {
     encoding: 'utf8',
     windowsHide: true,
+    // Retained evidence paths can exceed spawnSync's default 1 MiB output cap.
+    maxBuffer: 8 * 1024 * 1024,
     ...options,
   });
   return result;

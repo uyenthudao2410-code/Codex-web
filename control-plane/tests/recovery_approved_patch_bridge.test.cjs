@@ -139,3 +139,30 @@ test('approved-patch bridge allowlists its result and refuses a descriptor misma
   );
   assert.equal(called, false);
 });
+
+test('initial verification forwards one exact plan with bounded Sandbox grace and preserves failed proof effect', async () => {
+  const verification = { argv: ['node', '--test', 'tests/fixture.test.js'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };
+  const sealed = { ...request, verification };
+  const result = safeResult();
+  result.initial_verification = { plan_sha256: digest(verification), proof_status: 'failed', proof_ids: [], proof_fingerprint: null };
+  result.response_sha256 = digest({ file: result.file, initial_verification: result.initial_verification });
+  const calls = [];
+  const receipt = await runDevelopmentApprovedPatchBridge(sealed, {
+    appRoot: process.cwd(),
+    dependencies: {
+      createDevelopmentPaths: () => ({ runtimeIdentity: () => ({ mode: 'development', installation_id: 'a'.repeat(64) }) }),
+      loadRecoveryDescriptor: () => descriptor,
+      descriptorMatchesInstallation: () => true,
+      descriptorRequestOptions: () => ({ expectedInstanceId: descriptor.instance_id }),
+      clientFactory: () => ({ call: async (...args) => { calls.push(args); return result; } }),
+      approvedPatchBridge: { normaliseApprovedPatchResult }
+    }
+  });
+  assert.deepEqual(calls, [['runtime.control_plane_approved_patch', [sealed], { expectedInstanceId: descriptor.instance_id, timeout: 360000 }]]);
+  assert.equal(receipt.patch_applied, true);
+  assert.equal(receipt.local_semantic_acceptance, 'pending');
+  assert.deepEqual(receipt.initial_verification, result.initial_verification);
+  assert.equal(receipt.actor.client_id, BRIDGE_CLIENT_ID);
+  assert.equal(Object.hasOwn(receipt, 'patch_envelope'), false);
+  assert.equal(Object.hasOwn(receipt, 'verification'), false);
+});

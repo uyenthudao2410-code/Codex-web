@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "task_id": "137a8c53b24c447cbec578e9d679ef4a",
+  "orchestration": {},
+  "objective": "Apply one owner-approved exact local patch.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Git status exceeded the bounded exact-source identity limit.",
+  "next_step": "",
+  "created_at": "2026-10-11T19:50:12.586Z",
+  "updated_at": "2026-10-11T19:50:12.979Z",
+  "events": [
+    {
+      "time": "2026-10-11T19:50:12.586Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Apply one owner-approved exact local patch."
+      }
+    },
+    {
+      "time": "2026-10-11T19:50:12.979Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "WORKTREE_STATUS_TOO_LARGE"
+      }
+    }
+  ]
+}

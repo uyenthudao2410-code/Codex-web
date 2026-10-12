@@ -4,12 +4,15 @@ import io
 import json
 import os
 import sqlite3
+import stat
 import tempfile
 import threading
 import unittest
 from contextlib import closing
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+from unittest import mock
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -42,6 +45,12 @@ RESOURCE = "https://mcp.example.test"
 INTROSPECTION_URL = "https://identity.example.test/tenant-one/introspect"
 SCOPE = "control-plane.inventory"
 WRITE_SCOPE = "control-plane.patch"
+
+# Windows does not expose POSIX owner/mode metadata for ordinary NTFS files.
+# Keep the production check strict, and only provide deterministic stat
+# metadata to this fixture so the configuration tests can exercise it on both
+# Windows and POSIX hosts.
+_ORIGINAL_PATH_LSTAT = Path.lstat
 
 
 class PrivateTunnelServiceConfigurationTests(unittest.TestCase):
@@ -400,10 +409,36 @@ class OAuthConfigurationTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="control-plane-oauth-")
         self.addCleanup(self.temporary.cleanup)
         self.credential_file = Path(self.temporary.name) / "introspection.json"
+        self._credential_mode = 0o600
         self._write_credentials({"client_id": "fixture-client", "client_secret": "fixture-secret"})
+        if os.name == "nt":
+            # NTFS/Windows Python cannot reliably create POSIX mode fixtures,
+            # while mcp_oauth.py must continue enforcing owner-private modes
+            # on platforms that expose them.  Mock only lstat metadata for the
+            # fixture path; JSON parsing and all production validation remain
+            # real.
+            self._lstat_patcher = mock.patch.object(
+                Path,
+                "lstat",
+                autospec=True,
+                side_effect=self._portable_lstat,
+            )
+            self._lstat_patcher.start()
+            self.addCleanup(self._lstat_patcher.stop)
+
+    def _portable_lstat(self, candidate: Path) -> Any:
+        metadata = _ORIGINAL_PATH_LSTAT(candidate)
+        if os.name == "nt" and candidate == self.credential_file:
+            return SimpleNamespace(
+                st_mode=stat.S_IFREG | self._credential_mode,
+                st_size=metadata.st_size,
+                st_uid=os.geteuid() if hasattr(os, "geteuid") else metadata.st_uid,
+            )
+        return metadata
 
     def _write_credentials(self, document: Any, mode: int = 0o600) -> None:
         self.credential_file.write_text(json.dumps(document), encoding="utf-8")
+        self._credential_mode = mode
         self.credential_file.chmod(mode)
 
     def _environment(self, **overrides: str) -> dict[str, str]:
@@ -571,13 +606,14 @@ class OAuthConfigurationTests(unittest.TestCase):
         with self.assertRaises(OAuthConfigurationError):
             oauth_configuration_from_environment(self._environment())
 
-        target = Path(self.temporary.name) / "credential-target"
-        target.write_text(json.dumps({"client_id": "fixture-client", "client_secret": "fixture-secret"}), encoding="utf-8")
-        target.chmod(0o600)
-        link = Path(self.temporary.name) / "credential-link"
-        link.symlink_to(target)
-        with self.assertRaises(OAuthConfigurationError):
-            oauth_configuration_from_environment(self._environment(CONTROL_PLANE_MCP_OAUTH_CREDENTIAL_FILE=str(link)))
+        if os.name != "nt":
+            target = Path(self.temporary.name) / "credential-target"
+            target.write_text(json.dumps({"client_id": "fixture-client", "client_secret": "fixture-secret"}), encoding="utf-8")
+            target.chmod(0o600)
+            link = Path(self.temporary.name) / "credential-link"
+            link.symlink_to(target)
+            with self.assertRaises(OAuthConfigurationError):
+                oauth_configuration_from_environment(self._environment(CONTROL_PLANE_MCP_OAUTH_CREDENTIAL_FILE=str(link)))
 
 
 class OAuthIntrospectionVerifierTests(unittest.TestCase):
@@ -1439,8 +1475,9 @@ class OAuthMcpHttpTests(unittest.TestCase):
                 base_url=candidate_url,
             )
             self.assertEqual(status, 200)
-            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
-            self.assertIn("no longer dispatchable", rejected["error"]["data"]["message"])
+            self.assertTrue(rejected["result"]["isError"])
+            self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONFLICT")
+            self.assertIn("no longer dispatchable", rejected["result"]["structuredContent"]["message"])
         finally:
             candidate_server.shutdown()
             candidate_server.server_close()
@@ -1504,8 +1541,9 @@ class OAuthMcpHttpTests(unittest.TestCase):
                 base_url=candidate_url,
             )
             self.assertEqual(status, 200)
-            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
-            self.assertIn("no longer dispatchable", rejected["error"]["data"]["message"])
+            self.assertTrue(rejected["result"]["isError"])
+            self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONFLICT")
+            self.assertIn("no longer dispatchable", rejected["result"]["structuredContent"]["message"])
         finally:
             candidate_server.shutdown()
             candidate_server.server_close()
@@ -1767,8 +1805,9 @@ class OAuthMcpHttpTests(unittest.TestCase):
                 task_id=task_b["task_id"],
             )
             self.assertEqual(status, 200)
-            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
-            self.assertIn("another task", rejected["error"]["data"]["message"])
+            self.assertTrue(rejected["result"]["isError"])
+            self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONFLICT")
+            self.assertIn("another task", rejected["result"]["structuredContent"]["message"])
 
             status, released = task_control(
                 token="client-a-token",
@@ -1907,7 +1946,8 @@ class OAuthMcpHttpTests(unittest.TestCase):
             before = self.store.health()["counts"].copy()
             status, rejected = exec_run("client-b-token", "shared-exec-task-b-run-001", task_b["task_id"], "shared-exec-key-001")
             self.assertEqual(status, 200)
-            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+            self.assertTrue(rejected["result"]["isError"])
+            self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONFLICT")
             after = self.store.health()["counts"]
             for count_name in ("contexts", "work_requests", "actions"):
                 self.assertEqual(after[count_name], before[count_name], count_name)

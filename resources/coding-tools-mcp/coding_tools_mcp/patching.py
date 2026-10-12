@@ -10,6 +10,7 @@ import tempfile
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .errors import ToolFailure
 
@@ -17,6 +18,85 @@ from .errors import ToolFailure
 PATCH_TEMP_PREFIX = ".coding-tools-patch-"
 PATCH_BACKUP_PREFIX = ".coding-tools-backup-"
 MAX_EXACT_FILE_BYTES = 8 * 1024 * 1024
+
+
+class PatchWorkflowMixin:
+    def _agent_patch_inputs(self, args: dict[str, Any]) -> tuple[list[str], list[str]]:
+        directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
+        patches = [str(item) for item in args.get("patches", []) if str(item).strip()]
+        if str(args.get("patch", "")).strip():
+            patches.insert(0, str(args["patch"]))
+        new_file_patch = self._new_files_patch(list(args.get("files", [])))
+        if new_file_patch:
+            patches.insert(0, new_file_patch)
+        return directories, patches
+
+    def _preflight_patch_sequence(self, patches: list[str]) -> dict[str, Any]:
+        """Reject predictable disjoint-patch failures before EOCL or workspace writes."""
+        parsed: list[tuple[str, set[str]]] = []
+        seen_paths: set[str] = set()
+        overlapping_paths: set[str] = set()
+        operation_count = 0
+        for patch_text in patches:
+            operations = parse_patch(patch_text)
+            touched: set[str] = set()
+            for operation in operations:
+                operation_count += 1
+                touched.add(str(operation.path).replace("\\", "/"))
+                if operation.move_to:
+                    touched.add(str(operation.move_to).replace("\\", "/"))
+            overlapping_paths.update(seen_paths.intersection(touched))
+            seen_paths.update(touched)
+            parsed.append((patch_text, touched))
+        if operation_count == 0:
+            return {"checked": False, "reason": "empty_patch_sequence", "patch_count": len(patches)}
+        if overlapping_paths:
+            return {
+                "checked": False,
+                "reason": "cross_patch_path_dependency",
+                "patch_count": len(patches),
+                "overlap_count": len(overlapping_paths),
+            }
+        for patch_text, _touched in parsed:
+            self.apply_patch({"patch": patch_text, "dry_run": True})
+        return {"checked": True, "patch_count": len(patches), "operation_count": operation_count}
+
+    @staticmethod
+    def _source_write_paths(patches: list[str]) -> list[str]:
+        paths: set[str] = set()
+        for patch_text in patches:
+            for operation in parse_patch(patch_text):
+                path = str(operation.path).strip().replace("\\", "/")
+                if path:
+                    paths.add(path)
+                move_to = str(operation.move_to or "").strip().replace("\\", "/")
+                if move_to:
+                    paths.add(move_to)
+        return sorted(paths)
+
+    @staticmethod
+    def _new_files_patch(files: list[Any]) -> str:
+        sections = ["*** Begin Patch"]
+        added = 0
+        for item in files[:100]:
+            if not isinstance(item, dict):
+                raise ToolFailure("INVALID_ARGUMENT", "Each files item must contain path and content.", category="validation")
+            path = str(item.get("path", "")).strip().replace("\\", "/")
+            if not path or path.startswith("/") or ".." in Path(path).parts:
+                raise ToolFailure("INVALID_ARGUMENT", f"Invalid new file path: {path!r}", category="validation")
+            content = str(item.get("content", ""))
+            sections.append(f"*** Add File: {path}")
+            lines = content.splitlines()
+            sections.extend(f"+{line}" for line in lines)
+            if content.endswith(("\n", "\r")) is False and lines:
+                pass
+            if not lines:
+                sections.append("+")
+            added += 1
+        if not added:
+            return ""
+        sections.append("*** End Patch")
+        return "\n".join(sections)
 
 
 @dataclass

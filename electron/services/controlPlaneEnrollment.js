@@ -667,6 +667,17 @@ function parseExecPolicyInstallResult(stdout, workspaceId, workspaceGeneration) 
   });
 }
 
+function parseObservedPolicyFacade(value, code) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Object.keys(value).sort().join(',') !== 'profile,schema_version,sha256'
+    || !Number.isSafeInteger(value.schema_version) || value.schema_version < 1
+    || !NODE_ID_PATTERN.test(String(value.profile || ''))
+    || !SHA256_PATTERN.test(String(value.sha256 || ''))) {
+    throw enrollmentError(code, 'Policy local chưa trả về facade contract hợp lệ.');
+  }
+  return Object.freeze({ schema_version: value.schema_version, profile: value.profile, sha256: value.sha256 });
+}
+
 function parseExecPolicyObservation(stdout) {
   const output = String(stdout || '');
   if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
@@ -691,7 +702,7 @@ function parseExecPolicyObservation(stdout) {
     }
     return Object.freeze({ state: 'unavailable', reason: payload.reason });
   }
-  const expectedKeys = 'allowed_argv_prefix_count,allowed_argv_prefixes_sha256,authority_mode,enabled,execution,expires_at_ms,max_concurrent,max_output_bytes,max_timeout_ms,operation,policy_sha256,runtime_mode,state,workspace_generation,workspace_id';
+  const expectedKeys = 'allowed_argv_prefix_count,allowed_argv_prefixes_sha256,authority_mode,enabled,execution,expires_at_ms,facade_contract,max_concurrent,max_output_bytes,max_timeout_ms,operation,policy_sha256,runtime_mode,state,workspace_generation,workspace_id';
   if (Object.keys(payload).sort().join(',') !== expectedKeys
     || !['enabled', 'disabled'].includes(payload.state)
     || !['standing', 'expiring_legacy'].includes(payload.authority_mode)
@@ -716,6 +727,7 @@ function parseExecPolicyObservation(stdout) {
     enabled: payload.enabled === true,
     workspace_id: payload.workspace_id,
     workspace_generation: payload.workspace_generation,
+    facade_contract: parseObservedPolicyFacade(payload.facade_contract, 'CONTROL_PLANE_EXEC_POLICY_OBSERVATION_INVALID'),
     policy_sha256: payload.policy_sha256.toLowerCase(),
     allowed_argv_prefix_count: payload.allowed_argv_prefix_count,
     allowed_argv_prefixes_sha256: payload.allowed_argv_prefixes_sha256
@@ -788,8 +800,8 @@ function parseStandingFilePolicyObservation(stdout, kind) {
     return Object.freeze({ state: 'unavailable', reason: payload.reason });
   }
   const expectedKeys = read
-    ? 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,max_bytes,max_lines,operation,policy_sha256,runtime_mode,state,windows_acl_verified,workspace_generation,workspace_id'
-    : 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,max_file_bytes,max_patch_bytes,operation,policy_sha256,runtime_mode,state,validation_profile,windows_acl_verified,workspace_generation,workspace_id';
+    ? 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,facade_contract,max_bytes,max_lines,operation,policy_sha256,runtime_mode,state,windows_acl_verified,workspace_generation,workspace_id'
+    : 'allowed_prefix_count,allowed_prefixes_sha256,authority_mode,enabled,expires_at_ms,facade_contract,max_file_bytes,max_patch_bytes,operation,policy_sha256,runtime_mode,state,validation_profile,windows_acl_verified,workspace_generation,workspace_id';
   const standing = payload.authority_mode === 'standing';
   if ((standing && Object.keys(payload).sort().join(',') !== expectedKeys)
     || !['enabled', 'expired_or_disabled'].includes(payload.state)
@@ -810,6 +822,7 @@ function parseStandingFilePolicyObservation(stdout, kind) {
     enabled: payload.enabled === true,
     workspace_id: payload.workspace_id,
     workspace_generation: payload.workspace_generation,
+    facade_contract: parseObservedPolicyFacade(payload.facade_contract, 'CONTROL_PLANE_FILE_POLICY_OBSERVATION_INVALID'),
     policy_sha256: payload.policy_sha256.toLowerCase()
   });
 }
@@ -1342,6 +1355,21 @@ class ControlPlaneEnrollmentService {
     return parseExecPolicyObservation(result?.stdout);
   }
 
+  async inspectCurrentPolicyAuthority(policy) {
+    const result = await this.runPackagedNodeAgent('inspect-policy-authority', [
+      '--config', this.paths.controlPlaneNodeConfigFile(),
+      '--workspace-registry', this.paths.controlPlaneWorkspaceRegistryFile(),
+      '--workspace-id', policy.workspace_id,
+      '--workspace-generation', policy.workspace_generation
+    ]);
+    const authority = parsePolicyAuthorityObservation(result?.stdout, policy.workspace_id, policy.workspace_generation);
+    const age = Date.now() - authority.observed_at_ms;
+    if (age < 0 || age >= 60_000) {
+      throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_STALE', 'Chưa xác minh facade contract hiện hành của Ubuntu.');
+    }
+    return authority;
+  }
+
   async inspectMxcWindowsSandbox({ resourcesRoot, canonicalRoot, binaryHash } = {}) {
     if (this.experimentalWindowsSandbox !== true) return null;
     const windowsRoot = String(this.environment.SystemRoot || this.environment.WINDIR || 'C:\\Windows');
@@ -1582,7 +1610,23 @@ class ControlPlaneEnrollmentService {
       })
     );
     const sandbox = await this.inspectMxcSandbox({ workspaceRoot });
-    const policy = policyResult;
+    let policy = policyResult;
+    if (policy.state === 'enabled') {
+      try {
+        if (policy.workspace_id !== normalizedWorkspaceId || policy.workspace_generation !== normalizedWorkspaceGeneration) {
+          throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_TARGET_MISMATCH', 'Policy chạy chưa khớp thư mục đã chọn.');
+        }
+        const authority = await this.inspectCurrentPolicyAuthority(policy);
+        if (authority.exec_enabled !== true || authority.exec_binding_count < 1) {
+          throw enrollmentError('CONTROL_PLANE_EXEC_NOT_ADMITTED', 'Ubuntu chưa bật sandboxed exec cho binding này.');
+        }
+        policy = Object.freeze({ ...policy, current_facade_contract: authority.facade_contract,
+          authority_observed_at_ms: authority.observed_at_ms });
+      } catch (error) {
+        policy = Object.freeze({ ...policy, current_facade_contract: null, authority_observed_at_ms: null,
+          reason: String(error?.code || 'CONTROL_PLANE_POLICY_AUTHORITY_UNAVAILABLE') });
+      }
+    }
     return Object.freeze({ policy, sandbox });
   }
 
@@ -1695,7 +1739,28 @@ class ControlPlaneEnrollmentService {
       observe('file_read', 'inspect-file-read-policy'),
       observe('approved_patch', 'inspect-approved-patch-policy')
     ]);
-    return Object.freeze({ file_read: fileRead, approved_patch: approvedPatch });
+    // Reuse one authenticated observation when both singleton file policies
+    // belong to the same registered generation. Installed/enabled alone does
+    // not prove that their pinned facade still matches the current server.
+    const authorities = new Map();
+    const current = async (policy, allowWrite = false) => {
+      if (policy.state !== 'enabled') return policy;
+      const key = `${policy.workspace_id}:${policy.workspace_generation}`;
+      try {
+        if (!authorities.has(key)) authorities.set(key, this.inspectCurrentPolicyAuthority(policy));
+        const authority = await authorities.get(key);
+        if (allowWrite && authority.standing_write_enabled !== true) {
+          throw enrollmentError('CONTROL_PLANE_PATCH_POLICY_NOT_ADMITTED', 'Ubuntu chưa bật quyền sửa file cho connector này.');
+        }
+        return Object.freeze({ ...policy, current_facade_contract: authority.facade_contract,
+          authority_observed_at_ms: authority.observed_at_ms });
+      } catch (error) {
+        return Object.freeze({ ...policy, current_facade_contract: null, authority_observed_at_ms: null,
+          reason: String(error?.code || 'CONTROL_PLANE_POLICY_AUTHORITY_UNAVAILABLE') });
+      }
+    };
+    const [currentRead, currentPatch] = await Promise.all([current(fileRead), current(approvedPatch, true)]);
+    return Object.freeze({ file_read: currentRead, approved_patch: currentPatch });
   }
 
   async registerWorkspace({ workspacePath, capabilities: requestedCapabilities } = {}) {
@@ -1822,11 +1887,17 @@ class ControlPlaneEnrollmentService {
     if (this.paths.runtimeMode() !== 'packaged') {
       throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Thay capability workspace Ubuntu chỉ chạy từ candidate packaged đã được xác minh.');
     }
-    const canonicalPath = canonicalWorkspacePath(workspacePath);
     const normalizedWorkspaceId = centralWorkspaceId(workspaceId);
     const normalizedWorkspaceGeneration = centralWorkspaceGeneration(workspaceGeneration);
+    // An existing row already identifies one node-private root. Resolve that
+    // exact registration locally instead of making the owner pick it again;
+    // an explicitly supplied path still has to match the selected row.
+    const registry = this.paths.controlPlaneWorkspaceRegistryFile();
+    const canonicalPath = workspacePath === undefined
+      ? registeredWorkspacePath(registry, normalizedWorkspaceId, normalizedWorkspaceGeneration)
+      : canonicalWorkspacePath(workspacePath);
     assertSelectedWorkspaceRegistration(
-      this.paths.controlPlaneWorkspaceRegistryFile(), canonicalPath,
+      registry, canonicalPath,
       normalizedWorkspaceId, normalizedWorkspaceGeneration
     );
     const displayName = workspaceDisplayName(canonicalPath);
@@ -1834,7 +1905,6 @@ class ControlPlaneEnrollmentService {
     const python = this.paths.portablePython();
     const agent = this.paths.controlPlaneNodeAgent();
     const config = this.paths.controlPlaneNodeConfigFile();
-    const registry = this.paths.controlPlaneWorkspaceRegistryFile();
     for (const [label, file] of [['Python', python], ['node agent', agent]]) {
       try {
         if (!fs.statSync(file).isFile()) throw new Error('missing');

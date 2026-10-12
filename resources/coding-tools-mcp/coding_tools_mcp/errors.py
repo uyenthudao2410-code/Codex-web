@@ -3,6 +3,23 @@ from __future__ import annotations
 from typing import Any
 
 
+class ControllerContinuityError(ValueError):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        category: str = "validation",
+        retryable: bool = False,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.category = category
+        self.retryable = retryable
+        self.details = dict(details or {})
+
+
 class ToolFailure(Exception):
     """A recoverable tool-domain failure that should be shown to the agent."""
 

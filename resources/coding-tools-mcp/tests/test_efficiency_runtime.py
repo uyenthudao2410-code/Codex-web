@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -687,7 +688,33 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0")
+                self.assertEqual(contract["sha256"], "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4")
+                public_tools = runtime.list_tools()
+                public_contract_bytes = json.dumps(
+                    public_tools, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+                ).encode("utf-8")
+                self.assertEqual(hashlib.sha256(public_contract_bytes).hexdigest(), contract["sha256"])
+                workflow_schema = next(
+                    item["inputSchema"] for item in public_tools["tools"] if item["name"] == "agent_workflow"
+                )
+                initial_schema = workflow_schema["properties"]["initial_verification"]
+                self.assertEqual(initial_schema["type"], "object")
+                self.assertFalse(initial_schema["additionalProperties"])
+                self.assertEqual(set(initial_schema["properties"]), {"argv", "cwd", "timeout_ms", "max_output_bytes"})
+                self.assertEqual(set(initial_schema["required"]), {"argv", "cwd", "timeout_ms", "max_output_bytes"})
+                self.assertEqual(initial_schema["properties"]["argv"], {
+                    "type": "array", "minItems": 1, "maxItems": 32,
+                    "items": {"type": "string", "minLength": 1, "maxLength": 2048},
+                })
+                self.assertEqual(initial_schema["properties"]["cwd"], {"type": "string", "maxLength": 512})
+                self.assertEqual(initial_schema["properties"]["timeout_ms"], {"type": "integer", "minimum": 5000, "maximum": 300000})
+                self.assertEqual(initial_schema["properties"]["max_output_bytes"], {"type": "integer", "minimum": 1024, "maximum": 65536})
+                # Native admission enforces this pair. Discovery must publish
+                # its separate expiry field without extending the EXACT4 plan.
+                self.assertEqual(workflow_schema["properties"]["initial_verification_expires_at_ms"], {
+                    "type": "integer", "minimum": 1,
+                    "description": "Admitted authority deadline required with initial_verification, rechecked before patch and command start. It cannot renew authority.",
+                })
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["compatible_predecessor_sha256"], [])

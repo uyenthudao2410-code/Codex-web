@@ -17,6 +17,7 @@ import json
 import os
 import re
 import secrets
+import stat
 import subprocess
 import sys
 import time
@@ -26,6 +27,7 @@ import urllib.parse
 import uuid
 import zlib
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
@@ -115,6 +117,7 @@ EXEC_MAX_ARGV_ITEMS = 8
 EXEC_MAX_ARGV_ITEM_BYTES = 256
 EXEC_MAX_TIMEOUT_MS = 5 * 60 * 1000
 EXEC_MIN_TIMEOUT_MS = 5_000
+EXEC_RUN_BRIDGE_TIMEOUT_SECONDS = 360
 EXEC_MAX_OUTPUT_BYTES = 64 * 1024
 EXEC_MAX_ALLOWED_PREFIXES = 16
 EXEC_LOOP_MIN_INTERVAL_SECONDS = 15
@@ -122,7 +125,8 @@ EXEC_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
 EXEC_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
 EXEC_LOOP_LOCK_SCHEMA_VERSION = 1
 EXEC_ACTION_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
-EXEC_COMMAND_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$")
+# Native command IDs are URL-safe opaque tokens and may begin with '-' or '_'.
+EXEC_COMMAND_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9_-][A-Za-z0-9_.:-]{2,255}$")
 EXEC_LOCAL_HANDLE_PATTERN = re.compile(r"^cp_exec_[a-f0-9]{48}$")
 EXEC_CONTROL_OPERATIONS = frozenset({"exec_run", "exec_poll", "exec_stop"})
 EXEC_CONTROL_SIGNALS = frozenset({"TERM", "KILL", "INT"})
@@ -283,6 +287,13 @@ APPROVED_PATCH_PRE_EFFECT_REJECTION_CODES = frozenset({
     "MCP_AUTH_UNAVAILABLE",
     "CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE",
     "RECOVERY_HOST_INSTALLATION_MISMATCH",
+    "CONTROL_PLANE_EXEC_POLICY_MISSING", "CONTROL_PLANE_EXEC_POLICY_INVALID",
+    "CONTROL_PLANE_EXEC_POLICY_EXPIRED", "CONTROL_PLANE_EXEC_DISABLED",
+    "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH", "CONTROL_PLANE_EXEC_TARGET_MISMATCH",
+    "CONTROL_PLANE_EXEC_CONTRACT_MISMATCH", "CONTROL_PLANE_EXEC_ALLOWLIST_DENIED",
+    "CONTROL_PLANE_EXEC_LIMIT_DENIED", "CONTROL_PLANE_EXEC_REQUEST_INVALID",
+    "CONTROL_PLANE_EXEC_REQUEST_EXPIRED", "CONTROL_PLANE_EXEC_REQUEST_TOO_LARGE",
+    "CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT", "CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED",
 })
 APPROVED_PATCH_POLICY_STOP_CODES = frozenset({
     "CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING",
@@ -2046,6 +2057,31 @@ def _exact_approved_patch_envelope(
     }
 
 
+def _approved_patch_verification(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != {"argv", "cwd", "timeout_ms", "max_output_bytes"}:
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    argv = value["argv"]
+    if not isinstance(argv, list) or not 1 <= len(argv) <= EXEC_MAX_ARGV_ITEMS:
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    try:
+        argv = [_exec_argv_item(item) for item in argv]
+    except RuntimeError as error:
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID") from error
+    if any(character in argv[0] for character in ("/", "\\", ":")):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    cwd = value["cwd"]
+    if not isinstance(cwd, str):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    if cwd:
+        _approved_patch_relative_path(cwd, code="CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    for field, minimum, maximum in (("timeout_ms", EXEC_MIN_TIMEOUT_MS, EXEC_MAX_TIMEOUT_MS),
+                                    ("max_output_bytes", 1024, EXEC_MAX_OUTPUT_BYTES)):
+        number = value[field]
+        if not isinstance(number, int) or isinstance(number, bool) or not minimum <= number <= maximum:
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    return {"argv": argv, "cwd": cwd, "timeout_ms": value["timeout_ms"], "max_output_bytes": value["max_output_bytes"]}
+
+
 def _admit_approved_patch_policy_request(
     args: argparse.Namespace,
     *,
@@ -2068,6 +2104,8 @@ def _admit_approved_patch_policy_request(
         "intent_digest", "path", "preimage_sha256", "patch_sha256", "patch_envelope",
         "validation_profile", "expires_at_ms", "facade_contract", "authority_mode",
     }
+    if isinstance(request, dict) and "verification" in request:
+        expected_fields.add("verification")
     if not isinstance(request, dict) or set(request) != expected_fields:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
     policy, _entry = _approved_patch_policy_admission(args, config_path=config_path, config=config)
@@ -2125,6 +2163,21 @@ def _admit_approved_patch_policy_request(
         max_patch_bytes=policy["max_patch_bytes"],
         max_file_bytes=policy["max_file_bytes"],
     )
+    if "verification" in request:
+        verification = _approved_patch_verification(request["verification"])
+        exec_request = {
+            **{field: request[field] for field in (
+                "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation",
+                "expires_at_ms", "facade_contract",
+            )},
+            "operation": "exec_run", **verification,
+        }
+        exec_policy = _admit_exec_policy_request(args, config_path=config_path, config=config, request=exec_request)
+        if exec_policy["expires_at_ms"] is not None and request["expires_at_ms"] > exec_policy["expires_at_ms"]:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
+        exec_entry = _require_policy_workspace_registration(args, config_path=config_path, policy=exec_policy)
+        if exec_entry is None or exec_entry["capabilities"].get("exec") is not True:
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
     return policy, patch
 
 
@@ -2680,6 +2733,7 @@ def inspect_file_read_policy(args: argparse.Namespace) -> int:
             "workspace_generation": policy["workspace_generation"],
             "authority_mode": policy.get("authority_mode", "expiring_legacy"),
             "expires_at_ms": policy["expires_at_ms"],
+            "facade_contract": policy["facade_contract"],
             "policy_sha256": _policy_digest(policy),
             **_policy_scope_receipt(policy),
             "max_bytes": policy["max_bytes"],
@@ -2859,6 +2913,7 @@ def inspect_approved_patch_policy(args: argparse.Namespace) -> int:
             "workspace_generation": policy["workspace_generation"],
             "authority_mode": policy.get("authority_mode", "expiring_legacy"),
             "expires_at_ms": policy["expires_at_ms"],
+            "facade_contract": policy["facade_contract"],
             "policy_sha256": _policy_digest(policy),
             **_policy_scope_receipt(policy),
             "max_patch_bytes": policy["max_patch_bytes"],
@@ -3197,6 +3252,15 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
     }
     if authority_mode == APPROVED_PATCH_POLICY_STANDING_AUTHORITY:
         expected_arguments.add("authority_mode")
+    verification = None
+    if action.get("mcp_approved_patch_verification_json") is not None:
+        try:
+            verification = _approved_patch_verification(json.loads(action["mcp_approved_patch_verification_json"]))
+        except (TypeError, ValueError, RuntimeError) as error:
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED") from error
+        expected_arguments.add("verification_sha256")
+        if arguments.get("verification_sha256") != _approved_patch_projection_digest(verification):
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
     if (
         not isinstance(arguments, dict)
         or set(arguments) != expected_arguments
@@ -3293,6 +3357,7 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
         "validation_profile": APPROVED_PATCH_VALIDATION_PROFILE,
         "expires_at_ms": expires_at_ms,
         "facade_contract": facade_contract,
+        **({"verification": verification} if verification is not None else {}),
     }
 
 
@@ -3722,6 +3787,28 @@ def _approved_patch_projection_digest(value: dict[str, Any]) -> str:
     ).hexdigest()
 
 
+def _safe_approved_patch_initial_verification(value: Any, expected_plan_sha256: str) -> dict[str, Any]:
+    required = {"plan_sha256", "proof_status", "proof_ids", "proof_fingerprint"}
+    if (not isinstance(value, dict) or not required <= set(value)
+            or set(value) not in (required, required | {"command_id", "job_id"})):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_RESULT_PROOF_INVALID")
+    status = value.get("proof_status")
+    ids = value.get("proof_ids")
+    fingerprint = value.get("proof_fingerprint")
+    if (value.get("plan_sha256") != expected_plan_sha256 or status not in {"passed", "failed", "timed_out"}
+            or not isinstance(ids, list) or len(ids) > 64
+            or any(not isinstance(item, str) or re.fullmatch(r"[a-f0-9]{32}", item) is None for item in ids)
+            or (status == "passed" and (not ids or not isinstance(fingerprint, str) or SHA256_PATTERN.fullmatch(fingerprint) is None))
+            or (status != "passed" and fingerprint is not None)):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_RESULT_PROOF_INVALID")
+    if "command_id" in value and any(
+        not isinstance(value[field], str) or re.fullmatch(r"[A-Za-z0-9_-]{1,128}", value[field]) is None
+        for field in ("command_id", "job_id")
+    ):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_RESULT_PROOF_INVALID")
+    return {key: value[key] for key in sorted(value)}
+
+
 def _safe_approved_patch_bridge_result(
     value: Any,
     request: dict[str, Any],
@@ -3737,6 +3824,13 @@ def _safe_approved_patch_bridge_result(
         "local_handle", "patch_applied", "local_semantic_acceptance", "policy_sha256", "actor", "runtime_identity",
         "facade_contract", "file", "response_sha256",
     }
+    verification = None
+    if "verification" in request:
+        expected_fields.add("initial_verification")
+        verification = _safe_approved_patch_initial_verification(
+            value.get("initial_verification") if isinstance(value, dict) else None,
+            _approved_patch_projection_digest(_approved_patch_verification(request["verification"])),
+        )
     if not isinstance(value, dict) or set(value) != expected_fields:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_RESULT_ENVELOPE_INVALID")
     if (
@@ -3819,7 +3913,9 @@ def _safe_approved_patch_bridge_result(
     response_sha256 = str(value.get("response_sha256") or "").lower()
     if (
         SHA256_PATTERN.fullmatch(response_sha256) is None
-        or response_sha256 != _approved_patch_projection_digest(safe_file)
+        or response_sha256 != _approved_patch_projection_digest(
+            {"file": safe_file, "initial_verification": verification} if verification is not None else safe_file
+        )
     ):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_RESULT_DIGEST_INVALID")
     return {
@@ -3846,6 +3942,7 @@ def _safe_approved_patch_bridge_result(
         "facade_contract": dict(request["facade_contract"]),
         "file": safe_file,
         "response_sha256": response_sha256,
+        **({"initial_verification": verification} if verification is not None else {}),
     }
 
 
@@ -4359,7 +4456,8 @@ def recovery_approved_patch_bridge(
             env=environment,
             input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            timeout=args.timeout_seconds,
+            timeout=((request["verification"]["timeout_ms"] + 300_000) / 1000
+                     if "verification" in request else args.timeout_seconds),
             check=False,
         )
     except subprocess.TimeoutExpired:
@@ -4386,7 +4484,7 @@ def recovery_exec_bridge(
     args: argparse.Namespace,
     project_root: Path,
     request: dict[str, Any],
-) -> tuple[dict[str, Any] | None, str | None]:
+) -> tuple[dict[str, Any] | None, str | dict[str, Any] | None]:
     """Call the descriptor-hiding Electron exec bridge exactly once.
 
     The Python node agent never receives the Recovery descriptor/token or the
@@ -4405,7 +4503,11 @@ def recovery_exec_bridge(
             env=environment,
             input=json.dumps(request, separators=(",", ":")).encode("utf-8"),
             capture_output=True,
-            timeout=args.timeout_seconds,
+            # Cold Windows Sandbox setup precedes the first command receipt.
+            # Keep its bounded budget above the Recovery exec-run IPC budget;
+            # polls/stops retain the configured short observation timeout.
+            timeout=(EXEC_RUN_BRIDGE_TIMEOUT_SECONDS
+                     if request.get("operation") == EXEC_OPERATION else args.timeout_seconds),
             check=False,
         )
     except subprocess.TimeoutExpired:
@@ -4422,10 +4524,8 @@ def recovery_exec_bridge(
             return None, "CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID"
         return result, None
     error = payload.get("error") if isinstance(payload, dict) else None
-    return None, _safe_error_code(
-        error.get("code") if isinstance(error, dict) else None,
-        "CONTROL_PLANE_EXEC_FAILED",
-    )
+    safe_error = _safe_exec_bridge_error(error)
+    return None, safe_error if safe_error.get("details") else safe_error["code"]
 
 
 def recovery_document_write_bridge(
@@ -8352,9 +8452,97 @@ def _record_exec_receipt(journal_path: Path, journal: dict[str, Any], *, state: 
     return entry
 
 
+def _safe_exec_bridge_error(value: Any) -> dict[str, Any]:
+    """Keep machine diagnostics, never native messages, paths or caller extras."""
+
+    error = value if isinstance(value, dict) else {"code": value}
+    safe: dict[str, Any] = {"code": _safe_error_code(error.get("code"), "CONTROL_PLANE_EXEC_FAILED")}
+    details = error.get("details")
+    diagnostic: dict[str, Any] = {}
+    if isinstance(details, dict):
+        for field in ("native_error_code", "backend_error_code"):
+            code = details.get(field)
+            if isinstance(code, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{2,95}", code):
+                diagnostic[field] = code
+        for field in ("phase", "job_lifecycle"):
+            label = details.get(field)
+            if isinstance(label, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,63}", label):
+                diagnostic[field] = label
+        for field in ("command_id", "job_id"):
+            identifier = details.get(field)
+            if isinstance(identifier, str) and EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(identifier):
+                diagnostic[field] = identifier
+        root_pid = details.get("root_pid")
+        if isinstance(root_pid, int) and not isinstance(root_pid, bool) and 0 <= root_pid <= 2**53 - 1:
+            diagnostic["root_pid"] = root_pid
+        if isinstance(details.get("execution_started"), bool):
+            diagnostic["execution_started"] = details["execution_started"]
+        finished = details.get("job_finished_at")
+        if isinstance(finished, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z", finished):
+            try:
+                timestamp = datetime.fromisoformat(finished.replace("Z", "+00:00")).timestamp()
+            except (ValueError, OverflowError):
+                pass
+            else:
+                if 0 < timestamp <= time.time() + 5:
+                    diagnostic["job_finished_at"] = finished
+    if diagnostic:
+        safe["details"] = diagnostic
+    if error.get("recovery_response_received") is True:
+        safe["recovery_response_received"] = True
+        for field in ("action_id", "attempt_id", "task_id"):
+            identifier = error.get(field)
+            if isinstance(identifier, str) and EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(identifier):
+                safe[field] = identifier
+        generation = error.get("writer_lease_generation")
+        if isinstance(generation, int) and not isinstance(generation, bool) and generation > 0:
+            safe["writer_lease_generation"] = generation
+    return safe
+
+
+def _exec_bridge_failure_receipt(error: dict[str, Any], request: dict[str, Any], policy_sha256: str) -> dict[str, Any] | None:
+    """Settle only this authenticated invocation's durable no-process failure.
+
+    The native producer reads its exact Job after spawn_failed has committed.
+    A Sandbox code or caller-supplied zero PID alone is never terminal proof.
+    Control errors cannot undo evidence that a command previously ran.
+    """
+
+    details = error.get("details")
+    if (request.get("operation") != EXEC_OPERATION
+            or error.get("code") != "CONTROL_PLANE_EXEC_MCP_REJECTED"
+            or error.get("recovery_response_received") is not True
+            or any(error.get(field) != request.get(field)
+                   for field in ("action_id", "attempt_id", "task_id", "writer_lease_generation"))
+            or not isinstance(details, dict)
+            or not all(field in details for field in (
+                "native_error_code", "command_id", "job_id", "job_lifecycle", "root_pid",
+                "execution_started", "job_finished_at"))
+            or details["job_lifecycle"] != "spawn_failed"
+            or details["root_pid"] != 0
+            or details["execution_started"] is not False):
+        return None
+    return {
+        "schema_version": 1,
+        "operation_kind": "control_plane_exec",
+        "code": "CONTROL_PLANE_EXEC_FAILED_BEFORE_PROCESS",
+        "diagnostic_code": details["native_error_code"],
+        "bridge_error_code": error["code"],
+        "action_id": request["action_id"],
+        "attempt_id": request["attempt_id"],
+        "task_id": request["task_id"],
+        "writer_lease_generation": request["writer_lease_generation"],
+        "policy_sha256": policy_sha256,
+        "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
+        "facade_contract": dict(request["facade_contract"]),
+        **details,
+    }
+
+
 def _recover_exec_prepared_entry(
     entry: dict[str, Any],
     diagnostic_code: str = "CONTROL_PLANE_EXEC_PREPARED_RECOVERED",
+    diagnostic_details: dict[str, Any] | None = None,
 ) -> None:
     """Never re-run an exec after its durable pre-effect boundary was crossed."""
 
@@ -8377,6 +8565,7 @@ def _recover_exec_prepared_entry(
                 diagnostic_code,
                 "CONTROL_PLANE_EXEC_PREPARED_RECOVERED",
             ),
+            **(_safe_exec_bridge_error({"details": diagnostic_details}).get("details") or {}),
         },
     )
 
@@ -8602,13 +8791,15 @@ def _record_control_result(
 
 
 def _record_exec_control_unknown(
-    *, journal_path: Path, journal: dict[str, Any], entry: dict[str, Any], config: dict[str, Any], code: str
+    *, journal_path: Path, journal: dict[str, Any], entry: dict[str, Any], config: dict[str, Any], code: str,
+    diagnostic_details: dict[str, Any] | None = None,
 ) -> int:
     payload = {
         "schema_version": 1,
         "operation_kind": "control_plane_exec",
         "code": code,
         "reconciliation_required": True,
+        **(_safe_exec_bridge_error({"details": diagnostic_details}).get("details") or {}),
     }
     next_entry = _record_exec_receipt(
         journal_path,
@@ -8657,7 +8848,8 @@ def _control_bridge_observation(
             operation=operation,
             signal=signal,
             wait_ms=wait_ms,
-            yield_time_ms=min(30_000, max(0, int(getattr(args, "timeout_seconds", 20) * 1000))),
+            # Leave transport time for health, workspace binding and the receipt.
+            yield_time_ms=min(30_000, max(0, int(getattr(args, "timeout_seconds", 20) * 1000) - 10_000)),
         )
         policy = _admit_exec_policy_request(args, config_path=config_path, config=config, request=control_request)
         expected_policy_sha256 = _policy_digest(policy)
@@ -8665,10 +8857,12 @@ def _control_bridge_observation(
             raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CHANGED")
         result, error_code = recovery_exec_bridge(args, project_root, control_request)
         if result is None:
-            code = _safe_error_code(error_code, "CONTROL_PLANE_EXEC_CONTROL_UNAVAILABLE")
+            bridge_error = _safe_exec_bridge_error(error_code)
+            code = bridge_error["code"]
             if code in EXEC_CONTROL_RECONCILE_CODES:
                 return "unknown", _record_exec_control_unknown(
                     journal_path=journal_path, journal=journal, entry=entry, config=config, code=code,
+                    diagnostic_details=bridge_error.get("details"),
                 )
             entry["last_control_error"] = code
             entry["last_observed_at_ms"] = int(time.time() * 1000)
@@ -8978,7 +9172,19 @@ def _poll_exec_once(args: argparse.Namespace) -> int:
                 (completed if terminal == "completed" else stopped if terminal == "stopped"
                  else failed if terminal == "failed" else unknown).append(action_id)
                 continue
-            code = _safe_error_code(error_code, "CONTROL_PLANE_EXEC_FAILED")
+            bridge_error = _safe_exec_bridge_error(error_code)
+            code = bridge_error["code"]
+            failure = _exec_bridge_failure_receipt(bridge_error, request, expected_policy_sha256)
+            if failure is not None:
+                entry = _record_exec_receipt(
+                    journal_path, journal, state="failed", action_id=action_id,
+                    attempt_id=attempt_id, receipt_state="failed", local_handle="", payload=failure,
+                )
+                _submit_receipt(config, entry)
+                _write_json_atomic(journal_path, journal)
+                submitted_receipts += 1
+                failed.append(action_id)
+                continue
             # The durable ``prepared`` marker was written before the bridge
             # subprocess was invoked.  From this point a bridge error cannot
             # prove that no local effect crossed the Recovery boundary (the
@@ -8989,7 +9195,7 @@ def _poll_exec_once(args: argparse.Namespace) -> int:
             prepared = journal["entries"].get(key)
             if not isinstance(prepared, dict) or prepared.get("state") != "prepared":
                 raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID")
-            _recover_exec_prepared_entry(prepared, code)
+            _recover_exec_prepared_entry(prepared, code, bridge_error.get("details"))
             _write_json_atomic(journal_path, journal)
             _submit_receipt(config, prepared)
             _write_json_atomic(journal_path, journal)
@@ -9136,6 +9342,7 @@ def inspect_exec_policy(args: argparse.Namespace) -> int:
             "policy_sha256": _policy_digest(policy),
             "authority_mode": policy["authority_mode"],
             "expires_at_ms": policy["expires_at_ms"],
+            "facade_contract": policy["facade_contract"],
             "enabled": policy["enabled"],
             "runtime_mode": _runtime_mode(args),
             **_exec_policy_receipt_scope(policy),
@@ -9192,6 +9399,80 @@ def _artifact_action_text(action: dict[str, Any], field: str) -> str:
     return value
 
 
+def _artifact_request_expiry(action: dict[str, Any], policy: dict[str, Any] | None = None) -> None:
+    expires_at_ms = action.get("expires_at_ms")
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+        raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+    if expires_at_ms <= int(time.time() * 1000):
+        raise RuntimeError("CONTROL_PLANE_ARTIFACT_REQUEST_EXPIRED")
+    if policy is not None and policy["expires_at_ms"] is not None and expires_at_ms > policy["expires_at_ms"]:
+        raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
+
+
+def _artifact_stat_identity(metadata: os.stat_result, *, file: bool) -> tuple[int, ...]:
+    identity = (metadata.st_dev, metadata.st_ino, metadata.st_mode)
+    return (*identity, metadata.st_size, metadata.st_mtime_ns, metadata.st_ctime_ns) if file else identity
+
+
+def _artifact_direct_path_snapshot(root: Path, relative: str) -> list[tuple[int, ...]]:
+    """Fence each direct path component, including Windows reparse points."""
+    parts = relative.split("/")
+    cursor = root.absolute()
+    snapshots: list[tuple[int, ...]] = []
+    for index in range(len(parts) + 1):
+        if index:
+            cursor = cursor / parts[index - 1]
+        metadata = cursor.lstat()
+        if (stat.S_ISLNK(metadata.st_mode)
+                or getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+                or os.path.normcase(str(cursor.resolve(strict=True))) != os.path.normcase(str(cursor.absolute()))):
+            raise RuntimeError("CONTROL_PLANE_ARTIFACT_REPARSE_DENIED")
+        final = index == len(parts)
+        if not (stat.S_ISREG(metadata.st_mode) if final else stat.S_ISDIR(metadata.st_mode)):
+            raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+        snapshots.append(_artifact_stat_identity(metadata, file=final))
+    return snapshots
+
+
+def _read_artifact_bytes(root: Path, relative: str, max_bytes: int) -> bytes:
+    """Bound reads through one opened regular file and reject target drift."""
+    descriptor: int | None = None
+    try:
+        before = _artifact_direct_path_snapshot(root, relative)
+        target = root.joinpath(*relative.split("/"))
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        descriptor = os.open(target, flags)
+        with os.fdopen(descriptor, "rb", buffering=0) as handle:
+            descriptor = None
+            opened = os.fstat(handle.fileno())
+            if (not stat.S_ISREG(opened.st_mode)
+                    or _artifact_stat_identity(opened, file=True) != before[-1]
+                    or _artifact_direct_path_snapshot(root, relative) != before):
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_TARGET_CHANGED")
+            if opened.st_size > max_bytes:
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_TOO_LARGE")
+            chunks: list[bytes] = []
+            remaining = max_bytes + 1
+            while remaining:
+                chunk = handle.read(remaining)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            raw = b"".join(chunks)
+            if len(raw) > max_bytes:
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_TOO_LARGE")
+            if (_artifact_stat_identity(os.fstat(handle.fileno()), file=True) != before[-1]
+                    or _artifact_direct_path_snapshot(root, relative) != before):
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_TARGET_CHANGED")
+            return raw
+    except OSError as error:
+        raise RuntimeError("CONTROL_PLANE_ARTIFACT_READ_DENIED") from error
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 def _poll_artifact_once(args: argparse.Namespace) -> int:
     """Poll one scoped document/image read under the file-read allowlist.
 
@@ -9241,9 +9522,12 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
             submitted_receipts += _flush_file_read_journal(config, journal_path, journal)
             continue
         try:
+            _artifact_request_expiry(action)
             kind = action.get("mcp_artifact_kind")
             rel = action.get("mcp_artifact_path")
             if kind not in ("document", "image"):
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            if action.get("tool_name") != ("document_workflow" if kind == "document" else "view_image"):
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
             if not isinstance(rel, str) or not rel:
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
@@ -9254,39 +9538,34 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                 config_path=config_path,
                 config=config,
             )
+            _artifact_request_expiry(action, policy)
             for field in ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
                 if action.get(field) != policy[field]:
                     raise RuntimeError("CONTROL_PLANE_FILE_READ_TARGET_MISMATCH")
             rel = _file_read_relative_path(rel, code="CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
             if not _policy_path_is_allowed(policy, rel):
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ALLOWLIST_DENIED")
-            declared_root = Path(entry["canonical_path"]).absolute()
-            root = declared_root.resolve(strict=True)
-            if os.path.normcase(str(root)) != os.path.normcase(str(declared_root)):
-                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
-            target = root
-            for part in rel.split("/"):
-                target = target / part
-                direct = target.resolve(strict=True)
-                if os.path.normcase(str(direct)) != os.path.normcase(str(target.absolute())):
-                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
-            if not target.is_file():
-                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            root = Path(entry["canonical_path"]).absolute()
             contract = {"schema_version": action.get("mcp_artifact_facade_schema_version"),
                         "profile": action.get("mcp_artifact_facade_profile"),
                         "sha256": action.get("mcp_artifact_facade_contract_sha256")}
             _policy_facade_contract(contract["schema_version"], contract["profile"], contract["sha256"])
             if contract != policy["facade_contract"]:
                 raise RuntimeError("CONTROL_PLANE_FILE_READ_CONTRACT_MISMATCH")
+            artifact_cap = 256 * 1024 if kind == "document" else 1024 * 1024
+            raw = _read_artifact_bytes(root, rel, min(policy["max_bytes"], artifact_cap))
+            current_policy, current_entry = _file_read_policy_admission(args, config_path=config_path, config=config)
+            _artifact_request_expiry(action, current_policy)
+            if _policy_digest(current_policy) != _policy_digest(policy) or current_entry != entry:
+                raise RuntimeError("CONTROL_PLANE_FILE_READ_TARGET_MISMATCH")
             local_handle = f"cp_artifact_{secrets.token_hex(24)}"
             if kind == "document":
-                raw = target.read_bytes()
-                if len(raw) > 256 * 1024:
-                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_TOO_LARGE")
                 try:
                     content = raw.decode("utf-8")
                 except UnicodeDecodeError as error:
                     raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED") from error
+                if len(content.splitlines()) > policy["max_lines"]:
+                    raise RuntimeError("CONTROL_PLANE_FILE_READ_LIMIT_DENIED")
                 for pattern in FILE_READ_SENSITIVE_CONTENT_PATTERNS:
                     if pattern.search(content):
                         raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
@@ -9303,14 +9582,11 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                                                 "server_instance_id": identity.get("server_instance_id", "srv"),
                                                 "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
             else:
-                raw = target.read_bytes()
-                if len(raw) > 1024 * 1024:
-                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_TOO_LARGE")
                 if raw.startswith(b"\x89PNG\r\n\x1a\n"):
                     mime = "image/png"
                 elif raw.startswith(b"\xff\xd8\xff"):
                     mime = "image/jpeg"
-                elif raw.startswith(b"RIFF") and b"WEBP" in raw[:16]:
+                elif raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
                     mime = "image/webp"
                 else:
                     raise RuntimeError("CONTROL_PLANE_ARTIFACT_MIME_DENIED")
@@ -9330,6 +9606,9 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
         except RuntimeError as error:
             code = _safe_error_code(error, "CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
             pre_effect = code in FILE_READ_PRE_EFFECT_REJECTION_CODES | {
+                "CONTROL_PLANE_ARTIFACT_ACTION_DENIED", "CONTROL_PLANE_ARTIFACT_REQUEST_EXPIRED",
+                "CONTROL_PLANE_ARTIFACT_REPARSE_DENIED", "CONTROL_PLANE_ARTIFACT_TARGET_CHANGED",
+                "CONTROL_PLANE_ARTIFACT_READ_DENIED",
                 "CONTROL_PLANE_ARTIFACT_ALLOWLIST_DENIED", "CONTROL_PLANE_ARTIFACT_MIME_DENIED",
                 "CONTROL_PLANE_ARTIFACT_TOO_LARGE"}
             entry = _record_file_read_receipt(

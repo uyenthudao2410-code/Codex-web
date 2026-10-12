@@ -9,6 +9,7 @@ const path = require('node:path');
 const { parseRuntimeInvocation, resolveRuntime } = require('./recovery_runtime_adapter.cjs');
 
 const MAX_REQUEST_BYTES = 64 * 1024;
+const EXEC_RUN_IPC_TIMEOUT_MS = 330_000;
 
 function bridgeError(code) {
   return Object.assign(new Error(code), { code });
@@ -16,6 +17,60 @@ function bridgeError(code) {
 
 function text(value) {
   return String(value || '').trim();
+}
+
+// This subprocess boundary intentionally repeats the IPC projection checks:
+// packaged adapters must not depend on a development module or emit raw errors.
+function execErrorDetails(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const details = {};
+  const patterns = {
+    native_error_code: /^[A-Z][A-Z0-9_]{1,95}$/,
+    phase: /^(?:provision|start|exec|deprovision)$/,
+    backend_error_code: /^[a-z_]{3,48}$/,
+    command_id: /^[A-Za-z0-9_-][A-Za-z0-9_-]{0,159}$/,
+    job_id: /^[A-Za-z0-9_-][A-Za-z0-9_-]{0,159}$/,
+    job_lifecycle: /^(?:starting|running|spawn_failed|exited|failed|terminated|timed_out|quiesced|orphaned)$/
+  };
+  for (const [key, pattern] of Object.entries(patterns)) {
+    if (typeof value[key] === 'string' && pattern.test(value[key])) details[key] = value[key];
+  }
+  if (Number.isSafeInteger(value.root_pid) && value.root_pid >= 0) details.root_pid = value.root_pid;
+  if (typeof value.execution_started === 'boolean') details.execution_started = value.execution_started;
+  const finished = value.job_finished_at;
+  if (typeof finished === 'string'
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(finished)
+    && Number.isFinite(Date.parse(finished))
+    && new Date(finished).toISOString().slice(0, 19) === finished.slice(0, 19)) {
+    details.job_finished_at = finished;
+  }
+  return Object.keys(details).length ? details : null;
+}
+
+function errorCorrelation(value) {
+  const result = {};
+  for (const key of ['action_id', 'attempt_id', 'task_id']) {
+    if (typeof value?.[key] !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,159}$/.test(value[key])) return null;
+    result[key] = value[key];
+  }
+  if (!Number.isSafeInteger(value.writer_lease_generation) || value.writer_lease_generation < 1) return null;
+  result.writer_lease_generation = value.writer_lease_generation;
+  return result;
+}
+
+function serializeExecBridgeError(error) {
+  const code = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{1,95}$/.test(error.code)
+    ? error.code : 'CONTROL_PLANE_EXEC_FAILED';
+  const result = { code };
+  if (code === 'CONTROL_PLANE_EXEC_MCP_REJECTED' && error.recovery_response_received === true) {
+    const correlation = errorCorrelation(error);
+    if (correlation) {
+      Object.assign(result, correlation, { recovery_response_received: true });
+      const details = execErrorDetails(error.details);
+      if (details) result.details = details;
+    }
+  }
+  return result;
 }
 
 function readRequest(input = process.stdin) {
@@ -130,11 +185,28 @@ async function runExecBridge(request, {
     throw bridgeError('RECOVERY_HOST_INSTALLATION_MISMATCH');
   }
   const client = clientFactory({ paths });
-  const result = await client.call(
-    'runtime.control_plane_exec',
-    [request],
-    requestOptions(descriptor)
-  );
+  let result;
+  try {
+    result = await client.call(
+      'runtime.control_plane_exec',
+      [request],
+      {
+        ...requestOptions(descriptor),
+        // Cold Sandbox setup completes before exec_run can return a job handle.
+        ...(request.operation === 'exec_run' ? { timeout: EXEC_RUN_IPC_TIMEOUT_MS } : {})
+      }
+    );
+  } catch (error) {
+    if (error?.code === 'CONTROL_PLANE_EXEC_MCP_REJECTED' && error.recoveryResponseReceived === true) {
+      const correlation = errorCorrelation(request);
+      const details = execErrorDetails(error.details);
+      throw Object.assign(bridgeError('CONTROL_PLANE_EXEC_MCP_REJECTED'), {
+        ...(correlation ? { ...correlation, recovery_response_received: true } : {}),
+        ...(details ? { details } : {})
+      });
+    }
+    throw error;
+  }
   return normalisedResult(descriptor, result, request, execBridgeModule(runtime, dependencies));
 }
 
@@ -154,7 +226,7 @@ async function main(argv = process.argv.slice(2)) {
 
 if (require.main === module) {
   main().catch((error) => {
-    process.stdout.write(`${JSON.stringify({ ok: false, error: { code: text(error?.code) || 'CONTROL_PLANE_EXEC_FAILED' }})}\n`);
+    process.stdout.write(`${JSON.stringify({ ok: false, error: serializeExecBridgeError(error) })}\n`);
     process.exitCode = 1;
   });
 }
@@ -163,6 +235,7 @@ module.exports = {
   bridgeError,
   readRequest,
   normalisedResult,
+  serializeExecBridgeError,
   runExecBridge,
   runDevelopmentExecBridge
 };

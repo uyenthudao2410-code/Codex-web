@@ -8,6 +8,7 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const zlib = require('node:zlib');
+const { spawnSync } = require('node:child_process');
 
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
 const {
@@ -22,6 +23,38 @@ function listen(server) {
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function assertLocalMcpSchemaAccepts(calls) {
+  // Validate the actual emitted packets with the Python runtime contract.
+  // A permissive mock MCP server otherwise hides rejected bridge arguments.
+  const code = [
+    'import json,sys',
+    'from coding_tools_mcp.tool_schema import validate_arguments',
+    'from coding_tools_mcp.errors import JsonRpcError',
+    'calls=json.load(sys.stdin)',
+    'for call in calls: validate_arguments(call["params"]["name"],call["params"]["arguments"])',
+    'workflow=next(call["params"]["arguments"] for call in calls if call["params"]["name"]=="agent_workflow")',
+    'try:',
+    ' validate_arguments("agent_workflow",dict(workflow,include_diff=False))',
+    'except JsonRpcError as error:',
+    ' assert "include_diff is not a recognized argument" in str(error)',
+    'else:',
+    ' raise AssertionError("Regression fixture must reject the unsupported workflow argument")',
+    'print("BRIDGE_SCHEMA_OK")'
+  ].join('\n');
+  const result = spawnSync(process.execPath, [
+    path.join(__dirname, '..', 'scripts', 'run-python.js'), '-B', '-c', code
+  ], {
+    cwd: path.join(__dirname, '..', 'resources', 'coding-tools-mcp'),
+    input: JSON.stringify(calls),
+    encoding: 'utf8',
+    timeout: 15_000,
+    windowsHide: true
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /BRIDGE_SCHEMA_OK/);
 }
 
 function fixture(t) {
@@ -155,6 +188,117 @@ function approvedPatchWorkflowResult(action, idempotencyKey, {
   };
 }
 
+test('initial verification observes the original background workflow and retains failed proof without another write', async (t) => {
+  const item = fixture(t);
+  const action = admission(item.registeredRoot);
+  action.verification = { argv: ['node', '--test', 'tests/fixture.test.js'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };
+  action.exec_policy_sha256 = 'e'.repeat(64);
+  action.expires_at_ms = Date.now() + 600000;
+  const calls = [];
+  const requestTimeouts = [];
+  const request = http.request;
+  let now = Date.now();
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(http, 'request', function (options, ...argumentsList) {
+    requestTimeouts.push(options.timeout);
+    return Reflect.apply(request, this, [options, ...argumentsList]);
+  });
+  let workflowArguments;
+  const operationId = 'background_opaque_operation';
+  const proof = { plan_sha256: digest(action.verification), proof_status: 'failed', proof_ids: ['4'.repeat(32)], proof_fingerprint: null,
+    command_id: '-original-command', job_id: '_original-job' };
+  const server = http.createServer((request, response) => {
+    const chunks = [];
+    request.on('data', chunk => chunks.push(chunk));
+    request.on('end', () => {
+      assert.equal(request.headers['x-coding-tools-client-id'], BRIDGE_CLIENT_ID);
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      calls.push(body);
+      if (calls.length === 1) return send(response, body.id, { workspace: item.registeredRoot });
+      if (calls.length === 2) {
+        assert.equal(body.params.name, 'agent_workflow');
+        workflowArguments = body.params.arguments;
+        assert.deepEqual(workflowArguments.initial_verification, action.verification);
+        assert.equal(workflowArguments.initial_verification_expires_at_ms, action.expires_at_ms);
+        assert.equal(workflowArguments.verification, 'none');
+        now += 325_000; // Simulate elapsed handoff/setup without a real wait.
+        fs.writeFileSync(item.target, action._after, 'utf8');
+        return send(response, body.id, { status: 'running', background_operation: {
+          operation_id: operationId, tool: 'agent_workflow', workspace: item.registeredRoot, status: 'running' } });
+      }
+      assert.equal(calls.length, 3);
+      assert.equal(body.params.name, 'task_control');
+      assert.equal(body.params.arguments.action, 'operation');
+      assert.equal(body.params.arguments.operation_id, operationId);
+      assert.equal(body.params.arguments.wait_ms, 5_000);
+      assert.equal(body.params.arguments.task_context_id, workflowArguments.task_context_id);
+      const completed = approvedPatchWorkflowResult(action, workflowArguments.idempotency_key);
+      Object.assign(completed.execution, { ok: false, status: 'failed', initial_verification: proof });
+      completed.orchestration.orchestration_state = 'REPLAN';
+      Object.assign(completed.idempotency.summary, { execution_ok: false, execution_status: 'failed', orchestration_state: 'REPLAN',
+        initial_verification: proof, patch_effect: { applied: true, affected_files: [{ path: action.path, operation: 'update' }] } });
+      send(response, body.id, { background_operation: { operation_id: operationId, tool: 'agent_workflow', workspace: item.registeredRoot,
+        status: 'completed', result: { structuredContent: completed } } });
+    });
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });
+  const result = await context.orchestrator.controlPlaneApprovedPatch(action);
+  assert.equal(calls.filter(call => call.params.name === 'agent_workflow').length, 1);
+  assert.equal(result.patch_applied, true);
+  assert.equal(result.local_semantic_acceptance, 'pending');
+  assert.equal(result.initial_verification.proof_status, 'failed');
+  assert.deepEqual(requestTimeouts, [12_000, 330_000, 15_000]);
+  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
+  assert.equal(result.response_sha256, digest({ file: result.file, initial_verification: proof }));
+  assertLocalMcpSchemaAccepts(calls);
+});
+
+test('initial verification expires its original observation budget without another write or poll', async (t) => {
+  const item = fixture(t);
+  const action = admission(item.registeredRoot);
+  action.verification = { argv: ['node', '--test'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };
+  action.exec_policy_sha256 = 'e'.repeat(64);
+  action.expires_at_ms = Date.now() + 600000;
+  let now = Date.now();
+  t.mock.method(Date, 'now', () => now);
+  const calls = [];
+  const server = http.createServer((request, response) => {
+    const chunks = [];
+    request.on('data', chunk => chunks.push(chunk));
+    request.on('end', () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      calls.push(body);
+      if (calls.length === 1) return send(response, body.id, { workspace: item.registeredRoot });
+      assert.equal(body.params.name, 'agent_workflow');
+      assert.equal(calls.length, 2, 'an exhausted budget must not poll or start another workflow');
+      fs.writeFileSync(item.target, action._after, 'utf8');
+      now += 330_001;
+      send(response, body.id, { status: 'running', background_operation: {
+        operation_id: 'background_expired_operation', tool: 'agent_workflow', workspace: item.registeredRoot, status: 'running' } });
+    });
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });
+  await assert.rejects(context.orchestrator.controlPlaneApprovedPatch(action), {
+    code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_UNCONFIRMED'
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls.filter(call => call.params.name === 'agent_workflow').length, 1);
+  assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
+});
+
+test('initial verification cannot write before independent local exec admission', async (t) => {
+  const item = fixture(t);
+  const action = admission(item.registeredRoot);
+  action.verification = { argv: ['node', '--test'], cwd: '', timeout_ms: 60000, max_output_bytes: 32768 };
+  const context = createOrchestrator({ port: 1, globalWorkspace: item.registeredRoot });
+  await assert.rejects(context.orchestrator.controlPlaneApprovedPatch(action), { code: 'CONTROL_PLANE_APPROVED_PATCH_EXEC_POLICY_REQUIRED' });
+  assert.equal(fs.readFileSync(item.target, 'utf8'), 'before\n');
+});
+
 test('approved patch binds the registered root, creates a local RUN/WAVE, and returns only a receipt', async (t) => {
   const item = fixture(t);
   const action = admission(item.registeredRoot);
@@ -192,8 +336,7 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
         path: item.registeredRoot,
         patch: action.patch_envelope,
         dry_run: false,
-        verification: 'none',
-        include_diff: false
+        verification: 'none'
       });
       assert.match(workflowArguments.idempotency_key, /^cpap_[a-f0-9]{56}$/);
       fs.writeFileSync(item.target, action._after, 'utf8');
@@ -206,6 +349,7 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
   const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });
   const result = await context.orchestrator.controlPlaneApprovedPatch(action);
   assert.equal(calls.length, 2);
+  assertLocalMcpSchemaAccepts(calls);
   assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
   assert.equal(result.patch_applied, true);
   assert.equal(result.local_semantic_acceptance, 'pending');

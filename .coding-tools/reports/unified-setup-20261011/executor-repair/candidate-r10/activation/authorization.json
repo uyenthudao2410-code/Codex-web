@@ -1,0 +1,34 @@
+{
+  "kind": "operator_authorized_r10_transition",
+  "approval_received": true,
+  "approval_evidence": "User reply call_8GGm5LuAszEUDuMUjOBPBFFF: Cho phép r10, cập nhật Store và nghiệm thu 60 phút",
+  "candidate_tag": "setup-exec-contract-1011-r10",
+  "profile": "web-mcp-assistant",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "host": "100.116.112.22",
+  "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+  "duration_ms": 3600000,
+  "actions": [
+    "activate_r10",
+    "close_reopen_intake",
+    "renew_read_edit_exec_60m",
+    "metadata_sync",
+    "start_bounded_agent"
+  ],
+  "parity_sha256": "c9f6fe1313b6004519a61bebf3f8f173a74cfd1d563bef48fce87908ed72f57c",
+  "app_asar_sha256": "c39a614d40f551f0ddef4e579bcd8ef5d8d3ad365bbd43e22693df8c1f9672e9",
+  "executable_sha256": "6e34a6705a647aaddda0d24f2152904006a504ab7a29ba516b686c6de29ef09f",
+  "server_operations": {
+    "target": "svhome@100.116.112.22",
+    "service": "codex-control-plane.service",
+    "source_revision": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5",
+    "package_source_sha256": "sha256:83611914241508ad1f5ca96d017902cb6675fa15ea082f3aa4698f7cffe74419",
+    "deploy": true,
+    "restart_service": true,
+    "close_reopen_intake": true,
+    "renew_read_edit_exec_60m": true
+  },
+  "windows_reboot": false,
+  "vm_termination": false,
+  "approval_recorded_at_utc": "2026-10-11T12:33:42Z"
+}

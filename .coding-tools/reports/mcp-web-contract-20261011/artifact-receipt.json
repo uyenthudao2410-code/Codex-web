@@ -1,0 +1,248 @@
+{
+  "archive": "E:\\Github\\Tools-Codex-web\\dist\\control-plane-mcp-web-client-feedback-20261011T080434302090Z\\release\\codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90.tar.gz",
+  "archive_sha256": "e31132a545da55cad564a373c138bb644917c8cbce73e87b724c88dfee6f3b36",
+  "artifact_verification": {
+    "control_plane_schema_version": 28,
+    "file_count": 38,
+    "operation": "control_plane_release_verification",
+    "package_source_sha256": "sha256:acb5ae4713844015e32ee5005001583ae4c04e650c68fb599b22309c65dd2835",
+    "release_name": "codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+    "source_revision": "beaa9d5ade4926ef231e3ec9d0a517fe93830e90"
+  },
+  "base_package_source_sha256": "sha256:fd5132676f1a68e875348fe790c6803c591f65a73311d793194c20a4e70b7d81",
+  "base_revision": "70de202d93c9a759befe5d38491ce54e9ef4b3cd",
+  "captured_at_utc": "2026-10-11T08:12:18.381138+00:00",
+  "commit_changed_files": [
+    ".coding-tools/delivery-snapshot.json",
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/mcp_status.py",
+    "control-plane/control_plane/node_agent.py",
+    "control-plane/tests/test_artifact_node_agent.py",
+    "control-plane/tests/test_file_read_node_agent.py",
+    "control-plane/tests/test_mcp_artifact_relay.py",
+    "control-plane/tests/test_mcp_client_feedback.py",
+    "control-plane/tests/test_mcp_exec.py",
+    "control-plane/tests/test_mcp_exec_http_node_e2e.py",
+    "control-plane/tests/test_mcp_file_read_facade.py",
+    "control-plane/tests/test_mcp_oauth.py",
+    "control-plane/tests/test_mcp_permission_requests.py",
+    "control-plane/tests/test_mcp_private_tunnel_service_facade.py",
+    "control-plane/tests/test_mcp_status.py",
+    "control-plane/tests/test_mcp_status_facade.py",
+    "control-plane/tests/test_mcp_task_sessions.py"
+  ],
+  "deploy_ready_for_operator_review": true,
+  "deployment_performed": false,
+  "full_release_file_changes": [
+    {
+      "candidate": {
+        "path": "DEPLOYMENT.md",
+        "sha256": "85d01340e6c6a41eb8657d5c6ae8ee7cef88b2458a448d02caa3ddf04d94169d",
+        "size_bytes": 3203
+      },
+      "deployed": {
+        "path": "DEPLOYMENT.md",
+        "sha256": "99008bd3351336f49bf7b763cd181153eddf23c90ed622769e1259eb13d8171b",
+        "size_bytes": 3203
+      },
+      "path": "DEPLOYMENT.md"
+    },
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/mcp_facade.py",
+        "sha256": "6e2bbf968bc867ca8e0cd5cc265363b3a65708a242befb0bfca596cf203ebe1c",
+        "size_bytes": 204299
+      },
+      "deployed": {
+        "path": "control-plane/control_plane/mcp_facade.py",
+        "sha256": "3cf3bca4f03deb294b9752cce23942ab5524ba4016055dac30f02148c2f511c8",
+        "size_bytes": 195017
+      },
+      "path": "control-plane/control_plane/mcp_facade.py"
+    },
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/mcp_status.py",
+        "sha256": "a6cda1ac365d611e260f974a914e48b2f55784e4fbda8e66f310a8217b791aea",
+        "size_bytes": 2223
+      },
+      "deployed": null,
+      "path": "control-plane/control_plane/mcp_status.py"
+    },
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/node_agent.py",
+        "sha256": "4dadefb805358dc8ac2dc0efdba2a1cd6aeeb7bdded125b75577bcac68fe7cc9",
+        "size_bytes": 462484
+      },
+      "deployed": {
+        "path": "control-plane/control_plane/node_agent.py",
+        "sha256": "edda63dc462fba0a07f6b7fce5352ca5b61e24fb1271024d2074ff567116725e",
+        "size_bytes": 458439
+      },
+      "path": "control-plane/control_plane/node_agent.py"
+    }
+  ],
+  "isolated_branch": "codex/mcp-web-client-feedback",
+  "isolated_release_source_clean": true,
+  "isolated_runtime_evidence_status": [],
+  "isolated_source_directory": "E:\\Github\\Tools-Codex-web\\dist\\control-plane-mcp-web-client-feedback-20261011T080434302090Z\\source",
+  "main_head_and_index_preserved": true,
+  "operation": "isolated_mcp_web_client_feedback_release_preparation",
+  "package_source_sha256": "sha256:acb5ae4713844015e32ee5005001583ae4c04e650c68fb599b22309c65dd2835",
+  "primary_identity": {
+    "branch": "main",
+    "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "index_entries_sha256": "d5917fd0d147de6507a3207e0e8888ee7b27888dba8a60d11be11da51cd0923e",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "push_or_public_release": false,
+  "release_directory": "E:\\Github\\Tools-Codex-web\\dist\\control-plane-mcp-web-client-feedback-20261011T080434302090Z\\release\\codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+  "remote_mutations": false,
+  "review_archive": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\mcp-web-contract-20261011\\codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90.tar.gz",
+  "review_archive_sha256": "e31132a545da55cad564a373c138bb644917c8cbce73e87b724c88dfee6f3b36",
+  "review_manifest": "E:\\Github\\Tools-Codex-web\\.coding-tools\\reports\\mcp-web-contract-20261011\\candidate-release-manifest.json",
+  "runtime_and_deploy_file_changes": [
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/mcp_facade.py",
+        "sha256": "6e2bbf968bc867ca8e0cd5cc265363b3a65708a242befb0bfca596cf203ebe1c",
+        "size_bytes": 204299
+      },
+      "deployed": {
+        "path": "control-plane/control_plane/mcp_facade.py",
+        "sha256": "3cf3bca4f03deb294b9752cce23942ab5524ba4016055dac30f02148c2f511c8",
+        "size_bytes": 195017
+      },
+      "path": "control-plane/control_plane/mcp_facade.py"
+    },
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/mcp_status.py",
+        "sha256": "a6cda1ac365d611e260f974a914e48b2f55784e4fbda8e66f310a8217b791aea",
+        "size_bytes": 2223
+      },
+      "deployed": null,
+      "path": "control-plane/control_plane/mcp_status.py"
+    },
+    {
+      "candidate": {
+        "path": "control-plane/control_plane/node_agent.py",
+        "sha256": "4dadefb805358dc8ac2dc0efdba2a1cd6aeeb7bdded125b75577bcac68fe7cc9",
+        "size_bytes": 462484
+      },
+      "deployed": {
+        "path": "control-plane/control_plane/node_agent.py",
+        "sha256": "edda63dc462fba0a07f6b7fce5352ca5b61e24fb1271024d2074ff567116725e",
+        "size_bytes": 458439
+      },
+      "path": "control-plane/control_plane/node_agent.py"
+    }
+  ],
+  "service_operations": false,
+  "source_changes": [
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/node_agent.py",
+    "control-plane/control_plane/mcp_status.py",
+    "control-plane/tests/test_mcp_client_feedback.py",
+    "control-plane/tests/test_mcp_status.py",
+    "control-plane/tests/test_artifact_node_agent.py",
+    "control-plane/tests/test_mcp_status_facade.py",
+    "control-plane/tests/test_mcp_artifact_relay.py",
+    "control-plane/tests/test_mcp_file_read_facade.py",
+    "control-plane/tests/test_file_read_node_agent.py",
+    "control-plane/tests/test_mcp_exec.py",
+    "control-plane/tests/test_mcp_permission_requests.py",
+    "control-plane/tests/test_mcp_task_sessions.py",
+    "control-plane/tests/test_mcp_private_tunnel_service_facade.py",
+    "control-plane/tests/test_mcp_oauth.py",
+    "control-plane/tests/test_mcp_exec_http_node_e2e.py"
+  ],
+  "source_inputs": [
+    {
+      "path": "control-plane/control_plane/mcp_facade.py",
+      "sha256": "6e2bbf968bc867ca8e0cd5cc265363b3a65708a242befb0bfca596cf203ebe1c",
+      "size_bytes": 204299
+    },
+    {
+      "path": "control-plane/control_plane/node_agent.py",
+      "sha256": "4dadefb805358dc8ac2dc0efdba2a1cd6aeeb7bdded125b75577bcac68fe7cc9",
+      "size_bytes": 462484
+    },
+    {
+      "path": "control-plane/control_plane/mcp_status.py",
+      "sha256": "a6cda1ac365d611e260f974a914e48b2f55784e4fbda8e66f310a8217b791aea",
+      "size_bytes": 2223
+    },
+    {
+      "path": "control-plane/tests/test_mcp_client_feedback.py",
+      "sha256": "73568800e481782cc4cdcaab081318c3819f46557efd13660306b19217c8dde7",
+      "size_bytes": 13218
+    },
+    {
+      "path": "control-plane/tests/test_mcp_status.py",
+      "sha256": "f4acaa298bc21f478aeec124b9fb0ff6ae6747deca7cdbdabca235c8174b28b5",
+      "size_bytes": 5894
+    },
+    {
+      "path": "control-plane/tests/test_artifact_node_agent.py",
+      "sha256": "e727ff3a126da494bd4f7098746197e35d268e80a51b97b10d0dff431e104557",
+      "size_bytes": 15686
+    },
+    {
+      "path": "control-plane/tests/test_mcp_status_facade.py",
+      "sha256": "42e456a24bf7394c25d02951a6d9da61239ff23f9df257c5fdac835659e54af5",
+      "size_bytes": 5847
+    },
+    {
+      "path": "control-plane/tests/test_mcp_artifact_relay.py",
+      "sha256": "dc7db6d558268e7b38483d32b4c918aa75fef9b752b02a62dcfe9cc8a933e1bf",
+      "size_bytes": 2725
+    },
+    {
+      "path": "control-plane/tests/test_mcp_file_read_facade.py",
+      "sha256": "02540250d798b1bd1f681d6cfca8849f8f4074cd4eeb921037fb5855ead324cf",
+      "size_bytes": 13095
+    },
+    {
+      "path": "control-plane/tests/test_file_read_node_agent.py",
+      "sha256": "ac31f5d02dab5c5eda8c49d63c7640c22e193f0b7b6afaa34343c188adf3ebe6",
+      "size_bytes": 25440
+    },
+    {
+      "path": "control-plane/tests/test_mcp_exec.py",
+      "sha256": "f88e16423954eb895ae35477c9dc86893a019b9a5737867459997dbbd55cbacc",
+      "size_bytes": 19347
+    },
+    {
+      "path": "control-plane/tests/test_mcp_permission_requests.py",
+      "sha256": "e50912cd7b1481a30534c75cbf097f4c0a70f6ac7ff6c74333e0ee3002e090f3",
+      "size_bytes": 21373
+    },
+    {
+      "path": "control-plane/tests/test_mcp_task_sessions.py",
+      "sha256": "aa9f530b0c80d2a98da5b1faaae9711a7e6f4a0066c4587d4eb7c8ae604b3a90",
+      "size_bytes": 40326
+    },
+    {
+      "path": "control-plane/tests/test_mcp_private_tunnel_service_facade.py",
+      "sha256": "3bf01a72d8607591f040101053913bd8f4b195da84121e6ce4c2e6c9c4a6c410",
+      "size_bytes": 10718
+    },
+    {
+      "path": "control-plane/tests/test_mcp_oauth.py",
+      "sha256": "f1e917e1878047c545a987e3543327701c98a1b918dc6b4b2c20a92971b0d726",
+      "size_bytes": 106023
+    },
+    {
+      "path": "control-plane/tests/test_mcp_exec_http_node_e2e.py",
+      "sha256": "43d348154d3253a8845e600dc142d70d40bb8f649cab18d732c5d63d4809e36b",
+      "size_bytes": 83087
+    }
+  ],
+  "source_inputs_sha256": "acf5cf0ba533be0dfb1a14111598a748c8c1bd1e4e1c554bf76dede6cc962d83",
+  "source_revision": "beaa9d5ade4926ef231e3ec9d0a517fe93830e90",
+  "source_snapshot_matches_primary_after_build": true,
+  "unchanged_release_file_count": 34,
+  "validation_scope": "unchanged strict clean-source builder and release verifier; focused behavioral proofs owned by parent"
+}

@@ -1,0 +1,56 @@
+{
+  "kind": "r13_windows_transition_rotated_pilot_offline_proof",
+  "observed_at": "2026-10-11T20:16:17.600Z",
+  "runtime_activated": false,
+  "server_mutated": false,
+  "policy_mutated": false,
+  "approval_received": false,
+  "guard_tests_passed": 9,
+  "guard_result_reused_from_exact_helper_hashes": true,
+  "node_syntax": "passed",
+  "windows_powershell_parse_errors": 0,
+  "query_job_compile_only": "passed",
+  "matched_candidate_payload_files": 17,
+  "matched_lifecycle_dependencies": 6,
+  "source_freeze_sha256": "e9351a360eaa7c016514015a27ea06c762604e12c2a5ca436a550abbf09f29ff",
+  "candidate_parity_sha256": "7c2c60851359f619472bbfafb649529b3eaae90ee6a4626a724c401b91323b88",
+  "helper_manifest_sha256": "7f47e04e82d2868306a801b27b4099b3de4e37641e463577331c682ebac6068e",
+  "helper_files": [
+    {
+      "sha256": "8b376db45d4be9669edcc8278b6411da899497469e8f6d4b70f7b9662876d4d0",
+      "file": "transition-r13.cjs"
+    },
+    {
+      "sha256": "376e251067bf3d3e3345fe770a2fc02e9d5f9cf0a6e01fddb17da216cabdfc6e",
+      "file": "launch-child.ps1"
+    },
+    {
+      "sha256": "5c957000e82f816b0ba7754e816503f364ec035ff0fe55ae914f28d843599144",
+      "file": "query-job.py"
+    },
+    {
+      "sha256": "43a3db921569ddc98246206ea7420e103a4047a34edffe608640960ecb3791f7",
+      "file": "offline-check.cjs"
+    },
+    {
+      "sha256": "0138c6c198c4413c7316dd7b20b714e564ff77e7a038eca6e8bbb6fdad450617",
+      "file": "README.md"
+    },
+    {
+      "sha256": "afb9e4828aa67224e8c7dda82c63cf47f3841448a59b2dae629e915a578f96cf",
+      "file": "verify-packet.cjs"
+    }
+  ],
+  "preserved_authority_window": {
+    "context_id": "ctx_d7a539dd85264a62951fddad0ffa2f23",
+    "requested_at_ms": 1791747735200,
+    "expires_at_ms": 1791751335200
+  },
+  "predecessor_pilot_id": "pilot_98c0b502568a4f888b3106838004c117",
+  "expected_operation": "owner_approved_r13_same_window_pilot_rotation",
+  "expected_approval_id": "r13-same-window-transition",
+  "replacement_pilot_created_before_activation_required": true,
+  "minimum_remaining_ms": 720000,
+  "server_pause_count_allowed": 1,
+  "original_r12_receipt_preserved_and_rejected_for_r13_effects": true
+}

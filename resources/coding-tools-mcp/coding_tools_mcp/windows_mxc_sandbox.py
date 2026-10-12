@@ -696,11 +696,13 @@ def build_mxc_invocation(
             # current directory when the selected workspace is on a non-system
             # volume. A one-run CWD junction keeps relative operations on the
             # registered workspace while giving descendants a system-drive path.
+            # Mirror the workspace root, not only cwd, so parent-relative paths
+            # from a nested working directory stay in the registered workspace.
             cwd_alias_root = Path(tempfile.mkdtemp(
                 prefix="codex-mxc-cwd-", dir=system_root.anchor,
             )).resolve(strict=True)
             cwd_alias_path = cwd_alias_root / "workspace"
-            _create_directory_junction(cwd_alias_path, cwd)
+            _create_directory_junction(cwd_alias_path, root)
         readonly_paths, denied_paths = _build_path_fence(
             root, roots,
             extra_write_roots=[cwd_alias_path] if cwd_alias_path is not None else [],
@@ -783,7 +785,7 @@ def _build_mxc_invocation_with_scratch(
             "lifecycle": {"destroyOnExit": True, "preservePolicy": False},
             "process": {
                 "commandLine": sandbox_command,
-                "cwd": str(cwd_alias_path or cwd),
+                "cwd": str(cwd_alias_path / cwd.relative_to(root) if cwd_alias_path is not None else cwd),
                 "env": process_environment,
                 "timeout": timeout_ms,
             },
@@ -802,14 +804,10 @@ def _build_mxc_invocation_with_scratch(
             },
             "ui": {"disable": False, "clipboard": "none", "injection": False},
         }
-        encoded = base64.b64encode(
-            json.dumps(config, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
-        ).decode("ascii")
-        if len(encoded) > MAX_MXC_CONFIG_ARGUMENT_CHARS:
-            raise _failure("SANDBOX_CONFIGURATION_TOO_LARGE", "The bounded sandbox configuration exceeds the Windows command-line limit.")
+        config_arguments = _mxc_config_arguments(config, scratch)
         host_environment = _minimal_host_environment(executor, system_root)
         return MxcInvocation(
-            argv=(str(executor), "--experimental", "--config-base64", encoded),
+            argv=(str(executor), "--experimental", *config_arguments),
             environment=host_environment,
             scratch_directory=scratch,
             workspace_root=root,
@@ -820,6 +818,62 @@ def _build_mxc_invocation_with_scratch(
     except Exception:
         cleanup_mxc_scratch(root, scratch)
         raise
+
+
+def _mxc_config_arguments(config: dict[str, Any], scratch: Path) -> tuple[str, str]:
+    """Choose a bounded argv transport for a validated MXC config.
+
+    Small configurations remain inline for compatibility.  Large policies can
+    contain many explicit deny paths (for example, a busy developer volume),
+    so passing their Base64 form through Windows argv is not reliable.  In that
+    case write the exact same JSON to a fresh file inside the per-run scratch
+    directory and ask wxc-exec to load it from there.  The scratch directory is
+    already part of the selected workspace's write grant and is removed by the
+    normal invocation cleanup path.
+    """
+
+    serialized = json.dumps(
+        config,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    encoded = base64.b64encode(serialized).decode("ascii")
+    if len(encoded) <= MAX_MXC_CONFIG_ARGUMENT_CHARS:
+        return "--config-base64", encoded
+
+    config_fd: int | None = None
+    config_path: Path | None = None
+    try:
+        config_fd, raw_path = tempfile.mkstemp(
+            prefix=".mxc-config-",
+            suffix=".json",
+            dir=str(scratch),
+        )
+        config_path = Path(raw_path).absolute()
+        with os.fdopen(config_fd, "wb") as stream:
+            config_fd = None
+            stream.write(serialized)
+            stream.flush()
+            os.fsync(stream.fileno())
+        metadata = config_path.lstat()
+        if (
+            stat.S_ISLNK(metadata.st_mode)
+            or bool(getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+            or not stat.S_ISREG(metadata.st_mode)
+        ):
+            raise _failure("SANDBOX_CONFIGURATION_UNAVAILABLE", "The bounded sandbox configuration file is not a regular local file.")
+        return "--config", str(config_path)
+    except ToolFailure:
+        raise
+    except OSError as error:
+        raise _failure("SANDBOX_CONFIGURATION_UNAVAILABLE", "The bounded sandbox configuration could not be written to its private scratch directory.") from error
+    finally:
+        if config_fd is not None:
+            try:
+                os.close(config_fd)
+            except OSError:
+                pass
 
 
 def cleanup_mxc_scratch(workspace_root: Path, scratch_directory: Path) -> bool:

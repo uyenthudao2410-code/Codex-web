@@ -478,7 +478,7 @@ class GitToolsMixin:
             "warnings": warnings,
         }
 
-    def git_status(self, args: dict[str, Any]) -> dict[str, Any]:
+    def git_status(self, args: dict[str, Any], *, source_identity_only: bool = False) -> dict[str, Any]:
         resolved = self.resolve_existing(str(args.get("path", ".")))
         max_entries = int(args.get("max_entries", 1000))
         include_untracked = bool(args.get("include_untracked", True))
@@ -491,6 +491,11 @@ class GitToolsMixin:
             return self._git_status_not_repo(root_check)
         status_cmd = [git, "-C", str(resolved.path), "status", "--porcelain=v1", "-z", "-b"]
         status_cmd.append("--untracked-files=all" if include_untracked else "--untracked-files=no")
+        if source_identity_only:
+            # Exclude retained runtime evidence before the exact-source entry bound.
+            # Rooted pathspecs preserve repository-wide status from a subdirectory.
+            exclude = "top,exclude,icase" if os.name == "nt" else "top,exclude"
+            status_cmd.extend(["--", ":(top)**", f":({exclude}).coding-tools", f":({exclude}).coding-tools/**"])
         completed = self._run_git_bytes(status_cmd, timeout=10, env=git_env)
         if completed.returncode != 0:
             message = completed.stderr.decode("utf-8", errors="replace").strip()

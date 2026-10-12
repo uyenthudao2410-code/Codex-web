@@ -18,6 +18,8 @@ from control_plane.store import (
     ConflictError,
     ControlPlaneStore,
     MCP_TASK_WRITER_LEASE_TTL_MS,
+    NotFoundError,
+    PermissionError,
 )
 from control_plane.mcp_facade import ControlPlaneMcpFacade
 
@@ -150,11 +152,16 @@ class McpTaskSessionTests(unittest.TestCase):
         )
         self.assertEqual(first["state"], "held")
         self.assertEqual(first["lease_generation"], 1)
+        self.now += MCP_TASK_WRITER_LEASE_TTL_MS // 2
         renewed = self.store.claim_mcp_task_writer_lease(
             owner_id=owner, principal_id=principal, task_id=task_a["task_id"]
         )
         self.assertTrue(renewed["replayed"])
         self.assertEqual(renewed["lease_generation"], first["lease_generation"])
+        self.assertGreater(renewed["expires_at_ms"], first["expires_at_ms"])
+        self.assertEqual(renewed["expires_at_ms"], self.now + MCP_TASK_WRITER_LEASE_TTL_MS)
+        self.now = first["expires_at_ms"] + 1
+        self.assertLess(self.now, renewed["expires_at_ms"])
         with self.assertRaises(ConflictError):
             self.store.claim_mcp_task_writer_lease(
                 owner_id=owner, principal_id=principal, task_id=task_b["task_id"]
@@ -328,9 +335,8 @@ class McpTaskSessionTests(unittest.TestCase):
                 (self.now, intent["action_id"]),
             )
             connection.commit()
-        accepted = self.store.record_mcp_patch_acceptance(
+        accepted = self.store.record_owner_mcp_patch_acceptance(
             owner_id=owner,
-            principal_id=principal,
             action_id=intent["action_id"],
             decision="accepted",
             note="verified diff locally",
@@ -346,6 +352,89 @@ class McpTaskSessionTests(unittest.TestCase):
         stored = self.store.get_mcp_patch_acceptance(owner_id=owner, action_id=intent["action_id"])
         assert stored is not None
         self.assertEqual(stored["decision"], "accepted")
+
+    def test_owner_standing_patch_acceptance_resolves_intent_and_preserves_gates(self) -> None:
+        import base64
+        import hashlib
+        import sqlite3
+        import zlib
+
+        owner = "owner-default"
+        principal = self._principal(owner_id=owner, subject="standing-accept")["principal_id"]
+        self._principal(owner_id=owner, subject="other-standing-accept")
+        binding = self._target(owner_id=owner, suffix="standing-accept")
+        task = self.store.create_mcp_task_session(
+            owner_id=owner, principal_id=principal, binding_id=binding["binding_id"], label="Standing acceptance"
+        )
+        self.store.claim_mcp_task_writer_lease(owner_id=owner, principal_id=principal, task_id=task["task_id"])
+        preimage = hashlib.sha256(b"old\n").hexdigest()
+        new_content = b"new\n"
+        postimage = hashlib.sha256(new_content).hexdigest()
+        payload = base64.b64encode(zlib.compress(new_content)).decode("ascii")
+        envelope = "\n".join((
+            "*** Begin Patch",
+            "*** Write Exact File: notes/app.txt",
+            f"@@ encoding=zlib-base64 preimage_sha256={preimage} postimage_sha256={postimage}",
+            f"+{payload}",
+            "*** End Patch",
+            "",
+        ))
+        intent = self.store.request_mcp_standing_patch(
+            owner_id=owner,
+            principal_id=principal,
+            binding_id=binding["binding_id"],
+            path="notes/app.txt",
+            preimage_sha256=preimage,
+            patch_sha256=hashlib.sha256(envelope.encode("utf-8")).hexdigest(),
+            validation_profile="targeted",
+            patch_envelope=envelope,
+            idempotency_key="owner-standing-accept-001",
+            facade_contract=self._facade(schema_version=31, profile="control-plane-oauth-standing-write-v1"),
+            task_id=task["task_id"],
+        )
+        action_id = intent["action_id"]
+        with self.assertRaisesRegex(ConflictError, "completed receipt"):
+            self.store.record_owner_mcp_patch_acceptance(owner_id=owner, action_id=action_id, decision="accepted")
+
+        # Receipt payload verification belongs to the facade relay. Here the
+        # isolated durable fixture exercises the owner acceptance gates.
+        with closing(sqlite3.connect(self.store.path)) as connection:
+            connection.execute(
+                "INSERT INTO receipts(receipt_id, action_id, device_id, local_handle, receipt_state, payload_json, receipt_digest, received_at_ms)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ("rcpt_standing_unknown", action_id, binding["device_id"], "", "unknown", "{}", "e" * 64, self.now),
+            )
+            connection.execute("UPDATE actions SET delivery_state = 'reconcile_required' WHERE action_id = ?", (action_id,))
+            connection.commit()
+        with self.assertRaisesRegex(ConflictError, "unknown-effect"):
+            self.store.record_owner_mcp_patch_acceptance(owner_id=owner, action_id=action_id, decision="accepted")
+        with closing(sqlite3.connect(self.store.path)) as connection:
+            connection.execute(
+                "INSERT INTO receipts(receipt_id, action_id, device_id, local_handle, receipt_state, payload_json, receipt_digest, received_at_ms)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ("rcpt_standing_completed", action_id, binding["device_id"], "cp_standing_handle", "completed", "{}", "f" * 64, self.now + 1),
+            )
+            connection.execute(
+                "UPDATE actions SET delivery_state = 'settled', settled_at_ms = ? WHERE action_id = ?", (self.now + 1, action_id)
+            )
+            connection.commit()
+        self.store.close_mcp_task_session(owner_id=owner, principal_id=principal, task_id=task["task_id"])
+        with self.assertRaises(NotFoundError):
+            self.store.record_owner_mcp_patch_acceptance(owner_id="owner-other", action_id=action_id, decision="accepted")
+        accepted = self.store.record_owner_mcp_patch_acceptance(
+            owner_id=owner, action_id=action_id, decision="accepted", note="verified standing result"
+        )
+        self.assertEqual(accepted["principal_id"], principal)
+        self.assertEqual(accepted["owner_id"], owner)
+        self.assertEqual(accepted["decision"], "accepted")
+        self.assertEqual(
+            self.store.record_owner_mcp_patch_acceptance(owner_id=owner, action_id=action_id, decision="accepted"), accepted
+        )
+        with self.assertRaises(ConflictError):
+            self.store.record_owner_mcp_patch_acceptance(owner_id=owner, action_id=action_id, decision="rejected")
+        self.store.revoke_oauth_principal(owner_id=owner, principal_id=principal)
+        with self.assertRaises(PermissionError):
+            self.store.record_owner_mcp_patch_acceptance(owner_id=owner, action_id=action_id, decision="accepted")
 
     def test_unknown_effect_blocks_acceptance_until_reconciled(self) -> None:
         import sqlite3
@@ -467,7 +556,8 @@ class McpTaskFacadeTests(unittest.TestCase):
             "expected_facade_contract": self._contract(),
             "task_id": task_id,
         })
-        self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+        self.assertTrue(rejected["result"]["isError"])
+        self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONFLICT")
 
     def test_task_control_observes_and_handoffs_writer_lease(self) -> None:
         by_name = {tool["name"]: tool for tool in self.facade.contract["tools"]}
@@ -500,7 +590,8 @@ class McpTaskFacadeTests(unittest.TestCase):
             {"operation": "writer_claim", "task_id": task_id, "reason": "not allowed here"},
             tool="task_control",
         )
-        self.assertEqual(claimed_with_reason["error"]["code"], -32602)
+        self.assertTrue(claimed_with_reason["result"]["isError"])
+        self.assertEqual(claimed_with_reason["result"]["structuredContent"]["code"], "VALIDATION_ERROR")
         claimed = self._call(
             {"operation": "writer_claim", "task_id": task_id},
             tool="task_control",
@@ -658,7 +749,8 @@ class McpTaskFacadeTests(unittest.TestCase):
             granted_context_id=None,
             oauth_scopes=frozenset({"control-plane.inventory", "control-plane.patch"}),
         )
-        self.assertEqual(denied["error"]["data"]["code"], "CONFLICT")
+        self.assertTrue(denied["result"]["isError"])
+        self.assertEqual(denied["result"]["structuredContent"]["code"], "CONFLICT")
 
     def test_standing_document_create_is_durable_and_does_not_put_content_in_action_payload(self) -> None:
         """Central admission pins document writes without making the facade a file writer."""

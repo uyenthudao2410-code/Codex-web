@@ -417,6 +417,16 @@ test('central executor replaces a registered workspace generation only through e
   assert.equal(args.includes('must-not-reach-agent'), false);
   assert.deepEqual(options.env, { PATH: '/safe/path' });
   assert.equal(JSON.stringify(receipt).includes(workspace), false);
+  const selectedReceipt = await service.replaceWorkspace({
+    workspaceId, workspaceGeneration,
+    capabilities: { read: true, write: true, exec: true }
+  });
+  assert.deepEqual(selectedReceipt, receipt);
+  assert.equal(calls.length, 2);
+  const selectedArgs = calls[1][1];
+  assert.equal(selectedArgs[selectedArgs.indexOf('--workspace-path') + 1], fs.realpathSync.native(workspace));
+  assert.equal(selectedArgs[selectedArgs.indexOf('--expected-workspace-id') + 1], workspaceId);
+  assert.equal(selectedArgs[selectedArgs.indexOf('--expected-workspace-generation') + 1], workspaceGeneration);
   await assert.rejects(
     service.replaceWorkspace({
       workspacePath: workspace,
@@ -425,7 +435,15 @@ test('central executor replaces a registered workspace generation only through e
     }),
     { code: 'CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH' }
   );
-  assert.equal(calls.length, 1, 'wrong row must not invoke the node agent');
+  await assert.rejects(
+    service.replaceWorkspace({
+      workspaceId,
+      workspaceGeneration: 'generation_ffffffffffffffffffffffffffffffff',
+      capabilities: { read: true, write: true, exec: true }
+    }),
+    { code: 'CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH' }
+  );
+  assert.equal(calls.length, 2, 'wrong row or stale generation must not invoke the node agent');
   assert.throws(
     () => parseWorkspaceReplacementResult(JSON.stringify({
       workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
@@ -436,6 +454,39 @@ test('central executor replaces a registered workspace generation only through e
     })),
     { code: 'CONTROL_PLANE_WORKSPACE_REPLACE_OUTPUT_INVALID' }
   );
+});
+
+test('workspace row replacement refuses local root drift before invoking the node agent', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-workspace-replace-drift-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, 'fixture-workspace');
+  const movedWorkspace = path.join(root, 'moved-workspace');
+  const otherWorkspace = path.join(root, 'other-workspace');
+  fs.mkdirSync(workspace);
+  fs.mkdirSync(otherWorkspace);
+  const workspaceId = 'workspace_0123456789abcdef0123456789abcdef';
+  const workspaceGeneration = 'generation_abcdef0123456789abcdef0123456789';
+  fs.writeFileSync(path.join(root, 'control-plane-workspaces.json'), JSON.stringify({
+    schema_version: 1,
+    entries: [{
+      workspace_id: workspaceId, workspace_generation: workspaceGeneration,
+      canonical_path: fs.realpathSync.native(workspace), display_name: 'fixture-workspace',
+      capabilities: { read: true, write: false, exec: false }, created_at_ms: Date.now()
+    }]
+  }));
+  fs.renameSync(workspace, movedWorkspace);
+  fs.symlinkSync(otherWorkspace, workspace, process.platform === 'win32' ? 'junction' : 'dir');
+  let calls = 0;
+  const service = new ControlPlaneEnrollmentService({
+    paths: fixturePaths(root),
+    runner: async () => { calls += 1; throw new Error('unexpected agent invocation'); }
+  });
+  await assert.rejects(
+    service.replaceWorkspace({ workspaceId, workspaceGeneration,
+      capabilities: { read: true, write: true, exec: true } }),
+    { code: 'CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH' }
+  );
+  assert.equal(calls, 0);
 });
 
 test('workspace capability input is exact, boolean-only, and always requires read', () => {

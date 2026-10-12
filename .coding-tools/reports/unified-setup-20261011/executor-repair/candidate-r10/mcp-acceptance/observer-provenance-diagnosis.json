@@ -1,0 +1,26 @@
+{
+  "phase": "observer_provenance_diagnosis",
+  "read_only": true,
+  "files": {
+    "archive": {
+      "ok": false,
+      "code": "ENOENT"
+    },
+    "executable": {
+      "ok": true,
+      "sha256": "6e34a6705a647aaddda0d24f2152904006a504ab7a29ba516b686c6de29ef09f"
+    },
+    "parity": {
+      "ok": true,
+      "sha256": "c9f6fe1313b6004519a61bebf3f8f173a74cfd1d563bef48fce87908ed72f57c"
+    },
+    "freeze": {
+      "ok": true,
+      "sha256": "030893e3e3f056debb1ee8b4213e4b4c1ae0fdb28af63ba8313567a3e231049f"
+    }
+  },
+  "git": {
+    "ok": true,
+    "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "phase": "r14_context_guard_correction_focused_independent_review",
+  "status": "READY",
+  "reviewer": "/root/initial_proof_server/next_canary_review",
+  "manifest_sha256": "5ef952eb8ffcf3da8301df6c27359e080ad8c05e9fb67291d10519a77d83dd41",
+  "helper_sha256": "61b625adc8c707632d2f4d5ff2b9b07ee9fe654b90402513348aadb8b23ba896",
+  "driver_sha256": "30407f4c13434803b08bc10fd2ca3b5d28a7ed689fef3796e6b86d3c41c309d4",
+  "test_sha256": "6f9ef4b108c0873ab3694930ab52138aea780b514d9c78bf2f4be8419b002a8c",
+  "actual_census_proves_pre_effect_selector_failure": true,
+  "exact_live_context_and_original_expiry_required": true,
+  "historical_rows_and_original_failed_intent_preserved": true,
+  "fresh_exclusive_sibling_intent_required": true,
+  "same_authority_scope": true,
+  "remaining_concrete_blockers": [],
+  "external_effects_performed_by_review": false,
+  "live_transition_or_canary_proven_by_review": false
+}

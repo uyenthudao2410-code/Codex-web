@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -16,6 +18,7 @@ from unittest import mock
 from control_plane.node_agent import (
     _admit_exec_policy_request,
     _exec_bridge_request,
+    _exec_control_request,
     _exec_allowlist_match,
     _exec_argv_item,
     _exec_journal_key,
@@ -25,12 +28,14 @@ from control_plane.node_agent import (
     _read_exec_journal,
     _record_exec_receipt,
     _run_bounded_exec,
+    _safe_exec_bridge_result,
     _write_json_atomic,
     disable_exec_policy,
     install_exec_policy,
     inspect_exec_policy,
     main,
     poll_exec_once,
+    recovery_exec_bridge,
 )
 
 FACADE = {"schema_version": 14, "profile": "control-plane-oauth-bounded-exec-v1", "sha256": "f" * 64}
@@ -127,6 +132,55 @@ class BoundedRunnerTests(unittest.TestCase):
         self.assertIn(";rm", result["stdout"])
 
 
+class RecoveryExecBridgeTimeoutTests(unittest.TestCase):
+    def test_cold_start_budget_is_only_used_for_initial_exec(self) -> None:
+        args = SimpleNamespace(timeout_seconds=17)
+        for operation, expected_timeout in (("exec_run", 360), ("exec_poll", 17), ("exec_stop", 17)):
+            with self.subTest(operation=operation), \
+                 mock.patch("control_plane.node_agent._adapter_command", return_value=(["node", "bridge"], {})), \
+                 mock.patch("control_plane.node_agent.subprocess.run", return_value=SimpleNamespace(
+                     returncode=0, stdout=b'{"ok":true,"result":{"status":"running"}}')) as run:
+                result, error = recovery_exec_bridge(args, Path(__file__).parent, {"operation": operation})
+                self.assertIsNone(error)
+                self.assertEqual(result, {"status": "running"})
+                self.assertEqual(run.call_args.kwargs["timeout"], expected_timeout)
+                self.assertTrue(run.call_args.kwargs["capture_output"])
+
+    def test_cold_start_timeout_keeps_the_typed_unknown_effect_boundary(self) -> None:
+        with mock.patch("control_plane.node_agent._adapter_command", return_value=(["node", "bridge"], {})), \
+             mock.patch("control_plane.node_agent.subprocess.run", side_effect=subprocess.TimeoutExpired("node", 360)):
+            result, error = recovery_exec_bridge(SimpleNamespace(timeout_seconds=17), Path(__file__).parent,
+                                                 {"operation": "exec_run"})
+        self.assertIsNone(result)
+        self.assertEqual(error, "CONTROL_PLANE_EXEC_TIMEOUT")
+
+    def test_bridge_keeps_only_typed_native_diagnostics_and_authenticated_correlation(self) -> None:
+        finished = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        error = {
+            "code": "CONTROL_PLANE_EXEC_MCP_REJECTED",
+            "recovery_response_received": True,
+            "action_id": "act-exec-node-0001", "attempt_id": "try-exec-node-0001",
+            "task_id": "task_" + "a" * 32, "writer_lease_generation": 1,
+            "message": "private runtime message",
+            "details": {
+                "native_error_code": "SANDBOX_STATE_PHASE_FAILED", "phase": "state",
+                "backend_error_code": "MXC_STATE_PHASE_FAILED",
+                "command_id": "-4hBa9tkNAYi4ngWamUIO4Ba", "job_id": "job-exec-0001",
+                "job_lifecycle": "spawn_failed", "root_pid": 0, "execution_started": False,
+                "job_finished_at": finished, "path": "private/path", "stdout": "private output",
+            },
+        }
+        with mock.patch("control_plane.node_agent._adapter_command", return_value=(["node", "bridge"], {})), \
+             mock.patch("control_plane.node_agent.subprocess.run", return_value=SimpleNamespace(
+                 returncode=1, stdout=json.dumps({"ok": False, "error": error}).encode())):
+            result, diagnostic = recovery_exec_bridge(SimpleNamespace(timeout_seconds=17), Path(__file__).parent,
+                                                       {"operation": "exec_run"})
+        self.assertIsNone(result)
+        self.assertEqual(diagnostic, {field: value for field, value in error.items() if field != "message"} | {
+            "details": {field: value for field, value in error["details"].items() if field not in {"path", "stdout"}}
+        })
+
+
 class ExecNodeReceiptTests(unittest.TestCase):
     """The disabled exec lane still must preserve its no-replay boundary."""
 
@@ -216,6 +270,18 @@ class ExecNodeReceiptTests(unittest.TestCase):
         policy = self.policy(**overrides)
         _write_json_atomic(self.data_root / "control-plane-exec-policy.json", policy)
         return policy
+
+    def test_inspect_reports_installed_facade_without_changing_policy(self) -> None:
+        self.install_policy()
+        policy_path = self.data_root / "control-plane-exec-policy.json"
+        before = policy_path.read_bytes()
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(inspect_exec_policy(self.args()), 0)
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["facade_contract"], FACADE)
+        self.assertEqual(receipt["state"], "enabled")
+        self.assertEqual(policy_path.read_bytes(), before)
+        self.assertNotIn(self.config["node_secret"], output.getvalue())
 
     def exec_policy_cli_args(self, *, replace: bool = False, expires_at_ms: int | None = None) -> list[str]:
         args = [
@@ -312,7 +378,7 @@ class ExecNodeReceiptTests(unittest.TestCase):
             "stderr": "",
             "truncated": False,
             "timed_out": False,
-            "command_id": "command-exec-node-running-0001",
+            "command_id": "_aJumSgZyYU90Yj_Mt7qu-Gp",
             "job_id": "job-exec-node-running-0001",
             "run_id": "",
             "wave_id": "",
@@ -424,6 +490,20 @@ class ExecNodeReceiptTests(unittest.TestCase):
         value.update(overrides)
         return value
 
+    @staticmethod
+    def native_bridge_error(request: dict[str, object]) -> dict[str, object]:
+        return {
+            "code": "CONTROL_PLANE_EXEC_MCP_REJECTED", "recovery_response_received": True,
+            **{field: request[field] for field in ("action_id", "attempt_id", "task_id", "writer_lease_generation")},
+            "details": {
+                "native_error_code": "SANDBOX_STATE_PHASE_FAILED", "phase": "state",
+                "backend_error_code": "MXC_STATE_PHASE_FAILED",
+                "command_id": "_aJumSgZyYU90Yj_Mt7qu-Gp", "job_id": "job-exec-0001",
+                "job_lifecycle": "spawn_failed", "root_pid": 0, "execution_started": False,
+                "job_finished_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            },
+        }
+
     def test_owner_is_a_required_exact_exec_policy_binding(self) -> None:
         self.install_policy()
         request = _exec_bridge_request(self.action(), self.config)
@@ -508,6 +588,39 @@ class ExecNodeReceiptTests(unittest.TestCase):
             "unknown",
         )
 
+    def test_native_command_tokens_remain_exact_across_terminal_and_control_results(self) -> None:
+        policy = self.install_policy()
+        request = _exec_bridge_request(self.action(), self.config)
+        policy_sha256 = _policy_digest(policy)
+        for command_id in ("-4hBa9tkNAYi4ngWamUIO4Ba", "_aJumSgZyYU90Yj_Mt7qu-Gp"):
+            with self.subTest(command_id=command_id):
+                result = self.bridge_result(
+                    request, status="exited", local_handle="cp_exec_" + "a" * 48,
+                    command_id=command_id, job_id="job-exec-node-0001", policy_sha256=policy_sha256,
+                )
+                self.assertEqual(_safe_exec_bridge_result(result, request, policy_sha256)["command_id"], command_id)
+                for operation, status in (("exec_poll", "running"), ("exec_stop", "stopped")):
+                    control = _exec_control_request(
+                        request, result, operation=operation,
+                        **({"signal": "TERM", "wait_ms": 3000} if operation == "exec_stop" else {}),
+                    )
+                    self.assertEqual(_admit_exec_policy_request(
+                        self.args(), config_path=self.config_path, config=self.config, request=control,
+                    )["workspace_id"], request["workspace_id"])
+                    response = self.bridge_result(
+                        control, status=status, local_handle=result["local_handle"], command_id=command_id,
+                        job_id=result["job_id"], policy_sha256=policy_sha256,
+                    )
+                    self.assertEqual(_safe_exec_bridge_result(response, control, policy_sha256)["command_id"], command_id)
+                    drift = {**response, "command_id": "different-command-id"}
+                    with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID$"):
+                        _safe_exec_bridge_result(drift, control, policy_sha256)
+                for invalid in ("/invalid", "-bad/id", "-bad id", "-ba\nd", "-" * 257, "-x"):
+                    with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID$"):
+                        _safe_exec_bridge_result({**result, "command_id": invalid}, request, policy_sha256)
+        with self.assertRaises(RuntimeError):
+            _normalise_exec_policy(self.policy(workspace_id="_workspace-invalid"))
+
     def test_valid_exec_submission_uses_nested_receipt_shape(self) -> None:
         policy = self.install_policy()
         action = self.action()
@@ -519,7 +632,7 @@ class ExecNodeReceiptTests(unittest.TestCase):
             "stderr": "",
             "truncated": False,
             "timed_out": False,
-            "command_id": "command-exec-node-0001",
+            "command_id": "-4hBa9tkNAYi4ngWamUIO4Ba",
             "job_id": "job-exec-node-0001",
             "run_id": "",
             "wave_id": "",
@@ -627,6 +740,7 @@ class ExecNodeReceiptTests(unittest.TestCase):
             self.assertEqual(poll_exec_once(self.args()), 0)
         runner.assert_not_called()
         self.assertEqual([item["operation"] for item in bridge_requests], ["exec_poll"])
+        self.assertEqual(bridge_requests[0]["yield_time_ms"], 10_000)
         self.assertEqual(len(receipts), 1)
         self.assertEqual(receipts[0]["receipt_state"], "completed")
         saved = _read_exec_journal(journal_path)["entries"][_exec_journal_key(request["action_id"], request["attempt_id"])]
@@ -757,6 +871,134 @@ class ExecNodeReceiptTests(unittest.TestCase):
         saved = _read_exec_journal(self.config_path.with_name(f"{self.config_path.name}.exec-journal.json"))[
             "entries"
         ][_exec_journal_key(action["action_id"], action["attempt_id"])]
+        self.assertEqual(saved["state"], "unknown")
+
+    def test_exact_native_spawn_failure_is_terminal_and_ack_retry_does_not_spawn(self) -> None:
+        self.install_policy()
+        action = self.action()
+        receipts: list[dict[str, object]] = []
+        bridge_calls: list[dict[str, object]] = []
+
+        def request_fn(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            if path.endswith("/exec-stops"):
+                return {"stop_requests": []}
+            if path.endswith("/poll"):
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            receipts.append(payload)
+            if len(receipts) == 1:
+                raise RuntimeError("TEST_RECEIPT_ACK_LOST")
+            return {"receipt_id": "receipt-exec-spawn-failed-0001"}
+
+        def bridge(_args: object, _root: Path, control: dict[str, object]) -> tuple[None, dict[str, object]]:
+            bridge_calls.append(control)
+            return None, self.native_bridge_error(control)
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request_fn), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+             mock.patch("control_plane.node_agent.recovery_exec_bridge", side_effect=bridge), \
+             mock.patch("control_plane.node_agent._run_bounded_exec") as runner, redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "^TEST_RECEIPT_ACK_LOST$"):
+                poll_exec_once(self.args())
+            journal_path = self.config_path.with_name(f"{self.config_path.name}.exec-journal.json")
+            saved = _read_exec_journal(journal_path)["entries"][_exec_journal_key(action["action_id"], action["attempt_id"])]
+            self.assertEqual(saved["state"], "failed")
+            self.assertFalse(saved["receipt"]["receipt_submitted"])
+            self.assertEqual(poll_exec_once(self.args()), 0)
+        runner.assert_not_called()
+        self.assertEqual(len(bridge_calls), 1)
+        self.assertEqual(receipts[0], receipts[1])
+        self.assertEqual(receipts[0]["receipt_state"], "failed")
+        payload = receipts[0]["payload"]
+        self.assertEqual(payload["code"], "CONTROL_PLANE_EXEC_FAILED_BEFORE_PROCESS")
+        self.assertEqual(payload["diagnostic_code"], "SANDBOX_STATE_PHASE_FAILED")
+        self.assertEqual(payload["bridge_error_code"], "CONTROL_PLANE_EXEC_MCP_REJECTED")
+        self.assertEqual(payload["native_error_code"], "SANDBOX_STATE_PHASE_FAILED")
+        self.assertEqual(payload["job_lifecycle"], "spawn_failed")
+        self.assertNotIn("exit_code", payload)
+        self.assertNotIn("stdout", payload)
+
+    def test_incomplete_or_wrongly_correlated_native_failure_stays_unknown(self) -> None:
+        self.install_policy()
+        variants = (
+            ("code_only", {"details": {"native_error_code": "SANDBOX_STATE_PHASE_FAILED"}}),
+            ("no_provenance", {"recovery_response_received": False}),
+            ("wrong_action", {"action_id": "act-another-0001"}),
+            ("wrong_attempt", {"attempt_id": "try-another-0001"}),
+            ("wrong_task", {"task_id": "task_" + "b" * 32}),
+            ("bool_generation", {"writer_lease_generation": True}),
+            ("bool_pid", {"details.root_pid": False}),
+            ("live_pid", {"details.root_pid": 123}),
+            ("started", {"details.execution_started": True}),
+            ("not_terminal", {"details.job_lifecycle": "running"}),
+            ("wrong_job_type", {"details.job_id": []}),
+            ("invalid_finished", {"details.job_finished_at": "2026-02-30T00:00:00Z"}),
+            ("future_finished", {"details.job_finished_at": "2999-01-01T00:00:00Z"}),
+        )
+        for index, (name, changes) in enumerate(variants):
+            with self.subTest(name=name):
+                action = self.action(action_id=f"act-exec-failure-{index:04d}", attempt_id=f"try-exec-failure-{index:04d}")
+                receipts: list[dict[str, object]] = []
+
+                def request_fn(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+                    if path.endswith("/exec-stops"):
+                        return {"stop_requests": []}
+                    if path.endswith("/poll"):
+                        return {"actions": [action]}
+                    receipts.append(payload)
+                    return {"receipt_id": f"receipt-exec-failure-{index:04d}"}
+
+                def bridge(_args: object, _root: Path, control: dict[str, object]) -> tuple[None, dict[str, object]]:
+                    error = self.native_bridge_error(control)
+                    for field, value in changes.items():
+                        if field.startswith("details."):
+                            error["details"][field.removeprefix("details.")] = value
+                        else:
+                            error[field] = value
+                    return None, error
+
+                with mock.patch("control_plane.node_agent._request", side_effect=request_fn), \
+                     mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+                     mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+                     mock.patch("control_plane.node_agent.recovery_exec_bridge", side_effect=bridge) as bridge_mock, \
+                     redirect_stdout(io.StringIO()):
+                    self.assertEqual(poll_exec_once(self.args()), 0)
+                    self.assertEqual(poll_exec_once(self.args()), 0)
+                self.assertEqual(bridge_mock.call_count, 1)
+                self.assertEqual(len(receipts), 1)
+                self.assertEqual(receipts[0]["receipt_state"], "unknown")
+                self.assertEqual(receipts[0]["payload"]["diagnostic_code"], "CONTROL_PLANE_EXEC_MCP_REJECTED")
+                self.assertEqual(receipts[0]["payload"]["native_error_code"], "SANDBOX_STATE_PHASE_FAILED")
+
+    def test_control_error_keeps_diagnostics_without_undoing_a_running_process(self) -> None:
+        journal_path, _journal, request, running_result = self.running_journal()
+        receipts: list[dict[str, object]] = []
+
+        def request_fn(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            if path.endswith("/exec-stops"):
+                return {"stop_requests": []}
+            if path.endswith("/poll"):
+                return {"actions": []}
+            receipts.append(payload)
+            return {"receipt_id": "receipt-control-native-error-0001"}
+
+        def bridge(_args: object, _root: Path, control: dict[str, object]) -> tuple[None, dict[str, object]]:
+            error = self.native_bridge_error(control)
+            # Even a plausible no-process snapshot cannot overwrite the
+            # durable evidence that this command had a running process.
+            error["details"]["command_id"] = running_result["command_id"]
+            error["details"]["job_id"] = running_result["job_id"]
+            return None, error
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request_fn), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+             mock.patch("control_plane.node_agent.recovery_exec_bridge", side_effect=bridge), redirect_stdout(io.StringIO()):
+            self.assertEqual(poll_exec_once(self.args()), 0)
+        self.assertEqual(receipts[0]["receipt_state"], "unknown")
+        self.assertEqual(receipts[0]["payload"]["native_error_code"], "SANDBOX_STATE_PHASE_FAILED")
+        saved = _read_exec_journal(journal_path)["entries"][_exec_journal_key(request["action_id"], request["attempt_id"])]
         self.assertEqual(saved["state"], "unknown")
 
     def test_running_job_bridge_timeout_stays_running_until_a_later_terminal_observation(self) -> None:

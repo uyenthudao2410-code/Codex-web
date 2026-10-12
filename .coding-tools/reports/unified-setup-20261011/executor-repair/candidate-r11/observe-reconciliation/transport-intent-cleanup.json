@@ -1,0 +1,1 @@
+{"action": "cleanup", "files": {"cleanup-r11.py": {"sha256": "1d679771282690585912b83782cd3ff5f9d3f06e3b5ab78aa3de10e110266610", "size_bytes": 4019}, "observe-r11.py": {"sha256": "6525b2c6069c474c1c0c6e45084f19e4700246d2262b087c633e3692983caf73", "size_bytes": 9755}}, "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T164200000001Z"}

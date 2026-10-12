@@ -50,6 +50,7 @@ const {
   resolveExactRegisteredPatchTarget,
   verifyExactRegisteredPatchPostimage,
   normaliseApprovedPatchWorkflowResult,
+  normaliseInitialVerificationPlan,
   normaliseApprovedPatchResult
 } = require('./controlPlaneApprovedPatchBridge');
 const {
@@ -166,12 +167,16 @@ const MAX_FILE_READ_RESPONSE_BYTES = 96 * 1024;
 // durable prepared marker before this local request begins.  Timeout is never
 // a reason to repeat a patch; its caller must settle UNKNOWN and reconcile.
 const CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS = 12_000;
+// MXC provisions for up to 30s and boots for up to 210s before the process
+// timeout starts. Observe the original workflow through that setup window.
+const CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS = 240_000;
 const MAX_APPROVED_PATCH_RESPONSE_BYTES = 96 * 1024;
 const CONTROL_PLANE_DOCUMENT_WRITE_TIMEOUT_MS = 20_000;
 const MAX_DOCUMENT_WRITE_RESPONSE_BYTES = 96 * 1024;
-// exec_command may legitimately return a running handle after its bounded
-// initial yield. Keep the HTTP envelope above the MCP 30-second yield cap but
-// below the Recovery IPC request ceiling.
+// The first Windows Sandbox command provisions (30 s), boots (210 s), then
+// yields for at most 30 s before returning its managed Job. Control requests
+// keep the short envelope; the initial run must also cover bounded VM setup.
+const CONTROL_PLANE_EXEC_START_TIMEOUT_MS = 300_000;
 const CONTROL_PLANE_EXEC_TIMEOUT_MS = 35_000;
 const MAX_EXEC_RESPONSE_BYTES = 96 * 1024;
 
@@ -1787,6 +1792,17 @@ class RuntimeOrchestrator {
     const validHash = (value) => /^[a-f0-9]{64}$/.test(value);
     const validActionIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(value);
     const validTaskId = (value) => /^task_[a-f0-9]{32}$/.test(String(value || '').trim());
+    const verificationPlan = admission.verification ? normaliseInitialVerificationPlan(admission.verification) : null;
+    const verificationBinding = verificationPlan ? {
+      verification: verificationPlan, exec_policy_sha256: hash(admission.exec_policy_sha256),
+      expires_at_ms: admission.expires_at_ms
+    } : {};
+    if (verificationPlan && (!validHash(verificationBinding.exec_policy_sha256)
+      || !Number.isSafeInteger(admission.expires_at_ms) || admission.expires_at_ms <= Date.now())) {
+      throw Object.assign(new Error('Independent local exec admission is required before patch verification.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_EXEC_POLICY_REQUIRED'
+      });
+    }
     if (!validActionIdentifier(actionId)
       || !validActionIdentifier(attemptId)
       || !validHash(policySha256)
@@ -1842,7 +1858,8 @@ class RuntimeOrchestrator {
       workspace_generation: String(admission.workspace_generation).trim(),
       task_id: String(admission.task_id).trim(),
       writer_lease_generation: admission.writer_lease_generation,
-      facade_contract: facadeContract
+      facade_contract: facadeContract,
+      ...verificationBinding
     }).slice(0, 56)}`;
     const authorityFingerprint = controlPlaneBridgeDigest({
       schema_version: 1,
@@ -1850,7 +1867,8 @@ class RuntimeOrchestrator {
       binding_id: String(admission.binding_id).trim(),
       task_id: String(admission.task_id).trim(),
       writer_lease_generation: admission.writer_lease_generation,
-      action_id: actionId
+      action_id: actionId,
+      ...verificationBinding
     });
     const localIdempotencyKey = `cpap_${controlPlaneBridgeDigest({
       action_id: actionId,
@@ -1858,7 +1876,8 @@ class RuntimeOrchestrator {
       patch_sha256: hash(admission.patch_sha256),
       task_id: String(admission.task_id).trim(),
       writer_lease_generation: admission.writer_lease_generation,
-      facade_contract: facadeContract
+      facade_contract: facadeContract,
+      ...verificationBinding
     }).slice(0, 56)}`;
     const token = this.secrets.get('mcpAuthToken');
     if (!token) {
@@ -1891,9 +1910,10 @@ class RuntimeOrchestrator {
       patch_sha256: hash(admission.patch_sha256),
       task_id: String(admission.task_id).trim(),
       writer_lease_generation: admission.writer_lease_generation,
-      facade_contract: facadeContract
+      facade_contract: facadeContract,
+      ...verificationBinding
     });
-    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+    const callLocalTool = (name, toolArguments, idSuffix, timeoutMs = CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS) => new Promise((resolve, reject) => {
       const body = JSON.stringify({
         jsonrpc: '2.0',
         id: `control-plane-approved-patch-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
@@ -1927,7 +1947,7 @@ class RuntimeOrchestrator {
           'X-Coding-Tools-Client-Type': APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
           [CONNECTOR_ATTESTATION_HEADER]: attestationValue
         },
-        timeout: CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS
+        timeout: timeoutMs
       }, (response) => {
         let responseBody = '';
         let responseBytes = 0;
@@ -1991,7 +2011,10 @@ class RuntimeOrchestrator {
     // primitive.  This produces canonical RUN/WAVE/idempotency evidence in
     // the local ledger.  An exact file patch does not spawn an OS process, so
     // do not invent a managed-process Job or treat a PID as authorization.
-    const structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {
+    const verificationDeadline = verificationPlan
+      ? Date.now() + verificationPlan.timeout_ms + CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS + 30000
+      : null;
+    let structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {
       task_context_id: localTaskContextId,
       idempotency_key: localIdempotencyKey,
       workflow: 'custom',
@@ -2004,11 +2027,51 @@ class RuntimeOrchestrator {
       patch: admission.patch_envelope,
       dry_run: false,
       verification: 'none',
-      include_diff: false
-    }, 'workflow');
+      ...(verificationPlan ? { initial_verification: verificationPlan,
+        initial_verification_expires_at_ms: admission.expires_at_ms } : {})
+    }, 'workflow', verificationPlan
+      ? Math.max(1, verificationDeadline - Date.now())
+      : CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS);
+    if (verificationPlan && structured?.status === 'running') {
+      const operationId = structured.background_operation?.operation_id;
+      if (typeof operationId !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(operationId)
+        || structured.background_operation.tool !== 'agent_workflow'
+        || workspaceKey(normalizeWorkspacePath(structured.background_operation.workspace)) !== workspaceKey(expectedWorkspace)) {
+        throw Object.assign(new Error('Patch verification returned an unbound background operation.'), {
+          code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_INVALID'
+        });
+      }
+      const deadline = verificationDeadline;
+      while (Date.now() < deadline) {
+        const observed = await callLocalTool('task_control', {
+          task_context_id: localTaskContextId, action: 'operation', operation_id: operationId,
+          wait_ms: Math.min(10000, Math.max(0, deadline - Date.now()))
+        }, 'observe', 15000);
+        const operation = observed.background_operation;
+        if (!operation || operation.operation_id !== operationId || operation.tool !== 'agent_workflow'
+          || workspaceKey(normalizeWorkspacePath(operation.workspace)) !== workspaceKey(expectedWorkspace)
+          || operation.durable_only === true) {
+          throw Object.assign(new Error('Patch verification operation requires durable reconciliation.'), {
+            code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_UNCONFIRMED'
+          });
+        }
+        if (operation.status === 'running') continue;
+        if (operation.status !== 'completed' || !operation.result) {
+          throw Object.assign(new Error('Patch verification operation ended without its effect receipt.'), {
+            code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_UNCONFIRMED'
+          });
+        }
+        structured = operation.result.structuredContent || operation.result;
+        break;
+      }
+      if (structured?.status === 'running') throw Object.assign(new Error('Patch verification observation deadline expired; reconcile the original operation.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_OPERATION_UNCONFIRMED'
+      });
+    }
     const localWorkflow = normaliseApprovedPatchWorkflowResult(structured, {
       path: admission.path,
-      idempotency_key: localIdempotencyKey
+      idempotency_key: localIdempotencyKey,
+      ...(verificationPlan ? { verification: verificationPlan } : {})
     });
     const postimage = verifyExactRegisteredPatchPostimage(expectedWorkspace, admission);
     const file = {
@@ -2048,6 +2111,7 @@ class RuntimeOrchestrator {
       // central approval permitted this exact effect, but cannot serve as the
       // local semantic proof or controller acceptance for the RUN/WAVE.
       local_semantic_acceptance: localWorkflow.local_semantic_acceptance,
+      ...(localWorkflow.initial_verification ? { initial_verification: localWorkflow.initial_verification } : {}),
       actor: { client_id: APPROVED_PATCH_BRIDGE_CLIENT_ID, client_type: APPROVED_PATCH_BRIDGE_CLIENT_TYPE },
       policy_sha256: policySha256,
       facade_contract: {
@@ -2062,7 +2126,8 @@ class RuntimeOrchestrator {
         tool_contract_sha256: attestation.contractSha256
       },
       file,
-      response_sha256: approvedPatchProjectionDigest(file)
+      response_sha256: approvedPatchProjectionDigest(localWorkflow.initial_verification
+        ? { file, initial_verification: localWorkflow.initial_verification } : file)
     };
     try {
       // This final allowlist deliberately omits the raw patch, local root,
@@ -2385,6 +2450,7 @@ class RuntimeOrchestrator {
     const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
     const validActionIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(String(value || '').trim());
     const validIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(value || '').trim());
+    const validExecIdentifier = (value) => /^[A-Za-z0-9_-][A-Za-z0-9_.:-]{2,255}$/.test(String(value || '').trim());
     const validTaskId = (value) => /^task_[a-f0-9]{32}$/.test(String(value || '').trim());
     const validHash = (value) => /^[a-f0-9]{64}$/.test(String(value || '').trim().toLowerCase());
     const validLocalHandle = (value) => /^cp_exec_[a-f0-9]{48}$/.test(String(value || '').trim());
@@ -2412,8 +2478,8 @@ class RuntimeOrchestrator {
       && /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
       && validHash(facadeContract.sha256);
     const controlHandleValid = operation !== 'exec_run'
-      && validIdentifier(admission.command_id)
-      && validIdentifier(admission.job_id)
+      && validExecIdentifier(admission.command_id)
+      && validExecIdentifier(admission.job_id)
       && validLocalHandle(admission.local_handle)
       && typeof admission.consumer_id === 'string'
       && admission.consumer_id.trim().length >= 1
@@ -2578,7 +2644,9 @@ class RuntimeOrchestrator {
           'X-Coding-Tools-Client-Type': EXEC_BRIDGE_CLIENT_TYPE,
           [CONNECTOR_ATTESTATION_HEADER]: attestationValue
         },
-        timeout: CONTROL_PLANE_EXEC_TIMEOUT_MS
+        timeout: name === EXEC_ACTION_TOOL_NAME
+          ? CONTROL_PLANE_EXEC_START_TIMEOUT_MS
+          : CONTROL_PLANE_EXEC_TIMEOUT_MS
       }, (response) => {
         let responseBody = '';
         let responseBytes = 0;
@@ -2605,11 +2673,41 @@ class RuntimeOrchestrator {
             return;
           }
           const structured = parsed?.result?.structuredContent || parsed?.result || null;
-          const errorMessage = parsed?.error?.message
-            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
-          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
-            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the exec bridge (HTTP ${response.statusCode}).`)), {
-              code: 'CONTROL_PLANE_EXEC_MCP_REJECTED'
+          if (Number(response.statusCode || 0) !== 200 || parsed?.error || parsed?.result?.isError
+            || structured?.ok === false || !structured || typeof structured !== 'object' || Array.isArray(structured)) {
+            // Native ToolFailure and JSON-RPC errors have different envelopes.
+            // Preserve only typed diagnostic facts; text/output may contain
+            // credentials. These fields never decide whether an effect occurred.
+            const nativeError = parsed?.error?.data || structured?.error || parsed?.error;
+            const nativeDetails = nativeError?.details;
+            const details = {};
+            if (typeof nativeError?.code === 'string' && /^[A-Z][A-Z0-9_]{2,95}$/.test(nativeError.code)) {
+              details.native_error_code = nativeError.code;
+            }
+            if (nativeDetails && typeof nativeDetails === 'object' && !Array.isArray(nativeDetails)) {
+              if (['provision', 'start', 'deprovision', 'exec'].includes(nativeDetails.phase)) details.phase = nativeDetails.phase;
+              if (typeof nativeDetails.backend_error_code === 'string' && /^[a-z_]{3,48}$/.test(nativeDetails.backend_error_code)) {
+                details.backend_error_code = nativeDetails.backend_error_code;
+              }
+              for (const field of ['command_id', 'job_id']) {
+                if (typeof nativeDetails[field] === 'string' && /^[A-Za-z0-9_-][A-Za-z0-9_.:-]{2,255}$/.test(nativeDetails[field])) {
+                  details[field] = nativeDetails[field];
+                }
+              }
+              if (['starting', 'running', 'terminating', 'orphaned', 'spawn_failed', 'exited', 'terminated', 'timeout', 'reconciled_terminal'].includes(nativeDetails.job_lifecycle)) {
+                details.job_lifecycle = nativeDetails.job_lifecycle;
+              }
+              if (Number.isSafeInteger(nativeDetails.root_pid) && nativeDetails.root_pid >= 0) details.root_pid = nativeDetails.root_pid;
+              if (typeof nativeDetails.execution_started === 'boolean') details.execution_started = nativeDetails.execution_started;
+              if (typeof nativeDetails.job_finished_at === 'string'
+                && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(nativeDetails.job_finished_at)
+                && Number.isFinite(Date.parse(nativeDetails.job_finished_at))) {
+                details.job_finished_at = nativeDetails.job_finished_at;
+              }
+            }
+            reject(Object.assign(new Error('Coding Tools MCP rejected the control-plane exec request.'), {
+              code: 'CONTROL_PLANE_EXEC_MCP_REJECTED',
+              ...(Object.keys(details).length ? { details } : {})
             }));
             return;
           }

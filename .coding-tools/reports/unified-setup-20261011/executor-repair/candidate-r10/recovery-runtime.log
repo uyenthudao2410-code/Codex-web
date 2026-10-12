@@ -1,0 +1,862 @@
+TAP version 13
+# (node:24924) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: central bridge admission requires a fresh route and local policy rather than a Windows Tunnel connector
+ok 1 - central bridge admission requires a fresh route and local policy rather than a Windows Tunnel connector
+  ---
+  duration_ms: 2.7233
+  type: 'test'
+  ...
+# Subtest: full-clean UI termination keeps a detached Recovery Host descendant alive
+ok 2 - full-clean UI termination keeps a detached Recovery Host descendant alive
+  ---
+  duration_ms: 17.9547
+  type: 'test'
+  ...
+# Subtest: RuntimePaths resolves backend state without importing Electron APIs
+ok 3 - RuntimePaths resolves backend state without importing Electron APIs
+  ---
+  duration_ms: 3.9473
+  type: 'test'
+  ...
+# Subtest: device identity is stable per install, unique across installs, and corruption fails closed
+ok 4 - device identity is stable per install, unique across installs, and corruption fails closed
+  ---
+  duration_ms: 14.4403
+  type: 'test'
+  ...
+# Subtest: Recovery IPC is loopback-only, authenticated, bounded, and allowlisted
+ok 5 - Recovery IPC is loopback-only, authenticated, bounded, and allowlisted
+  ---
+  duration_ms: 408.7343
+  type: 'test'
+  ...
+# Subtest: Recovery IPC client keeps fresh status as a read argument, not transport authority
+ok 6 - Recovery IPC client keeps fresh status as a read argument, not transport authority
+  ---
+  duration_ms: 0.4865
+  type: 'test'
+  ...
+# Subtest: Recovery IPC preserves only typed execution diagnostics on the exact error action
+ok 7 - Recovery IPC preserves only typed execution diagnostics on the exact error action
+  ---
+  duration_ms: 18.0733
+  type: 'test'
+  ...
+# Subtest: Recovery IPC execution diagnostics reject coercion and impossible UTC completion dates
+ok 8 - Recovery IPC execution diagnostics reject coercion and impossible UTC completion dates
+  ---
+  duration_ms: 0.3705
+  type: 'test'
+  ...
+# Subtest: Recovery Host lock rejects a second live owner and replaces a dead owner
+ok 9 - Recovery Host lock rejects a second live owner and replaces a dead owner
+  ---
+  duration_ms: 5.7792
+  type: 'test'
+  ...
+# Subtest: duplicate replacement contender cannot fail the epoch owned by the live Recovery Host
+ok 10 - duplicate replacement contender cannot fail the epoch owned by the live Recovery Host
+  ---
+  duration_ms: 27.7552
+  type: 'test'
+  ...
+# Subtest: persisted READY connector proof accepts either exact freshness mode and rejects malformed identities or timestamps
+ok 11 - persisted READY connector proof accepts either exact freshness mode and rejects malformed identities or timestamps
+  ---
+  duration_ms: 466.2542
+  type: 'test'
+  ...
+# Subtest: persisted central READY proof uses the immutable profile and complete census, never a Windows connector receipt
+ok 12 - persisted central READY proof uses the immutable profile and complete census, never a Windows connector receipt
+  ---
+  duration_ms: 85.2765
+  type: 'test'
+  ...
+# Subtest: Recovery Host keeps control-plane IPC alive for an invalid READY epoch without rewriting history
+ok 13 - Recovery Host keeps control-plane IPC alive for an invalid READY epoch without rewriting history
+  ---
+  duration_ms: 514.5786
+  type: 'test'
+  ...
+# Subtest: invalid READY adoption supervision services only the explicit supervisor restart ticket
+ok 14 - invalid READY adoption supervision services only the explicit supervisor restart ticket
+  ---
+  duration_ms: 79.3905
+  type: 'test'
+  ...
+# Subtest: healthy READY supervision services the explicit supervisor restart ticket
+ok 15 - healthy READY supervision services the explicit supervisor restart ticket
+  ---
+  duration_ms: 53.9924
+  type: 'test'
+  ...
+# Subtest: healthy READY supervision yields immediately after a supervisor restart enters HANDOFF
+ok 16 - healthy READY supervision yields immediately after a supervisor restart enters HANDOFF
+  ---
+  duration_ms: 55.8046
+  type: 'test'
+  ...
+# Subtest: healthy READY supervision defers a retained supervisor restart until the next watchdog tick
+ok 17 - healthy READY supervision defers a retained supervisor restart until the next watchdog tick
+  ---
+  duration_ms: 76.6854
+  type: 'test'
+  ...
+# Subtest: invalid READY adoption guard retires only after a different durable epoch becomes current
+ok 18 - invalid READY adoption guard retires only after a different durable epoch becomes current
+  ---
+  duration_ms: 65.1677
+  type: 'test'
+  ...
+# Subtest: Recovery Host adopts a durable READY epoch only after strict proof validation
+ok 19 - Recovery Host adopts a durable READY epoch only after strict proof validation
+  ---
+  duration_ms: 54.8825
+  type: 'test'
+  ...
+# Subtest: Recovery Host adopts a complete central READY census after an ordinary host restart
+ok 20 - Recovery Host adopts a complete central READY census after an ordinary host restart
+  ---
+  duration_ms: 55.0567
+  type: 'test'
+  ...
+# Subtest: Recovery Host rejects central settings with only a legacy direct READY receipt
+ok 21 - Recovery Host rejects central settings with only a legacy direct READY receipt
+  ---
+  duration_ms: 51.1414
+  type: 'test'
+  ...
+# Subtest: ordinary central recovery supervision never reads a cloud key or restarts retained direct Tunnel settings
+ok 22 - ordinary central recovery supervision never reads a cloud key or restarts retained direct Tunnel settings
+  ---
+  duration_ms: 6.4533
+  type: 'test'
+  ...
+# Subtest: Recovery Host owns supervision and IPC without stopping the runtime when UI exits
+ok 23 - Recovery Host owns supervision and IPC without stopping the runtime when UI exits
+  ---
+  duration_ms: 41.6218
+  type: 'test'
+  ...
+# Subtest: runtime projection closes stale READY admission when the current primary runtime is incomplete
+ok 24 - runtime projection closes stale READY admission when the current primary runtime is incomplete
+  ---
+  duration_ms: 42.8533
+  type: 'test'
+  ...
+# Subtest: connector-pending supervision wakes final census for an exact compatible bootstrap
+ok 25 - connector-pending supervision wakes final census for an exact compatible bootstrap
+  ---
+  duration_ms: 10.8991
+  type: 'test'
+  ...
+# Subtest: Recovery Host supervision arms accepted-code activation only after the durable epoch becomes READY and OPEN
+ok 26 - Recovery Host supervision arms accepted-code activation only after the durable epoch becomes READY and OPEN
+  ---
+  duration_ms: 7.6513
+  type: 'test'
+  ...
+# Subtest: Recovery Host lightweight IPC serves one fresh supervision projection without duplicate live probes
+ok 27 - Recovery Host lightweight IPC serves one fresh supervision projection without duplicate live probes
+  ---
+  duration_ms: 8.8589
+  type: 'test'
+  ...
+# Subtest: Recovery Host publishes the completed UI observation into its cached IPC projection
+ok 28 - Recovery Host publishes the completed UI observation into its cached IPC projection
+  ---
+  duration_ms: 12.1901
+  type: 'test'
+  ...
+# Subtest: fresh Recovery Host status proves an unregistered UI is missing for idle handoff
+ok 29 - fresh Recovery Host status proves an unregistered UI is missing for idle handoff
+  ---
+  duration_ms: 8.1511
+  type: 'test'
+  ...
+# Subtest: fresh Recovery Host status keeps a registered but unverified UI fail closed
+ok 30 - fresh Recovery Host status keeps a registered but unverified UI fail closed
+  ---
+  duration_ms: 9.4695
+  type: 'test'
+  ...
+# Subtest: Recovery Host identity observation is a read-only exact MCP projection
+ok 31 - Recovery Host identity observation is a read-only exact MCP projection
+  ---
+  duration_ms: 11.7352
+  type: 'test'
+  ...
+# Subtest: Recovery Host admits a control-plane read-only context only from explicit local policy and strict runtime evidence
+ok 32 - Recovery Host admits a control-plane read-only context only from explicit local policy and strict runtime evidence
+  ---
+  duration_ms: 17.4095
+  type: 'test'
+  ...
+# Subtest: new unsuppressed Recovery Host relaunches UI after initial registration grace expires
+ok 33 - new unsuppressed Recovery Host relaunches UI after initial registration grace expires
+  ---
+  duration_ms: 10.1857
+  type: 'test'
+  ...
+# Subtest: Recovery Host relaunches a previously registered UI when its process dies unexpectedly
+ok 34 - Recovery Host relaunches a previously registered UI when its process dies unexpectedly
+  ---
+  duration_ms: 1134.4405
+  type: 'test'
+  ...
+# Subtest: UI watchdog does not relaunch a registered UI when async process identity is unavailable
+ok 35 - UI watchdog does not relaunch a registered UI when async process identity is unavailable
+  ---
+  duration_ms: 7.4765
+  type: 'test'
+  ...
+# Subtest: explicit operator quit suppression survives Recovery Host replacement and blocks default-armed recovery
+ok 36 - explicit operator quit suppression survives Recovery Host replacement and blocks default-armed recovery
+  ---
+  duration_ms: 15.2695
+  type: 'test'
+  ...
+# Subtest: Recovery Host rejects UI registration from another installation
+ok 37 - Recovery Host rejects UI registration from another installation
+  ---
+  duration_ms: 6.3359
+  type: 'test'
+  ...
+# Subtest: Recovery Host exposes host and UI runtime identities separately
+ok 38 - Recovery Host exposes host and UI runtime identities separately
+  ---
+  duration_ms: 8.0787
+  type: 'test'
+  ...
+# Subtest: UI watchdog defers to a pending controlled electron activation
+ok 39 - UI watchdog defers to a pending controlled electron activation
+  ---
+  duration_ms: 10.1335
+  type: 'test'
+  ...
+# Subtest: Recovery Host reports a source change as pending without restarting itself
+ok 40 - Recovery Host reports a source change as pending without restarting itself
+  ---
+  duration_ms: 16.0272
+  type: 'test'
+  ...
+# Subtest: Recovery Host replacement hands off ownership without stopping Coding MCP or tunnel
+ok 41 - Recovery Host replacement hands off ownership without stopping Coding MCP or tunnel
+  ---
+  duration_ms: 265.6261
+  type: 'test'
+  ...
+# Subtest: Recovery Host handoff drains in-flight supervision before releasing ownership
+ok 42 - Recovery Host handoff drains in-flight supervision before releasing ownership
+  ---
+  duration_ms: 307.6255
+  type: 'test'
+  ...
+# Subtest: Recovery Host verifies replacement revision before any legacy device migration
+ok 43 - Recovery Host verifies replacement revision before any legacy device migration
+  ---
+  duration_ms: 0.8116
+  type: 'test'
+  ...
+# Subtest: Recovery replacement accepts the pinned legacy revision contract and rejects added-file tampering
+ok 44 - Recovery replacement accepts the pinned legacy revision contract and rejects added-file tampering
+  ---
+  duration_ms: 18.617
+  type: 'test'
+  ...
+# Subtest: Recovery Host resumes ownership and releases the fence when replacement does not start
+ok 45 - Recovery Host resumes ownership and releases the fence when replacement does not start
+  ---
+  duration_ms: 251.4422
+  type: 'test'
+  ...
+# Subtest: Recovery Host launch arguments preserve the app root in development
+ok 46 - Recovery Host launch arguments preserve the app root in development
+  ---
+  duration_ms: 0.8396
+  type: 'test'
+  ...
+# Subtest: activation launchers propagate the epoch through argv and child environment
+ok 47 - activation launchers propagate the epoch through argv and child environment
+  ---
+  duration_ms: 1.3007
+  type: 'test'
+  ...
+# Subtest: real Electron children strip deferred worker-only environment contracts
+ok 48 - real Electron children strip deferred worker-only environment contracts
+  ---
+  duration_ms: 0.1274
+  type: 'test'
+  ...
+# Subtest: activation launchers reject expired requests before invoking the process spawn boundary
+ok 49 - activation launchers reject expired requests before invoking the process spawn boundary
+  ---
+  duration_ms: 0.2848
+  type: 'test'
+  ...
+# Subtest: Electron main delegates runtime ownership to Recovery Host
+ok 50 - Electron main delegates runtime ownership to Recovery Host
+  ---
+  duration_ms: 1.2392
+  type: 'test'
+  ...
+# Subtest: Electron UI registers with Recovery Host only after its window is visible
+not ok 51 - Electron UI registers with Recovery Host only after its window is visible
+  ---
+  duration_ms: 0.9559
+  type: 'test'
+  location: 'E:\\Github\\Tools-Codex-web\\tests\\recovery-host.test.js:2632:1'
+  failureType: 'testCodeFailure'
+  error: 'ready-to-show must be subscribed before local HTML can load'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (E:\Github\Tools-Codex-web\tests\recovery-host.test.js:2651:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Recovery Host restart resolves the current accepted checkpoint and rejects caller drift
+ok 52 - Recovery Host restart resolves the current accepted checkpoint and rejects caller drift
+  ---
+  duration_ms: 12.8021
+  type: 'test'
+  ...
+# Subtest: process liveness rejects missing and non-positive PIDs before OS probing
+ok 53 - process liveness rejects missing and non-positive PIDs before OS probing
+  ---
+  duration_ms: 3.4394
+  type: 'test'
+  ...
+# Subtest: native MCP launch env brokers secrets and excludes ambient loader or secret state
+ok 54 - native MCP launch env brokers secrets and excludes ambient loader or secret state
+  ---
+  duration_ms: 1.7243
+  type: 'test'
+  ...
+# Subtest: native MCP launch passes the durable installation identity to the child process
+ok 55 - native MCP launch passes the durable installation identity to the child process
+  ---
+  duration_ms: 1.0918
+  type: 'test'
+  ...
+# Subtest: native MCP launch ignores an ambient P5 seed when no managed SecretStore seed is supplied
+ok 56 - native MCP launch ignores an ambient P5 seed when no managed SecretStore seed is supplied
+  ---
+  duration_ms: 1.0969
+  type: 'test'
+  ...
+# Subtest: orchestrator obtains the managed P5 seed only from the encrypted secret store
+ok 57 - orchestrator obtains the managed P5 seed only from the encrypted secret store
+  ---
+  duration_ms: 4.2024
+  type: 'test'
+  ...
+# Subtest: full-clean replacement binds acceptance preservation to the child activation environment
+ok 58 - full-clean replacement binds acceptance preservation to the child activation environment
+  ---
+  duration_ms: 1.2651
+  type: 'test'
+  ...
+# Subtest: activation epoch status distinguishes a valid empty store from unavailable durable authority
+ok 59 - activation epoch status distinguishes a valid empty store from unavailable durable authority
+  ---
+  duration_ms: 0.7835
+  type: 'test'
+  ...
+# Subtest: terminal activation epochs block runtime start before MCP or Tunnel mutation
+ok 60 - terminal activation epochs block runtime start before MCP or Tunnel mutation
+  ---
+  duration_ms: 1.8189
+  type: 'test'
+  ...
+# Subtest: central executor readiness never treats a local MCP as a local OpenAI Tunnel or central authority
+ok 61 - central executor readiness never treats a local MCP as a local OpenAI Tunnel or central authority
+  ---
+  duration_ms: 0.9527
+  type: 'test'
+  ...
+# Subtest: central executor starts its local MCP without a node Runtime API Key or Tunnel client
+ok 62 - central executor starts its local MCP without a node Runtime API Key or Tunnel client
+  ---
+  duration_ms: 67.4083
+  type: 'test'
+  ...
+# Subtest: central executor refuses Tunnel-only repair without reading node Runtime credentials
+ok 63 - central executor refuses Tunnel-only repair without reading node Runtime credentials
+  ---
+  duration_ms: 1.1457
+  type: 'test'
+  ...
+# Subtest: Coding MCP health is trusted only when workspace and device_id both match
+ok 64 - Coding MCP health is trusted only when workspace and device_id both match
+  ---
+  duration_ms: 9.9994
+  type: 'test'
+  ...
+# Subtest: Coding MCP health classifies deterministic mismatches separately from transient timeout or not-ready state
+ok 65 - Coding MCP health classifies deterministic mismatches separately from transient timeout or not-ready state
+  ---
+  duration_ms: 4012.7004
+  type: 'test'
+  ...
+# Subtest: activation census can request a bounded health window without weakening identity checks
+ok 66 - activation census can request a bounded health window without weakening identity checks
+  ---
+  duration_ms: 1517.0593
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation preflight requires workspace identity even for a refusal
+ok 67 - Coding MCP activation preflight requires workspace identity even for a refusal
+  ---
+  duration_ms: 6.8736
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation observation allows a retained ledger census beyond the former 15-second window
+ok 68 - Coding MCP activation observation allows a retained ledger census beyond the former 15-second window
+  ---
+  duration_ms: 15261.8944
+  type: 'test'
+  ...
+# Subtest: Git and persistent-device ownership helpers project exact local identity state
+ok 69 - Git and persistent-device ownership helpers project exact local identity state
+  ---
+  duration_ms: 2.0216
+  type: 'test'
+  ...
+# Subtest: lightweight Git telemetry serves stale cache while one slow refresh runs in background
+ok 70 - lightweight Git telemetry serves stale cache while one slow refresh runs in background
+  ---
+  duration_ms: 1.6277
+  type: 'test'
+  ...
+# Subtest: device-aware process services keep legacy or foreign live owners fail-closed in source contract
+ok 71 - device-aware process services keep legacy or foreign live owners fail-closed in source contract
+  ---
+  duration_ms: 2.548
+  type: 'test'
+  ...
+# Subtest: native runtime identity changes with workspace and port while tool mode stays smart
+ok 72 - native runtime identity changes with workspace and port while tool mode stays smart
+  ---
+  duration_ms: 2.3716
+  type: 'test'
+  ...
+# Subtest: development Coding MCP launch is pinned to the current checkout module root
+ok 73 - development Coding MCP launch is pinned to the current checkout module root
+  ---
+  duration_ms: 8.4631
+  type: 'test'
+  ...
+# Subtest: development Coding MCP launch fails closed when resources belong to another checkout
+ok 74 - development Coding MCP launch fails closed when resources belong to another checkout
+  ---
+  duration_ms: 12.9971
+  type: 'test'
+  ...
+# Subtest: packaged Coding MCP launch accepts its packaged resource root
+ok 75 - packaged Coding MCP launch accepts its packaged resource root
+  ---
+  duration_ms: 7.2551
+  type: 'test'
+  ...
+# Subtest: proxy values from Windows settings are normalized
+ok 76 - proxy values from Windows settings are normalized
+  ---
+  duration_ms: 1.2447
+  type: 'test'
+  ...
+# Subtest: background runtime processes are hidden and detached from Recovery Host lifetime
+ok 77 - background runtime processes are hidden and detached from Recovery Host lifetime
+  ---
+  duration_ms: 1.5437
+  type: 'test'
+  ...
+# Subtest: runtime state migration keeps only current native and tunnel fields
+ok 78 - runtime state migration keeps only current native and tunnel fields
+  ---
+  duration_ms: 0.8195
+  type: 'test'
+  ...
+# Subtest: native revision status is pending only when the live process has a captured revision
+ok 79 - native revision status is pending only when the live process has a captured revision
+  ---
+  duration_ms: 3.0463
+  type: 'test'
+  ...
+# Subtest: runtime recovery projection exposes only local typed supervisor evidence
+ok 80 - runtime recovery projection exposes only local typed supervisor evidence
+  ---
+  duration_ms: 1.2572
+  type: 'test'
+  ...
+# Subtest: runtime recovery projection records failure and recovery time markers
+ok 81 - runtime recovery projection records failure and recovery time markers
+  ---
+  duration_ms: 2.1751
+  type: 'test'
+  ...
+# Subtest: runtime recovery projection marks when a failure streak starts
+ok 82 - runtime recovery projection marks when a failure streak starts
+  ---
+  duration_ms: 1.6334
+  type: 'test'
+  ...
+# Subtest: revision observation failure cannot break runtime supervision
+ok 83 - revision observation failure cannot break runtime supervision
+  ---
+  duration_ms: 1.3752
+  type: 'test'
+  ...
+# Subtest: connector contract stays pending until current tools/list rediscovery is observed
+ok 84 - connector contract stays pending until current tools/list rediscovery is observed
+  ---
+  duration_ms: 2.7967
+  type: 'test'
+  ...
+# Subtest: runtime snapshots expose rediscovery without implicitly acknowledging a changed contract
+ok 85 - runtime snapshots expose rediscovery without implicitly acknowledging a changed contract
+  ---
+  duration_ms: 15.6955
+  type: 'test'
+  ...
+# Subtest: live runtime snapshot rejects a discovery receipt from a different MCP process tuple
+ok 86 - live runtime snapshot rejects a discovery receipt from a different MCP process tuple
+  ---
+  duration_ms: 3.2728
+  type: 'test'
+  ...
+# Subtest: activation connector acknowledgement accepts only an exact current-process discovery receipt
+ok 87 - activation connector acknowledgement accepts only an exact current-process discovery receipt
+  ---
+  duration_ms: 9.1866
+  type: 'test'
+  ...
+# Subtest: official connector acknowledgement is bound to the exact health receipt
+ok 88 - official connector acknowledgement is bound to the exact health receipt
+  ---
+  duration_ms: 22.7303
+  type: 'test'
+  ...
+# Subtest: activation connector compatibility bootstrap is exact, no-workspace, and never claims rediscovery
+ok 89 - activation connector compatibility bootstrap is exact, no-workspace, and never claims rediscovery
+  ---
+  duration_ms: 12.1148
+  type: 'test'
+  ...
+# Subtest: managed connector attestation binds one Recovery Host secret to one exact MCP identity
+ok 90 - managed connector attestation binds one Recovery Host secret to one exact MCP identity
+  ---
+  duration_ms: 1.1079
+  type: 'test'
+  ...
+# Subtest: native reuse binds a requested connector attestation secret to the launch digest
+ok 91 - native reuse binds a requested connector attestation secret to the launch digest
+  ---
+  duration_ms: 0.7936
+  type: 'test'
+  ...
+# Subtest: connector contract state is unavailable without a current contract fingerprint
+ok 92 - connector contract state is unavailable without a current contract fingerprint
+  ---
+  duration_ms: 0.831
+  type: 'test'
+  ...
+# Subtest: persisted matching connector SHA survives process restart without forcing rediscovery
+ok 93 - persisted matching connector SHA survives process restart without forcing rediscovery
+  ---
+  duration_ms: 7.3182
+  type: 'test'
+  ...
+# Subtest: reviewed exact predecessor requires live current-process ChatWeb contact before compatibility acknowledgement
+ok 94 - reviewed exact predecessor requires live current-process ChatWeb contact before compatibility acknowledgement
+  ---
+  duration_ms: 1.9303
+  type: 'test'
+  ...
+# Subtest: reviewed compatibility closure admits a skipped-version ChatWeb bootstrap without weakening identity gates
+ok 95 - reviewed compatibility closure admits a skipped-version ChatWeb bootstrap without weakening identity gates
+  ---
+  duration_ms: 6.3866
+  type: 'test'
+  ...
+# Subtest: compatibility route stays fail closed for undeclared or boundary-changing contracts
+ok 96 - compatibility route stays fail closed for undeclared or boundary-changing contracts
+  ---
+  duration_ms: 1.6914
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation prepare forwards the checkpoint-bound source receipt
+ok 97 - Coding MCP activation prepare forwards the checkpoint-bound source receipt
+  ---
+  duration_ms: 9.7814
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation prepare allows a valid response beyond the former five-second client window
+ok 98 - Coding MCP activation prepare allows a valid response beyond the former five-second client window
+  ---
+  duration_ms: 5266.8761
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation verify forwards acceptance-pending preservation
+ok 99 - Coding MCP activation verify forwards acceptance-pending preservation
+  ---
+  duration_ms: 4.0707
+  type: 'test'
+  ...
+# Subtest: supervisor consumes a fresh workspace-bound restart ticket exactly once
+ok 100 - supervisor consumes a fresh workspace-bound restart ticket exactly once
+  ---
+  duration_ms: 3.485
+  type: 'test'
+  ...
+# Subtest: supervisor resumes a claimed processing journal after a Recovery Host crash window
+ok 101 - supervisor resumes a claimed processing journal after a Recovery Host crash window
+  ---
+  duration_ms: 1.7689
+  type: 'test'
+  ...
+# Subtest: supervisor retains the processing journal across RUNTIME_BUSY and retries the same operation
+ok 102 - supervisor retains the processing journal across RUNTIME_BUSY and retries the same operation
+  ---
+  duration_ms: 2.5279
+  type: 'test'
+  ...
+# Subtest: supervisor restart ticket fails closed without Recovery Host checkpoint authority
+ok 103 - supervisor restart ticket fails closed without Recovery Host checkpoint authority
+  ---
+  duration_ms: 2.0945
+  type: 'test'
+  ...
+# Subtest: exact stale-run supervisor maintenance uses checkpoint-free full-clean refresh
+ok 104 - exact stale-run supervisor maintenance uses checkpoint-free full-clean refresh
+  ---
+  duration_ms: 3.5146
+  type: 'test'
+  ...
+# Subtest: supervisor never cancels or reopens a fence after a durable epoch binds the ticket operation
+ok 105 - supervisor never cancels or reopens a fence after a durable epoch binds the ticket operation
+  ---
+  duration_ms: 2.4441
+  type: 'test'
+  ...
+# Subtest: Recovery Host activation preflight capability is operation-bound and HMAC-authenticated
+ok 106 - Recovery Host activation preflight capability is operation-bound and HMAC-authenticated
+  ---
+  duration_ms: 8.5164
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation without a configured tunnel reports that no tunnel was preserved
+ok 107 - Coding MCP activation without a configured tunnel reports that no tunnel was preserved
+  ---
+  duration_ms: 4.2901
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation refuses an expired request immediately before stopping the old process
+ok 108 - Coding MCP activation refuses an expired request immediately before stopping the old process
+  ---
+  duration_ms: 1.5859
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation fails closed when disk revision changes after replacement identity verification
+ok 109 - Coding MCP activation fails closed when disk revision changes after replacement identity verification
+  ---
+  duration_ms: 2.4679
+  type: 'test'
+  ...
+# Subtest: Coding MCP activation fails before stop when the requested revision changed
+ok 110 - Coding MCP activation fails before stop when the requested revision changed
+  ---
+  duration_ms: 1.3316
+  type: 'test'
+  ...
+# Subtest: supervisor rejects stale or wrong-workspace restart tickets without restarting
+ok 111 - supervisor rejects stale or wrong-workspace restart tickets without restarting
+  ---
+  duration_ms: 1.6794
+  type: 'test'
+  ...
+# Subtest: supervisor rejects every malformed restart envelope without invoking full-clean activation
+ok 112 - supervisor rejects every malformed restart envelope without invoking full-clean activation
+  ---
+  duration_ms: 7.9089
+  type: 'test'
+  ...
+# Subtest: supervisor treats the exact ticket expiry instant as already expired
+ok 113 - supervisor treats the exact ticket expiry instant as already expired
+  ---
+  duration_ms: 3.6779
+  type: 'test'
+  ...
+# Subtest: supervisor preserves an accepted ticket when reading its durable journal is uncertain
+ok 114 - supervisor preserves an accepted ticket when reading its durable journal is uncertain
+  ---
+  duration_ms: 2.0046
+  type: 'test'
+  ...
+# Subtest: supervisor never recovers a restart ticket from json backup
+ok 115 - supervisor never recovers a restart ticket from json backup
+  ---
+  duration_ms: 2.8452
+  type: 'test'
+  ...
+# Subtest: supervisor recovers only the tunnel when MCP remains healthy
+ok 116 - supervisor recovers only the tunnel when MCP remains healthy
+  ---
+  duration_ms: 1.5134
+  type: 'test'
+  ...
+# Subtest: automatic recovery latches a full-clean-required source refusal after one attempt
+ok 117 - automatic recovery latches a full-clean-required source refusal after one attempt
+  ---
+  duration_ms: 1.3292
+  type: 'test'
+  ...
+# Subtest: automatic recovery keeps transient failures eligible for bounded retry
+ok 118 - automatic recovery keeps transient failures eligible for bounded retry
+  ---
+  duration_ms: 1.0372
+  type: 'test'
+  ...
+# Subtest: supervisor trusts MCP health over a stale owned-process record
+ok 119 - supervisor trusts MCP health over a stale owned-process record
+  ---
+  duration_ms: 0.7229
+  type: 'test'
+  ...
+# Subtest: central executor supervisor never attempts a node Tunnel repair
+ok 120 - central executor supervisor never attempts a node Tunnel repair
+  ---
+  duration_ms: 0.9299
+  type: 'test'
+  ...
+# Subtest: supervisor does not kill a live MCP process after transient health failures
+ok 121 - supervisor does not kill a live MCP process after transient health failures
+  ---
+  duration_ms: 0.8753
+  type: 'test'
+  ...
+# Subtest: supervisor never escalates deterministic MCP health mismatch into a destructive restart
+ok 122 - supervisor never escalates deterministic MCP health mismatch into a destructive restart
+  ---
+  duration_ms: 3.1473
+  type: 'test'
+  ...
+# Subtest: supervisor fail-closes before replacement when the recorded owned PID is still alive but MCP health is unavailable
+ok 123 - supervisor fail-closes before replacement when the recorded owned PID is still alive but MCP health is unavailable
+  ---
+  duration_ms: 21.9211
+  type: 'test'
+  ...
+# Subtest: supervisor defers recovery when both health checks fail but MCP process remains alive
+ok 124 - supervisor defers recovery when both health checks fail but MCP process remains alive
+  ---
+  duration_ms: 1.1036
+  type: 'test'
+  ...
+# Subtest: supervisor recovers only Coding MCP after the owned MCP process exits
+ok 125 - supervisor recovers only Coding MCP after the owned MCP process exits
+  ---
+  duration_ms: 0.7353
+  type: 'test'
+  ...
+# Subtest: MCP-only recovery refuses an unexpectedly occupied MCP port without touching Tunnel
+ok 126 - MCP-only recovery refuses an unexpectedly occupied MCP port without touching Tunnel
+  ---
+  duration_ms: 378.2242
+  type: 'test'
+  ...
+# Subtest: MCP-only soft recovery stops the replacement when disk revision drifts after spawn
+ok 127 - MCP-only soft recovery stops the replacement when disk revision drifts after spawn
+  ---
+  duration_ms: 6.5845
+  type: 'test'
+  ...
+# Subtest: supervisor requires three consecutive failures of the same kind
+ok 128 - supervisor requires three consecutive failures of the same kind
+  ---
+  duration_ms: 0.8204
+  type: 'test'
+  ...
+# Subtest: supervisor replaces only a hung live MCP after repeated deferrals
+ok 129 - supervisor replaces only a hung live MCP after repeated deferrals
+  ---
+  duration_ms: 1.6914
+  type: 'test'
+  ...
+# Subtest: supervisor resets the deferral counter once the runtime becomes healthy
+ok 130 - supervisor resets the deferral counter once the runtime becomes healthy
+  ---
+  duration_ms: 0.9775
+  type: 'test'
+  ...
+# Subtest: native and tunnel stop paths require exact process identity before tree termination
+ok 131 - native and tunnel stop paths require exact process identity before tree termination
+  ---
+  duration_ms: 0.897
+  type: 'test'
+  ...
+# Subtest: native and tunnel health probes use non-blocking process identity observation by default
+ok 132 - native and tunnel health probes use non-blocking process identity observation by default
+  ---
+  duration_ms: 0.51
+  type: 'test'
+  ...
+# Subtest: native stop forwards the exact stored PID and start token
+ok 133 - native stop forwards the exact stored PID and start token
+  ---
+  duration_ms: 8.213
+  type: 'test'
+  ...
+# Subtest: native stop clears a retired receipt without terminating its recycled PID
+ok 134 - native stop clears a retired receipt without terminating its recycled PID
+  ---
+  duration_ms: 5.9657
+  type: 'test'
+  ...
+# Subtest: native stop rejects unavailable or missing identity without clearing state
+ok 135 - native stop rejects unavailable or missing identity without clearing state
+  ---
+  duration_ms: 3.3631
+  type: 'test'
+  ...
+# Subtest: tunnel stop forwards the exact stored PID and start token
+ok 136 - tunnel stop forwards the exact stored PID and start token
+  ---
+  duration_ms: 6.8904
+  type: 'test'
+  ...
+# Subtest: tunnel stop clears a retired receipt without terminating its recycled PID
+ok 137 - tunnel stop clears a retired receipt without terminating its recycled PID
+  ---
+  duration_ms: 6.8197
+  type: 'test'
+  ...
+# Subtest: tunnel stop rejects unavailable or missing identity without clearing state
+ok 138 - tunnel stop rejects unavailable or missing identity without clearing state
+  ---
+  duration_ms: 2.1805
+  type: 'test'
+  ...
+# Subtest: authorized child exact stale maintenance preserves supervisor owner and passes target workspace to full-clean
+ok 139 - authorized child exact stale maintenance preserves supervisor owner and passes target workspace to full-clean
+  ---
+  duration_ms: 2.379
+  type: 'test'
+  ...
+1..139
+# tests 139
+# suites 0
+# pass 138
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 27034.1088

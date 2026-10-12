@@ -1,0 +1,23 @@
+{
+  "kind": "root_observed_packaged_recovery_smoke",
+  "candidate_tag": "initial-proof-1011-r11",
+  "command": "CODEX_PACKAGED_APP_ROOT=<candidate>/win-unpacked node scripts/packaged-recovery-smoke.js",
+  "execution_date": "2026-10-11",
+  "exit_code": 0,
+  "ok": true,
+  "source": "Root directly observed the command's JSON stdout; this receipt is a summary, not a raw stdout capture.",
+  "package": {
+    "required_resources": 18,
+    "source_resources_exact": true,
+    "control_plane_adapter_exact": true,
+    "smart_tool_profile": "smart-v3",
+    "smart_tools": ["agent_workflow", "command_control", "document_workflow", "exec_command", "request_permissions", "task_control", "view_image", "workspace_context"]
+  },
+  "isolation": {"user_data_isolated": true, "production_descriptor_stable": true},
+  "recovery": {"host_ready": true, "device_identity_present": true, "mcp_alive": true},
+  "supervisor": {"healthy": true, "live_owner_fail_closed": true, "hash_mismatch_fail_closed": true, "scheduled_task_mutation": false},
+  "test_owned_process_cleanup_assertions_passed": true,
+  "production_runtime_activated": false,
+  "ubuntu_deployed": false,
+  "authority_renewed": false
+}

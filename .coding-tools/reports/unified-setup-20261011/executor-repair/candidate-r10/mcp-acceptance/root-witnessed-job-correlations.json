@@ -1,0 +1,38 @@
+{
+  "kind": "root_tool_observation_summary",
+  "observed_at": "2026-10-11T13:37:41Z",
+  "raw_output_reprinted": false,
+  "proof_ledger_or_acceptance_proven": false,
+  "command_replayed": false,
+  "observations": [
+    {
+      "helper": "verify-r10-native-job-v2.py",
+      "helper_sha256": "693f5783cff04fc2130b9d1085fcdbaf8d60dbcd578d2e763bacaaf5ea02709f",
+      "ok": true,
+      "action_id": "act_9482be2aef814d82b3ff4722b5979a25",
+      "job_id": "4978280465374604b7eb7e04b4297327",
+      "transport_sha256": "c3ab3f3cb0d80c5023f32efc20a964586fdd3dcfdd7bea361f2e91120eba4e6a",
+      "run_wave_correlation": "standalone_exec_both_empty"
+    },
+    {
+      "helper": "verify-r10-native-job-v3.py",
+      "helper_sha256": "7109c9ca8ece117601a2295369884c2d37f04bfd674552844d8cc8be50e6527e",
+      "ok": true,
+      "mode": "cold",
+      "action_id": "act_91aaaf5601124cb19c6eff321112e09d",
+      "job_id": "db555fd7c8b44ca4957b8e842dcffe9d",
+      "transport_sha256": "378918499ef5d8aedb9fa9b47f9b3827b46e9e514a00f4253aa5a6f33277d239",
+      "run_wave_correlation": "standalone_exec_both_empty"
+    },
+    {
+      "helper": "verify-r10-native-job-v3.py",
+      "helper_sha256": "7109c9ca8ece117601a2295369884c2d37f04bfd674552844d8cc8be50e6527e",
+      "ok": true,
+      "mode": "warm",
+      "action_id": "act_851da1bd59764e24bb5fa50d11c102f6",
+      "job_id": "ee1ebaad7bd44883ad5deba4c203ea91",
+      "transport_sha256": "312a5ad1bca4066aa12039f836fb35acff7662aae9ed1eb8d70c339f71967920",
+      "run_wave_correlation": "standalone_exec_both_empty"
+    }
+  ]
+}

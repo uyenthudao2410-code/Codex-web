@@ -1,0 +1,18 @@
+{
+  "service_instance_id": "cp_6766892f5ada47d1862a0d24334f1116",
+  "context_id": "ctx_9e58c758a20249479b6ec806970f68ca",
+  "pilot_id": "pilot_25fa8c634f7f40e282c30a303b51bfd0",
+  "requested_at_ms": 1791722898491,
+  "expires_at_ms": 1791726498491,
+  "rollout_receipt_sha256": "5b29fa057d1fa0e58cde5107e9073c5651068ec19814a1906a748c2aa2cd30bb",
+  "native_observation_sha256": "ac3ca254d600013a74ccaef92c1379320404396086b3148060174c8e98ac2a7d",
+  "facade_contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "274af168c29bc7a10eb35e2314632badddabe456c2c645cda7a7767480fc2e32"
+  },
+  "process_instance_id": "NPcICAuYwm7xgyoD",
+  "server_instance_id": "tVh1URl5e518xNsl",
+  "activation_epoch_id": "activation-mv3tn5og-8def0602e3d318e0c42052c6eefc00ba",
+  "native_contract_sha256": "bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0"
+}

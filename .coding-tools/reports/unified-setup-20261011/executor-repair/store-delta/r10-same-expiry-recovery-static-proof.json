@@ -1,0 +1,39 @@
+{
+  "kind": "pure_same_expiry_recovery_guard_proof",
+  "helper_sha256": "c796a36e4747be0a10df46e99e8b0c1c63d0d004e1a95174e30fa238465e3dad",
+  "syntax_passed": true,
+  "positive_cases": 2,
+  "negative_cases": [
+    {
+      "case": "different_scope",
+      "rejected": "PILOT_SCOPE_OR_EXPIRY_CHANGED"
+    },
+    {
+      "case": "extended_expiry",
+      "rejected": "PILOT_SCOPE_OR_EXPIRY_CHANGED"
+    },
+    {
+      "case": "offline",
+      "rejected": "RECOVERED_NODE_NOT_EXACT_FRESH_READY"
+    },
+    {
+      "case": "wrong_native",
+      "rejected": "RECOVERED_NODE_NOT_EXACT_FRESH_READY"
+    },
+    {
+      "case": "stale_heartbeat",
+      "rejected": "RECOVERED_NODE_NOT_EXACT_FRESH_READY"
+    },
+    {
+      "case": "expired_policy",
+      "rejected": "RECOVERED_NODE_NOT_EXACT_FRESH_READY"
+    },
+    {
+      "case": "wrong_epoch",
+      "rejected": "RECOVERED_NODE_NOT_EXACT_FRESH_READY"
+    }
+  ],
+  "v3_unchanged": true,
+  "main_invoked": false,
+  "live_operations": false
+}

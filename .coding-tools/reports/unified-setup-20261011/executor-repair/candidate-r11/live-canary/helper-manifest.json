@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "prepared_at_utc": "2026-10-11T15:12:30.0579078Z",
+  "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "scope": "local-only r11 canary helpers",
+  "common_guard_sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+  "root_ssh_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba",
+  "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "proof": {
+    "stage": "passed",
+    "canary_tests": 16,
+    "transport_tests": 6,
+    "reader_tests": 4,
+    "passed": 26,
+    "live_dispatch": "not_performed",
+    "native_semantic_acceptance": "pending"
+  },
+  "files": [
+    {
+      "path": "r11_mcp_canary.py",
+      "bytes": 33604,
+      "sha256": "110b0a648c831312e01294c74d8acc260c6ad89374880ec2bdd77036971c4f75"
+    },
+    {
+      "path": "test_r11_mcp_canary.py",
+      "bytes": 14907,
+      "sha256": "839263520b4ddb6c2165095b20782e2c0ac4c5c830fe7d2a39272234d8f03a45"
+    },
+    {
+      "path": "root-canary-ssh.py",
+      "bytes": 11858,
+      "sha256": "c8c47308e8cfdc0bf1153875d93e4dff60a53fee995ea5fb21aed53686e40d87"
+    },
+    {
+      "path": "test_root_canary_ssh.py",
+      "bytes": 6141,
+      "sha256": "e6fcb958d6e5f84e97e9ad0d5853d3bb0e09597f899539592c71045d442c9763"
+    },
+    {
+      "path": "native-output-read.cjs",
+      "bytes": 11756,
+      "sha256": "8f313d10789b65e84959efdf9ea7e2e277addc2242032e768df1df9b9dd87c11"
+    },
+    {
+      "path": "native-output-read.test.cjs",
+      "bytes": 3026,
+      "sha256": "1af96149242b9934857d7e9a9a9822ae5c36ba179ab01be97f79c849df9d085d"
+    },
+    {
+      "path": "patch-envelope.txt",
+      "bytes": 639,
+      "sha256": "77f2c282c91f3627e721d0d68bf1fa821bad21575ec136204353894b18ce5e4a"
+    },
+    {
+      "path": "pins.template.json",
+      "bytes": 1208,
+      "sha256": "4cdc0a57e5a17dc873ac871d7809da7f404962cffe123937a33310ba854b72c0"
+    },
+    {
+      "path": "README.md",
+      "bytes": 9608,
+      "sha256": "0124bb039da005989c434128d1c6c41cfe0b6557e13e72e1bf174718405160e6"
+    },
+    {
+      "path": "LOCAL-STATUS.md",
+      "bytes": 2598,
+      "sha256": "66ada980dc380e3cc9f7c7e4f504aa77b98a0ad2d57116c87d343e64143612bf"
+    }
+  ]
+}

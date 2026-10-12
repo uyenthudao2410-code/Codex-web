@@ -1,0 +1,104 @@
+{
+  "kind": "r10_native_local_read_only_v3",
+  "observed_at": "2026-10-11T13:06:11.359Z",
+  "ok": true,
+  "phase": "cold",
+  "repository": {
+    "root": "E:\\Github\\Tools-Codex-web",
+    "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "worktree": "dirty_preserved"
+  },
+  "candidate": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-setup-exec-contract-1011-r10\\win-unpacked",
+  "profile": "web-mcp-assistant",
+  "package": {
+    "app_asar_sha256": "c39a614d40f551f0ddef4e579bcd8ef5d8d3ad365bbd43e22693df8c1f9672e9",
+    "executable_sha256": "6e34a6705a647aaddda0d24f2152904006a504ab7a29ba516b686c6de29ef09f",
+    "parity_sha256": "c9f6fe1313b6004519a61bebf3f8f173a74cfd1d563bef48fce87908ed72f57c",
+    "source_freeze_sha256": "030893e3e3f056debb1ee8b4213e4b4c1ae0fdb28af63ba8313567a3e231049f",
+    "raw_archive_reader": "electron_original_fs"
+  },
+  "transport": {
+    "kind": "source_bytes_equal_pinned_packaged_module_closure",
+    "module_sha256": {
+      "commandRunner": "8bc2e57cda49b0566ef8c2fccd410be3b6f30061494edf73387b6929bca42540",
+      "deviceIdentity": "3fa0ddde6723b85549de7d3cc3303160464188706bfe580ef97a0008c4ada602",
+      "jsonStore": "9d29ea36518e2bf0de712a5a8bdf721ce39921f9612a0970a0e72b6a28181fd9",
+      "pathSemantics": "eba6fb2177e57c113ea9e022891b7ecdecede2fb772677194e2f0dcbe47054f9",
+      "runtimeIdentity": "e68b77d6cd35c4fffd5ce99f6574fea089332429736972e59dcd2c8ab87f93d1",
+      "runtimePaths": "a28fe23a10daa10baeb9c437ccee13cff2c1d28585d1c6daa3e5a23844d23474",
+      "recoveryIpc": "57e0154c4d9f80bcfc5fa95ec5c4643de436d8fe945e9b3ab884afd9b8faebc2",
+      "recoveryHostLauncher": "92cb2478ae940c737a8e8a007181a9fa410b1eeb1e26a06b5bb07e1043ebf60a",
+      "processIdentity": "a0ee2b08cbe4108c352ba14b9532ceaf581497f745a2adda7924c819a972809f"
+    },
+    "runtime_paths_mode": "packaged",
+    "virtual_asar_file_read": false
+  },
+  "descriptor": {
+    "installation_id": "36cd3af6fe1da4607cfe3035d48becd97dc12265901b480401bf44389ff1d1dc",
+    "instance_id": "683d283f8174b82d1c906d53fd41e190",
+    "runtime_mode": "packaged"
+  },
+  "owner": {
+    "state": "live",
+    "pid": 14516,
+    "process_start_token": "134361966532424140"
+  },
+  "identity": {
+    "observation_schema_version": 1,
+    "observation_kind": "mcp_identity_read_only",
+    "observed_at": "2026-10-11T13:06:10.735Z",
+    "recovery_host_instance_id": "683d283f8174b82d1c906d53fd41e190",
+    "mcp_process_instance_id": "NPcICAuYwm7xgyoD",
+    "mcp_server_instance_id": "tVh1URl5e518xNsl",
+    "activation_epoch_id": "activation-mv3tn5og-8def0602e3d318e0c42052c6eefc00ba",
+    "current_activation_epoch_id": "activation-mv3tn5og-8def0602e3d318e0c42052c6eefc00ba",
+    "tool_contract_sha256": "bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0",
+    "mcp_ready": true,
+    "identity_current": true
+  },
+  "backend": {
+    "kind": "Microsoft MXC Windows Sandbox state-aware candidate",
+    "root": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-setup-exec-contract-1011-r10\\win-unpacked\\resources\\resources\\tools\\mxc-windows-sandbox",
+    "verified_files_sha256": {
+      "wxc-exec.exe": "8668cf65887b51f2afb167da5fb8476f53ddc09341288e8f558c9e02c5c6e7cb",
+      "wxc-windows-sandbox-daemon.exe": "6232c7ee1628321d35aefa50e986805521e61b9b7c7c5bf255091d6250899fcf",
+      "wxc-windows-sandbox-guest.exe": "c7fcb668abd7139a94145fabbe0d4397dcc2e9302ced11c19767809d14a3f9b5",
+      "mxc-windows-sandbox.provenance.json": "09c599513697d82b5059f29b757d015c78067811c1286ba93dd72aa10552dd7d"
+    },
+    "probe_performed": false,
+    "active_manager_ownership_proven": false
+  },
+  "host": {
+    "observed_at": "2026-10-11T13:06:11.2682360Z",
+    "temp_root": "C:\\Users\\daoth\\AppData\\Local\\Temp\\",
+    "processes": [],
+    "sandbox_process_count": 0,
+    "daemon_process_count": 0,
+    "daemon_record_exists": false,
+    "daemon_record_regular_file": false,
+    "daemon_record_read": false,
+    "daemon_record_hashed": false,
+    "cold_candidate_observed": true,
+    "warm_candidate_observed": false,
+    "daemon_or_vm_ownership_proven": false,
+    "manager_lease_proven": false
+  },
+  "requested_phase_observed": true,
+  "pin_fields": {
+    "process_instance_id": "NPcICAuYwm7xgyoD",
+    "server_instance_id": "tVh1URl5e518xNsl",
+    "activation_epoch_id": "activation-mv3tn5og-8def0602e3d318e0c42052c6eefc00ba",
+    "native_contract_sha256": "bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0"
+  },
+  "helper_sha256": "1800ec6dfd07532e39ca6b05b3cd4c98561cb8cd8da3c1d119beb82e5314eb29",
+  "canary_accepted": false,
+  "cleanup_confirmed": false,
+  "mutations": {
+    "runtime": false,
+    "authority": false,
+    "command": false,
+    "probe": false,
+    "service": false,
+    "ledger": false
+  }
+}

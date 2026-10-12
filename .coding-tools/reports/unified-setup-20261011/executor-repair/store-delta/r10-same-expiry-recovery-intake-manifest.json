@@ -1,0 +1,13 @@
+{
+  "kind": "prepared_same_expiry_recovery_intake",
+  "helper": "ubuntu-r10-same-expiry-recovery-intake.py",
+  "helper_sha256": "c796a36e4747be0a10df46e99e8b0c1c63d0d004e1a95174e30fa238465e3dad",
+  "base_observe_only_sha256": "770853b1f6df78550961a04e0a8d01e19c368247d6384acbf6aa6b0bf98358d0",
+  "frozen_v3_sha256": "a312575854fee785158fa21624a096d7b09ae3701ded38f449a7330ba089ebec",
+  "requested_at_ms": 1791722898491,
+  "expires_at_ms": 1791726498491,
+  "authority_renewed": false,
+  "original_marker_modified": false,
+  "prepared_only": true,
+  "live_operations": false
+}

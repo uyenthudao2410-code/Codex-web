@@ -1,0 +1,203 @@
+{
+  "build": {
+    "platform": "windows",
+    "python": "3.11.9"
+  },
+  "component_sha256": {
+    "control_plane": "7ed7550721be7d1606f900510796fe550e93d869f50390413df1af90d90ca341",
+    "deployment": "e337212749940ffb89dcec979519c46fa542e59c5b00d1bd131b0116feb44381",
+    "documentation": "9a5c5d895c59a8aee03bead1c38a7482f6e1ade9e1036a16cdee03c9de3daf06"
+  },
+  "control_plane_schema_version": 28,
+  "files": [
+    {
+      "path": "control-plane/control_plane/__init__.py",
+      "sha256": "b2281d801697f3819879b5100bf6e1c4c0dcfd67f9aae15198d4bfb93280a07a",
+      "size_bytes": 332
+    },
+    {
+      "path": "control-plane/control_plane/__main__.py",
+      "sha256": "035af58fc85e40477e9d33d31f5c7d4481dad5babe8bdb3a97dbfba1879871a4",
+      "size_bytes": 103
+    },
+    {
+      "path": "control-plane/control_plane/deployment_verifier.py",
+      "sha256": "02ec6c6b0e49410b0f8a6b3d43665f860087df1e242a19ec18eff449204f7401",
+      "size_bytes": 7671
+    },
+    {
+      "path": "control-plane/control_plane/http_api.py",
+      "sha256": "c28b93dfa968022ac8dcdeac24ee574a9b57b62ba636c51d1deeb586b3916644",
+      "size_bytes": 105963
+    },
+    {
+      "path": "control-plane/control_plane/maintenance.py",
+      "sha256": "795d4ee4f607bd29c9ad178b1af62e5a212d99cae4c9843adbd8e76fc748894e",
+      "size_bytes": 4538
+    },
+    {
+      "path": "control-plane/control_plane/mcp_facade.py",
+      "sha256": "3cf3bca4f03deb294b9752cce23942ab5524ba4016055dac30f02148c2f511c8",
+      "size_bytes": 195017
+    },
+    {
+      "path": "control-plane/control_plane/mcp_oauth.py",
+      "sha256": "1ecba74925783bb9f09a5d4b54dd44085851f6b8efa8ad9e7f7acb98f13e6b7f",
+      "size_bytes": 27838
+    },
+    {
+      "path": "control-plane/control_plane/node-agent.cmd",
+      "sha256": "fa6f151746cc721f96293d107bc194aa71423510921fbc2f3dfea4db572cb9bb",
+      "size_bytes": 937
+    },
+    {
+      "path": "control-plane/control_plane/node_agent.py",
+      "sha256": "edda63dc462fba0a07f6b7fce5352ca5b61e24fb1271024d2074ff567116725e",
+      "size_bytes": 458439
+    },
+    {
+      "path": "control-plane/control_plane/recovery_approved_patch_bridge.cjs",
+      "sha256": "db50e1a20a7f97642d6856b3ab91bfed8d9cfc9d9655ff234ae005f534f81072",
+      "size_bytes": 6168
+    },
+    {
+      "path": "control-plane/control_plane/recovery_document_write_bridge.cjs",
+      "sha256": "622521e5cac877937ac5b962e3bf7b06ed516712b11669fe2686946a951376f5",
+      "size_bytes": 5773
+    },
+    {
+      "path": "control-plane/control_plane/recovery_exec_bridge.cjs",
+      "sha256": "44ab2e187fc1e3e5b33d776d169ab63e353162465e0a249fcf7fdd70fa3a78be",
+      "size_bytes": 6152
+    },
+    {
+      "path": "control-plane/control_plane/recovery_file_read_bridge.cjs",
+      "sha256": "e76f44b07dd88a78e725d4c7d55e6df2de65047489769bd79b42984e149d087b",
+      "size_bytes": 5314
+    },
+    {
+      "path": "control-plane/control_plane/recovery_identity_observer.cjs",
+      "sha256": "04f721542146c7a22fc97244610330f41f2a858ce977bef39c62088399200cd1",
+      "size_bytes": 6922
+    },
+    {
+      "path": "control-plane/control_plane/recovery_read_only_bridge.cjs",
+      "sha256": "0212b65b7def3a01d1aa1399992f6635e049aaeefaad0b86776c786898432056",
+      "size_bytes": 10965
+    },
+    {
+      "path": "control-plane/control_plane/recovery_runtime_adapter.cjs",
+      "sha256": "8249750fadf5837b28492e98381acb3b5a4d7379b8aae4bac8f11a243f3dd4d9",
+      "size_bytes": 4906
+    },
+    {
+      "path": "control-plane/control_plane/store.py",
+      "sha256": "99d3eba656a269886a842bc357a14222eb811bbb7dea8d0538c210d5f3edcf40",
+      "size_bytes": 459335
+    },
+    {
+      "path": "control-plane/control_plane/web_ui.py",
+      "sha256": "073bde8624c5d6ff76ddfae8633acb7c1c4118b05aa458b4be1b21b3ae8181aa",
+      "size_bytes": 76754
+    },
+    {
+      "path": "control-plane/README.md",
+      "sha256": "41b08895eef4f1ea9867f0c45e199e9627163677696a852c9c438cc62b2baa1f",
+      "size_bytes": 67291
+    },
+    {
+      "path": "deploy/codex-control-plane-authority-renewal.service.example",
+      "sha256": "4d8fe28d652248df8f8db7d64a23b40b025e189f6de65c40ef49c23442e63e9c",
+      "size_bytes": 489
+    },
+    {
+      "path": "deploy/codex-control-plane-authority-renewal.timer.example",
+      "sha256": "8e9574508e910a286d46ae54f9b3fc213dae26da068b06a845a1022930ba5a31",
+      "size_bytes": 257
+    },
+    {
+      "path": "deploy/codex-control-plane-backup.service.example",
+      "sha256": "4d79c805aaa010555bdf17c62b70b429f814f6aa936b577f0548c594ea761985",
+      "size_bytes": 387
+    },
+    {
+      "path": "deploy/codex-control-plane-backup.timer.example",
+      "sha256": "b32e4577dcb1a7942bf045668bc5d89f2fe0b99f93922c5e320a66ef64b893bd",
+      "size_bytes": 213
+    },
+    {
+      "path": "deploy/codex-control-plane-healthcheck.service.example",
+      "sha256": "4d8e01b3c6005039b38cbaa633d5ad9a7b7798872b08d6f52095147c9c6aef47",
+      "size_bytes": 430
+    },
+    {
+      "path": "deploy/codex-control-plane-healthcheck.timer.example",
+      "sha256": "0fbbb3e34a98ed9c881d5636bcd9041ab301424a9279a4f3a0eff77b80285e63",
+      "size_bytes": 234
+    },
+    {
+      "path": "deploy/codex-control-plane-mcp-tunnel.service.example",
+      "sha256": "4a1034b676b600b4d68de7450f747a9d7898896d7f44d8e12abcc2670b830052",
+      "size_bytes": 844
+    },
+    {
+      "path": "deploy/codex-control-plane.service.example",
+      "sha256": "39f88a3938d4291b8e2e0d62a8f84bf6667dcbd858cee0ebf280e501b9c1508e",
+      "size_bytes": 538
+    },
+    {
+      "path": "deploy/control-plane-authority-renewal.py",
+      "sha256": "06ce91b9697e5e3b2b32392142a17c16a3da2571286feec4e24e71feab23b2cb",
+      "size_bytes": 8137
+    },
+    {
+      "path": "deploy/control-plane-backup.sh",
+      "sha256": "4b52a0f1c757d3d4a371cad46defd4088434e932f90413959b8f93fc11d346a1",
+      "size_bytes": 3672
+    },
+    {
+      "path": "deploy/control-plane-healthcheck.sh",
+      "sha256": "eece1d3db7849c84a608dacabcf49f71bb44692586d43a1f72536b632e21a0a9",
+      "size_bytes": 3642
+    },
+    {
+      "path": "deploy/control-plane-launcher.sh",
+      "sha256": "2bc1013d520010e415703156a7531f01fae147c889751a8788503aa6b565e98e",
+      "size_bytes": 576
+    },
+    {
+      "path": "deploy/control-plane-mcp-tunnel-launcher.sh",
+      "sha256": "a1c6372c0d00d7c0c40c6f7b488c58456169830a3201cede5f15237a42255bea",
+      "size_bytes": 8696
+    },
+    {
+      "path": "deploy/control-plane-mcp-tunnel.env.example",
+      "sha256": "d2c10df499047552c80b50ea7ac72ed4fbcb0305a57218ce148e9aa3b720151e",
+      "size_bytes": 1620
+    },
+    {
+      "path": "deploy/control-plane-verify-release.py",
+      "sha256": "73477f61d9741759272ded41e03ddbe942e2b9c214f9defec769ede89c895b0d",
+      "size_bytes": 8133
+    },
+    {
+      "path": "deploy/control-plane.env.example",
+      "sha256": "e3e7d9be57baa41f3584d2ad096099334b755a14e5302fc1874ae1e1ce66d892",
+      "size_bytes": 5926
+    },
+    {
+      "path": "deploy/prepare-control-plane-activation.py",
+      "sha256": "822ddb0e28542a5f8eb2cb1ffca6c888381cc9e731af4cefb451fa6eb10eb1aa",
+      "size_bytes": 9324
+    },
+    {
+      "path": "DEPLOYMENT.md",
+      "sha256": "99008bd3351336f49bf7b763cd181153eddf23c90ed622769e1259eb13d8171b",
+      "size_bytes": 3203
+    }
+  ],
+  "package_source_sha256": "sha256:fd5132676f1a68e875348fe790c6803c591f65a73311d793194c20a4e70b7d81",
+  "release_name": "codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd",
+  "schema_version": 1,
+  "source_revision": "70de202d93c9a759befe5d38491ce54e9ef4b3cd"
+}

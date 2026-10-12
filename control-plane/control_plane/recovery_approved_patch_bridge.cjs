@@ -98,7 +98,8 @@ function normalisedResult(descriptor, result, request, bridge) {
     runtime_identity: normalized.runtime_identity,
     facade_contract: normalized.facade_contract,
     file: normalized.file,
-    response_sha256: normalized.response_sha256
+    response_sha256: normalized.response_sha256,
+    ...(normalized.initial_verification ? { initial_verification: normalized.initial_verification } : {})
   };
 }
 
@@ -129,7 +130,10 @@ async function runApprovedPatchBridge(request, {
   const result = await client.call(
     'runtime.control_plane_approved_patch',
     [request],
-    requestOptions(descriptor)
+    {
+      ...requestOptions(descriptor),
+      ...(request.verification ? { timeout: request.verification.timeout_ms + 300000 } : {})
+    }
   );
   return normalisedResult(descriptor, result, request, approvedPatchBridgeModule(runtime, dependencies));
 }

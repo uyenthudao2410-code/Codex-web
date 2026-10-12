@@ -70,13 +70,19 @@ class McpExecCentralTests(unittest.TestCase):
             "argv": ["npm", "test", ";", "rm", "-rf", "/"],
             "idempotency_key": "exec-key-shell-001", "expected_facade_contract": self._contract(),
         })
-        self.assertEqual(bad["error"]["data"]["code"], "VALIDATION_ERROR")
+        self.assertNotIn("error", bad)
+        self.assertTrue(bad["result"]["isError"])
+        self.assertEqual(bad["result"]["structuredContent"]["code"], "VALIDATION_ERROR")
+        self.assertEqual(bad["result"]["structuredContent"]["execution"], "not_started")
+        self.assertEqual(bad["result"]["structuredContent"]["tool_name"], "exec_command")
+        self.assertTrue(bad["result"]["structuredContent"]["message"])
         bad_cwd = self._call("exec_command", {
             "operation": "exec_run", "binding_id": self.binding["binding_id"],
             "argv": ["npm", "test"], "cwd": "/etc",
             "idempotency_key": "exec-key-cwd-002", "expected_facade_contract": self._contract(),
         })
-        self.assertEqual(bad_cwd["error"]["data"]["code"], "VALIDATION_ERROR")
+        self.assertTrue(bad_cwd["result"]["isError"])
+        self.assertEqual(bad_cwd["result"]["structuredContent"]["code"], "VALIDATION_ERROR")
         with self.assertRaises(ValidationError):
             self.store.request_mcp_exec(
                 owner_id=self.owner_id, principal_id=self.principal["principal_id"],
@@ -113,7 +119,8 @@ class McpExecCentralTests(unittest.TestCase):
             "argv": ["python", "-m", "pytest", "-q"],
             "idempotency_key": "exec-key-task-004", "expected_facade_contract": self._contract(),
         })
-        self.assertEqual(conflict["error"]["data"]["code"], "CONFLICT")
+        self.assertTrue(conflict["result"]["isError"])
+        self.assertEqual(conflict["result"]["structuredContent"]["code"], "CONFLICT")
         # Stop is pending until the node proves quiescence.
         stopped = self._call("command_control", {"operation": "exec_stop", "action_id": action_id})
         self.assertEqual(stopped["result"]["structuredContent"]["stop_state"], "pending")
@@ -273,7 +280,8 @@ class McpExecCentralTests(unittest.TestCase):
             "operation": "doc_read", "binding_id": self.binding["binding_id"],
             "path": ".ssh/id_rsa", "idempotency_key": "artifact-doc-008",
             "expected_facade_contract": self._contract()})
-        self.assertEqual(denied["error"]["data"]["code"], "VALIDATION_ERROR")
+        self.assertTrue(denied["result"]["isError"])
+        self.assertEqual(denied["result"]["structuredContent"]["code"], "VALIDATION_ERROR")
 
     def test_two_nodes_same_path_stay_isolated_per_task(self) -> None:
         """Bốn máy chồng thời gian: cùng tên file nhưng digest/marker khác nhau."""

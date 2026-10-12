@@ -1,0 +1,54 @@
+{
+  "approval_id": "r13-same-window-transition",
+  "authority_extended": false,
+  "effects_performed_by_lane": false,
+  "files": [
+    {
+      "bytes": 24187,
+      "path": "correlate_r13.py",
+      "sha256": "f19e257171f637958e1d2d85d74b92583e66dc6ebe55ff91f395c797cb0907d3"
+    },
+    {
+      "bytes": 11761,
+      "path": "native-output-read.cjs",
+      "sha256": "3f509c5754eb060d497e2d1b08c8bbc636d0584af9b83f3d755fcfd0edf76f9e"
+    },
+    {
+      "bytes": 11040,
+      "path": "native-preflight.cjs",
+      "sha256": "8c8ab2e51d115b6bc37750df1d6bf930ee378a860a2ddbb8905df23235c0b8c9"
+    },
+    {
+      "bytes": 639,
+      "path": "patch-envelope.txt",
+      "sha256": "77f2c282c91f3627e721d0d68bf1fa821bad21575ec136204353894b18ce5e4a"
+    },
+    {
+      "bytes": 1373,
+      "path": "pins.template.json",
+      "sha256": "0e436efed1bc60ee83b740963c9fe1869faecb07b160f0f0a204ef86a8ff1bde"
+    },
+    {
+      "bytes": 42642,
+      "path": "r13_mcp_canary.py",
+      "sha256": "2849f593854292a7e75f18ee2c183b30e721685a03df2b9a7455246d3442615c"
+    },
+    {
+      "bytes": 4315,
+      "path": "README.md",
+      "sha256": "86f2f72dc210b5e1393ad2e1a6f9c5ec11a19e32723aae57a4ec58d0467f1c4e"
+    },
+    {
+      "bytes": 14788,
+      "path": "root-canary-ssh.py",
+      "sha256": "a757716cfbf69aad62977c049ce966d05885a16793017ee1aa543f12a4a87073"
+    },
+    {
+      "bytes": 3345,
+      "path": "test_r13_receipt.py",
+      "sha256": "e04c3325b71511cc40a922309fa1aaca7b6726f0372f4c1f5a20ada815f9cf05"
+    }
+  ],
+  "proof": "3 offline receipt guards, Python AST, Node syntax, exact actual r13 17-file package proof passed",
+  "schema_version": 1
+}

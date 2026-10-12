@@ -1,0 +1,14 @@
+{
+  "captured_at_utc": "2026-10-11T23:15:38.714938+00:00",
+  "credentials_read_by_lane": false,
+  "failures": 0,
+  "identity_guard_negative_cases": true,
+  "live_ledger_queried_by_lane": false,
+  "native_capsule_sha256": "8c081b83dfcb075e3b8f7588cb15d9dbc4274d472d5551c0e60985b4a1beaa6c",
+  "ok": true,
+  "phase": "r13_5h_after_effect_settlement_offline_proof",
+  "python_helpers_compile": true,
+  "runtime_effects_by_lane": false,
+  "ssh_executed_by_lane": false,
+  "tests": 13
+}

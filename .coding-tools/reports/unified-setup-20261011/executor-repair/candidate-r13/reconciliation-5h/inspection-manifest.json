@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "approval_id": "call_a60e931056bd402b997c6c10b0796d81",
+  "action_id": "act_b2335c57472b4d68931d10dda1572ff9",
+  "task_id": "task_3b2a2a860ca54ef7889d2efce6923dc7",
+  "inspector_sha256": "5c37fd0c014eae013a30e75a33acfa6a48ff7843627c9257728ccd23fd4bfcb6",
+  "driver_sha256": "240ce398788a00313eead7801a8b689d00e3403f29868da56c09cb1de473aafe",
+  "immutable_settlement_sha256": "30f0169c0acb39bb888178e1326a220d175d936a39208397f358eb1eb0b0ed0f",
+  "root_intent_sha256": "58dd54ddf1bc7c368ea7ac7270b3c43921b0afc88fb34a0cf20910072d382bd8",
+  "ready_for_read_only": true,
+  "syntax_passed": true,
+  "remote_mutation": false,
+  "effects_by_lane": false,
+  "scope": "exact action receipt task lease family and exact marker file hashes",
+  "original_full_row_baseline_available": false,
+  "reconstructed_verify_failure_is_history_proof": false,
+  "settlement_replay_forbidden": true
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "phase": "r14_server_same_window_offline_packet_proof",
+  "ok": true,
+  "captured_at_utc": "2026-10-11T23:49:07Z",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "helper_sha256": "33c1090a30bf16132b79d299451b43484e5c09d8a59b69e2a36a05bf1d0448e9",
+  "driver_sha256": "1bd09687a04dddefd2fd1ee0b28019c0e5fbb00a3e824deb420fef43ea4b6a09",
+  "test_sha256": "4189f5571d2f98f3e1def8b9c45f5861d0a0f6cab124efa6b595fc5a14875ef5",
+  "focused_suite_previously_passed": 5,
+  "final_marker_fix_consumer_command": "python -B .coding-tools/reports/unified-setup-20261011/executor-repair/candidate-r14/activation-server-same-window/test_server_transition_r14.py ProjectionAndPreservation.test_server_observation_matches_real_windows_consumer -v",
+  "final_marker_fix_consumer_tests": 1,
+  "final_marker_fix_consumer_exit_code": 0,
+  "synthetic_receipts_are_offline_only": true,
+  "external_effects_performed": false,
+  "r14_activated": false,
+  "live_executor_or_canary_acceptance_proven": false,
+  "explicit_future_human_approval_required": true
+}

@@ -1,0 +1,216 @@
+{
+  "action": "observe",
+  "captured_at_utc": "2026-10-11T14:52:58.886756+00:00",
+  "public_receipts": [
+    {
+      "admission": "recovery",
+      "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+      "node": {
+        "activation_epoch": "activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2",
+        "contract_version": "sha256:bc44c044a0b08dfdea80b8ba0dfcc080e180e21a5460dbf9726b49ac1fa769b0",
+        "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+        "last_seen_at_ms": 1791729164933,
+        "mcp_server_instance_id": "SOxylAgR7THX6DDW",
+        "policy_expires_at_ms": 1791729224850,
+        "policy_reason": null,
+        "policy_state": "enabled",
+        "readiness": "ready",
+        "runtime_instance_id": "BgeS5R1qpQK2inXj"
+      },
+      "observed_at_ms": 1791730378813,
+      "ok": true,
+      "package_source_sha256": "sha256:83611914241508ad1f5ca96d017902cb6675fa15ea082f3aa4698f7cffe74419",
+      "phase": "r11_read_only_observation",
+      "remote_mutation": false,
+      "service_grant_preserved": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+      "service_grant_scopes": [
+        "control-plane.inventory",
+        "control-plane.patch",
+        "control-plane.read"
+      ],
+      "service_grant_sha256": "edf2dfc4d6001c7f78d6160e2ca3c49ae30e4296d158662a827eaf49268017d8",
+      "service_instance_id": "cp_6766892f5ada47d1862a0d24334f1116",
+      "source_revision": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5",
+      "state": {
+        "acceptances": 1,
+        "accepted_actions": 0,
+        "actions": 40,
+        "all_action_task_intent_families_sha256": "eeeb4a336ab04edd42d15647ef495bc3c3416b5ac33bd66136d497469435a62d",
+        "contexts_sha256": "a3376df7d6bf21d472f05b5908b40c6df912f184d814c0d088cc82df5831bd8e",
+        "historical_action_families_sha256": "825c437a6f420df0221f01bf74685c4fe3caf46268a62506497942aff9d52aed",
+        "open_tasks": 0,
+        "open_writers": 0,
+        "patch_acceptances_sha256": "52be68a0dac2b56af51271fb8278bae1b04187f4573266c0051beabbec349309",
+        "queued_actions": 0,
+        "schema_version": 28,
+        "target_unsettled_actions": 0,
+        "tasks": 12,
+        "unsettled_acceptances": 0,
+        "unsettled_actions": 13
+      },
+      "state_sha256": "610ab4bd20787eb897518ffb59a58e2339d40bedb1a025f417154b5a2cc600a7",
+      "target_contexts": [
+        {
+          "closed_at_ms": 1791702679160,
+          "context_id": "ctx_48bfd028d6b349788abc8477cd925967",
+          "expires_at_ms": 1791699184407
+        },
+        {
+          "closed_at_ms": 1791702679174,
+          "context_id": "ctx_82c87627f65f4e9b99b35668e7c78cc6",
+          "expires_at_ms": 1791696170766
+        },
+        {
+          "closed_at_ms": 1791702679187,
+          "context_id": "ctx_3c557d0eeab24e79874961026086ce1f",
+          "expires_at_ms": 1791696474810
+        },
+        {
+          "closed_at_ms": 1791702679201,
+          "context_id": "ctx_230028fdf52143d8b229e876cfd2507d",
+          "expires_at_ms": 1791696643895
+        },
+        {
+          "closed_at_ms": 1791702679215,
+          "context_id": "ctx_e772d0c9b47143f595dd84709c245f81",
+          "expires_at_ms": 1791696960006
+        },
+        {
+          "closed_at_ms": 1791702679236,
+          "context_id": "ctx_e2d03bfda25a40c1a31b2b48d76440c3",
+          "expires_at_ms": 1791696684171
+        },
+        {
+          "closed_at_ms": 1791707184017,
+          "context_id": "ctx_9cb78107d4aa4828bed2a0c0ee40633e",
+          "expires_at_ms": 1791706279253
+        },
+        {
+          "closed_at_ms": 1791707184033,
+          "context_id": "ctx_cbb36a43f9ff4f86b99b5a75d60bf9e1",
+          "expires_at_ms": 1791705457873
+        },
+        {
+          "closed_at_ms": 1791714033351,
+          "context_id": "ctx_80a102323c14412fa539a396a1edd034",
+          "expires_at_ms": 1791710784008
+        },
+        {
+          "closed_at_ms": 1791714033361,
+          "context_id": "ctx_2be1313cb3984855b97e292f80c59668",
+          "expires_at_ms": 1791707993068
+        },
+        {
+          "closed_at_ms": 1791714033372,
+          "context_id": "ctx_3c0b4da69ea349e38d0cebd6fa6f5ac4",
+          "expires_at_ms": 1791707997121
+        },
+        {
+          "closed_at_ms": 1791714033378,
+          "context_id": "ctx_c6bb907ce1fb44128ae158964b9b2aab",
+          "expires_at_ms": 1791709917492
+        },
+        {
+          "closed_at_ms": 1791714033385,
+          "context_id": "ctx_4d820c17c629457c81d5f0e184bc0b6a",
+          "expires_at_ms": 1791710771356
+        },
+        {
+          "closed_at_ms": 1791717556525,
+          "context_id": "ctx_01ca575dd5fa46cc95432e8f5aa56848",
+          "expires_at_ms": 1791717633341
+        },
+        {
+          "closed_at_ms": 1791717556537,
+          "context_id": "ctx_32c7174bd16848478e8c77a81a7ea8f8",
+          "expires_at_ms": 1791714550404
+        },
+        {
+          "closed_at_ms": 1791717556545,
+          "context_id": "ctx_d788aa607016419b989eef7ab90e1f29",
+          "expires_at_ms": 1791714564503
+        },
+        {
+          "closed_at_ms": 1791717556553,
+          "context_id": "ctx_965f2ee797eb49f088f50b825a804540",
+          "expires_at_ms": 1791714901012
+        },
+        {
+          "closed_at_ms": 1791722898500,
+          "context_id": "ctx_655e717e5c634cc1922d0f0d2e9d33c6",
+          "expires_at_ms": 1791721156518
+        },
+        {
+          "closed_at_ms": 1791718794151,
+          "context_id": "ctx_9b930390ceb94596a49513ad94ebcb97",
+          "expires_at_ms": 1791718413412
+        },
+        {
+          "closed_at_ms": 1791718794138,
+          "context_id": "ctx_5b576164bfce43c1b8bc6016cbfc118a",
+          "expires_at_ms": 1791718650278
+        },
+        {
+          "closed_at_ms": null,
+          "context_id": "ctx_9e58c758a20249479b6ec806970f68ca",
+          "expires_at_ms": 1791726498491
+        },
+        {
+          "closed_at_ms": 1791724065875,
+          "context_id": "ctx_72a70fa1bd40462fb13a4e08955ea466",
+          "expires_at_ms": 1791724614672
+        },
+        {
+          "closed_at_ms": 1791725747178,
+          "context_id": "ctx_56091859214b4249baf134ef9381b7dd",
+          "expires_at_ms": 1791726314012
+        },
+        {
+          "closed_at_ms": 1791725825162,
+          "context_id": "ctx_e77ed7d9e7e44d42ad6cf89ac56c87ca",
+          "expires_at_ms": 1791726410064
+        }
+      ],
+      "target_pilots": [
+        {
+          "decision_id": "pilot_b4069f55f8ab45e497c5287f51ce8ff6",
+          "expires_at_ms": 1791699184407,
+          "revoked_at_ms": 1791702660503
+        },
+        {
+          "decision_id": "pilot_c9bac9faee6c459680e6a7c44931848d",
+          "expires_at_ms": 1791706279253,
+          "revoked_at_ms": 1791707078485
+        },
+        {
+          "decision_id": "pilot_4723468161ec46269ea73e93e854f52a",
+          "expires_at_ms": 1791710784008,
+          "revoked_at_ms": 1791713872924
+        },
+        {
+          "decision_id": "pilot_39a7fb99d6f7475db1e553383c3f3e2e",
+          "expires_at_ms": 1791717633341,
+          "revoked_at_ms": 1791717508046
+        },
+        {
+          "decision_id": "pilot_6c6dd3a9b03e4221af64068ff5ea0afd",
+          "expires_at_ms": 1791721156518,
+          "revoked_at_ms": 1791722256723
+        },
+        {
+          "decision_id": "pilot_25fa8c634f7f40e282c30a303b51bfd0",
+          "expires_at_ms": 1791726498491,
+          "revoked_at_ms": 1791725421060
+        },
+        {
+          "decision_id": "pilot_0b07c86e179a4a6182b8503faa66dfaa",
+          "expires_at_ms": 1791726498491,
+          "revoked_at_ms": 1791730301417
+        }
+      ]
+    }
+  ],
+  "remote_dir": "/home/svhome/.local/lib/codex-control-plane/incoming/r11-approved-20261011T145116647004Z",
+  "ssh_returncode": 0,
+  "stderr_disclosed": false
+}

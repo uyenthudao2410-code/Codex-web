@@ -1,0 +1,33 @@
+diff --git a/control-plane/control_plane/store.py b/control-plane/control_plane/store.py
+index 33410680..478e6032 100644
+--- a/control-plane/control_plane/store.py
++++ b/control-plane/control_plane/store.py
+@@ -6384,16 +6384,23 @@ class ControlPlaneStore:
+     ) -> dict[str, Any]:
+         """Owner Console acceptance without requiring the OAuth principal handle.
+ 
+-        The principal is resolved from the sealed approved-patch intent so the
+-        Console never needs to copy a principal token. Owner, target and
+-        receipt gates are identical to the principal path.
++        The principal is resolved from the sealed owner-review or standing
++        patch intent so the Console never needs to copy a principal token.
++        Owner, target and receipt gates are identical to the principal path.
+         """
+         owner_id = _text(owner_id, "owner_id")
+         action_id = _text(action_id, "action_id")
+         with self._connection() as connection:
+             intent = connection.execute(
+-                "SELECT principal_id FROM mcp_approved_patch_intents WHERE action_id = ?",
+-                (action_id,),
++                """
++                SELECT principal_id FROM mcp_approved_patch_intents
++                WHERE owner_id = ? AND action_id = ?
++                UNION ALL
++                SELECT principal_id FROM mcp_standing_patch_intents
++                WHERE owner_id = ? AND action_id = ?
++                LIMIT 1
++                """,
++                (owner_id, action_id, owner_id, action_id),
+             ).fetchone()
+         if intent is None:
+             raise NotFoundError("approved-patch action does not exist.")

@@ -7,6 +7,83 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
+function policyReuseFixture({ before, after = before } = {}) {
+  const source = read('renderer/app.js'), calls = [];
+  const context = {
+    state: { snapshot: { settings: {} }, centralExecObservations: {} },
+    api: { inspectControlPlaneExecPolicy: async () => {
+      calls.push('inspect'); return { policy: calls.filter(value => value === 'inspect').length === 1 ? before : after, sandbox: { state: 'available' } };
+    }, installControlPlaneExecPolicy: async () => { calls.push('install'); return { policy_sha256: after.policy_sha256 }; } },
+    isCentralExecutor: () => true, assertPackagedCentralSetup: () => {},
+    centralExecObservationKey: value => value.workspace_id + ':' + value.workspace_generation,
+    unwrap: value => value, toast: () => {}, renderCentralExecutorMode: () => {},
+    refreshSnapshot: async () => {}, controlPlaneExecSandboxReason: value => value || '',
+    window: { confirm: () => { throw new Error('existing setup consent should be used'); } }
+  };
+  vm.runInNewContext(source.slice(source.indexOf('function setupPolicyMatches('), source.indexOf('\nfunction setupWorkspaceAccess(')), context);
+  vm.runInNewContext(source.slice(source.indexOf('async function installControlPlaneExecPolicy('), source.indexOf('\nasync function installControlPlaneStandingFilePolicies(')), context);
+  return { context, calls };
+}
+
+test('setup verifies the exact current facade with fresh authority before treating saved rights as ready', () => {
+  const workspace = { workspace_id: 'workspace-a', workspace_generation: 'generation-a' };
+  const facade = { schema_version: 32, profile: 'control-plane-private-tunnel-service-v1', sha256: 'a'.repeat(64) };
+  const policy = { ...workspace, state: 'enabled', policy_sha256: 'b'.repeat(64), facade_contract: facade,
+    current_facade_contract: { ...facade }, authority_observed_at_ms: Date.now() };
+  const { context } = policyReuseFixture();
+  assert.equal(context.setupPolicyMatches(policy, workspace), true);
+  for (const field of ['schema_version', 'profile', 'sha256']) {
+    assert.equal(context.setupPolicyMatches({ ...policy, current_facade_contract: { ...facade, [field]: 'wrong' } }, workspace), false, field);
+  }
+  for (const delta of [{ current_facade_contract: null }, { facade_contract: null },
+    { facade_contract: {}, current_facade_contract: {} }, { authority_observed_at_ms: null },
+    { authority_observed_at_ms: Date.now() - 60_000 }, { authority_observed_at_ms: Date.now() + 60_000 },
+    { workspace_generation: 'another' }]) {
+    assert.equal(context.setupPolicyMatches({ ...policy, ...delta }, workspace), false);
+  }
+});
+
+test('exec setup reuses only a fresh matching contract and reinstalls stale saved rights using existing consent', async () => {
+  const workspace = { workspace_id: 'workspace-a', workspace_generation: 'generation-a', display_name: 'Project', capabilities: { exec: true } };
+  const facade = { schema_version: 32, profile: 'control-plane-private-tunnel-service-v1', sha256: 'a'.repeat(64) };
+  const current = { workspace_id: workspace.workspace_id, workspace_generation: workspace.workspace_generation,
+    state: 'enabled', policy_sha256: 'b'.repeat(64), facade_contract: facade, current_facade_contract: { ...facade }, authority_observed_at_ms: Date.now() };
+  for (const before of [current, { ...current, facade_contract: { ...facade, sha256: 'f'.repeat(64) } },
+    { ...current, current_facade_contract: null }, { ...current, authority_observed_at_ms: Date.now() - 60_000 }]) {
+    const { context, calls } = policyReuseFixture({ before, after: current });
+    const receipt = await context.installControlPlaneExecPolicy(workspace, { confirmationAccepted: true });
+    assert.equal(receipt.policy_sha256, current.policy_sha256);
+    assert.equal(calls.includes('install'), before !== current);
+  }
+});
+
+test('setup refreshes file contract evidence after a long exec probe and refuses completion when authority stays unknown', async () => {
+  const source = read('renderer/app.js');
+  const workspace = { workspace_id: 'workspace-a', workspace_generation: 'generation-a', capabilities: { read: true, write: true, exec: true } };
+  for (const freshAfterRefresh of [true, false]) {
+    const scope = { deadline: Date.now() + 60_000 }, calls = [];
+    let fileEvidenceCurrent = true;
+    const context = {
+      state: { setupContinuation: scope, snapshot: { status: {} }, centralAuthorityStatus: { fresh: true, state: 'dispatchable' },
+        centralExecObservations: { selected: { policy: { policy_sha256: 'b'.repeat(64) } } } },
+      selectedCentralWorkspace: () => workspace, setupScopeMatches: () => true,
+      centralWorkspaceTarget: () => ({ dispatch_state: 'dispatchable', capabilities: workspace.capabilities }),
+      setupWorkspaceAccess: () => ({ read: fileEvidenceCurrent, patch: fileEvidenceCurrent, exec: true }),
+      reconcileControlPlaneAuthorityStatus: async () => {}, refreshControlPlaneWorkspaces: async () => {},
+      installControlPlaneExecPolicy: async () => { fileEvidenceCurrent = false; return { policy_sha256: 'b'.repeat(64) }; },
+      centralExecObservationKey: () => 'selected', refreshSnapshot: async () => {},
+      refreshControlPlaneStandingFilePolicies: async () => { calls.push('refresh-file-contract'); fileEvidenceCurrent = freshAfterRefresh; },
+      renderSetupExecution: () => {}, renderSetupState: () => {}, controlPlaneExecSandboxReason: () => '',
+      cancelSetupContinuation: message => { calls.push(message); context.state.setupContinuation = null; }
+    };
+    vm.runInNewContext(source.slice(source.indexOf('async function continueSetup('), source.indexOf('\nfunction renderSetupExecution(')), context);
+    if (freshAfterRefresh) assert.equal((await context.continueSetup()).read, true);
+    else await assert.rejects(context.continueSetup(), /Chưa xác minh được quyền hiện hành/);
+    assert.ok(calls.includes('refresh-file-contract'));
+    assert.equal(calls.some(value => value.startsWith('Đã xác minh policy')), freshAfterRefresh);
+  }
+});
+
 function openConsoleHandler({ trusted = true, savedUrl = 'https://saved.tailnet.example' } = {}) {
   const source = read('electron/main.js');
   const start = source.indexOf("secureHandle('control-plane:open-console'");
@@ -205,7 +282,7 @@ test('central setup source preserves a single enrollment request and opens opera
   assert.match(app, /await openControlPlaneConsole\(\)/);
 });
 
-function centralSetupReadyFixture(capabilities, targetReadiness = null, statusOverrides = {}) {
+function centralSetupReadyFixture(capabilities, targetReadiness = null, statusOverrides = {}, pendingFolder = false) {
   const source = read('renderer/app.js');
   const start = source.indexOf('function renderSetupState(snapshot)');
   const end = source.indexOf('\nasync function handleSetupPrimaryAction()', start);
@@ -233,7 +310,9 @@ function centralSetupReadyFixture(capabilities, targetReadiness = null, statusOv
     state: {
       centralWorkspaceInventoryStatus: 'loaded',
       centralEnrollmentStatus: { fresh: true, state: 'approved' },
-      centralAuthorityStatus: { fresh: true, state: 'active', dispatchable_target_count: 1 }
+      centralAuthorityStatus: pendingFolder
+        ? { fresh: true, state: 'no_binding', dispatchable_target_count: 0 }
+        : { fresh: true, state: 'active', dispatchable_target_count: 1 }
     },
     $: (selector) => element(selector.slice(1)),
     isCentralExecutor: () => true,
@@ -242,6 +321,9 @@ function centralSetupReadyFixture(capabilities, targetReadiness = null, statusOv
     centralTargetReadiness: () => targetReadiness || ({ ready: true, state: 'ready', title: 'Target Ubuntu đã sẵn sàng', detail: 'Ubuntu online, runtime ready và policy được xác nhận enabled.' }),
     centralRoutePresentation: () => ({ label: 'Runtime Windows chưa sẵn sàng', detail: 'Local executor chưa xác nhận route.' }),
     centralWorkspaceSummary: () => 'Codex-web',
+    selectedCentralWorkspace: () => pendingFolder ? { workspace_id: 'workspace-1', capabilities } : null,
+    authorityStatusPresentation: () => ({ detail: 'Chờ chủ hệ thống cấp thư mục.' }),
+    renderSetupExecution: () => {},
     centralSetupGuidance: () => ({ title: 'Đã kết nối', detail: 'Đã xác nhận', action: 'workspace', actionLabel: 'Mở thư mục' })
   };
   vm.runInNewContext(source.slice(start, end), context);
@@ -266,6 +348,13 @@ test('central setup does not turn registered write and exec capabilities into Ch
   assert.equal(fixture.element('setupSummaryBadge').textContent, 'SẴN SÀNG');
   assert.match(fixture.element('setupSummaryText').textContent, /Quyền đọc file, sửa file và chạy lệnh từ ChatGPT cần policy và receipt riêng/);
   assert.doesNotMatch(fixture.element('setupStepVerify').small.textContent, /Sẵn sàng nhận việc/);
+});
+
+test('the main setup action continues the selected folder while owner approval is pending', () => {
+  const fixture = centralSetupReadyFixture({ read: true, write: true, exec: true },
+    { ready: false, state: 'no_binding', title: 'Chờ cấp quyền', detail: 'Chờ chủ hệ thống.' }, {}, true);
+  assert.equal(fixture.element('setupPrimaryAction').textContent, 'Hoàn tất thiết lập');
+  assert.equal(fixture.element('setupPrimaryAction').dataset.setupAction, 'continue');
 });
 
 test('central setup does not label an assigned but offline target ready and offers a status refresh', () => {
@@ -350,6 +439,7 @@ function navigationHarness() {
     location: { hash: '' },
     history: { replaceState: (_state, _title, value) => { context.location.hash = value.slice(1); } },
     $: (selector) => bySelector.get(selector),
+    requestAnimationFrame: (callback) => callback(),
     $$: (selector) => selector === '.nav-item' ? navItems : selector === '.page' ? pages : setupLinks
   };
   vm.createContext(context);
@@ -366,6 +456,16 @@ test('system navigation opens the unified setup shell instead of silently redire
   const activePages = fixture.pages.filter((page) => page.classList.contains('active')).map((page) => page.dataset.pageView);
   assert.deepEqual(activePages, ['system']);
   assert.equal(fixture.navItems.find((item) => item.dataset.page === 'system').classList.contains('active'), true);
+});
+
+test('connection and folder aliases stay on the single system page', () => {
+  const fixture = navigationHarness();
+  for (const alias of ['deploy', 'workspace']) {
+    fixture.run(alias);
+    assert.equal(fixture.context.state.currentPage, 'system');
+    assert.equal(fixture.context.location.hash, 'system');
+    assert.deepEqual(fixture.pages.filter((page) => page.classList.contains('active')).map((page) => page.dataset.pageView), ['system']);
+  }
 });
 
 test('development central controls are visibly gated before action handlers run', () => {

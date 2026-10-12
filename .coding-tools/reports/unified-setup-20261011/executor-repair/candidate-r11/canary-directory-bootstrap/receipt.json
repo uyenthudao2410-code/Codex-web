@@ -1,0 +1,14 @@
+{
+  "observed_at_utc": "2026-10-11T17:00:23.339451+00:00",
+  "ssh_returncode": 0,
+  "stderr_disclosed": false,
+  "public_receipt": {
+    "ok": true,
+    "phase": "canary_receipt_directory_created",
+    "path": "/home/svhome/.local/state/codex-control-plane/owner-operations/r11-initial-verification-next-60m/canary-after-contract-sync",
+    "mode": "0700",
+    "authority_marker_unchanged": true,
+    "task_or_action_created": false,
+    "remote_mutation": true
+  }
+}

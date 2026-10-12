@@ -1,0 +1,66 @@
+{
+  "kind": "standing_policy_contract_recurrence_source_proof",
+  "observed_at": "2026-10-11T17:28:39.916Z",
+  "repository_root": "E:/Github/Tools-Codex-web",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "files": [
+    {
+      "file": "renderer/app.js",
+      "sha256": "4818027873d96ffbd8a9fd30d91996a484793b2180d77c31f87616368db68706"
+    },
+    {
+      "file": "electron/services/controlPlaneEnrollment.js",
+      "sha256": "8855a46f64833b5a464ff82fc91f5a7af2058d61f493725ca4f64b701e841cfe"
+    },
+    {
+      "file": "control-plane/control_plane/node_agent.py",
+      "sha256": "bc28e81636d4d1edb35fcfd4b05e905241f4f63ba18ceac38e8c9043cce56840"
+    },
+    {
+      "file": "tests/control-plane-standing-file-policy.test.js",
+      "sha256": "4f00031cb8a3d27b9171e0050615179b22770709ba0f34079a38c911811fc7fa"
+    },
+    {
+      "file": "tests/control-plane-exec-sandbox.test.js",
+      "sha256": "3f64162a04ec8ae3a1e4b475d25baa663dbb292673aaa730cc13bef896e52b00"
+    },
+    {
+      "file": "tests/system-setup-console.test.js",
+      "sha256": "805d5d20d308ac115582086dffa2f36b8010b8bd7fcb302a48eb97cc78d48d55"
+    },
+    {
+      "file": "control-plane/tests/test_file_read_node_agent.py",
+      "sha256": "99bbf70dfeca0490d7feae8d62d8f7b988994ebdfbafa808a858ad4a4d0364d8"
+    },
+    {
+      "file": "control-plane/tests/test_approved_patch_node_agent.py",
+      "sha256": "49e576ac9adea5b837344048fe557b07a3efc98e3dba3c46d226b0a678ddc904"
+    },
+    {
+      "file": "control-plane/tests/test_exec_node_agent.py",
+      "sha256": "a88b4b68d5a6eb0e603dd90f52f4a00a5e07125ff34977dc3a1d7983cbef8d6a"
+    }
+  ],
+  "javascript": {
+    "command": "node --test tests/control-plane-standing-file-policy.test.js tests/control-plane-exec-sandbox.test.js tests/system-setup-console.test.js",
+    "passed": 33,
+    "failed": 0
+  },
+  "python": {
+    "cwd": "control-plane",
+    "command": "python -B -m unittest tests.test_file_read_node_agent.FileReadNodeAgentTests.test_inspect_reports_installed_facade_without_changing_policy tests.test_approved_patch_node_agent.ApprovedPatchNodeAgentTests.test_inspect_reports_installed_facade_without_changing_policy tests.test_exec_node_agent.ExecNodeReceiptTests.test_inspect_reports_installed_facade_without_changing_policy",
+    "passed": 3,
+    "failed": 0
+  },
+  "syntax_check": true,
+  "git_diff_check": true,
+  "current_failures": [],
+  "public_mcp_schema_changed": false,
+  "policy_schema_changed": false,
+  "heartbeat_behavior_changed": false,
+  "sandbox_gate_changed": false,
+  "external_effects": false,
+  "packaged": false,
+  "committed": false,
+  "pushed": false
+}

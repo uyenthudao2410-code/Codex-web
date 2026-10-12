@@ -1,0 +1,26 @@
+{
+  "frozen_at": "2026-10-11T16:48:06.624Z",
+  "files": [
+    {
+      "name": "reconcile.cjs",
+      "sha256": "0d36cb184e10ab608c877699bd4b676a2a331276d2b9ddd179cf6ad7ef0abd2e"
+    },
+    {
+      "name": "test-reconcile.cjs",
+      "sha256": "c37bcb4e0062d2f4fbc40965346ab85fc94e3bf47a2a6338d725ac6ef7224bd9"
+    },
+    {
+      "name": "README.md",
+      "sha256": "712bc31672cb394a3a3863f456a0b7cf2d6180a1f493efb0bc80d1923eef5a9b"
+    },
+    {
+      "name": "proof-receipt.json",
+      "sha256": "a350d6e96c6c8e5c6506af89cf60f6c08c985d4901b2f5090ddc220723a10a22"
+    }
+  ],
+  "append_only_evidence": [
+    "reconciliation.jsonl"
+  ],
+  "root_only_sync": true,
+  "authority_expires_at_ms": 1791739329910
+}

@@ -1,0 +1,585 @@
+ M .coding-tools/orchestration/ledger.sqlite3
+ M .coding-tools/orchestration/task-context-workspaces.json
+ M .coding-tools/performance.json
+ M .github/workflows/ci.yml
+ M control-plane/control_plane/mcp_facade.py
+ M control-plane/control_plane/node_agent.py
+ M control-plane/control_plane/recovery_exec_bridge.cjs
+ M control-plane/control_plane/store.py
+ M control-plane/control_plane/web_ui.py
+ M control-plane/tests/recovery_exec_bridge.test.cjs
+ M control-plane/tests/test_exec_node_agent.py
+ M control-plane/tests/test_file_read_node_agent.py
+ M control-plane/tests/test_mcp_approved_patch_http_node_e2e.py
+ M control-plane/tests/test_mcp_exec.py
+ M control-plane/tests/test_mcp_exec_http_node_e2e.py
+ M control-plane/tests/test_mcp_file_read_facade.py
+ M control-plane/tests/test_mcp_oauth.py
+ M control-plane/tests/test_mcp_permission_requests.py
+ M control-plane/tests/test_mcp_private_tunnel_service_facade.py
+ M control-plane/tests/test_mcp_task_sessions.py
+ M control-plane/tests/test_release_artifact.py
+ M docs/CURRENT_STATE.md
+ M docs/RELEASE_CHECKLIST.md
+ M docs/TESTING.md
+ M electron/app-icon.ico
+ M electron/app-icon.png
+ M electron/browserPreload.js
+ M electron/main.js
+ M electron/preload.js
+ M electron/services/controlPlaneEnrollment.js
+ M electron/services/processIdentity.js
+ M electron/services/recoveryHost.js
+ M electron/services/runtimeOrchestrator.js
+ M package.json
+ M renderer/app-icon.png
+ M renderer/app.js
+ M renderer/browser.js
+ M renderer/index.html
+ M renderer/settings-compact.css
+ M renderer/styles.css
+ M resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py
+ M resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py
+ M resources/coding-tools-mcp/coding_tools_mcp/coordination.py
+ M resources/coding-tools-mcp/coding_tools_mcp/errors.py
+ M resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py
+ M resources/coding-tools-mcp/coding_tools_mcp/oauth.py
+ M resources/coding-tools-mcp/coding_tools_mcp/patching.py
+ M resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py
+ M resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_sandbox.py
+ M resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py
+ M resources/coding-tools-mcp/tests/test_run_continuation.py
+ M resources/coding-tools-mcp/tests/test_windows_mxc_sandbox.py
+ M tests/control-center-manager.test.js
+ M tests/control-plane-approved-patch-runtime.test.js
+ M tests/control-plane-enrollment.test.js
+ M tests/control-plane-exec-runtime.test.js
+ M tests/dev-ui-lifecycle.test.js
+ M tests/process-identity.test.js
+ M tests/recovery-host.test.js
+ M tests/settings-redesign.test.js
+ M tests/system-setup-console.test.js
+?? .coding-tools/orchestration/.task-context-workspaces.json.9632.22812.tmp
+?? .coding-tools/orchestration/reports/run-95e909f0040a448faa9f1f3257e2ee2c/run-summary.md
+?? .coding-tools/orchestration/reports/run-95e909f0040a448faa9f1f3257e2ee2c/wave-001.md
+?? .coding-tools/reports/folder-permissions-20261011/activate-candidate.cjs
+?? .coding-tools/reports/folder-permissions-20261011/central-file-proof-r3.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/central-file-proof.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/central-file-proof.py
+?? .coding-tools/reports/folder-permissions-20261011/central-patch-acceptance-deployed.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/central-patch-acceptance.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/completion-checkpoint.md
+?? .coding-tools/reports/folder-permissions-20261011/connected-agent-renewal-process.json
+?? .coding-tools/reports/folder-permissions-20261011/connected-agent-renewal-status.json
+?? .coding-tools/reports/folder-permissions-20261011/enable-windows-sandbox.ps1
+?? .coding-tools/reports/folder-permissions-20261011/first-task-close.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/layout-result.json
+?? .coding-tools/reports/folder-permissions-20261011/local-acceptance-adapter.md
+?? .coding-tools/reports/folder-permissions-20261011/local-job-census.json
+?? .coding-tools/reports/folder-permissions-20261011/local-policies.cjs
+?? .coding-tools/reports/folder-permissions-20261011/local-policy-result.json
+?? .coding-tools/reports/folder-permissions-20261011/metadata-renewal-acl.json
+?? .coding-tools/reports/folder-permissions-20261011/metadata-renewal-result.json
+?? .coding-tools/reports/folder-permissions-20261011/permissions-1100.png
+?? .coding-tools/reports/folder-permissions-20261011/permissions-760.png
+?? .coding-tools/reports/folder-permissions-20261011/pre-effect-rejection.json
+?? .coding-tools/reports/folder-permissions-20261011/read-write-fixture.txt
+?? .coding-tools/reports/folder-permissions-20261011/reconcile-pre-effect.py
+?? .coding-tools/reports/folder-permissions-20261011/render-preview.cjs
+?? .coding-tools/reports/folder-permissions-20261011/runtime-result.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/CANDIDATE-DEPLOYMENT.md
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/README.md
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/artifact-receipt.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/artifact-verification.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/base-store.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/build-isolated-release.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/build-receipt.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/candidate-release-manifest.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/classify-deployment-actions.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd.tar.gz
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/deploy-server-fix.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/deployed-release-manifest.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/deployed-store.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/deployment-action-classification.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/deployment-result.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/expired-metadata-fence.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/fixed-store.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-checkout.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-clone.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-commit.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-delivery-check.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-delivery-stage.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-longpaths.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/isolated-source-stage.log
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/owner-standing-acceptance.patch
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/preflight.json
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/prepare-artifact.py
+?? .coding-tools/reports/folder-permissions-20261011/server-acceptance-fix/preserve-review-packet.py
+?? .coding-tools/reports/folder-permissions-20261011/server-authority.py
+?? .coding-tools/reports/folder-permissions-20261011/server-final.json
+?? .coding-tools/reports/folder-permissions-20261011/server-open.json
+?? .coding-tools/reports/folder-permissions-20261011/server-prepare.json
+?? .coding-tools/reports/folder-permissions-20261011/server-reconciliation-verified.json
+?? .coding-tools/reports/folder-permissions-20261011/server-renewal-final.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/server-renewal-open.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/server-renewal.jsonl
+?? .coding-tools/reports/folder-permissions-20261011/terminal-reconciliation-receipt.json
+?? .coding-tools/reports/folder-permissions-20261011/windows-sandbox-feature-result.json
+?? .coding-tools/reports/folder-permissions-20261011/windows-sandbox-uac-launch.json
+?? .coding-tools/reports/mcp-web-contract-20261011/artifact-receipt.json
+?? .coding-tools/reports/mcp-web-contract-20261011/artifact-verification.json
+?? .coding-tools/reports/mcp-web-contract-20261011/audit-live.py
+?? .coding-tools/reports/mcp-web-contract-20261011/build-candidate.py
+?? .coding-tools/reports/mcp-web-contract-20261011/build-receipt.json
+?? .coding-tools/reports/mcp-web-contract-20261011/candidate-release-manifest.json
+?? .coding-tools/reports/mcp-web-contract-20261011/codex-control-plane-beaa9d5ade4926ef231e3ec9d0a517fe93830e90.tar.gz
+?? .coding-tools/reports/mcp-web-contract-20261011/exec-coldstart-build.log
+?? .coding-tools/reports/mcp-web-contract-20261011/exec-coldstart-candidate.json
+?? .coding-tools/reports/mcp-web-contract-20261011/exec-coldstart-frozen-inputs.json
+?? .coding-tools/reports/mcp-web-contract-20261011/exec-coldstart-smoke.log
+?? .coding-tools/reports/mcp-web-contract-20261011/final-local-state.json
+?? .coding-tools/reports/mcp-web-contract-20261011/frozen-source-inputs.json
+?? .coding-tools/reports/mcp-web-contract-20261011/host-path-probe.cjs
+?? .coding-tools/reports/mcp-web-contract-20261011/host-path-probe.json
+?? .coding-tools/reports/mcp-web-contract-20261011/isolated-checkout.log
+?? .coding-tools/reports/mcp-web-contract-20261011/isolated-clone.log
+?? .coding-tools/reports/mcp-web-contract-20261011/isolated-commit.log
+?? .coding-tools/reports/mcp-web-contract-20261011/isolated-delivery-check.log
+?? .coding-tools/reports/mcp-web-contract-20261011/isolated-delivery-stage.log
+?? .coding-tools/reports/mcp-web-contract-20261011/isolated-source-stage.log
+?? .coding-tools/reports/mcp-web-contract-20261011/live-baseline.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/live-rollout-verification.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-policy.cjs
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-policy.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-r5-checkpoint.md
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-r5-verification.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-task-cleanup.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-exec-verification.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.agent.stderr.log
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.agent.stdout.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.cjs
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.exec-observation.py
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.exec-reconcile.py
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.final-native.py
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.md
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.r5-activation.cjs
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.r5-activation.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.r5-agent.stderr.log
+?? .coding-tools/reports/mcp-web-contract-20261011/postreboot-runtime.r5-agent.stdout.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/rollout-final-checkpoint.md
+?? .coding-tools/reports/mcp-web-contract-20261011/rollout-review.md
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-authority-renewal.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-deployment-preflight.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-deployment-result.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-final-identity-inspection.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-final-observation.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-final-observe-tail.py
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-inspect-tail.py
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-exec-unknown-observation.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-final-observe-tail.py
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-observe-tail.py
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-server-checkpoint.md
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-server-final.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-server-initial.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-postreboot-unknown-observe-tail.py
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-pre-resume-inspection.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-renew-tail.py
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-rollout-checkpoint.md
+?? .coding-tools/reports/mcp-web-contract-20261011/ubuntu-rollout-driver.py
+?? .coding-tools/reports/mcp-web-contract-20261011/validation-checkpoint.md
+?? .coding-tools/reports/mcp-web-contract-20261011/verify-live-rollout.py
+?? .coding-tools/reports/mcp-web-contract-20261011/verify-postreboot-exec-r5.py
+?? .coding-tools/reports/mcp-web-contract-20261011/verify-postreboot-exec.py
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation-agent.stderr.log
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation-agent.stdout.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation-census-diagnose-result.json
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation-census-diagnose.py
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation-checkpoint.md
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation.cjs
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-activation.jsonl
+?? .coding-tools/reports/mcp-web-contract-20261011/windows-candidate.json
+?? .coding-tools/reports/unified-setup-20261011/candidate-delta.json
+?? .coding-tools/reports/unified-setup-20261011/compare-candidates.cjs
+?? .coding-tools/reports/unified-setup-20261011/completion-checkpoint.md
+?? .coding-tools/reports/unified-setup-20261011/final-focused-tests.log
+?? .coding-tools/reports/unified-setup-20261011/focused-tests.log
+?? .coding-tools/reports/unified-setup-20261011/layout-result-01.json
+?? .coding-tools/reports/unified-setup-20261011/layout-result-02.json
+?? .coding-tools/reports/unified-setup-20261011/layout-result-04.json
+?? .coding-tools/reports/unified-setup-20261011/layout-result-05.json
+?? .coding-tools/reports/unified-setup-20261011/layout-result-06.json
+?? .coding-tools/reports/unified-setup-20261011/layout-result-07.json
+?? .coding-tools/reports/unified-setup-20261011/layout-result-08.json
+?? .coding-tools/reports/unified-setup-20261011/lifecycle-tests.log
+?? .coding-tools/reports/unified-setup-20261011/local-job-census.json
+?? .coding-tools/reports/unified-setup-20261011/preview-01.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-01.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-02.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-02.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-03.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-03.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-04.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-04.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-05.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-05.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-06.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-06.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-07.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-07.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-08.stderr.log
+?? .coding-tools/reports/unified-setup-20261011/preview-08.stdout.log
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-01.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-02.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-03.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-04.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-05.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-06.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-07.json
+?? .coding-tools/reports/unified-setup-20261011/preview-inputs-08.json
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-01/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-02/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-03/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-04/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-05/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-06/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-07/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/app-icon.png
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/app.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/control-center.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/control-center.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/dashboard.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/dashboard.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts/JetBrainsMono-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts/JetBrainsMono-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts/JetBrainsMono-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts/PlusJakartaSans-latin-ext.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts/PlusJakartaSans-latin.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/fonts/PlusJakartaSans-vietnamese.woff2
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/index.html
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/p5-a0.js
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/settings-compact.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/styles.css
+?? .coding-tools/reports/unified-setup-20261011/preview-source-08/theme-bootstrap.js
+?? .coding-tools/reports/unified-setup-20261011/render-preview.cjs
+?? .coding-tools/reports/unified-setup-20261011/server-review/README.md
+?? .coding-tools/reports/unified-setup-20261011/server-review/prepare-review.py
+?? .coding-tools/reports/unified-setup-20261011/server-review/receipt.json
+?? .coding-tools/reports/unified-setup-20261011/server-review/syntax-validation.json
+?? .coding-tools/reports/unified-setup-20261011/server-review/web_ui.base-073bde8624c5d6ff76ddfae8633acb7c1c4118b05aa458b4be1b21b3ae8181aa.py
+?? .coding-tools/reports/unified-setup-20261011/server-review/web_ui.current-03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b.py
+?? .coding-tools/reports/unified-setup-20261011/server-review/web_ui.exact.patch
+?? .coding-tools/reports/unified-setup-20261011/server-review/web_ui.review-lf.patch
+?? .coding-tools/reports/unified-setup-20261011/setup-final-tests.log
+?? .coding-tools/reports/unified-setup-20261011/static-layout-checkpoint.md
+?? .coding-tools/reports/unified-setup-20261011/system-01-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-01-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-02-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-dark-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-light-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-03-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-dark-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-dark-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-light-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-light-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-04-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-dark-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-dark-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-light-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-light-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-05-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-dark-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-dark-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-light-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-light-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-06-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-dark-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-dark-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-light-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-light-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-07-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1100-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1100-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1100-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1100-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1100-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1100-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-dark-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-dark-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-light-exec-ready.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-light-sandbox-unavailable.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-1360-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-760-dark-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-760-dark-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-760-dark-top.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-760-light-setupExecutionSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-760-light-setupFolderSection.png
+?? .coding-tools/reports/unified-setup-20261011/system-08-760-light-top.png
+?? .coding-tools/reports/unified-setup-20261011/verify-candidate.cjs
+?? .coding-tools/reports/unified-setup-20261011/windows-build-r7.log
+?? .coding-tools/reports/unified-setup-20261011/windows-build.log
+?? .coding-tools/reports/unified-setup-20261011/windows-candidate.json
+?? .coding-tools/reports/unified-setup-20261011/windows-smoke-r7.log
+?? .coding-tools/reports/unified-setup-20261011/windows-smoke.log
+?? .coding-tools/task-contexts/b5637371a8b5e1b444e73b68.json
+?? .coding-tools/task-contexts/d02ed0e352416a3495f1f1d7.json
+?? .coding-tools/task-contexts/d5cbb213270d0337b195286c.json
+?? control-plane/control_plane/mcp_status.py
+?? control-plane/tests/test_artifact_node_agent.py
+?? control-plane/tests/test_mcp_artifact_relay.py
+?? control-plane/tests/test_mcp_client_feedback.py
+?? control-plane/tests/test_mcp_status.py
+?? control-plane/tests/test_mcp_status_facade.py
+?? control-plane/tests/test_web_ui_folder_setup.py
+?? docs/MCP_WEB_OPERATIONS.md
+?? resources/coding-tools-mcp/coding_tools_mcp/goal_continuation_ledger.py
+?? resources/coding-tools-mcp/coding_tools_mcp/run_continuation_ledger.py
+?? scripts/run-packaged-recovery-smoke.js
+?? tests/fixtures/folder-permissions-20261011.txt
+?? tests/folder-permission-editor.test.js
+?? tests/run-packaged-recovery-smoke.test.js
+?? tests/toolbar-folder-navigation.test.js
+?? tests/unified-desktop-shell.test.js

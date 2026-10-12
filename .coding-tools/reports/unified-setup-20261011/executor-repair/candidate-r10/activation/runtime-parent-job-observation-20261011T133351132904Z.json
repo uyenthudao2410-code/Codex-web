@@ -1,0 +1,151 @@
+{
+  "schema_version": 2,
+  "observed_at": "2026-10-11T13:33:51.132904+00:00",
+  "phase": "post_handoff_before_helper_exit",
+  "installation_id": "36cd3af6fe1da4607cfe3035d48becd97dc12265901b480401bf44389ff1d1dc",
+  "host_instance_id": "4d3c42c864437d33fb43f647939d4e35",
+  "activation_epoch_id": "activation-mv3v3pus-8547a1b4205f606ae6211c793f9ec8b2",
+  "normalization": "FILETIME floored to10 ticks, matching electron/services/processIdentity.js",
+  "targets": [
+    {
+      "role": "recovery_host",
+      "pid": 25868,
+      "expected_start_token": "134361991050098600",
+      "identity_matches_pin": true,
+      "ancestry": [
+        {
+          "pid": 25868,
+          "parent_pid": 9172,
+          "name": "Coding Tools MCP.exe",
+          "created": "2026-10-11T13:31:45.0098600Z",
+          "state": "observed",
+          "raw_creation_filetime": "134361991050098609",
+          "process_start_token": "134361991050098600",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 9172,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [],
+      "lifetime_independence_proven": false
+    },
+    {
+      "role": "electron_ui",
+      "pid": 26252,
+      "expected_start_token": "134361991148631080",
+      "identity_matches_pin": true,
+      "ancestry": [
+        {
+          "pid": 26252,
+          "parent_pid": 25868,
+          "name": "Coding Tools MCP.exe",
+          "created": "2026-10-11T13:31:54.8631080Z",
+          "state": "observed",
+          "raw_creation_filetime": "134361991148631080",
+          "process_start_token": "134361991148631080",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 25868,
+          "parent_pid": 9172,
+          "name": "Coding Tools MCP.exe",
+          "created": "2026-10-11T13:31:45.0098600Z",
+          "state": "observed",
+          "raw_creation_filetime": "134361991050098609",
+          "process_start_token": "134361991050098600",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 9172,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [
+        true
+      ],
+      "lifetime_independence_proven": false
+    },
+    {
+      "role": "native_mcp",
+      "pid": 17488,
+      "expected_start_token": "134361991080061930",
+      "identity_matches_pin": true,
+      "ancestry": [
+        {
+          "pid": 17488,
+          "parent_pid": 25868,
+          "name": "pythonw.exe",
+          "created": "2026-10-11T13:31:48.0061930Z",
+          "state": "observed",
+          "raw_creation_filetime": "134361991080061933",
+          "process_start_token": "134361991080061930",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 25868,
+          "parent_pid": 9172,
+          "name": "Coding Tools MCP.exe",
+          "created": "2026-10-11T13:31:45.0098600Z",
+          "state": "observed",
+          "raw_creation_filetime": "134361991050098609",
+          "process_start_token": "134361991050098600",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 9172,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [
+        true
+      ],
+      "lifetime_independence_proven": false
+    },
+    {
+      "role": "connected_agent",
+      "pid": 25208,
+      "expected_start_token": "134361991578800960",
+      "identity_matches_pin": true,
+      "ancestry": [
+        {
+          "pid": 25208,
+          "parent_pid": 3540,
+          "name": "python.exe",
+          "created": "2026-10-11T13:32:37.8800960Z",
+          "state": "observed",
+          "raw_creation_filetime": "134361991578800967",
+          "process_start_token": "134361991578800960",
+          "any_job_membership": true,
+          "job_query_succeeded": true,
+          "job_limits_identified": false
+        },
+        {
+          "pid": 3540,
+          "state": "absent_at_cim_snapshot"
+        }
+      ],
+      "parent_creation_precedes_child": [],
+      "lifetime_independence_proven": false
+    }
+  ],
+  "runtime_mutated": false,
+  "authority_mutated": false,
+  "source_mutated": false,
+  "notes": [
+    "IsProcessInJob reports membership in any Windows Job; Job owner/limits unidentified.",
+    "No command lines, environment variables or credentials collected.",
+    "Earlier v1 matches compared raw100ns FILETIME against microsecond-normalized pins; use this normalized observation for identity correlation."
+  ]
+}

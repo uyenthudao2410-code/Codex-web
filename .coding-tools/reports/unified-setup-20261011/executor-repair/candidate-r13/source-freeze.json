@@ -1,0 +1,96 @@
+{
+  "kind": "source_fingerprint_source_freeze",
+  "observed_at": "2026-10-11T19:59:38.849Z",
+  "repository_root": "E:\\Github\\Tools-Codex-web",
+  "repository_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "candidate_tag": "source-fingerprint-1012-r13",
+  "source_files": [
+    {
+      "source": "electron/services/controlPlaneApprovedPatchBridge.js",
+      "payload": "app.asar/electron/services/controlPlaneApprovedPatchBridge.js",
+      "sha256": "08391c186c3243f5e290e15ea7514a977316cfcad082b00da8f6e46be8f2d555"
+    },
+    {
+      "source": "electron/services/recoveryHost.js",
+      "payload": "app.asar/electron/services/recoveryHost.js",
+      "sha256": "612861c7c27f7e0a3071c6acb45cdc971fa893b317038e7153d8ef41d9442fd1"
+    },
+    {
+      "source": "electron/services/runtimeOrchestrator.js",
+      "payload": "app.asar/electron/services/runtimeOrchestrator.js",
+      "sha256": "043540376ce6deeff271839e2e7e9f259156462dc6ce286ff5bca6d51a309d99"
+    },
+    {
+      "source": "electron/services/controlPlaneEnrollment.js",
+      "payload": "app.asar/electron/services/controlPlaneEnrollment.js",
+      "sha256": "8855a46f64833b5a464ff82fc91f5a7af2058d61f493725ca4f64b701e841cfe"
+    },
+    {
+      "source": "renderer/app.js",
+      "payload": "app.asar/renderer/app.js",
+      "sha256": "4818027873d96ffbd8a9fd30d91996a484793b2180d77c31f87616368db68706"
+    },
+    {
+      "source": "renderer/index.html",
+      "payload": "app.asar/renderer/index.html",
+      "sha256": "dc7dceb03cae483a2509393225ae8ba1e1209144578ae87396c11eec6f0ae613"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/approved_patch_verification.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/approved_patch_verification.py",
+      "sha256": "57ec5798b408c26eb29d2d006ac018fd55250aa62e08d31f3d28d5dd5b9cd79f"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+      "sha256": "2723839c51727b92b4543aba3ef39842a88b26f3588d20bb0a7c329412aaa514"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "sha256": "e743287a026b139d538b4a3080a823b56feb423387ba8b94b79bf36e94619364"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+      "sha256": "700da02303077a3267408d90a60c5f0fd20ce765c673851b1a74593e4f3eed9a"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "sha256": "b2df54b2450237cfff50b9662a5746704855fda8708a7076ea606a43e0b36ebb"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+      "sha256": "0b3e402bd1c5d6649eaae01668a9a77ca9c29f3967522717c544f424dc2dda37"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "sha256": "692a8ad182889ae06f304f3880c83a7682732c599fda0571d5040eae2e2d458c"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+      "sha256": "dc432fce584eaed36e13d6150388817f944c154770024e5c59a90d7031ddaf42"
+    },
+    {
+      "source": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "payload": "resources/resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "sha256": "808a6dc888f6812cf30ae805e29d7f0abdd340d0ef9c91c534e05e451acf7aa9"
+    },
+    {
+      "source": "control-plane/control_plane/node_agent.py",
+      "payload": "resources/resources/control-plane/node_agent.py",
+      "sha256": "bc28e81636d4d1edb35fcfd4b05e905241f4f63ba18ceac38e8c9043cce56840"
+    },
+    {
+      "source": "control-plane/control_plane/recovery_approved_patch_bridge.cjs",
+      "payload": "resources/resources/control-plane/recovery_approved_patch_bridge.cjs",
+      "sha256": "da9748607ac7cbe036b5bb011d5794e773331591b9d1ce916619d5130c320e70"
+    }
+  ],
+  "runtime_activated": false,
+  "server_mutated": false
+}

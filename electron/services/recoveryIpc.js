@@ -79,7 +79,41 @@ function boundedJson(value, maxBytes = MAX_RESPONSE_BYTES) {
   return JSON.stringify({ ok: false, error: { code: 'RESPONSE_TOO_LARGE', message: 'Recovery Host response exceeded the bounded size.' } });
 }
 
-function safeError(error) {
+function sanitizeControlPlaneExecErrorDetails(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const details = {};
+  const patterns = {
+    native_error_code: /^[A-Z][A-Z0-9_]{1,95}$/,
+    phase: /^(?:provision|start|exec|deprovision)$/,
+    backend_error_code: /^[a-z_]{3,48}$/,
+    command_id: /^[A-Za-z0-9_-][A-Za-z0-9_-]{0,159}$/,
+    job_id: /^[A-Za-z0-9_-][A-Za-z0-9_-]{0,159}$/,
+    job_lifecycle: /^(?:starting|running|spawn_failed|exited|failed|terminated|timed_out|quiesced|orphaned)$/
+  };
+  for (const [key, pattern] of Object.entries(patterns)) {
+    if (typeof value[key] === 'string' && pattern.test(value[key])) details[key] = value[key];
+  }
+  if (Number.isSafeInteger(value.root_pid) && value.root_pid >= 0) details.root_pid = value.root_pid;
+  if (typeof value.execution_started === 'boolean') details.execution_started = value.execution_started;
+  const finished = value.job_finished_at;
+  if (typeof finished === 'string'
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(finished)
+    && Number.isFinite(Date.parse(finished))
+    && new Date(finished).toISOString().slice(0, 19) === finished.slice(0, 19)) {
+    details.job_finished_at = finished;
+  }
+  return Object.keys(details).length ? details : null;
+}
+
+function safeError(error, action) {
+  if (action === 'runtime.control_plane_exec' && error?.code === 'CONTROL_PLANE_EXEC_MCP_REJECTED') {
+    const details = sanitizeControlPlaneExecErrorDetails(error.details);
+    return {
+      code: 'CONTROL_PLANE_EXEC_MCP_REJECTED',
+      message: 'The local execution runtime rejected the request.',
+      ...(details ? { details } : {})
+    };
+  }
   return {
     code: String(error?.code || 'RECOVERY_ACTION_FAILED').slice(0, 80),
     message: String(error?.message || error || 'Recovery action failed.').slice(0, 1000)
@@ -290,7 +324,7 @@ class RecoveryIpcServer {
       } catch (error) {
         if (finished) return;
         finished = true;
-        const safe = safeError(error);
+        const safe = safeError(error, action);
         this.log?.warn?.('Recovery Host IPC action failed', { action, code: safe.code });
         const body = boundedJson({ ok: false, error: safe });
         response.writeHead(409, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
@@ -437,8 +471,13 @@ class RecoveryIpcClient {
           try { payload = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
           catch { reject(Object.assign(new Error('Recovery Host returned invalid JSON.'), { code: 'RECOVERY_RESPONSE_INVALID' })); return; }
           if (response.statusCode !== 200 || payload?.ok !== true) {
-            reject(Object.assign(new Error(String(payload?.error?.message || `Recovery Host request failed (HTTP ${response.statusCode}).`)), {
-              code: String(payload?.error?.code || 'RECOVERY_REQUEST_FAILED'),
+            const safe = safeError(payload?.error || {
+              code: 'RECOVERY_REQUEST_FAILED',
+              message: `Recovery Host request failed (HTTP ${response.statusCode}).`
+            }, action);
+            reject(Object.assign(new Error(safe.message), {
+              code: safe.code,
+              ...(safe.details ? { details: safe.details } : {}),
               // Preserve response provenance even if a handler uses an OS-like
               // code. A semantic refusal must not become transport-loss authority.
               recoveryResponseReceived: true
@@ -505,6 +544,7 @@ module.exports = {
   loadRecoveryDescriptor,
   assertExpectedDescriptor,
   sameToken,
+  sanitizeControlPlaneExecErrorDetails,
   MAX_DESCRIPTOR_BYTES,
   MAX_REQUEST_BYTES,
   MAX_RESPONSE_BYTES,

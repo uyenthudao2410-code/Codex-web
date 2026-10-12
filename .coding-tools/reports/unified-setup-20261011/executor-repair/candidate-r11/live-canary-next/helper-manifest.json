@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "prepared_at_utc": "2026-10-11T16:32:18.0947667Z",
+  "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+  "scope": "local-only r11 next-authority canary derivative",
+  "common_guard_sha256": "c55d9d07144654ca0216d55c8de8b20c1a238a9a722ac455d6c83ec0d406e36f",
+  "root_ssh_sha256": "d6aa00d14128b8905e0edb92df24a02eeb9867a3a032a53f41d8375b023d39ba",
+  "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "proof": {
+    "canary_tests": 16,
+    "transport_tests": 6,
+    "next_authority_tests": 13,
+    "passed": 35,
+    "live_dispatch": "not_performed",
+    "native_semantic_acceptance": "pending"
+  },
+  "files": [
+    {
+      "path": "r11_mcp_canary.py",
+      "bytes": 35845,
+      "sha256": "b9be1f2fb50b3831442dbf12aaf15f68a2af5286c8ae5bd14b74f0a375b7918a"
+    },
+    {
+      "path": "root-canary-ssh.py",
+      "bytes": 12154,
+      "sha256": "3783b623d54d3f4a9819d74aa73a8bc0ac6dc8682de921b0be8b3ddff4eb5e98"
+    },
+    {
+      "path": "patch-envelope.txt",
+      "bytes": 639,
+      "sha256": "77f2c282c91f3627e721d0d68bf1fa821bad21575ec136204353894b18ce5e4a"
+    },
+    {
+      "path": "pins.template.json",
+      "bytes": 1226,
+      "sha256": "c84054cd2fe366ae99ca68f179cb7fe2a573580a4c2ec7cb2bf7d10049eaa8e0"
+    },
+    {
+      "path": "test_r11_mcp_canary.py",
+      "bytes": 14987,
+      "sha256": "e4445ef80b8d2880f37204cba8ad318928ca401755fd30011503848321decd78"
+    },
+    {
+      "path": "test_root_canary_ssh.py",
+      "bytes": 6141,
+      "sha256": "e6fcb958d6e5f84e97e9ad0d5853d3bb0e09597f899539592c71045d442c9763"
+    },
+    {
+      "path": "test_next_authority.py",
+      "bytes": 10382,
+      "sha256": "0e6ffefece1152648d0c74c85e3d091935dcf37305ee9ea7b31cc6f693868b31"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3427,
+      "sha256": "2b410f2ef4eff1cefd3cc7219c8afb11f497576f2fb997152701a84bdb5cb4e8"
+    }
+  ]
+}

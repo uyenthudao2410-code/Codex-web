@@ -1,0 +1,11 @@
+{
+  "files": {
+    "ADOPTION.md": "7580467b883ffb2410a3318aadfe59ef397eeff2d474a0bd64b750a45fffe591",
+    "adopt-exact-child.cjs": "6036982dd766669ab18e5982a10161b74b25533b400c7146fe74e7640e3208ec",
+    "adoption-proof-receipt.json": "aa4f7e0be994614312691ce69d1e1b0419288db31a45aa8b3ff01d48bcc8f132",
+    "query-process-job.py": "87e1f445c7bafd3f96106dd1ebc67bca29b9bf2fdd6fc926af265c2c13b76a71"
+  },
+  "operation": "root_only_exact_child_adoption_and_samecandidate_refresh",
+  "original_manifest_sha256": "979732c6243bd67ab4b04a5cdc5978540fb7600afc91553f6613268fd09067c6",
+  "prepared_only": true
+}

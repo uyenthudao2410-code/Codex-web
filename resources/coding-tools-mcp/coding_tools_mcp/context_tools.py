@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .approved_patch_verification import (APPROVED_PATCH_VERIFICATION_ORIGIN, InitialVerificationPlan,
+    bounded_patch_effect, initial_verification_summary, validate_initial_verification_execution)
 from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH
@@ -618,6 +620,7 @@ class ContextToolsMixin:
         budget_adjusted: bool = False,
         owner_run_id: str = "",
         owner_wave_id: str = "",
+        initial_plan: InitialVerificationPlan | None = None,
     ) -> dict[str, Any]:
         started = time.time()
 
@@ -628,7 +631,7 @@ class ContextToolsMixin:
         if cancellation_requested():
             return {
                 "command": command,
-                "status": "cancelled",
+                "status": "failed" if initial_plan is not None else "cancelled",
                 "exit_code": None,
                 "duration_ms": 0,
                 "summary": "Background workflow runtime budget expired before the check started.",
@@ -666,9 +669,29 @@ class ContextToolsMixin:
             "max_output_bytes": 131072,
             "verbosity": "summary",
         }
+        if initial_plan is not None:
+            exec_args.pop("cmd")
+            exec_args.update({"_argv": list(initial_plan.argv), "workdir": initial_plan.cwd or ".",
+                             "max_output_bytes": initial_plan.max_output_bytes,
+                             "_approved_patch_verification_plan": initial_plan,
+                             "_approved_patch_verification_origin": APPROVED_PATCH_VERIFICATION_ORIGIN})
         if owner_run_id and owner_wave_id:
             exec_args.update({"run_id": owner_run_id, "wave_id": owner_wave_id})
-        payload = self.exec_command(exec_args)
+        try:
+            payload = self.exec_command(exec_args)
+        except ToolFailure as exc:
+            if initial_plan is None or not (exc.details.get("execution_started") is False
+                    or exc.category in {"validation", "security", "permission"}
+                    or exc.code in {"RUNTIME_ACTIVATION_PENDING", "SESSION_CAPACITY_EXCEEDED", "PRINCIPAL_CAPACITY_EXCEEDED"}):
+                raise
+            # Only a known no-start rejection is a failed check. An uncertain
+            # process/poll outcome stays unknown and is never auto-replayed.
+            result = {"command": command, "status": "failed", "ok": False, "exit_code": None,
+                      "duration_ms": int((time.time() - started) * 1000), "error_code": exc.code,
+                      "summary": "Initial verification was rejected before command execution.", "timed_out": False}
+            if exc.details.get("command_id") and exc.details.get("job_id"):
+                result.update(command_id=exc.details["command_id"], job_id=exc.details["job_id"])
+            return result
         terminal_tool = "exec_command"
         terminal_args: dict[str, Any] = {"cmd": command}
         while payload.get("status") == "running":
@@ -690,7 +713,7 @@ class ContextToolsMixin:
                 "session_id": str(payload.get("session_id", "")),
                 "chars": "",
                 "yield_time_ms": poll_ms,
-                "max_output_bytes": 131072,
+                "max_output_bytes": initial_plan.max_output_bytes if initial_plan is not None else 131072,
                 "verbosity": "summary",
             }
             payload = self.write_stdin(terminal_args)
@@ -716,7 +739,7 @@ class ContextToolsMixin:
             check_status = "timed_out"
         else:
             check_status = "failed"
-        return {
+        result = {
             "command": command,
             "status": check_status,
             "exit_code": payload.get("exit_code"),
@@ -727,15 +750,27 @@ class ContextToolsMixin:
             "timed_out": timed_out,
             "effective_timeout_ms": effective_timeout_ms,
         }
+        if initial_plan is not None:
+            owner = payload.get("execution_owner") if isinstance(payload.get("execution_owner"), dict) else {}
+            result.update(ok=check_status == "passed", command_id=payload.get("command_id"), job_id=owner.get("job_id"))
+        return result
 
     def apply_changes_and_verify(self, args: dict[str, Any]) -> dict[str, Any]:
         """Apply one coherent change set, record proof identity, and avoid redundant proof reruns."""
         objective = str(args.get("objective", "")).strip() or "Apply and verify workspace changes"
         orchestration_ctx = args.get("_orchestration_context")
         ctx = orchestration_ctx if isinstance(orchestration_ctx, RunContext) else None
+        initial_plan = args.get("_approved_patch_verification_plan")
+        if initial_plan is not None or args.get("_approved_patch_verification_origin") is not None:
+            if (args.get("_approved_patch_verification_origin") is not APPROVED_PATCH_VERIFICATION_ORIGIN
+                    or not isinstance(initial_plan, InitialVerificationPlan) or ctx is None
+                    or args.get("dry_run", False) is not False):
+                raise ToolFailure("APPROVED_PATCH_VERIFICATION_ORIGIN_DENIED", "Initial verification requires its workflow-owned admission.", category="security")
+            validate_initial_verification_execution(self, initial_plan)
         raw_patches = args.get("patches", [])
         patches = [str(item) for item in raw_patches if str(item).strip()]
-        single_patch = str(args.get("patch", "")).strip()
+        raw_single_patch = str(args.get("patch", ""))
+        single_patch = raw_single_patch if initial_plan is not None else raw_single_patch.strip()
         if single_patch:
             patches.insert(0, single_patch)
         raw_adoptions = args.get("adopt_existing_files", [])
@@ -773,7 +808,7 @@ class ContextToolsMixin:
                 "text": "Adopt existing or apply workspace changes" if adopt_existing_files else "Apply workspace changes",
                 "status": "pending",
             })
-        if checks:
+        if checks or initial_plan is not None:
             workflow_steps.append({"id": "checks", "text": "Run requested checks", "status": "pending"})
         if verification != "none":
             workflow_steps.append({"id": "verify", "text": "Run tests and build verification", "status": "pending"})
@@ -863,7 +898,10 @@ class ContextToolsMixin:
                         adoptions=adopted_files,
                     )
             for patch_text in patches:
-                result = self.apply_patch({"patch": patch_text, "dry_run": bool(args.get("dry_run", False))})
+                result = self.apply_patch({"patch": patch_text, "dry_run": bool(args.get("dry_run", False)),
+                    **({"_approved_patch_verification_plan": initial_plan,
+                        "_approved_patch_verification_origin": APPROVED_PATCH_VERIFICATION_ORIGIN}
+                       if initial_plan is not None else {})})
                 patch_results.append(result)
                 affected_files.extend(result.get("affected_files", []))
                 if ctx is not None and not bool(args.get("dry_run", False)):
@@ -943,7 +981,16 @@ class ContextToolsMixin:
             }
 
         command_results: list[dict[str, Any]] = []
+        initial_result: dict[str, Any] | None = None
         timeout_ms = min(max(int(args.get("timeout_ms", 600000)), 1000), 600000)
+
+        def current_initial_projection() -> dict[str, Any]:
+            if initial_plan is None:
+                return {}
+            fingerprint = passed_proof_fingerprint(self.orchestration_ledger.list_proofs(ctx.run_id, wave_id=ctx.wave_id))
+            effect = bounded_patch_effect({"patch_results": patch_results, "affected_files": affected_files})
+            return {"patch_effect": effect, "initial_verification": initial_verification_summary(
+                initial_plan, initial_result or {"status": "timed_out", "timed_out": True}, proof_ids, fingerprint or None)}
 
         def cancelled_workflow_result(
             stage_id: str,
@@ -961,13 +1008,14 @@ class ContextToolsMixin:
             })
             return {
                 "ok": False,
-                "status": "cancelled",
+                "status": "failed" if initial_plan is not None else "cancelled",
                 "objective": objective,
                 "patch_results": patch_results,
                 "affected_files": affected_files,
                 "check_results": command_results,
                 "build_report": build_report,
                 "proof_summary": current_proof_summary(),
+                **current_initial_projection(),
                 "error": {
                     "code": "WORKFLOW_RUNTIME_EXCEEDED",
                     "message": failure,
@@ -977,12 +1025,15 @@ class ContextToolsMixin:
                 },
             }
 
-        if checks:
+        if checks or initial_plan is not None:
             set_stage("checks", "Running requested checks")
-        for command in checks:
+        check_steps = [(command, None) for command in checks]
+        if initial_plan is not None:
+            check_steps.append((f"structured-argv:{initial_plan.sha256}", initial_plan))
+        for command, structured_plan in check_steps:
             if background_cancelled():
                 return cancelled_workflow_result("checks")
-            command_timeout_ms = self._workflow_proof_timeout_ms(timeout_ms)
+            command_timeout_ms = self._workflow_proof_timeout_ms(structured_plan.timeout_ms if structured_plan is not None else timeout_ms)
             if ctx is None:
                 result = self._run_continuous_check(
                     command,
@@ -994,14 +1045,16 @@ class ContextToolsMixin:
                 )
             else:
                 command_hash = hashlib.sha256(command.encode("utf-8", errors="replace")).hexdigest()
-                stage_id = f"check:{command_hash[:16]}"
+                stage_id = f"initial-verification:{structured_plan.sha256[:16]}" if structured_plan is not None else f"check:{command_hash[:16]}"
                 proof_fp = self.proof_ledger.fingerprint(
                     stage_id=stage_id,
                     base_head=str(proof_identity.get("base_head") or ctx.base_head),
                     worktree_fp=str(proof_identity.get("worktree_fp") or ""),
                     contract_fp=ctx.contract_fp,
                     input_paths=affected_paths,
-                    config={"command_hash": command_hash, "workdir": workdir, "timeout_ms": command_timeout_ms},
+                    config={"command_hash": command_hash, "workdir": workdir, "timeout_ms": command_timeout_ms,
+                            **({"initial_verification": structured_plan.public(), "authority_expires_at_ms": structured_plan.expires_at_ms}
+                               if structured_plan is not None else {})},
                     upstream_proof_ids=upstream_proof_ids,
                 )
                 result, proof_id = self.proof_ledger.run_cached(
@@ -1016,6 +1069,9 @@ class ContextToolsMixin:
                         "workdir": workdir,
                         "workspace_identity": dict(proof_identity.get("workspace_identity") or {}),
                         "proof_source_binding": dict(proof_source_binding or {}),
+                        **({"initial_verification": structured_plan.public(), "plan_sha256": structured_plan.sha256,
+                            "authority_expires_at_ms": structured_plan.expires_at_ms}
+                           if structured_plan is not None else {}),
                     },
                     runner=lambda command=command, command_timeout_ms=command_timeout_ms: self._run_continuous_check(
                         command,
@@ -1024,12 +1080,15 @@ class ContextToolsMixin:
                         budget_adjusted=True,
                         owner_run_id=ctx.run_id,
                         owner_wave_id=ctx.wave_id,
+                        initial_plan=structured_plan,
                     ),
                 )
                 proof_ids.append(proof_id)
                 upstream_proof_ids.append(proof_id)
                 observe_proof_cache(result)
             command_results.append(result)
+            if structured_plan is not None:
+                initial_result = result
             if result.get("status") != "passed":
                 if result.get("cancelled") or background_cancelled():
                     return cancelled_workflow_result("checks")
@@ -1053,6 +1112,7 @@ class ContextToolsMixin:
                     "check_results": command_results,
                     "build_report": None,
                     "proof_summary": current_proof_summary(),
+                    **current_initial_projection(),
                     "error": {"code": failure_code, "message": failure, "category": "runtime", "retryable": True, "details": {}},
                 }
 
@@ -1193,5 +1253,6 @@ class ContextToolsMixin:
                 "worktree_fp": str(proof_identity.get("worktree_fp") or ""),
                 "source_fingerprint": str(proof_identity.get("source_fingerprint") or proof_identity.get("worktree_fp") or ""),
             },
+            **current_initial_projection(),
             "next_step": final_next,
         }

@@ -1,0 +1,10 @@
+test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch (test_run_continuation.RunContinuationSurfaceTests.test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch) ... ok
+test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting (test_run_continuation.RunContinuationSurfaceTests.test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting) ... ok
+test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting (test_run_continuation.RunContinuationSurfaceTests.test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting) ... ok
+test_control_plane_structured_argv_requires_attested_bridge_identity (test_wave_a_runtime.CommandHandleMigrationTests.test_control_plane_structured_argv_requires_attested_bridge_identity) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 13.701s
+
+OK
+{"all_shell_false": true, "bridge_poll_count": 1, "distinct_polled_commands": 1, "errors": 0, "failures": 0, "real_process_or_vm_started": false, "scope": "isolated boundary diagnostic; not live MXC acceptance", "simulated_failed_checks": 1, "synthetic_spawn_count": 5, "tests_run": 4}

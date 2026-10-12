@@ -1,0 +1,214 @@
+{
+  "kind": "r9_final_read_only_census",
+  "observed_at": "2026-10-11T11:49:11.339Z",
+  "ok": true,
+  "blockers": [],
+  "repository": {
+    "root": "E:\\Github\\Tools-Codex-web",
+    "branch": "main",
+    "head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "worktree": "dirty_preserved"
+  },
+  "candidate": "E:\\Github\\Tools-Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-executor-lifecycle-1011-r9\\win-unpacked",
+  "profile": "web-mcp-assistant",
+  "helper_sha256": "484e47b63a3e146c708e7d4df35bd4e6fb73b4ed25925dce4b04802a5134eabb",
+  "read_helper_service_sha256": {
+    "runtimePaths": "a28fe23a10daa10baeb9c437ccee13cff2c1d28585d1c6daa3e5a23844d23474",
+    "recoveryIpc": "57e0154c4d9f80bcfc5fa95ec5c4643de436d8fe945e9b3ab884afd9b8faebc2",
+    "recoveryHostLauncher": "92cb2478ae940c737a8e8a007181a9fa410b1eeb1e26a06b5bb07e1043ebf60a",
+    "processIdentity": "a0ee2b08cbe4108c352ba14b9532ceaf581497f745a2adda7924c819a972809f",
+    "fullCleanActivation": "286df402bad9414b8414fb1800dacf7f35cac6795fee0971e9d04ce6839e7c1d"
+  },
+  "active_package": {
+    "app_asar_sha256": "3bc75601041ef35b9fd894878b9f1905117512e3fc6f74d6102575b0f1edb226",
+    "executable_sha256": "fadc2feb4bb566b3fa22f22ea918c7175f39fa6b74eb7ccb9d2a1d6bab1b6211",
+    "installation_id": "e65d60602938af2f1c6e8cd9e8c59352ff2a5e24a268a45a98114726cdd8210d",
+    "instance_id": "6006092b7a061f47b20a0b27c1f34f1d"
+  },
+  "identities": {
+    "host": {
+      "state": "live",
+      "pid": 1128,
+      "process_start_token": "134361911908524600"
+    },
+    "ui": {
+      "state": "live",
+      "pid": 25296,
+      "process_start_token": "134361911886531150"
+    },
+    "native": {
+      "state": "live",
+      "pid": 9212,
+      "process_start_token": "134361911931895600"
+    },
+    "agent": {
+      "state": "live",
+      "pid": 7108,
+      "process_start_token": "134361912150770020"
+    }
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7",
+    "state": "READY",
+    "admission_open": true,
+    "update_incomplete": false
+  },
+  "readiness": {
+    "fully_ready": true,
+    "local_ready": true,
+    "central_connected": true,
+    "authority_ready": true,
+    "update_incomplete": false,
+    "failure_kind": ""
+  },
+  "agent": {
+    "agent_pid": 7108,
+    "last_iteration_state": "completed",
+    "last_heartbeat_state": "succeeded",
+    "last_heartbeat_at_ms": 1791719333312
+  },
+  "ledger": {
+    "safe_for_stopped_activation": false,
+    "code": "RUNTIME_BUSY",
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 17,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 18,
+      "awaiting_acceptance_runs": [
+        "95e909f0040a448faa9f1f3257e2ee2c"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "reason": "live_runtime_state_process",
+    "ledger_mutated": false,
+    "content_free": true,
+    "census_fingerprint": "a1aa958492f5485e4a6ca59f9594dc22a29b9fbfe593231818e7d05fe498e2b0",
+    "snapshot": {
+      "logical_sha256": "ee3a8b8787405c46f02f0e78591fd63bdcf31083438b4cf13382002be347a110",
+      "integrity_check": [
+        "ok"
+      ],
+      "query_only": true,
+      "immutable": true
+    },
+    "hold_exclusive": false
+  },
+  "pending_acceptance": {
+    "before": {
+      "runs": {
+        "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+        "status": "active",
+        "finished_at": null,
+        "record_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590"
+      },
+      "waves": {
+        "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+        "wave_id": "c101beadfc6d4f2fbc13845052c84693",
+        "status": "active",
+        "finished_at": null,
+        "record_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce"
+      }
+    },
+    "after": {
+      "runs": {
+        "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+        "status": "active",
+        "finished_at": null,
+        "record_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590"
+      },
+      "waves": {
+        "run_id": "95e909f0040a448faa9f1f3257e2ee2c",
+        "wave_id": "c101beadfc6d4f2fbc13845052c84693",
+        "status": "active",
+        "finished_at": null,
+        "record_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce"
+      }
+    },
+    "records_unchanged": true
+  },
+  "server": {
+    "observed_at_ms": 1791719351275,
+    "service_instance_id": "cp_d203277517b747e4b056ec0184d09709",
+    "source_revision": "5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f",
+    "package_source_sha256": "sha256:bb529f710342bf064fb5d2259ab1ad49e3733a6ca6db0c60b60ed67f119a7566",
+    "admission": "scoped_pilot",
+    "state": {
+      "unsettled_actions": 13,
+      "queued_actions": 0,
+      "accepted_actions": 0,
+      "open_writers": 0,
+      "open_tasks": 0,
+      "actions": 37,
+      "tasks": 9,
+      "acceptances": 1,
+      "unsettled_acceptances": 0,
+      "schema_version": 28,
+      "historical_action_families_sha256": "825c437a6f420df0221f01bf74685c4fe3caf46268a62506497942aff9d52aed",
+      "patch_acceptances_sha256": "52be68a0dac2b56af51271fb8278bae1b04187f4573266c0051beabbec349309",
+      "target_unsettled_actions": 0
+    },
+    "state_sha256": "8337f7784ee87c130a4d64f391247b86abc71e9f43cf3cc61e3bee905c11d016",
+    "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+    "node": {
+      "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+      "readiness": "ready",
+      "policy_state": "enabled",
+      "policy_reason": null,
+      "policy_expires_at_ms": 1791719393128,
+      "last_seen_at_ms": 1791719333224,
+      "activation_epoch": "activation-mv3qe36p-991f11f44f47d32ea2e217b1db882ff7"
+    },
+    "authority": {
+      "context": {
+        "context_id": "ctx_655e717e5c634cc1922d0f0d2e9d33c6",
+        "expires_at_ms": 1791721156518,
+        "closed_at_ms": null
+      },
+      "pilot": {
+        "decision_id": "pilot_6c6dd3a9b03e4221af64068ff5ea0afd",
+        "expires_at_ms": 1791721156518,
+        "revoked_at_ms": null
+      },
+      "expected_expires_at_ms": 1791721156518
+    },
+    "canary_contexts": [
+      {
+        "context_id": "ctx_9b930390ceb94596a49513ad94ebcb97",
+        "expires_at_ms": 1791718413412,
+        "closed_at_ms": 1791718794151
+      },
+      {
+        "context_id": "ctx_5b576164bfce43c1b8bc6016cbfc118a",
+        "expires_at_ms": 1791718650278,
+        "closed_at_ms": 1791718794138
+      }
+    ],
+    "server_read_helper_sha256": "c86ff98e315651225a9f125132ce4ac4c84fe64a537d3021971d5333c9abf869"
+  },
+  "mutations": {
+    "runtime": false,
+    "service": false,
+    "policy": false,
+    "task": false,
+    "acceptance": false,
+    "command_replay": false,
+    "sandbox_probe": false,
+    "windows_restart": false
+  }
+}

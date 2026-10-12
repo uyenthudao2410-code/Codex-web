@@ -1,0 +1,14 @@
+{
+  "authority_renewal": false,
+  "base_helper_sha256": "c86ff98e315651225a9f125132ce4ac4c84fe64a537d3021971d5333c9abf869",
+  "existing_context_id": "ctx_655e717e5c634cc1922d0f0d2e9d33c6",
+  "helper_sha256": "7ed4ace1d54bea7865f3c6dbf5790917dd95f254ca5d2609049efedf0a85d39d",
+  "operation": "guarded_store_observer_reopen_preparation",
+  "package_source_sha256": "sha256:83611914241508ad1f5ca96d017902cb6675fa15ea082f3aa4698f7cffe74419",
+  "remote_execution": false,
+  "replacement_pilot_requires_explicit_approval_flag": true,
+  "revoked_pilot_to_preserve": "pilot_6c6dd3a9b03e4221af64068ff5ea0afd",
+  "source_revision": "395c7868931729249e66654132c8734a404c22cfa6c74a85f3cc7fdc56e5d4d5",
+  "syntax": "pass",
+  "unchanged_expires_at_ms": 1791721156518
+}

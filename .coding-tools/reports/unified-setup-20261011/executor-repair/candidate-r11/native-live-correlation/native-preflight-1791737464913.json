@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "kind": "r11_query_only_native_preflight",
+  "observed_at_ms": 1791737464913,
+  "native_preflight": {
+    "observed_at_ms": 1791737464913,
+    "source_head": "2c554f59cb7b8ffc86ce5e0e28076c792777642f",
+    "preimage_sha256": "90363c394e12dd67f9003ef96b033e739c7837b34c238238966df623d9e55650",
+    "checker_sha256": "059c4e83fcbeb07b293312988975b7267d8ab8428872e5ff1211dbf059800230",
+    "old_run_sha256": "a167681ee42f25bc76a6eb03f63dfd91ef382924573205835f07d5ab01eef590",
+    "old_wave_sha256": "59d351b7afbc33b8e8f8f2f35bf5dfdd1c8a319bab93dd005481f4df36862bce",
+    "no_active_jobs": true
+  },
+  "activation_epoch": "activation-mv41dwd7-2d04fcff5a63f38940d0e99aea872251",
+  "runtime_instance_id": "JSKtd-MweBjIMZ0p",
+  "mcp_server_instance_id": "Vx0DhMwsMsmnY7E1",
+  "native_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "census": {
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0
+    },
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "899b8e99e63a16961aa729db10d7f868006dffbfeafa3b6c4ab9f1eeb10f543f",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "1ae74a0aa12e4dbca4aa86b2198dd367de5814bc00205cbd5032ad1c31f5b286",
+      "size_bytes": 97800192,
+      "snapshot_at": "2026-10-11T16:51:03.176Z"
+    },
+    "blockers": [
+      "live_runtime_state_process"
+    ],
+    "mutated_canonical_ledger": false
+  },
+  "source_unchanged": true,
+  "external_mutation": false
+}

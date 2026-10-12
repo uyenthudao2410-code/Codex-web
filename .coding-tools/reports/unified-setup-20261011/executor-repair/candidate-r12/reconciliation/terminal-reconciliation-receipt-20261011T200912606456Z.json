@@ -1,0 +1,29 @@
+{
+  "credentials_saved": false,
+  "no_replay": true,
+  "phase": "root_r12_exact_terminal_reconciliation",
+  "public_receipts": [
+    {
+      "action_id": "act_6aa1329b96c146f38c807f9926b3e684",
+      "action_state": "settled",
+      "attempt_id": "try_4178cd41d2f3424a81dcb3c4cc706ed1",
+      "local_node_journal_modified": false,
+      "new_run_job_proof_created": false,
+      "ok": true,
+      "original_unknown_receipt_preserved": "rcpt_9117fdebb06b4e8e8b1b5cd1b65ed2b1",
+      "patch_applied": false,
+      "phase": "r12_exact_pre_effect_reconciled",
+      "remote_mutation": true,
+      "replay_forbidden": true,
+      "task_closed": true,
+      "task_id": "task_d2c1dd3bff4042d084b045e9bc5a381b",
+      "terminal_code": "WORKTREE_STATUS_TOO_LARGE",
+      "terminal_receipt_id": "rcpt_b714c82d5e4a4328b072129f3675b78b",
+      "unrelated_history_preserved": true,
+      "writer_released": true
+    }
+  ],
+  "raw_error_disclosed": false,
+  "remote_mutation_possible": true,
+  "ssh_returncode": 0
+}

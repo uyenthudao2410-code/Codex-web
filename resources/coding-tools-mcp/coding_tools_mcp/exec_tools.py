@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .artifact_refs import build_file_artifact_ref
+from .approved_patch_verification import require_initial_verification_origin
 from .build_verify import verify_build as run_build_verification
 from .command_parse import (
     DESTRUCTIVE_RE,
@@ -267,7 +268,9 @@ class ExecToolsMixin:
             # to a shell: process creation below uses the original argv list.
             cmd = structured_argv[0]
         elif raw_argv is not None:
-            if args.get("_continuation_internal") is not True:
+            if args.get("_approved_patch_verification_origin") is not None:
+                require_initial_verification_origin(self, args)
+            elif args.get("_continuation_internal") is not True:
                 raise ToolFailure(
                     "INTERNAL_STRUCTURED_ARGV_DENIED",
                     "Structured argv execution is reserved for the continuation proof driver.",
@@ -331,11 +334,28 @@ class ExecToolsMixin:
                 if exc.code != "SANDBOX_UNAVAILABLE":
                     raise
                 landlock_warning = landlock_unavailable_warning(exc)
-        with self.sessions_lock:
+        no_start_details = {"execution_started": False} if args.get("_approved_patch_verification_origin") is not None else {}
+        with self.activation_lock, self.sessions_lock:
+            try:
+                self._activation_require_executor_available_locked()
+                self._activation_cleanup_locked()
+                if self.activation_fence:
+                    raise ToolFailure(
+                        "RUNTIME_ACTIVATION_PENDING",
+                        "The runtime is draining for a controlled code activation; retry after reconnect.",
+                        category="runtime", retryable=True,
+                        details={"operation_id": str(self.activation_fence.get("operation_id") or "")},
+                    )
+            except ToolFailure as exc:
+                if no_start_details:
+                    exc.details = {**exc.details, **no_start_details}
+                if landlock_fd is not None:
+                    os.close(landlock_fd)
+                raise
             if self._closed:
                 if landlock_fd is not None:
                     os.close(landlock_fd)
-                raise ToolFailure("SESSION_CLOSED", "Runtime is closed.", category="runtime")
+                raise ToolFailure("SESSION_CLOSED", "Runtime is closed.", category="runtime", details=no_start_details)
             principal_id = str(args.get("principal_id", "default") or "").strip()[:64] or "default"
             principal_active = self.principal_active_counts.get(principal_id, 0)
             if len(self.sessions) + self.starting_sessions >= MAX_ACTIVE_EXEC_SESSIONS:
@@ -346,7 +366,7 @@ class ExecToolsMixin:
                     "Too many commands are already running or starting.",
                     category="runtime",
                     retryable=True,
-                    details={"max_active_sessions": MAX_ACTIVE_EXEC_SESSIONS},
+                    details={"max_active_sessions": MAX_ACTIVE_EXEC_SESSIONS, **no_start_details},
                 )
             if principal_active >= processes.PRINCIPAL_MAX_ACTIVE_SESSIONS:
                 if landlock_fd is not None:
@@ -360,10 +380,12 @@ class ExecToolsMixin:
                         "principal_id": principal_id,
                         "max_principal_sessions": processes.PRINCIPAL_MAX_ACTIVE_SESSIONS,
                         "principal_active": principal_active,
+                        **no_start_details,
                     },
                 )
             self.starting_sessions += 1
         process: subprocess.Popen[bytes] | None = None
+        spawn_attempted = False
         session: ExecSession | None = None
         admission = None
         registered = False
@@ -472,6 +494,9 @@ class ExecToolsMixin:
                 env = invocation.environment
                 # VM startup is a separate lifecycle phase, not command runtime.
                 deadline = time.time() + (timeout_ms / 1000.0)
+            if args.get("_approved_patch_verification_origin") is not None:
+                require_initial_verification_origin(self, args)
+            spawn_attempted = True
             process, pty_master_fd = spawn_process(
                 popen_cmd,
                 cwd=str(workdir.path),
@@ -523,7 +548,10 @@ class ExecToolsMixin:
                     registered = True
             if not registered:
                 raise ToolFailure("SESSION_CLOSED", "Runtime closed while the command was starting.", category="runtime")
-        except Exception:
+        except Exception as error:
+            if (args.get("_approved_patch_verification_origin") is not None and not spawn_attempted
+                    and process is None and isinstance(error, ToolFailure)):
+                error.details = {**error.details, "execution_started": False}
             with self.sessions_lock:
                 if not registered and not slot_released:
                     self.starting_sessions -= 1
@@ -533,6 +561,36 @@ class ExecToolsMixin:
                 sandbox_cleanup_callback()
             if admission is not None:
                 self.execution_resource_governor.spawn_failed(admission)
+                # A lifecycle rejection before Popen is a known failure of
+                # this command, even when starting a new VM can be retried.
+                # Bind that claim to the durable Job; a code alone is not proof.
+                if not spawn_attempted and process is None and isinstance(error, ToolFailure):
+                    try:
+                        job = self.execution_resource_governor.find_exact_job(
+                            command_id=command_id, job_id=admission.job_id,
+                        )
+                    except Exception:
+                        # Unavailable evidence must not replace the original
+                        # failure or manufacture a settled execution outcome.
+                        job = None
+                    if (
+                        job is not None
+                        and job.get("command_id") == command_id
+                        and job.get("job_id") == admission.job_id
+                        and job.get("lifecycle_state") == "spawn_failed"
+                        and job.get("root_pid") == 0
+                        and job.get("finished_at")
+                    ):
+                        error.details = {
+                            **error.details,
+                            "command_id": job["command_id"],
+                            "job_id": job["job_id"],
+                            "job_lifecycle": "spawn_failed",
+                            "root_pid": 0,
+                            "execution_started": False,
+                            "job_finished_at": job["finished_at"],
+                        }
+                        error.retryable = False
             raise
         finally:
             if landlock_fd is not None:

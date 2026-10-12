@@ -1,0 +1,16 @@
+warning: in the working copy of 'control-plane/control_plane/mcp_facade.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/control_plane/node_agent.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_file_read_node_agent.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_exec.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_exec_http_node_e2e.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_file_read_facade.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_oauth.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_permission_requests.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_private_tunnel_service_facade.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_task_sessions.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/control_plane/mcp_status.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_artifact_node_agent.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_artifact_relay.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_client_feedback.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_status.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'control-plane/tests/test_mcp_status_facade.py', LF will be replaced by CRLF the next time Git touches it
