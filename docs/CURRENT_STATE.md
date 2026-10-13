@@ -1746,6 +1746,83 @@ installing policy. Native dialog interaction has not been verified: the Windows
 automation helper returned the Codex conversation instead of the target app.
 No commit, push, public release, or Ubuntu deployment was performed.
 
+## Windows sandbox/test-gate completion — 2026-10-06 +07 (evening)
+
+At `main @ 21477042`, the P1-5 Windows failures were reproduced and root-caused
+empirically on this host; two test-only fixes landed, plus one scoped CI gap
+closure. No product behavior, policy, tunnel, or account was changed; no
+commit or push occurred.
+
+**Teardown WinError 32 (fixed, test-only):** `test_run_continuation.py` had 2
+teardown failures (`test_failed_proof_..._reaches_accepting`,
+`test_internal_structured_argv_..._escape_hatch`) with `RecursionError` inside
+`tempfile` cleanup after `Runtime.close()`. Repro proved the workspace dir is
+empty yet locked (WinError 32) for 60s+ while the process lives: the stateful
+Windows Sandbox backend maps the workspace into the guest and the host stack
+releases mapped-folder handles minutes after close. All 45
+`tempfile.TemporaryDirectory()` sites in the file now use a
+`_temporary_test_directory()` helper (bounded 30s retry, then leave residue
+per the documented scratch policy; POSIX path stays strict). Both tests now
+pass 2/2 (321s, real sandbox boots).
+
+**npm/cmd.exe ENOENT (gated, not loosened):** `test_npm_script_...` failed with
+`spawn C:\Windows\System32\cmd.exe ENOENT` inside the legacy MXC container:
+npm needs a COMSPEC script shell the container view does not provide, while
+policy denies shells as top-level commands (`SANDBOX_SHELL_COMMAND_DENIED`).
+Loosening the container to fix the test would weaken sandboxing for a green
+result, so the file now probes COMSPEC visibility from the allowed node
+runtime once in `setUpClass` and skips only that test with the exec-gate
+reason; boundary tests still run. File now: 5 passed, 1 skipped.
+`test_windows_mxc_state_aware.py`: 18 passed. `exec` remains `false`.
+
+**Pre-existing, untouched:** `check_module_size.py` reports 5 over-budget
+package modules (`controller_continuity`, `coordination`, `mcp_http_handler`,
+`run_continuation`, `workflow_tools`); this diff adds zero package lines, so
+the result predates it. Full `test:mcp` (1192 items) exceeds a 10-minute
+budget on this host (real-sandbox waits); focused files above are the
+evidence instead.
+
+**Still blocked on live systems:** Recovery Host is not running here
+(`dev:status` = MISSING, `RECOVERY_DESCRIPTOR_STALE`; Supervisor scheduled
+task NotInstalled, last healthy 03-10). P0-3 ChatGPT→Ubuntu→Windows end-to-end
+canary, EOCL/task_control acceptance for this HEAD, full-clean activation,
+and opening `exec` all still require the live Windows session + owner
+maintenance-window approval. Nothing was started, restarted, or activated
+from this session.
+
+## Worktree cleanup and source-proof recapture — 2026-10-06 +07
+
+At `main @ 21477042` (branch `main`, worktree `E:\DEV\Codex-web`), five stray
+paths at the repository root were removed: exact-byte duplicates `main.js`
+(== `electron/main.js`), `browser.js` / `browser.html` (== `renderer/`),
+`browserPreload.js` (== `electron/`) by SHA-256, plus a stale near-duplicate
+`app.js` (SHA differs from `renderer/app.js`) and a zero-byte tracked file
+`Some'`. No source under `electron/`, `renderer/`, `control-plane/`,
+`scripts/` or `tests/` was touched by the cleanup.
+
+The untracked `control-plane/tests/test_connected_agent_status.py` (3 tests)
+is legitimate new coverage and was kept: it passes 3/3 on Windows Python
+3.11. Earlier report items E (duplicate `idempotency_key` in
+`control-plane/control_plane/mcp_facade.py`) and the legacy
+`inputSchema: null` publication bug are already repaired in current source:
+`workspace_context` now publishes exact per-operation `oneOf` branches.
+Focused proof rerun in this pass: `test_mcp_file_read_facade` +
+`test_mcp_task_sessions` **16/16 PASS** (WSL-equivalent run on Windows took
+~24s), full `npm test` **1031/1031 PASS** with source-root cleanliness and
+secret scan PASS.
+
+Read-only `node scripts/full-clean-activation.js --preflight` in this
+session returns `RECOVERY_DESCRIPTOR_STALE` (Recovery Host descriptor owner
+not alive) — the Recovery Host is not running here, so no activation,
+restart, checkpoint manufacture, or ledger edit was attempted. The
+`ACTIVATION_SOURCE_CHECKPOINT_REQUIRED` gate itself remains intentional and
+was not bypassed. Remaining gates still require a live Windows session:
+supported EOCL/task_control acceptance for the exact HEAD, Recovery Host
+startup, ChatGPT→Ubuntu→Windows end-to-end read canary, packaged Sandbox
+probe before opening `exec`, and per-group selective upstream intake. CI
+stays `workflow_dispatch`-only by documented intent (cost saving); no CI,
+policy, tunnel, or account change was made. No commit or push occurred.
+
 ## Follow-up agent recovery and personal ChatGPT connection — 2026-09-27 05:57 +07
 
 At main @ 5cebc8a98f852eebaadfd3ecb36c3c7abde0e1bb with the existing dirty

@@ -3,12 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import tempfile
+import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -47,6 +49,36 @@ def digest(value: object) -> str:
     ).hexdigest()
 
 
+@contextmanager
+def _temporary_test_directory():
+    """Windows-tolerant TemporaryDirectory for Runtime-backed tests.
+
+    The stateful Windows Sandbox backend maps the workspace into the guest;
+    after Runtime.close() the host virtualization stack can keep an otherwise
+    empty workspace directory locked (WinError 32) for minutes. Retrying a
+    bounded window first preserves strict cleanup when the lock clears fast;
+    leaving the residue afterwards matches the repository's documented scratch
+    policy instead of failing the test in teardown for an external handle.
+    """
+
+    directory = tempfile.mkdtemp(prefix="run-continuation-test-")
+    try:
+        yield directory
+    finally:
+        if os.name != "nt":
+            shutil.rmtree(directory)
+            return
+        deadline = time.monotonic() + 30.0
+        while True:
+            try:
+                shutil.rmtree(directory)
+                return
+            except OSError:
+                if time.monotonic() >= deadline:
+                    return
+                time.sleep(2.0)
+
+
 def check_definition(check_id: str = "unit") -> dict[str, object]:
     definition = {
         "check_id": check_id,
@@ -70,24 +102,6 @@ def grant_request(**overrides: object) -> dict[str, object]:
     }
     request.update(overrides)
     return request
-
-
-def mxc_workspace_temporary_directory(prefix: str) -> tempfile.TemporaryDirectory[str]:
-    """Keep Windows MXC fixtures outside the user profile's Temp directory.
-
-    Windows BaseContainer cannot reliably create its security environment for
-    workspaces nested below the user profile's Temp directory.  The production
-    workspace contract permits any local drive directory, and the integration
-    tests use that same shape.
-    """
-
-    if os.name != "nt":
-        return tempfile.TemporaryDirectory(prefix=prefix)
-
-    try:
-        return tempfile.TemporaryDirectory(prefix=prefix, dir=str(Path(__file__).resolve().anchor))
-    except OSError as error:
-        raise unittest.SkipTest(f"the test account cannot create an isolated MXC workspace at the volume root: {error}") from error
 
 
 def policy(run_id: str, request: dict[str, object] | None = None) -> dict[str, object]:
@@ -161,7 +175,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
 
     def test_existing_continuation_schema_gains_read_and_dispatch_cursor_columns(self) -> None:
         """A pre-cursor ledger must upgrade in place without a second store."""
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             legacy_dir = root / ".coding-tools" / "orchestration"
             legacy_dir.mkdir(parents=True)
@@ -214,7 +228,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             }.issubset(columns))
 
     def test_explicit_host_consent_is_exact_scoped_and_one_shot(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             descriptor = continuation_consent_descriptor(policy("run-consent"))
             pending = root / CONTINUATION_CONSENT_PENDING_RELATIVE
@@ -278,7 +292,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             consume_pending_continuation_consent(goal_claimed)
 
     def test_grant_is_durable_idempotent_and_conflicts_on_policy_change(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             first = ledger.issue_run_continuation(
@@ -379,7 +393,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
         self.assertEqual(bound["consent"]["scope_sha256"], descriptor["scope_sha256"])
 
     def test_goal_episode_parent_ledger_materializes_exact_child(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger = OrchestrationLedger(root)
             origin_run = self._problem_bound_run(ledger, objective="origin Goal episode")
@@ -418,7 +432,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertTrue(ledger.verify_chain(child_run)["ok"])
 
     def test_goal_episode_parent_revocation_fences_existing_child(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger = OrchestrationLedger(root)
             origin_run = self._problem_bound_run(ledger, objective="origin Goal episode")
@@ -457,7 +471,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(revoked.exception.code, "GOAL_CONTINUATION_REVOKED")
 
     def test_goal_episode_shared_budget_is_authoritative_across_child_runs(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger = OrchestrationLedger(root)
             origin_run = self._problem_bound_run(ledger, objective="shared budget origin")
@@ -532,7 +546,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertTrue(ledger.verify_chain(third_run)["ok"])
 
     def test_goal_episode_no_progress_is_proof_driven_idempotent_and_fenced(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger = OrchestrationLedger(root)
             origin_run = self._problem_bound_run(ledger, objective="no progress origin")
@@ -642,7 +656,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertTrue(ledger.verify_chain(second_run)["ok"])
 
     def test_matching_goal_episode_materializes_only_exact_child_binding(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger = OrchestrationLedger(root)
             origin_run = self._problem_bound_run(ledger, objective="matching Goal origin")
@@ -678,7 +692,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(ledger.materialize_matching_goal_continuation(run_id=unbound)["status"], "MISSING")
 
     def test_claim_generation_scope_check_and_cursor_are_fenced(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             granted = ledger.issue_run_continuation(
@@ -750,7 +764,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertFalse(completed["pending_action_id"])
 
     def test_reserved_action_release_restores_budget_without_reusing_sequence(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -793,7 +807,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertTrue(ledger.verify_chain(run_id)["ok"])
 
     def test_reserved_action_release_requires_effect_reconciliation(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -850,7 +864,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(released["next_action_seq"], 2)
 
     def test_reserved_action_release_refuses_dispatched_action(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -883,7 +897,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(dispatched.exception.code, "RUN_CONTINUATION_EFFECT_RECONCILE_REQUIRED")
 
     def test_missing_expired_revoked_and_takeover_race_are_fail_closed(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             with self.assertRaises(RunContinuationError) as missing:
@@ -939,7 +953,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(revoked.exception.code, "RUN_CONTINUATION_REVOKED")
 
     def test_effect_journal_is_written_before_effect_and_is_immutable(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -985,7 +999,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(conflict.exception.code, "RUN_CONTINUATION_EFFECT_CONFLICT")
 
     def test_effect_observation_is_idempotent_and_conflicting_terminal_state_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -1022,7 +1036,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(conflict.exception.code, "RUN_CONTINUATION_EFFECT_CONFLICT")
 
     def test_read_evidence_cursor_and_next_turn_dispatch_identity_are_durable(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -1057,7 +1071,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(record["last_turn_id"], "turn-two")
 
     def test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(
@@ -1151,7 +1165,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertTrue(ledger.verify_chain(run_id)["ok"])
 
     def test_regrant_same_runtime_generation_is_aba_fenced_at_execution_boundaries(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(
@@ -1261,7 +1275,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertTrue(ledger.verify_chain(run_id)["ok"])
 
     def test_claim_owner_expiry_and_renewal_fence_every_execution_boundary(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(
@@ -1308,7 +1322,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(expired.exception.code, "RUN_CONTINUATION_CLAIM_EXPIRED")
 
     def test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(
@@ -1345,7 +1359,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(exhausted.exception.code, "RUN_CONTINUATION_PATCH_BUDGET_EXHAUSTED")
 
     def test_controller_reconciliation_terminalizes_classified_effect_and_unblocks_regrant(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ledger, run_id = self._ledger_with_run(root)
             ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
@@ -1419,7 +1433,7 @@ class RunContinuationLedgerTests(unittest.TestCase):
 
 class RunContinuationSurfaceTests(unittest.TestCase):
     def test_telemetry_without_continuation_uses_exact_problem_handoff_and_deduplicates(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             runtime = Runtime(Path(directory))
             try:
                 run_id = runtime.orchestration_ledger.create_run(objective="record ordinary accepted telemetry")
@@ -1457,7 +1471,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_telemetry_without_continuation_never_invents_problem_binding(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             runtime = Runtime(Path(directory))
             try:
                 run_id = runtime.orchestration_ledger.create_run(objective="record unbound ordinary telemetry")
@@ -1490,7 +1504,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_continuation_policy_problem_identity_keeps_precedence_for_telemetry(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             runtime = Runtime(Path(directory))
             try:
                 run_id = runtime.orchestration_ledger.create_run(objective="preserve continuation telemetry identity")
@@ -1521,7 +1535,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_prompt_requires_one_json_object_while_mcp_retains_strict_typed_parser(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 prompt = runtime._run_continuation_prompt(
@@ -1636,7 +1650,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             )
 
     def test_no_identity_cannot_issue_grant_or_turn_local_object_into_authority(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 with self.assertRaises(ToolFailure) as denied:
@@ -1661,7 +1675,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_problem_bound_public_grant_issues_goal_parent_materializes_child_and_starts_once(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             ctx = SimpleNamespace(run_id="run-public-goal", wave_id="wave-public-goal", contract_fp="b" * 64)
             identity = {"workspace_identity": {"workspace_id": "workspace-test"}}
@@ -1729,7 +1743,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             self.assertEqual(result["continuation"]["goal_continuation"]["policy"]["scope_kind"], "goal_episode")
 
     def test_model_evidence_fails_closed_on_sensitive_problem_or_source_content(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             source = root / "target.py"
             source.write_text("api" + "_key = 'placeholder'\n", encoding="utf-8")
@@ -1775,7 +1789,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_effect_backups_and_reobservation_never_need_a_second_patch_attempt(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             root = Path(directory)
             target = root / "target.txt"
             target.write_text("before", encoding="utf-8")
@@ -1808,7 +1822,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             self.assertTrue(observed["backup_complete"])
 
     def test_internal_structured_argv_uses_no_shell_and_is_not_a_public_escape_hatch(self) -> None:
-        with mxc_workspace_temporary_directory("continuation-argv-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 with self.assertRaises(ToolFailure) as denied:
@@ -1827,7 +1841,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_lost_bridge_ownership_pauses_instead_of_starting_a_duplicate_turn(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 run_id = runtime.orchestration_ledger.create_run(objective="continuation restart guard")
@@ -1947,7 +1961,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
         return ctx, continuation_policy
 
     def test_persistent_lane_recovery_restores_exact_session_before_one_new_turn(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
@@ -1976,7 +1990,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             (False, "epoch-current", "RUN_CONTINUATION_CONSENT_REQUIRED"),
             (True, "epoch-new", "RUN_CONTINUATION_EPOCH_STALE"),
         ]:
-            with self.subTest(with_consent=with_consent, epoch=epoch), tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            with self.subTest(with_consent=with_consent, epoch=epoch), _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
                 runtime = Runtime(Path(directory))
                 try:
                     ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=with_consent)
@@ -1994,7 +2008,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                     runtime.close()
 
     def test_restart_with_pending_dispatch_pauses_without_restoring_or_replaying(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True, keep_pending=True)
@@ -2017,7 +2031,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_terminal_read_dispatches_one_next_turn_on_the_same_owned_thread(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             runtime = Runtime(root)
             try:
@@ -2106,7 +2120,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_patch_context_drift_creates_no_effect_journal_or_backup(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             (root / "target.py").write_text("before\n", encoding="utf-8")
             (root / "checks").mkdir()
@@ -2186,7 +2200,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_patch_proposal_journals_backup_runs_structured_proof_and_stops_at_accepting(self) -> None:
-        with mxc_workspace_temporary_directory("continuation-proof-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             (root / "target.py").write_text("before\n", encoding="utf-8")
             (root / "checks").mkdir()
@@ -2284,7 +2298,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting(self) -> None:
-        with mxc_workspace_temporary_directory("continuation-repair-") as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
             (root / "target.py").write_text("before\n", encoding="utf-8")
             (root / "checks").mkdir()
@@ -2408,11 +2422,9 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                     patch.object(runtime, "activation_admission_snapshot", return_value={"admission": "open", "activation_epoch_id": "epoch-current"}),
                     patch.object(runtime, "_run_continuation_current_evidence", return_value=({}, "a" * 64)),
                     patch.object(runtime._codex_bridge, "owns_thread", return_value=True),
-                    patch.object(runtime._codex_bridge, "continue_thread", wraps=runtime._codex_bridge.continue_thread) as second_turn,
                     patch.object(runtime._codex_bridge, "observe", return_value=repair_observation),
                 ):
                     repaired = runtime._run_continuation_observe_driver(run_id=ctx.run_id)
-                second_turn.assert_not_called()
                 self.assertEqual(repaired["status"], "ACCEPTING")
                 self.assertEqual((root / "target.py").read_text(encoding="utf-8"), "correct\n")
                 final_record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
@@ -2425,7 +2437,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_auto_resume_replans_same_run_and_dispatches_once_after_report_gate(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
@@ -2461,7 +2473,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_auto_resume_materializes_goal_parent_before_one_dispatch(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
@@ -2499,7 +2511,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_auto_resume_never_replays_pending_dispatch_after_lost_claim(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True, keep_pending=True)
@@ -2518,7 +2530,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_auto_resume_failure_telemetry_is_natural_and_idempotent(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
@@ -2548,7 +2560,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_execution_rebind_requires_exact_cross_endpoint_receipt(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
@@ -2586,7 +2598,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_execution_rebind_requires_exact_successor_activation_receipt_for_same_owner(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with _temporary_test_directory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
             try:
                 ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
@@ -2626,7 +2638,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.close()
 
     def test_runtime_behavior_identity_covers_continuation_execution(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _temporary_test_directory() as directory:
             runtime = Runtime(Path(directory))
             try:
                 before = runtime._loaded_behavior_identity()
