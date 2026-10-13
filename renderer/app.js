@@ -58,6 +58,7 @@ function createPreviewApi() {
 
 const pageMeta = {
   overview: ['EXECUTION CONTROL', 'Command Center', 'Runtime, clients, routing, authority and proof in one operational view.'],
+  usage: ['SỬ DỤNG', 'Sử dụng Token', 'Theo dõi token, chi phí và hiệu quả sử dụng.'],
   device: ['DEVICE CONTROL', 'Thiết bị hiện tại', 'Định danh thiết bị, ownership, Coding/Recovery, Tunnel và Git của máy đang chạy Recovery Host.'],
   deploy: ['KẾT NỐI', 'Kết nối máy chủ', 'Kết nối Ubuntu hoặc cấu hình direct legacy trong phần nâng cao.'],
   workspace: ['THƯ MỤC & QUYỀN', 'Thư mục & quyền', 'Chọn đường dẫn local và xem rõ quyền đọc, ghi, chạy đang được áp dụng.'],
@@ -1992,6 +1993,7 @@ function applyFormValues(snapshot, force = false) {
   $('#keepRunningToggle').checked = settings.keepRunningOnClose;
   $('#autoStartToggle').checked = settings.autoStartServices;
   $('#progressReportSelect').value = String(settings.progressReportSeconds || 90);
+  if ($('#executionModeSelect')) $('#executionModeSelect').value = settings.executionMode === 'sandboxed' ? 'sandboxed' : 'local';
   if ($('#toolModeSelect')) $('#toolModeSelect').value = 'smart';
   $$('input[name="permission"]').forEach((input) => {
     input.checked = input.value === settings.permissionMode;
@@ -2698,6 +2700,7 @@ function collectSettings() {
     keepRunningOnClose: $('#keepRunningToggle').checked,
     autoStartServices: $('#autoStartToggle').checked,
     progressReportSeconds: Number($('#progressReportSelect').value || 90),
+    executionMode: $('#executionModeSelect') ? $('#executionModeSelect').value : 'local',
     guideProgress: collectGuideProgress()
   };
 }
@@ -3752,6 +3755,7 @@ function bindEvents() {
   $('#keepRunningToggle').addEventListener('change', () => savePreference('keepRunningOnClose', $('#keepRunningToggle').checked));
   $('#autoStartToggle').addEventListener('change', () => savePreference('autoStartServices', $('#autoStartToggle').checked));
   $('#progressReportSelect').addEventListener('change', () => savePreference('progressReportSeconds', Number($('#progressReportSelect').value || 90)));
+  if ($('#executionModeSelect')) $('#executionModeSelect').addEventListener('change', () => savePreference('executionMode', $('#executionModeSelect').value));
 
   $$('[data-guide-check]').forEach((input) => input.addEventListener('change', async () => {
     renderGuideProgress();
@@ -3803,6 +3807,15 @@ function bindEvents() {
 async function initialize() {
   try {
     bindEvents();
+    // Streamlined UI: move token analytics dashboard from overview to the
+    // dedicated Usage page. Keeps Command Center focused on 3 core blocks.
+    try {
+      const daSection = document.querySelector('.page[data-page-view="overview"] .da-section');
+      const usageContainer = document.getElementById('usageAnalyticsContainer');
+      if (daSection && usageContainer) {
+        usageContainer.appendChild(daSection);
+      }
+    } catch (_) { /* non-fatal: dashboard stays on overview */ }
     api.onProgress(updateProgress);
     api.onLog((entry) => {
       state.logs.push(entry);

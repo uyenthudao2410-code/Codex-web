@@ -27,6 +27,7 @@
       <nav class="nav-list" aria-label="Điều hướng chính">
 
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Thực thi mã</span></button>
+        <button class="nav-item" data-page="usage"><span class="nav-icon">TK</span><span>Sử dụng</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tác vụ & kết quả</span></button>
         <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
         <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
@@ -608,6 +609,11 @@
           </div>
         </section>
 
+        <section class="page" data-page-view="usage">
+          <div class="section-header"><div><span class="section-kicker">SỬ DỤNG</span><h2>Sử dụng Token</h2><p>Theo dõi token, chi phí và hiệu quả sử dụng.</p></div></div>
+          <div id="usageAnalyticsContainer"></div>
+        </section>
+
         <section class="page" data-page-view="device">
           <div class="section-header"><div><span class="section-kicker">DEVICE CONTROL</span><h2>Thiết bị hiện tại</h2><p>Định danh thiết bị, runtime, Tunnel và Git của máy đang chạy Recovery Host này. Panel này chỉ điều khiển máy hiện tại; shared-account inventory và chọn binding được thực hiện qua Ubuntu Control Plane/MCP.</p></div><div class="inline-actions"><span id="deviceScopeBadge" class="security-chip">Local only</span><button class="secondary-button" id="deviceRefresh">Làm mới</button></div></div>
           <div class="device-overview-grid"><article class="panel device-identity-card"><div class="panel-title"><div><span class="section-kicker">IDENTITY</span><h3 id="deviceDisplayName">Thiết bị hiện tại</h3><p>device_id bền vững theo cài đặt; device_instance_id đổi theo lifecycle Recovery Host.</p></div><span id="deviceOnline" class="soft-badge neutral">Đang kiểm tra</span></div><div class="device-kv-grid"><div><span>Device ID</span><code id="deviceId">—</code></div><div><span>Device instance</span><code id="deviceInstanceId">—</code></div><div><span>Workspace</span><code id="deviceWorkspace">—</code></div><div><span>Git ứng dụng</span><code id="deviceGitState">Không có dữ liệu</code></div></div></article><article class="panel"><div class="panel-title"><div><span class="section-kicker">OWNERSHIP</span><h3>Runtime trên thiết bị này</h3><p>Process/tunnel chỉ được điều khiển khi persistent device_id khớp.</p></div></div><div class="device-service-grid"><div class="device-service-card"><span>Coding</span><b id="deviceCodingState">Đang kiểm tra</b><small id="deviceCodingTunnelId">Tunnel: —</small></div><div class="device-service-card"><span>Recovery</span><b id="deviceRecoveryState">Đang kiểm tra</b><small id="deviceRecoveryTunnelId">Tunnel: —</small></div></div><div class="notice warning"><b>Ranh giới hiện tại</b><p>Panel này chỉ điều khiển process của device hiện tại. Client cùng tài khoản ChatGPT chọn binding_id qua Control Plane để task chạy tại node đã bind; panel không tự gửi thao tác remote và không retarget task.</p></div></article></div>
@@ -879,6 +885,7 @@
                   <div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div>
                   <div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div>
                   <div class="setting-row"><span><b>Dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div>
+                  <label class="setting-row"><span><b>Chế độ thực thi</b><small>Local: chạy trực tiếp, nhẹ như Claude Code (mặc định). Sandboxed: cách ly container cho remote không tin cậy.</small></span><span class="setting-control"><select id="executionModeSelect"><option value="local">Local (nhẹ)</option><option value="sandboxed">Sandboxed (cách ly)</option></select><small class="setting-save-state" data-setting-state="executionMode">Đã lưu</small></span></label>
                 </article>
                 <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
               </div>
