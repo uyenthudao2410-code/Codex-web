@@ -77,6 +77,32 @@ PERMISSION_MODE_CAPABILITIES: dict[str, ModeCapabilities] = {
 
 PERMISSION_MODE_CHOICES = tuple(PERMISSION_MODE_CAPABILITIES)
 
+EXECUTION_MODE_ENV = f"{ENV_PREFIX}_EXECUTION_MODE"
+EXECUTION_MODES = frozenset({"local", "sandboxed"})
+
+
+def execution_mode_from_env() -> str:
+    """How commands execute.
+
+    - "local" (default): run directly as the invoking user, like Claude Code.
+      Lightweight; intended for the operator's own machine, including their own
+      ChatGPT tunnel where the operator trusts the remote driver.
+    - "sandboxed": heavy per-command container isolation (Windows MXC sandbox /
+      Landlock) for untrusted remote use. Kept for future remote scenarios.
+    """
+    mode = os.environ.get(EXECUTION_MODE_ENV, "local").strip().lower()
+    if mode not in EXECUTION_MODES:
+        raise ValueError(
+            f"{EXECUTION_MODE_ENV} must be one of: {', '.join(sorted(EXECUTION_MODES))}"
+        )
+    return mode
+
+
+def is_sandboxed_execution() -> bool:
+    """True only when the operator explicitly opted into heavy sandboxing."""
+    return execution_mode_from_env() == "sandboxed"
+
+
 POSIX_CORE_ENV_NAMES = {"PATH", "LANG", "LC_ALL", "TERM"}
 # Not POSIX core, but inherited under inherit="core" so git helper subprocesses and
 # exec_command share the host's global git config (e.g. safe.directory entries).
