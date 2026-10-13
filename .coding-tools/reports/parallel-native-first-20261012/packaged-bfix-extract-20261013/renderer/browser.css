@@ -1,0 +1,77 @@
+:root{color-scheme:light;font-family:Inter,"Segoe UI","Microsoft YaHei UI",sans-serif;--border:#e5e5e5;--text:#202123;--muted:#6f7378;--green:#10a37f;--amber:#c58b13;--red:#d94343}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f7f8;color:var(--text)}
+button{font:inherit}
+.browser-toolbar{position:relative;z-index:20;height:112px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.98);box-shadow:0 1px 8px rgba(0,0,0,.04)}
+.toolbar-main{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:center;height:63px;padding:0 14px}
+.service-state{display:flex;align-items:center;gap:7px}
+.service-state{justify-content:flex-end}
+.hub-brand,.manager-button,.add-workspace,.workspace-chip{height:38px;border:0;border-radius:10px;color:#34363a;background:transparent}
+.hub-brand{display:inline-flex;align-items:center;gap:9px;padding:0 11px;cursor:default}
+.workspace-chip:hover{background:#f0f1f2}
+.logo-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;color:#fff;background:#202123;font-size:10px;font-weight:800}
+.hub-brand b{font-size:13px}
+.service-state span i,.device-state-button i{width:8px;height:8px;border-radius:50%;background:#b8bcc2}
+.service-state span.ready i,.device-state-button.ready i{background:var(--green);box-shadow:0 0 0 3px rgba(16,163,127,.11)}
+.service-state span.warn i{background:var(--amber);box-shadow:0 0 0 3px rgba(197,139,19,.12)}
+.service-state span.error i,.device-state-button.error i{background:var(--red)}
+.service-state span{display:inline-flex;align-items:center;gap:6px;padding:0 5px;color:var(--muted);font-size:11px}
+.service-state #gitState span{padding:0;color:inherit;font-size:inherit}
+.device-state-button{display:inline-flex;max-width:180px;height:32px;align-items:center;gap:6px;padding:0 9px;border:1px solid var(--border);border-radius:9px;color:var(--muted);background:#fff;cursor:pointer;font-size:11px;font-weight:700}
+.device-state-button span{padding:0;color:inherit;font-size:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.device-state-button:hover{background:#f0f1f2}
+.manager-button{margin-left:7px;padding:0 17px;color:#fff;background:#202123;font-size:12px;font-weight:700}
+.manager-button.active{background:var(--green)}
+.workspace-bar{display:flex;height:49px;align-items:center;gap:10px;padding:0 15px;border-top:1px solid #f0f0f0}
+.workspace-label{position:relative;display:flex;min-width:255px;align-items:center;gap:9px}
+.workspace-label span{padding:3px 7px;border-radius:6px;color:#087f65;background:#e7f6f1;font-size:10px;font-weight:800}
+.workspace-label strong{max-width:300px;overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.workspace-health-button{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;padding:0;border:0;border-radius:7px;background:transparent;cursor:pointer}
+.workspace-health-button:hover{background:#f0f1f2}
+.workspace-health-button i{width:7px;height:7px;border-radius:50%;background:#b8bcc2}
+.workspace-health-button.ready i{background:var(--green);box-shadow:0 0 0 3px rgba(16,163,127,.11)}
+.workspace-health-button.error i{background:var(--red);box-shadow:0 0 0 3px rgba(217,67,67,.08)}
+.workspace-health-popover{position:absolute;top:34px;left:0;z-index:80;width:min(420px,70vw);padding:12px 13px;border:1px solid #dedfe2;border-radius:12px;background:#fff;box-shadow:0 12px 35px rgba(0,0,0,.14);font-size:11px}
+.workspace-health-popover[hidden]{display:none}
+.workspace-health-popover b{display:block;margin-bottom:5px;color:#25272a;font-size:12px}
+.workspace-health-popover code{display:block;overflow:hidden;margin-bottom:10px;color:#6b6f74;font-family:"Cascadia Code",Consolas,monospace;text-overflow:ellipsis;white-space:nowrap}
+.workspace-health-popover div{display:flex;justify-content:space-between;gap:12px;padding-top:6px;color:#7b7f84}
+.workspace-health-popover div strong{color:#35383c;font-size:11px}
+.workspace-chips{display:flex;min-width:0;flex:1;align-items:center;gap:6px;overflow:hidden}
+.workspace-select{height:32px;max-width:180px;padding:0 28px 0 10px;border:1px solid #d9d9d9;border-radius:9px;background:#fff;color:#34363a;font-size:11px;font-weight:700;cursor:pointer}
+.workspace-chip{max-width:160px;height:30px;padding:0 10px;color:#5f6368;background:#f5f5f5;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.switch-state{color:#087f65;font-size:11px;white-space:nowrap}
+.add-workspace{height:32px;padding:0 12px;border:1px solid #d9d9d9;background:#fff;font-size:11px;font-weight:700}
+.add-workspace.secondary-action{color:#087f65;border-color:#cfe8df;background:#f3fbf8}
+.add-workspace.secondary-action:hover{background:#e7f6f1}
+.task-strip{display:flex;min-width:0;max-width:590px;align-items:center;gap:7px;padding:5px 8px;border-radius:9px;background:#f5f5f5;color:#74777c;font-size:10px}
+.task-strip i{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#b8bcc2}
+.task-strip b,.task-strip small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-strip b{max-width:150px;color:#3e4145;font-size:11px}
+.task-strip small{max-width:190px}
+.task-progress{width:72px;height:5px;flex:0 0 72px;overflow:hidden;border-radius:999px;background:#dfe2e5}
+.task-progress span{display:block;width:0;height:100%;border-radius:inherit;background:var(--green);transition:width .25s ease}
+.task-progress-text{min-width:28px;color:#555b61;font-size:9px;font-variant-numeric:tabular-nums;text-align:right}
+.task-strip button{display:none;padding:2px 6px;border:0;border-radius:5px;background:#e6e7e9;color:#4d5054;font-size:9px;cursor:pointer}
+.task-strip.active i{background:var(--green)}
+.task-strip.waiting i{background:#3486e6}
+.task-strip.paused i{background:#e5a000}
+.task-strip.stopped i,.task-strip.failed i{background:var(--red)}
+.task-strip.paused .task-progress span{background:#e5a000}
+.task-strip.stopped .task-progress span,.task-strip.failed .task-progress span{background:var(--red)}
+.task-strip.active #pauseTask,.task-strip.active #stopTask,.task-strip.paused #resumeTask,.task-strip.paused #stopTask,.task-strip.stopped #resumeTask{display:inline-block}
+.executor-stage{display:grid;height:calc(100% - 112px);place-items:center;padding:28px;background:radial-gradient(circle at 50% 35%,#fff,#f5f5f6 55%,#eceeef)}
+.executor-card{width:min(640px,100%);padding:36px;border:1px solid #e2e3e6;border-radius:18px;background:#fff;box-shadow:0 16px 48px rgba(0,0,0,.07)}
+.executor-kicker{color:#087f65;font-size:11px;font-weight:800;letter-spacing:.08em}
+.executor-card h1{margin:12px 0 8px;font-size:24px}
+.executor-card>p{color:var(--muted);font-size:13px;line-height:1.6}
+.executor-facts{display:grid;grid-template-columns:1fr;gap:0;margin:24px 0;border-top:1px solid var(--border)}
+.executor-facts div{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);font-size:12px}
+.executor-facts dt{color:var(--muted)}
+.executor-facts dd{margin:0;text-align:right;font-weight:700}
+.external-open-button{height:40px;padding:0 17px;border:0;border-radius:9px;color:#fff;background:#202123;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.external-open-button:hover{background:#3c3e42}
+.external-open-button:disabled{opacity:.6;cursor:wait}
+.executor-card .executor-notice{min-height:20px;margin-bottom:0;font-size:11px}
+@media(max-width:1150px){.task-progress{width:48px;flex-basis:48px}.task-strip small{max-width:120px}}
+@media(max-width:1000px){.toolbar-main{grid-template-columns:1fr auto}.workspace-chip:nth-child(n+3){display:none}.task-strip small,.task-progress,.task-progress-text{display:none}.executor-card{padding:25px}}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Coding Tools Ubuntu Control Plane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/codex-control-plane/control-plane.env
+# `current` must be an operator-controlled symlink to an immutable, verified
+# release directory. Do not point it at a Git checkout or state directory.
+ExecStart=%h/.local/lib/codex-control-plane/current/deploy/control-plane-launcher.sh
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

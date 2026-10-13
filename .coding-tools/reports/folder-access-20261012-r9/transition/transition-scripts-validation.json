@@ -1,0 +1,16 @@
+{
+  "operation": "r9_transition_scripts_validation",
+  "observed_at": "2026-10-12T08:17:36.6022679+00:00",
+  "runtime_effects": 0,
+  "supervisor_mutated": false,
+  "shortcuts_mutated": false,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9\\win-unpacked",
+  "parse_errors": 0,
+  "old_shortcut_hashes_verified_against_completion_r8": true,
+  "exact_retirement_receipt_matches_launch_guard": true,
+  "scripts": {
+    "shortcut_r9_sha256": "b166f72557e52f482deefa2ba343b6d54a0183797f3f0360c29d2339ba8118a9",
+    "launch_r9_sha256": "7ba22950da3ec57dbcd5b1c294d33d05a3bcd8f77176436ea5c83e3f5e12172e"
+  },
+  "remaining": "Root install supervisor and launch r9; full-clean refresh and fresh READY/OPEN observer; then guarded shortcut update."
+}

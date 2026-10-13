@@ -1,0 +1,19 @@
+{
+  "operation": "replace",
+  "observed_at": "2026-10-12T02:41:07.262Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "old_workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "display_name": "Codex-web",
+    "capabilities": {
+      "read": true,
+      "write": true,
+      "exec": true
+    },
+    "replayed": false,
+    "state": "replaced"
+  }
+}

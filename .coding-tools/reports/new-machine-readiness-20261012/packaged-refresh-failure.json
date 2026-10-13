@@ -1,0 +1,7 @@
+{
+  "operation": "refresh",
+  "observed_at": "2026-10-12T02:44:35.019Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "ok": false,
+  "code": "ACCEPTANCE_PENDING"
+}

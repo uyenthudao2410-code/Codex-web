@@ -1,0 +1,43 @@
+{
+  "operation": "native_first_overlay_independent_review",
+  "observed_at_ms": 1791804969997,
+  "reviewed_helper_sha256": "5dbbd90823c5fc10111955d0f041affb3ee97231225ffc8b0b544f6e1500177b",
+  "review_kind": "static_source_review",
+  "reviewed_for": "inert_upload_and_readonly_preflight_only",
+  "execution_authorized_by_this_review": false,
+  "corrected_findings": [
+    "Exact old-source PYTHONPATH entries now updated with guarded baseline comparison.",
+    "Once candidate start is attempted, no automatic second stop or source rollback occurs.",
+    "OAuth principal and all immutable service grant fields including credential digest are hashed in memory."
+  ],
+  "verified_boundaries": [
+    "Pinned service/source/config identity before mutation.",
+    "Read-only SQLite causal census before stop and after stopped ingress.",
+    "Protected consistent SQLite backup; no database restoration or authority mutation code path.",
+    "Pre-start source/config rollback only while service is proven stopped.",
+    "Poststart causal drift leaves current source for operator review.",
+    "Archive file set and candidate delta limited to mcp_facade.py and node_agent.py."
+  ],
+  "material_limit": "The initial census-to-service-stop interval is not an atomic admission fence. Post-stop census prevents source switching if new work arrives, but cannot claim zero transient interruption. Actual execute remains withheld.",
+  "global_preflight_blocker": {
+    "snapshot_at_ms": 1791804883844,
+    "global_live_tasks": 0,
+    "global_live_writers": 0,
+    "global_active_actions": 1,
+    "state": "dispatch_unconfirmed",
+    "device_id": "3c7378b3-ecc4-4466-9a87-25d4d53ffdcf",
+    "expected_windows_device_active_actions": 0,
+    "expected_windows_device_unknown_actions": 5,
+    "action_id": "act_0f0a49c6424d42d3bc7bc49ad46e4ffa",
+    "created_at_ms": 1789835163392,
+    "expires_at_ms": 1789835463391,
+    "expired": true,
+    "classification": "Historical expired dispatch_unconfirmed outcome on another device; conservative servicewide no-transition guard, not new live work.",
+    "evidence": "server-readiness-global-blocker.json"
+  },
+  "canary_prepared": true,
+  "live_canary_executed": false,
+  "service_operations_performed_by_reviewer": false,
+  "commit_performed": false,
+  "push_performed": false
+}

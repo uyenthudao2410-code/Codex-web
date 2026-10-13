@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "operation": "bfix_packaged_handoff",
+  "observed_at": "2026-10-13T05:11:20.171Z",
+  "ok": false,
+  "code": "FRESH_UBUNTU_FENCE_EXPIRED",
+  "message": "FRESH_UBUNTU_FENCE_EXPIRED",
+  "details": {
+    "age": 159327
+  },
+  "mutation_started": false
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "assist-canary",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "observed_at": "2026-10-12T13:05:19.195Z",
+  "observed_at_ms": 1791810319195,
+  "ok": false,
+  "stage": "bounded_operator_assisted_delivery",
+  "code": "OPERATOR_ASSISTANCE_STOPPED_ON_FAILURE",
+  "mutating_action_started": true,
+  "original_scoped_poll_intent_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\operator-scoped-assistance-intent-1791810226404-8ffd5fc3.json",
+  "retry_instruction": "Observe exact current state and original operation receipt; do not replay uncertain mutations.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\assist-canary-failure-1791810319195.json"
+}

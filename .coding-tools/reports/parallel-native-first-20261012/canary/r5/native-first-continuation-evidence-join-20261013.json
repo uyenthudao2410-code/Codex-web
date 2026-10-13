@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "operation": "native_first_continuation_evidence_join",
+  "observed_at_ms": 1791847050094,
+  "status": "lanes_complete_semantic_gate_separate",
+  "semantic_acceptance_performed": false,
+  "replayed_original_actions": false,
+  "scope": {
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "binding_id": "bind_71661b1046884174b01c99af5f8546aa"
+  },
+  "runtime_identity": {
+    "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "process_instance_id": "-s21-KH6ldxHjCSO",
+    "server_instance_id": "7GYqt3ZdkU47_HIr",
+    "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+  },
+  "combined_proof_counts": {
+    "reads": 100,
+    "patches": 20,
+    "readbacks": 20,
+    "node_jobs": 10,
+    "git_jobs": 3,
+    "approved_build": 1,
+    "build_readback": 1
+  },
+  "native_jobs": [
+    {
+      "lane": "node_01",
+      "job_id": "6080b6a36054463599969e67712762f6",
+      "command_id": "pxUul7ASLJVZtfDKCC5nh22J",
+      "local_handle": "cp_exec_84a8b8b918222e6bf89c5ec74fc5b73c766ab0c935af811e"
+    },
+    {
+      "lane": "node_02",
+      "job_id": "5bbd3f5476c64067a857e3b5d3495ae8",
+      "command_id": "AdUHPCmNHz0fEYJVppQGyW6-",
+      "local_handle": "cp_exec_51e7ab258fdfd3144b1a9b6a8c0b609f42079728cb18a70a"
+    },
+    {
+      "lane": "node_03",
+      "job_id": "0650a600e5714604807a8e18ce37883a",
+      "command_id": "o78w3GZNtbbsr8z4dgkuucyr",
+      "local_handle": "cp_exec_a116ac8880c1277eb4dc9f66395fef7dafaa18f426611d3e"
+    },
+    {
+      "lane": "node_04",
+      "job_id": "5e3aaf8fccc5494b8c0a832080189c10",
+      "command_id": "5whXDL5o0HdxpCqkW8RkWZna",
+      "local_handle": "cp_exec_d380b7d0bf8498c58e2d26c203014892709824aecee285ad"
+    },
+    {
+      "lane": "node_05",
+      "job_id": "747edfdf78834e9a85e9b68f0e8fff04",
+      "command_id": "RVxiha6pjzvWF7ZVRJtTuPkb",
+      "local_handle": "cp_exec_0b51c5d541b99646c857750690c9daf0b79fea4740f395a6"
+    },
+    {
+      "lane": "node_06",
+      "job_id": "be19f97ddc5748d6bad1c839fe511f9e",
+      "command_id": "21EEyNlKq5y9AhAAoQ_N1PT6",
+      "local_handle": "cp_exec_98f8cf3a19fafc2081b636bba35a9c9449825b9e0f05d5fb"
+    },
+    {
+      "lane": "node_07",
+      "job_id": "4fe18086aa2f420583b09dab5ff15b2a",
+      "command_id": "W-nqslfz35r5eUYgFJEkteMy",
+      "local_handle": "cp_exec_4c0dc0866dbcab4107599f5d14f9b7cfd38e545f450c8ee5"
+    },
+    {
+      "lane": "node_08",
+      "job_id": "c990bda6b0be4e6183b3ab6c5a3a40c1",
+      "command_id": "Os62d4ChPxK-Ik1BBdRyPdnD",
+      "local_handle": "cp_exec_fe24c75d92cc3e84bc6f348d28f8730ec8d8e1d28d37da3f"
+    },
+    {
+      "lane": "node_09",
+      "job_id": "3937cc56cd2048f28a3364bc4d152bdc",
+      "command_id": "CVW8pA7gONrLHvRsehNhGATm",
+      "local_handle": "cp_exec_65c7d1b6c0555e9d4db2170f79d60112a006324b3cc44b99"
+    },
+    {
+      "lane": "node_10",
+      "job_id": "793cd7a94a7e4a309c510edb259f3695",
+      "command_id": "qJFrp_4v3h5fpgxof_KlRRxj",
+      "local_handle": "cp_exec_a0dd7e6ed2de96d2b660a555432ee1f602730821e9900bf3"
+    },
+    {
+      "lane": "git_status",
+      "job_id": "f62fb2cb068c415e929e115d463f4d95",
+      "command_id": "fO9eWRy_a64rIewrwAFBrEjX",
+      "local_handle": "cp_exec_2ed1d3ebe82a9bed16e50d8d2bffc5e3f42ce61e47a6235c"
+    },
+    {
+      "lane": "git_diff",
+      "job_id": "68653395134c462d899601b914b53166",
+      "command_id": "FWYFpbE_zKwQfUT6zBTsJek-",
+      "local_handle": "cp_exec_f954012534b7d6beac9a18a71e10b8f249d69718a42b8194"
+    },
+    {
+      "lane": "git_log",
+      "job_id": "9b4abaa8f7854c758b253e79058e562e",
+      "command_id": "c4CCoPiRhOyyFGNP8fu8G8xv",
+      "local_handle": "cp_exec_2e5182fe92f3c15892812348f554d375b34d9f5ff0bfadc8"
+    },
+    {
+      "lane": "build",
+      "job_id": "41109a23964f414cbae58de1e0ee5015",
+      "command_id": "8l5Nk4TZu4jz2DPHaG9VxEGM",
+      "local_handle": "cp_exec_7a2349b272224be292fdad639451c218991d7905f69f80a4"
+    }
+  ],
+  "source_receipts": [
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-e343984bfcee4e8fb5f9de04038596a7.ndjson",
+      "sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+      "size_bytes": 311754,
+      "record_count": 426
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson",
+      "sha256": "fc85db8fa45fca92a0bd444d8d2665883b2813cb8f00f5cabc1958c756992dcb",
+      "size_bytes": 148341,
+      "record_count": 13
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\continuation-resume-receipt-9509199d0c7b49bba496c971676a4882.ndjson",
+      "sha256": "af487390f5a2e19e52f39b9d2166914bcbb513de6c519fb469f38493d2dbf729",
+      "size_bytes": 151250,
+      "record_count": 5
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\readback-finalizer-receipt-698fcc64e0b5431081e8a4e90fb7569f.ndjson",
+      "sha256": "8da8e4c70eb01878ed0db2b8483de34e83ddf4fce8088f0f3bc816517fd541bd",
+      "size_bytes": 152436,
+      "record_count": 2
+    }
+  ],
+  "source_chain": {
+    "continuation_source_partial_sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+    "resume_source_continuation_sha256": "fc85db8fa45fca92a0bd444d8d2665883b2813cb8f00f5cabc1958c756992dcb",
+    "readback_source_resume_sha256": "af487390f5a2e19e52f39b9d2166914bcbb513de6c519fb469f38493d2dbf729"
+  },
+  "remaining_gates": [
+    "semantic_acceptance",
+    "autocad_unknown_reconciliation",
+    "real_dotnet_autocad_build"
+  ]
+}

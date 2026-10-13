@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "operation": "r2_native_pending_acceptance_resource_observation",
+  "observed_at_ms": 1791781181424,
+  "read_only": true,
+  "mutated_canonical_ledger": false,
+  "native_semantic_acceptance_performed": false,
+  "native_patch_run": {
+    "run_id": "4967dd953ce74b5d97cbf01aad827139",
+    "status": "active"
+  },
+  "native_patch_wave_id": "d4b12a2aff6f4e4eb7dd06de65833aab",
+  "latest_state_event": {
+    "seq": 59910,
+    "event_id": "b2389c13efdd4467a543ff45b37577be",
+    "event_type": "observation_stage_anchor_recorded",
+    "state_after": "ACCEPTING",
+    "event_hash": "fd7d81f8d23953c002e4b61e85811480cd4855f03c4993d879cacaf0ab6d91f5"
+  },
+  "resource_counts": {
+    "controller_leases": 0,
+    "write_fences": 0,
+    "agent_lanes": 0,
+    "managed_jobs": 0,
+    "proofs": 0
+  },
+  "background_operations": [
+    {
+      "operation_id": "p2lZbB9BUUS9HBnr",
+      "wave_id": "d4b12a2aff6f4e4eb7dd06de65833aab",
+      "status": "completed",
+      "finished_at": "2026-10-12T04:57:13.419Z"
+    }
+  ],
+  "final_original_job": {
+    "job_id": "65c2908a7371487cbfbb22ee1d60c262",
+    "run_id": "",
+    "wave_id": "",
+    "finished_at": "2026-10-12T04:58:00.715Z",
+    "process_instance_id": "ev_bVSX46CWc8WG5"
+  }
+}

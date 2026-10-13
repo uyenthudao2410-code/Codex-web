@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "operation": "prepare",
+  "ok": true,
+  "observed_at": "2026-10-12T18:32:54.921Z",
+  "provenance": "local_authenticated_operator",
+  "connector_attestation_claimed": false,
+  "canary_sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+  "continuation_sha256": "fc85db8fa45fca92a0bd444d8d2665883b2813cb8f00f5cabc1958c756992dcb",
+  "continuation_resume_sha256": "af487390f5a2e19e52f39b9d2166914bcbb513de6c519fb469f38493d2dbf729",
+  "readback_finalizer_sha256": "8da8e4c70eb01878ed0db2b8483de34e83ddf4fce8088f0f3bc816517fd541bd",
+  "readback_observer_sha256": null,
+  "original_attempt_id": "e343984bfcee4e8fb5f9de04038596a7",
+  "continuation_attempt_id": "0fe3b0d6d1e44d8284760356bea309fc",
+  "evidence_set": {
+    "partial_attempt_id": "e343984bfcee4e8fb5f9de04038596a7",
+    "continuation_attempt_id": "0fe3b0d6d1e44d8284760356bea309fc",
+    "continuation_resume_attempt_id": "9509199d0c7b49bba496c971676a4882",
+    "readback_finalizer_attempt_id": "698fcc64e0b5431081e8a4e90fb7569f",
+    "readback_observer_attempt_id": null,
+    "readback_finalizer_sha256": "8da8e4c70eb01878ed0db2b8483de34e83ddf4fce8088f0f3bc816517fd541bd",
+    "readback_observer_sha256": null,
+    "partial_error_code": "ORIGINAL_JOB_IDENTITY_NOT_VERIFIED",
+    "partial_proof_counts": {
+      "reads": 100,
+      "patches": 20,
+      "readbacks": 20,
+      "node_jobs": 0,
+      "git_jobs": 0
+    },
+    "continuation_proof_counts": {
+      "node_jobs": 10,
+      "git_jobs": 1,
+      "approved_build": 0,
+      "build_readback": 0
+    },
+    "continuation_resume_proof_counts": {
+      "git_jobs": 2,
+      "approved_build": 1,
+      "build_readback": 0
+    },
+    "readback_finalizer_proof_counts": {
+      "build_readback": 1
+    },
+    "readback_observer_proof_counts": null,
+    "aggregate_counts": {
+      "reads": 100,
+      "patches": 20,
+      "readbacks": 20,
+      "node_jobs": 10,
+      "git_jobs": 3,
+      "approved_build": 1,
+      "build_readback": 1
+    },
+    "original_actions_replayed": false
+  },
+  "targets": [
+    {
+      "lane": "patch_001",
+      "original_action_id": "act_5c04ac0a0a9341d58e89781a2584dee7",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_2f91f26918d7bad14639b92e23265418683ea4100362db624248be7b",
+      "run_id": "8e298cb7e7db4241bda2836019ef1efe",
+      "wave_id": "1104f70e44ee4f5db54abfc4d358b027",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-001.txt",
+          "sha256": "a151be9217932a088deaa272a75d6fca90525ccf56c5842ea781aed20314f623"
+        }
+      ]
+    },
+    {
+      "lane": "patch_002",
+      "original_action_id": "act_908a5832d3d847b4aab325273b533571",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_81575542087ebb280f1a2e8bd1237bc863590b23e3a4fb5f00fc4816",
+      "run_id": "b9ecb76f290a4de7b2eba995100e319d",
+      "wave_id": "4357de0c90734570bc8ef66c4028b0a0",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-002.txt",
+          "sha256": "6b04d81ea22d4d37ebc50e8bc1f930d855fe4c8a4da6e88ef958bde873d08a0c"
+        }
+      ]
+    },
+    {
+      "lane": "patch_003",
+      "original_action_id": "act_ac31882df77541a2931534f1c65d14ec",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_7c2fda99b0ce185b17b8caab7d45125584496007d4927bcb5d7a3d59",
+      "run_id": "e85335c62e314bc88432ee8d3ceb9f11",
+      "wave_id": "92df7d0072104c4c9a46f4b7ebda0ec5",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-003.txt",
+          "sha256": "b5c5d5bc035470016cb00dbbc9b63ec266dfb1765692e7c6c24d670b0b7a2574"
+        }
+      ]
+    },
+    {
+      "lane": "patch_004",
+      "original_action_id": "act_e7547f64f7cf4e2eb730453579b42ce4",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_af41efc1db586da2e86e3e146dee7f677005a0fa5aa359fd39aa76b1",
+      "run_id": "7b321e699c45499db1e5a3643632c67c",
+      "wave_id": "1414015641ca4246b6fd3d9bfa91d6e7",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-004.txt",
+          "sha256": "947de03d4dc6793b4b61ca0bb2dba17ee3de24ad85dc3bbfe110d388a679b107"
+        }
+      ]
+    },
+    {
+      "lane": "patch_005",
+      "original_action_id": "act_8e91c9a772da4214ae32d9d2955f6e33",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_3d45e9dd3d937af37c366661e01da39ae0b78dad67afae54cc8cbd91",
+      "run_id": "150fe6f3e18f4150937e5fa5e9420e43",
+      "wave_id": "8116f0258fa74ec786720c39cb452f96",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-005.txt",
+          "sha256": "8089fd1bb96527272402ffb8ff877b8a939e304b44fdfbb611a6b94b658c0e43"
+        }
+      ]
+    },
+    {
+      "lane": "patch_006",
+      "original_action_id": "act_af9744f4eb084c34bb7a4e849ab49876",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_00d60e8af83c183d7b89edde297234fbba714ff293a2a3278cc02dcc",
+      "run_id": "38401447bb74422b8d2930033b769fc3",
+      "wave_id": "4dba0a43376c4f92b4e607f8ba6cf38d",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-006.txt",
+          "sha256": "7272d3647030c02f85d77685fb340bc6dec7941a85f917b0899a4b7280265ba2"
+        }
+      ]
+    },
+    {
+      "lane": "patch_007",
+      "original_action_id": "act_419be7622b5a4f9e85cf1f81b9b7e881",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_86a36ced438d39c264ba02ed9fa20c700fbdfc382462dbdb927d64ba",
+      "run_id": "97a7d061690b4b2a8ee54c8f00e6776f",
+      "wave_id": "18514c64ce574b5e96473ad710738189",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-007.txt",
+          "sha256": "5fb86b18d105d168fe8492ce7cc68a09e639cd8a2d6dcbd320eb2c2e85d588f6"
+        }
+      ]
+    },
+    {
+      "lane": "patch_008",
+      "original_action_id": "act_41e0d33851d14ba79149899e94eab9b0",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_edce636043e3064250b2af8d9fa4773964e62eb767ed53b2733dd866",
+      "run_id": "b8456637e7b147e2be4f242f9ba53de0",
+      "wave_id": "db42a92bab1f45b1b2a062e57074b084",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-008.txt",
+          "sha256": "e2dc9d4cee32b416004c2e3c7025a5e416df08c8b47e9365c431e6e13539cae3"
+        }
+      ]
+    },
+    {
+      "lane": "patch_009",
+      "original_action_id": "act_d05f2ab8487042538655b4a7e690ed3b",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_457b43dcc38f828e201f689f2c702ae1c1490c650e6c79825d95e136",
+      "run_id": "acc6fee6a77c41238e0cbdc7ee732b12",
+      "wave_id": "1356baf9d16e4acbbd34b9803314cfdf",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-009.txt",
+          "sha256": "b9e3a66916a27cfa91d2b9af759da5bffefb7aeed142158ff0c621312a6582bb"
+        }
+      ]
+    },
+    {
+      "lane": "patch_010",
+      "original_action_id": "act_d5be2f75a26b40888332f8c1f4de3c27",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_958f92ae71ac5745d6f5e71d45147a633ae005b1784204567df4a228",
+      "run_id": "9bb77434054e4c508f110fc473646a43",
+      "wave_id": "f738ae67902a460f9094ce4e5f3ee9fe",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-010.txt",
+          "sha256": "1e2d21562b8e52c62710d15a66ac31199e76036cd3eba35c9594cf1b5f455619"
+        }
+      ]
+    },
+    {
+      "lane": "patch_011",
+      "original_action_id": "act_a96153ca318a46f1bfeb06465225497b",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_b70fdb70020deffc76bec6a6561d1abc2cd2e7fa7501a23592130407",
+      "run_id": "b1525990972d4bf1a6ec2f68a8609e2b",
+      "wave_id": "027d6eb3efa9484f98e2b53af0189665",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-011.txt",
+          "sha256": "59e44ddb3c608f5cfa3e39cb2f941917b39a70e6b9c8726422837c5630ca96ed"
+        }
+      ]
+    },
+    {
+      "lane": "patch_012",
+      "original_action_id": "act_5773b23b3639415eac405513c96132ae",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_138c3067719d6d5a7798915bed73489d49f017b80432d751164b5929",
+      "run_id": "ed965126d3fe42f692bec027f0665ec0",
+      "wave_id": "63da70cb273245c689642f666580658b",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-012.txt",
+          "sha256": "3f077eea829e42ccd3eb5b0348c8db37098d8095a564c8ef6706b1049ec21e03"
+        }
+      ]
+    },
+    {
+      "lane": "patch_013",
+      "original_action_id": "act_6c1436db8686491da147116eb64b74e7",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_0ff3f4cf8e9d2a1288a6b067961206b952335d16b6878fd4017ac38c",
+      "run_id": "8ab4c233c1d049f998010f643ceaee51",
+      "wave_id": "3259e3be540c47dfb409f14735f38587",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-013.txt",
+          "sha256": "9284a177c93545c23f1da3f9069c5c9f6fdc858c7356564265cc00d7649d33dc"
+        }
+      ]
+    },
+    {
+      "lane": "patch_014",
+      "original_action_id": "act_d2bdb7e0a101490f9d5d00adaf3c1754",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_387ae29e10cd0d0fa1d52b725572445db461b4117438224a83ffab0c",
+      "run_id": "a5c44b4205da445bab756f4ec476f23f",
+      "wave_id": "8be04c0bff754083b8e7c1956224a576",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-014.txt",
+          "sha256": "d769b58bd85b4b2cd83989c6681ec975d8e8f98a95fe8137d1e9abe98d195bb4"
+        }
+      ]
+    },
+    {
+      "lane": "patch_015",
+      "original_action_id": "act_5700080e953544139d7ad2c5d17b36b0",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_8e664289e5563207e128dd9e360ca22a12edfb3b8fa79b6330407f69",
+      "run_id": "72d5687bd91b411f95e310fd6c8f8f9e",
+      "wave_id": "a294da4fd1f04bb096b1d92fd3946f9e",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-015.txt",
+          "sha256": "3d1de4341ff5bacc11d3fa10ec932ef7aecd5406b78d86370d451c46e89fcb90"
+        }
+      ]
+    },
+    {
+      "lane": "patch_016",
+      "original_action_id": "act_e2b30080095d48348eec38c01723c3da",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_7e1649677562d64382ad487ca44db6769881b5947a8ca8fe95a111d8",
+      "run_id": "4fc6af5a57314f5e95d712cfd37422ed",
+      "wave_id": "f8b6138fd89e4bb0b9cecf54fb424ddd",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-016.txt",
+          "sha256": "baa6eedbbbeb4c9c81a05361dee2c0866f3b08b86ceb9a898abfdc494c11a59f"
+        }
+      ]
+    },
+    {
+      "lane": "patch_017",
+      "original_action_id": "act_a794658dfd604b1bac8decf7dbf92551",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_89c31afdfc944df2a33f4cf44333db07cc00cd3fd935d65d8ed492f3",
+      "run_id": "de86c09d1a0b49d5894fb82ae0269812",
+      "wave_id": "1ed65b2d9f5f45e2a2f7493f1d4d0b68",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-017.txt",
+          "sha256": "98cc6ebe0323e76ccb8545394de6e59c9924f52b727f316d860b9fe9befdc223"
+        }
+      ]
+    },
+    {
+      "lane": "patch_018",
+      "original_action_id": "act_8481d514bbcf4a799242075e3d896f6f",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_39e290fa43f7f123f3f432c3415135dde0dc9f6fae0b2a05e2be2ed4",
+      "run_id": "b40768fd47774a25a9247ba17b8eddbf",
+      "wave_id": "646e18c805b24ded8a347b2bee3460c3",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-018.txt",
+          "sha256": "ba05e43a1ec2c3c2b2de49c1159e866512b02b8dd97c0acbe92d2268320e8850"
+        }
+      ]
+    },
+    {
+      "lane": "patch_019",
+      "original_action_id": "act_5ba548d19f74498c89f4cd2e8ee7f672",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_02cb139303c9b6fe1ca5bb54c9b07992d6bc6b781fa06e5dcc5d7968",
+      "run_id": "b2f5651423ff4df1986223f1d8275205",
+      "wave_id": "fc419c121caa47faa769d70e6bf32c3a",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-019.txt",
+          "sha256": "59609162479b3a662adfefe82646a4d43302a4790de10f67d533368f68f1b8a5"
+        }
+      ]
+    },
+    {
+      "lane": "patch_020",
+      "original_action_id": "act_4a9623896b7c4b1ba1513ba5732edfdc",
+      "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "task_context_id": "cpap_ef8a55f657b0591119550d1bcba262ccc6ffb880ab24377313f8a9ac",
+      "run_id": "38504a452a604a368a11f3ca2facad01",
+      "wave_id": "bd96fae016f44ba49c9cb3ad25c609f5",
+      "acceptance_files": [
+        {
+          "path": "tests/fixtures/native-first-canary/file-020.txt",
+          "sha256": "77ab389af56e40d4ffd642c33f9f1b15c03cd3a1ae9fa7a0be3b9df940a3f5bb"
+        }
+      ]
+    }
+  ],
+  "original_actions_replayed": false,
+  "acceptance_performed": false,
+  "accepted_count": 0,
+  "runtime_identity": {
+    "activation_epoch": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "process_instance_id": "-s21-KH6ldxHjCSO",
+    "server_instance_id": "7GYqt3ZdkU47_HIr",
+    "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+  },
+  "api_invoked": false,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-prepare-1791829974922-030aa12c.json"
+}

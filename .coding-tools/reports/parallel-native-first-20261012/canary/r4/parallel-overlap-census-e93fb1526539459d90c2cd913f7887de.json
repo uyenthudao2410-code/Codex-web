@@ -1,0 +1,32 @@
+{
+  "ssh_exit_code": 1,
+  "limitation": "Two process samples cannot exclude transient VM startup; exact native receipts and overlapping same-node script intervals are the backend/overlap evidence.",
+  "operation": "parallel_overlap_windows_sandbox_census",
+  "after": {
+    "command_lines_collected": false,
+    "observed_at_ms": 1791829045957,
+    "processes": [
+      {
+        "private_memory_bytes": 812281856,
+        "process_name": "vmmemCmZygote",
+        "working_set_bytes": 0,
+        "pid": 16828
+      }
+    ],
+    "process_count": 1
+  },
+  "before": {
+    "command_lines_collected": false,
+    "observed_at_ms": 1791828957728,
+    "processes": [
+      {
+        "private_memory_bytes": 812281856,
+        "process_name": "vmmemCmZygote",
+        "working_set_bytes": 0,
+        "pid": 16828
+      }
+    ],
+    "process_count": 1
+  },
+  "attempt_id": "e93fb1526539459d90c2cd913f7887de"
+}

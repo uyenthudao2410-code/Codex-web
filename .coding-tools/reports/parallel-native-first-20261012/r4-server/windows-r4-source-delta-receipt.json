@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "operation": "windows_r4_loader_and_heartbeat_loop_delta_against_serving_ubuntu",
+  "ok": true,
+  "captured_at_utc": "2026-10-12T13:41:48.000703+00:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "readiness_sha256": "149114f81baeee4fc3d18f2ae7437d38418f03b9a2099e8cda587085da7e0f7b",
+  "readiness_captured_at_ms": 1791812171053,
+  "serving_service_pid": 970133,
+  "serving_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+  "serving_package_source_sha256": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+  "serving_node_agent_sha256": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+  "windows_r4_node_agent_raw_sha256": "fca440c9fc9faa32e4beea9085b2828a85b1c27247a17217aef7230698ce2537",
+  "changed_function_ast_sha256": {
+    "_connected_agent_iteration": {
+      "serving_ast_sha256": "3ea75b9ae686b78aabf6e6ca2c430fb73cf928d1b68f275901942b2e43056de0",
+      "r4_ast_sha256": "fb96a87c63cded43ae35435052b14a60ad60d3e5c27101e08c3aa7cb38d10336"
+    },
+    "run_connected_agent": {
+      "serving_ast_sha256": "79597ac6591d88d97e0d03436a237ea719cff6fd80d9293463cb0bbea35d5464",
+      "r4_ast_sha256": "6b621c866a378a9c184e44ef6ef46618fb4f594a4d87bcf571f50e926e739146"
+    }
+  },
+  "package_import_branch_unchanged": true,
+  "all_ast_except_direct_else_and_two_named_function_bodies_unchanged": true,
+  "changed_functions": [
+    "_connected_agent_iteration",
+    "run_connected_agent"
+  ],
+  "changed_functions_public_signatures_unchanged": true,
+  "serving_http_entrypoint": "python3 -B -m control_plane -> .http_api.serve_from_environment",
+  "serving_entrypoint_dependency_proof": {
+    "http_transitive_local_import_graph": {
+      "__main__": [
+        "http_api"
+      ],
+      "http_api": [
+        "mcp_facade",
+        "mcp_oauth",
+        "store",
+        "web_ui"
+      ],
+      "web_ui": [],
+      "store": [],
+      "mcp_oauth": [
+        "store"
+      ],
+      "mcp_facade": [
+        "mcp_status",
+        "node_agent",
+        "store"
+      ],
+      "node_agent": [
+        "workspace_policy_store"
+      ],
+      "workspace_policy_store": [],
+      "mcp_status": [],
+      "__init__": [
+        "store"
+      ]
+    },
+    "renewal_local_import_dependencies": [],
+    "node_agent_reachable_from_http_or_renewal": true,
+    "changed_connected_agent_loop_executed_by_http_or_renewal": false
+  },
+  "serving_http_may_import_node_agent_for_facade_relay": true,
+  "serving_http_and_renewal_do_not_execute_changed_connected_agent_loop": true,
+  "serving_entrypoint_hashes": {
+    "launcher": "2bc1013d520010e415703156a7531f01fae147c889751a8788503aa6b565e98e",
+    "package_main": "035af58fc85e40477e9d33d31f5c7d4481dad5babe8bdb3a97dbfba1879871a4",
+    "renewal": "419e6891bf4d89beb62841add7824411b43f3357e6fc46b5a2e7a65a2baf131b"
+  },
+  "contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "ubuntu_alignment_deployment_required_for_current_http_and_renewal": false,
+  "ubuntu_alignment_deployment_performed": false,
+  "external_mutations_performed": false,
+  "source_or_package_parity_claimed": false,
+  "proof_limit": "Current immutable HTTP/renewal entrypoints do not reach node_agent; this does not prove a future Linux node-agent client uses the corrected loop or that r4 has been packaged/activated.",
+  "canary_pin_rule": "Pin actual serving Ubuntu node_agent and Windows r4 node_agent separately; do not claim byte parity."
+}

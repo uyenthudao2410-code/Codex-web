@@ -214,8 +214,10 @@ class WorkspaceReplacementTests(unittest.TestCase):
             "exec_enabled": True, "exec_binding_count": 1,
             "observed_at_ms": 1_700_000_000_000,
         }
+        local_now = 1_700_000_123_000
         with mock.patch("control_plane.node_agent._request", return_value=authority) as request:
-            result, stdout, stderr = self.invoke(argv)
+            with mock.patch("control_plane.node_agent.time.time", return_value=local_now / 1000):
+                result, stdout, stderr = self.invoke(argv)
         self.assertEqual(result, 0, stderr)
         receipt = json.loads(stdout)
         self.assertEqual(receipt["operation"], "control_plane_policy_authority_observation")
@@ -224,9 +226,39 @@ class WorkspaceReplacementTests(unittest.TestCase):
         self.assertTrue(receipt["standing_write_enabled"])
         self.assertTrue(receipt["exec_enabled"])
         self.assertEqual(receipt["exec_binding_count"], 1)
+        self.assertEqual(receipt["observed_at_ms"], local_now)
+        self.assertEqual(receipt["server_observed_at_ms"], authority["observed_at_ms"])
         self.assertNotIn(str(self.workspace), stdout)
         self.assertNotIn("node-secret", stdout)
         request.assert_called_once()
+        for server_offset in (-3_600_000, 3_600_000):
+            with self.subTest(server_clock_offset=server_offset):
+                current_response = {**authority, "observed_at_ms": local_now + server_offset}
+                with mock.patch("control_plane.node_agent._request", return_value=current_response) as request:
+                    with mock.patch("control_plane.node_agent.time.time", return_value=local_now / 1000):
+                        result, stdout, stderr = self.invoke(argv)
+                self.assertEqual(result, 0, stderr)
+                receipt = json.loads(stdout)
+                self.assertEqual(receipt["observed_at_ms"], local_now,
+                                 "freshness is measured using the node's local clock")
+                self.assertEqual(receipt["server_observed_at_ms"], local_now + server_offset)
+                self.assertEqual(current_response["observed_at_ms"], local_now + server_offset,
+                                 "the authenticated server response remains unchanged")
+                self.assertEqual(receipt["workspace_generation"], "generation-replace-old-0001")
+                request.assert_called_once_with(
+                    "https://control.example.test", "/v1/nodes/device-replace-0001/policy-authority",
+                    {"workspace_id": "workspace-replace-0001", "workspace_generation": "generation-replace-old-0001"},
+                    "Node node-secret-replacement-test",
+                )
+        for invalid_server_time in (None, True, 0, -1, "1700000000000"):
+            with self.subTest(invalid_server_time=invalid_server_time):
+                with mock.patch("control_plane.node_agent._request", return_value={
+                    **authority, "observed_at_ms": invalid_server_time,
+                }):
+                    result, stdout, stderr = self.invoke(argv)
+                self.assertEqual(result, 1)
+                self.assertEqual(stdout, "")
+                self.assertIn("CONTROL_PLANE_POLICY_AUTHORITY_INVALID", stderr)
         with mock.patch("control_plane.node_agent._request", return_value={
             **authority, "workspace_generation": "generation-unrelated-0001",
         }):

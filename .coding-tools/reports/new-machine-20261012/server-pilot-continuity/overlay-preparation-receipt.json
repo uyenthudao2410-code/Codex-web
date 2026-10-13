@@ -1,0 +1,27 @@
+{
+  "operation": "retired_read_pilot_overlay_preparation",
+  "remote_mutations": false,
+  "baseline_service_pid": 835411,
+  "baseline_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "baseline_source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "baseline_package_source_sha256": "sha256:80a2e82115714f8e5e32cc7144e180b1f83ee8738e2af1e4821de8048128f7e8",
+  "baseline_store_sha256": "f50ddce70d5821bd82a32b12640ce5609ec510409cac18a312f6ffd23d56d513",
+  "overlay_store_sha256": "e5b3b8e2a63e2e4144f9f782b275b4ecc056e8c1f642c91cc9647cb6b6d6667c",
+  "overlay_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "changed_runtime_files": [
+    "control-plane/control_plane/store.py"
+  ],
+  "unchanged_release_files": 37,
+  "manifest_source_revision_semantics": "Original serving baseline; reviewed uncommitted store overlay is bound separately by overlay_store_sha256, not claimed as a Git release.",
+  "candidate_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\new-machine-20261012\\server-pilot-continuity\\codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e",
+  "candidate_archive": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\new-machine-20261012\\server-pilot-continuity\\codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e.tar.gz",
+  "candidate_archive_sha256": "c0f51088bb1145105e96d7c8a4c1990d767e5a292c8079166d42397b34ccf42b",
+  "verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:41c3bdb38a0b642f650d08d89382bc07b594d330289cf7fa82a624c17147a8a3",
+    "file_count": 38
+  }
+}

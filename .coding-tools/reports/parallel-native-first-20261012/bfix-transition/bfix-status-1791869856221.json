@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "operation": "bfix_operator_status",
+  "observed_at": "2026-10-13T05:37:36.220Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "mutation_started": false,
+  "owner": {
+    "owner_pid": 41352,
+    "owner_process_start_token": "134363434192821600",
+    "instance_id": "748a7b9e958236326c5d6f07f0c18592",
+    "installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+    "runtime_mode": "packaged",
+    "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973"
+  },
+  "host": {
+    "state": "healthy",
+    "code_revision": {
+      "running_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-13T05:37:25.151Z",
+      "file_count": 40
+    },
+    "ready_adoption": {
+      "state": "adopted"
+    },
+    "recovery_bootstrap": null,
+    "activation_closure": {
+      "schema_version": 1,
+      "source_checkpoint_id": "4e9e9eb6bb494ca5ae04c49c7092c126",
+      "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+      "wave_id": "685a7631abf64ce08b38f2073708d788",
+      "proof_fingerprint": "5ea244c9b3e9486e7f5fc4b14ea95ea62293dbba15ed79b3fa8d37c669d0c57c",
+      "accepted_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "valid": true,
+      "checkpoint_identity_valid": true,
+      "closure_input_schema_supported": true,
+      "source_accepted": true,
+      "accepted_receipts_complete": true,
+      "activation_eligible": false,
+      "eligibility_code": "ACTIVATABLE",
+      "affected_components": [
+        "recovery_host"
+      ],
+      "affected_components_valid": true,
+      "component_receipts": {
+        "recovery_host": [
+          {
+            "path": "electron/services/recoveryActionStore.js",
+            "state": "file",
+            "sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646",
+            "size_bytes": 84284,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+            "wave_id": "685a7631abf64ce08b38f2073708d788",
+            "restart_safe": true,
+            "content_addressed": true
+          }
+        ]
+      },
+      "component_receipts_valid": true,
+      "postflight_receipts": {
+        "recovery_host": null
+      },
+      "postflight_receipts_valid": false,
+      "component_current": {
+        "recovery_host": false
+      },
+      "components_current": false,
+      "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+      "connector_continuity_only": false,
+      "connector_refresh_required": true,
+      "connector_acknowledgement_pending": false,
+      "connector_rediscovered_at": null,
+      "connector_compatibility_acknowledged_at": null,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "connector_contract_current": false,
+      "lifecycle_decision": null,
+      "lifecycle_clean": false,
+      "lifecycle_code": null,
+      "runtime_running": true,
+      "tunnel_running": false,
+      "runtime_fully_ready": false,
+      "observed_at": "2026-10-13T05:37:35.237Z",
+      "release_state": "NOT_RELEASED",
+      "production_state": "NOT_CLAIMED",
+      "closure_state": "ACTIVATABLE",
+      "live_closure": "ACTIVATABLE"
+    },
+    "auto_activation": {
+      "trust_model": "running_baseline_accepted_receipts_v2",
+      "continuity_mode": "detached_runtime_children_v1",
+      "running": true,
+      "processing": false,
+      "pending": 0,
+      "deferred": 0,
+      "awaiting": 0,
+      "blocked": 1,
+      "failed": 0,
+      "completed": 0,
+      "baseline_head": "7f26754657c5a1e933dea000fb75a0624e72f152",
+      "processed_checkpoints": 1,
+      "closure_input": {
+        "schema_version": 1,
+        "source_checkpoint_id": "4e9e9eb6bb494ca5ae04c49c7092c126",
+        "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+        "wave_id": "685a7631abf64ce08b38f2073708d788",
+        "proof_fingerprint": "5ea244c9b3e9486e7f5fc4b14ea95ea62293dbba15ed79b3fa8d37c669d0c57c",
+        "accepted_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+        "source_accepted": true,
+        "accepted_receipts_complete": true,
+        "activation_eligible": false,
+        "eligibility_code": "ACTIVATABLE",
+        "affected_components": [
+          "recovery_host"
+        ],
+        "affected_components_valid": true,
+        "component_receipts_valid": true,
+        "component_receipts": {
+          "recovery_host": [
+            {
+              "path": "electron/services/recoveryActionStore.js",
+              "state": "file",
+              "sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646",
+              "size_bytes": 84284,
+              "receipt_kind": "explicit_existing_file",
+              "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+              "wave_id": "685a7631abf64ce08b38f2073708d788",
+              "restart_safe": true,
+              "content_addressed": true,
+              "expected_sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646"
+            }
+          ]
+        },
+        "postflight_receipts": {},
+        "components_current": false,
+        "lifecycle_decision": null,
+        "lifecycle_clean": false,
+        "observed_at": "2026-10-13T05:13:00.065Z"
+      },
+      "last_error": null
+    },
+    "electron_ui_recovery": {
+      "state": "healthy",
+      "registered": true,
+      "alive": true,
+      "pid": 45636,
+      "instance_id": "67b4b7236d920c36b0d1fd418812d27c",
+      "started_at_unix_ms": 1791869829266,
+      "runtime_mode": "packaged",
+      "recovery_host_runtime_mode": "packaged",
+      "recovery_host_installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+      "ui_runtime_mode": "packaged",
+      "ui_installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+      "suppressed": false,
+      "suppression_reason": "",
+      "attempts_in_window": 0,
+      "last_launch_pid": null,
+      "initial_registration_grace_until_unix_ms": null,
+      "pending_registration_until_unix_ms": null,
+      "next_attempt_at_unix_ms": null,
+      "circuit_suppressed_until_unix_ms": null,
+      "last_error_code": null
+    },
+    "runtime": {
+      "mcp": true,
+      "tunnel": false,
+      "execution_role": "central_executor",
+      "central_connected": true,
+      "authority_ready": true,
+      "central_status_reason": null,
+      "fully_ready": true,
+      "update_incomplete": false,
+      "connector_ready": false,
+      "connector_ack_sha_matches": false,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+      "recovering": false,
+      "recovery_blocked": false
+    }
+  },
+  "runtime": {
+    "fullyReady": true,
+    "mcpRunning": true,
+    "nativeAlive": true,
+    "centralConnected": true,
+    "authorityReady": true,
+    "componentsReady": true,
+    "updateIncomplete": false,
+    "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+    "codeRevision": {
+      "codingMcp": {
+        "running_revision": "dbb2c5af325486fa4f44617836ad49961c23341d439018443f1ceeead5ace026",
+        "disk_revision": "dbb2c5af325486fa4f44617836ad49961c23341d439018443f1ceeead5ace026",
+        "update_pending": false,
+        "state": "current",
+        "checked_at": "2026-10-13T05:37:25.724Z",
+        "file_count": 150,
+        "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973"
+      }
+    },
+    "activationClosure": {
+      "schema_version": 1,
+      "source_checkpoint_id": "4e9e9eb6bb494ca5ae04c49c7092c126",
+      "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+      "wave_id": "685a7631abf64ce08b38f2073708d788",
+      "proof_fingerprint": "5ea244c9b3e9486e7f5fc4b14ea95ea62293dbba15ed79b3fa8d37c669d0c57c",
+      "accepted_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "valid": true,
+      "checkpoint_identity_valid": true,
+      "closure_input_schema_supported": true,
+      "source_accepted": true,
+      "accepted_receipts_complete": true,
+      "activation_eligible": false,
+      "eligibility_code": "ACTIVATABLE",
+      "affected_components": [
+        "recovery_host"
+      ],
+      "affected_components_valid": true,
+      "component_receipts": {
+        "recovery_host": [
+          {
+            "path": "electron/services/recoveryActionStore.js",
+            "state": "file",
+            "sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646",
+            "size_bytes": 84284,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+            "wave_id": "685a7631abf64ce08b38f2073708d788",
+            "restart_safe": true,
+            "content_addressed": true
+          }
+        ]
+      },
+      "component_receipts_valid": true,
+      "postflight_receipts": {
+        "recovery_host": null
+      },
+      "postflight_receipts_valid": false,
+      "component_current": {
+        "recovery_host": false
+      },
+      "components_current": false,
+      "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+      "connector_continuity_only": false,
+      "connector_refresh_required": true,
+      "connector_acknowledgement_pending": false,
+      "connector_rediscovered_at": null,
+      "connector_compatibility_acknowledged_at": null,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "connector_contract_current": false,
+      "lifecycle_decision": null,
+      "lifecycle_clean": false,
+      "lifecycle_code": null,
+      "runtime_running": true,
+      "tunnel_running": false,
+      "runtime_fully_ready": false,
+      "observed_at": "2026-10-13T05:37:35.237Z",
+      "release_state": "NOT_RELEASED",
+      "production_state": "NOT_CLAIMED",
+      "closure_state": "ACTIVATABLE",
+      "live_closure": "ACTIVATABLE"
+    },
+    "activationEpoch": {
+      "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+      "operation_id": "bfix-refresh-mv690kyy-15ac432fd5415cb6",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "970b247d9ef8fb4d6e8e4b4875de82ceccdb1e9e2ce39edaa277329575e97af1",
+      "expires_at_unix_ms": 1791870403311,
+      "ready_at": "2026-10-13T05:37:25.046Z",
+      "error": null
+    },
+    "device": {
+      "scope": "current_device_only",
+      "registry": "local",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "device_instance_id": "748a7b9e958236326c5d6f07f0c18592",
+      "display_name": "DESKTOP-63643J4",
+      "online": true,
+      "workspace": "E:\\DEV\\Codex-web",
+      "execution_role": "central_executor",
+      "coding": {
+        "mcp_running": true,
+        "native_alive": true,
+        "tunnel_running": false,
+        "tunnel_managed": false,
+        "tunnel_id": null,
+        "endpoint_device_instance_id": "748a7b9e958236326c5d6f07f0c18592",
+        "ownership": "device_id"
+      },
+      "git": {
+        "available": true,
+        "branch": "main",
+        "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+        "head_short": "7999c415",
+        "dirty": true
+      },
+      "recovery": {
+        "host_running": true,
+        "mcp_running": true,
+        "tunnel_running": false,
+        "tunnel_state": "not_configured",
+        "tunnel_id": null
+      }
+    }
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+    "operation_id": "bfix-refresh-mv690kyy-15ac432fd5415cb6",
+    "state": "READY",
+    "epoch_state": "READY",
+    "admission_open": true,
+    "update_incomplete": false,
+    "ready_commit_digest": "970b247d9ef8fb4d6e8e4b4875de82ceccdb1e9e2ce39edaa277329575e97af1",
+    "expires_at_unix_ms": 1791870403311,
+    "ready_at": "2026-10-13T05:37:25.046Z",
+    "error": null
+  },
+  "ok": true
+}

@@ -1,0 +1,32 @@
+{
+  "operation": "r6-activation-checkpoint",
+  "state": "READY_WITH_LIVE_RECOVERY_PROOF_PENDING",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "source_tests": {
+    "adapter": 31,
+    "subtests": 17,
+    "native": 4,
+    "build_verification": 12
+  },
+  "package_parity": {
+    "application_files": 91,
+    "resources": 298,
+    "adapters": 9
+  },
+  "isolated_smoke_pass": true,
+  "runtime_manifest": "r6-exact-runtime-identities.json",
+  "status_only_vm_launches": 0,
+  "cold_and_warm_exit_code": 0,
+  "node_version": "v24.19.0",
+  "same_original_task": "task_91b8033f78254a52bd83120411c7674e",
+  "remaining": "supported owned Sandbox stop and new after_stop Job, final quiescence",
+  "deviations": [
+    "explicit complete call arrived after coordinator already committed READY; ACTIVATION_EPOCH_TERMINAL is expected terminal result verified by durable epoch and read-only observer",
+    "warm writer log held exclusive FileShare; separate observe-only checkpoint read canonical original receipts without replay",
+    "native stop observer used exact Win32 time against runtime normalized microsecond token; prepare rejected before stop; observer repair follows official processIdentity.js rounding"
+  ],
+  "original_failed_chatgpt_action_replayed": false,
+  "server_restart_this_wave": false,
+  "local_runtime_activation_performed": true,
+  "push_or_commit_or_release_performed": false
+}

@@ -85,6 +85,18 @@ class ExecPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_POLICY_EXPIRED$"):
             _normalise_exec_policy(legacy, now_ms=1_700_000_000_000)
 
+    def test_optional_routing_preserves_old_policy_and_rejects_unsafe_native_prefixes(self) -> None:
+        old = _policy()
+        self.assertEqual(_normalise_exec_policy(old), old)
+        explicit = _policy(execution_mode="native_only", native_argv_prefixes=[["npm", "test"]])
+        self.assertEqual(_normalise_exec_policy(explicit), explicit)
+        self.assertNotEqual(_policy_digest(old), _policy_digest(explicit))
+        for invalid in (None, [["C:/tools/node.exe"]], [["npm", "test"], ["npm", "test"]], [["npm", "test;whoami"]]):
+            with self.subTest(prefixes=invalid), self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_POLICY_INVALID$"):
+                _normalise_exec_policy(_policy(native_argv_prefixes=invalid))
+        with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_POLICY_INVALID$"):
+            _normalise_exec_policy(_policy(execution_mode="unrestricted"))
+
 
 class BoundedRunnerTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -280,6 +292,8 @@ class ExecNodeReceiptTests(unittest.TestCase):
         receipt = json.loads(output.getvalue())
         self.assertEqual(receipt["facade_contract"], FACADE)
         self.assertEqual(receipt["state"], "enabled")
+        self.assertEqual(receipt["execution_mode"], "native_first")
+        self.assertEqual(receipt["native_argv_prefixes"], [])
         self.assertEqual(policy_path.read_bytes(), before)
         self.assertNotIn(self.config["node_secret"], output.getvalue())
 
@@ -359,6 +373,21 @@ class ExecNodeReceiptTests(unittest.TestCase):
             ]), 1)
         self.assertIn("CONTROL_PLANE_EXEC_POLICY_DISABLE_CONFIRMATION_REQUIRED", error.getvalue())
         self.assertTrue(json.loads(policy_path.read_text(encoding="utf-8"))["enabled"])
+
+    def test_cli_install_and_inspection_preserve_explicit_native_routing_policy(self) -> None:
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(self.exec_policy_cli_args() + [
+                "--execution-mode", "native_only", "--native-argv-prefix", '["python","-m","pytest"]',
+            ]), 0)
+        installed = json.loads(output.getvalue())
+        self.assertEqual(installed["execution_mode"], "native_only")
+        self.assertEqual(installed["native_argv_prefixes"], [["python", "-m", "pytest"]])
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(inspect_exec_policy(self.args()), 0)
+        inspected = json.loads(output.getvalue())
+        self.assertEqual(inspected["execution_mode"], installed["execution_mode"])
+        self.assertEqual(inspected["native_argv_prefixes"], installed["native_argv_prefixes"])
+        self.assertEqual(inspected["policy_sha256"], installed["policy_sha256"])
 
     def test_cli_rejects_legacy_expiry_without_writing_policy(self) -> None:
         stderr = io.StringIO()
@@ -621,6 +650,35 @@ class ExecNodeReceiptTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             _normalise_exec_policy(self.policy(workspace_id="_workspace-invalid"))
 
+    def test_exec_backend_metadata_is_verified_and_preserved_in_durable_receipts(self) -> None:
+        policy = self.install_policy()
+        request = _exec_bridge_request(self.action(), self.config)
+        policy_sha256 = _policy_digest(policy)
+        result = self.bridge_result(
+            request, status="exited", local_handle="cp_exec_" + "a" * 48,
+            command_id="command-exec-node-0001", job_id="job-exec-node-0001", policy_sha256=policy_sha256,
+        )
+        output_keys = ("status", "exit_code", "stdout", "stderr", "truncated", "timed_out",
+                       "command_id", "job_id", "run_id", "wave_id", "output_refs")
+        output = {key: result[key] for key in output_keys}
+        self.assertNotIn("execution_backend", _safe_exec_bridge_result(result, request, policy_sha256))
+        metadata = {"execution_backend": "native", "isolation_level": "process_container", "policy_decision": "native_explicit_approval"}
+        updated = {**result, **metadata, "response_sha256": __import__("hashlib").sha256(json.dumps(
+            {**output, **metadata}, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")).hexdigest()}
+        safe = _safe_exec_bridge_result(updated, request, policy_sha256)
+        journal_path = self.config_path.with_name(self.config_path.name + ".exec-journal.json")
+        _record_exec_receipt(journal_path, {"schema_version": 1, "entries": {}}, state="completed",
+                             action_id=request["action_id"], attempt_id=request["attempt_id"], receipt_state="completed",
+                             local_handle=safe["local_handle"], payload=safe)
+        saved = _read_exec_journal(journal_path)["entries"][_exec_journal_key(request["action_id"], request["attempt_id"])]
+        self.assertEqual(saved["receipt"]["payload"]["execution_backend"], "native")
+        with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID$"):
+            _safe_exec_bridge_result({**updated, "policy_decision": "native_safe_command"}, request, policy_sha256)
+        for metadata_drift in ({"execution_backend": "native"}, {**metadata, "isolation_level": "hypervisor"}):
+            with self.subTest(metadata=metadata_drift), self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID$"):
+                _safe_exec_bridge_result({**result, **metadata_drift}, request, policy_sha256)
+
     def test_valid_exec_submission_uses_nested_receipt_shape(self) -> None:
         policy = self.install_policy()
         action = self.action()
@@ -740,7 +798,7 @@ class ExecNodeReceiptTests(unittest.TestCase):
             self.assertEqual(poll_exec_once(self.args()), 0)
         runner.assert_not_called()
         self.assertEqual([item["operation"] for item in bridge_requests], ["exec_poll"])
-        self.assertEqual(bridge_requests[0]["yield_time_ms"], 10_000)
+        self.assertEqual(bridge_requests[0]["yield_time_ms"], 0)
         self.assertEqual(len(receipts), 1)
         self.assertEqual(receipts[0]["receipt_state"], "completed")
         saved = _read_exec_journal(journal_path)["entries"][_exec_journal_key(request["action_id"], request["attempt_id"])]
@@ -1056,6 +1114,45 @@ class ExecNodeReceiptTests(unittest.TestCase):
             _read_exec_journal(journal_path)["entries"][_exec_journal_key(request["action_id"], request["attempt_id"])]["state"],
             "completed",
         )
+
+    def test_recovery_reconciles_backend_metadata_loss_or_drift_without_respawn(self) -> None:
+        output_keys = ("status", "exit_code", "stdout", "stderr", "truncated", "timed_out",
+                       "command_id", "job_id", "run_id", "wave_id", "output_refs")
+        metadata = {"execution_backend": "native", "isolation_level": "process_container", "policy_decision": "native_explicit_approval"}
+        for changed in ({}, {**metadata, "policy_decision": "native_safe_command"}):
+            with self.subTest(metadata=changed):
+                journal_path, journal, request, running = self.running_journal()
+                running.update(metadata)
+                running["response_sha256"] = __import__("hashlib").sha256(json.dumps(
+                    {**{key: running[key] for key in output_keys}, **metadata},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")).hexdigest()
+                _write_json_atomic(journal_path, journal)
+                terminal = self.bridge_result(request, status="exited", local_handle=running["local_handle"],
+                    command_id=running["command_id"], job_id=running["job_id"], policy_sha256=running["policy_sha256"])
+                terminal.update(changed)
+                terminal["response_sha256"] = __import__("hashlib").sha256(json.dumps(
+                    {**{key: terminal[key] for key in output_keys}, **changed},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")).hexdigest()
+                receipts = []
+                def request_fn(_url, request_path, payload, _authorization=None):
+                    if request_path.endswith("/exec-stops"):
+                        return {"stop_requests": []}
+                    if request_path.endswith("/poll"):
+                        return {"actions": []}
+                    receipts.append(payload)
+                    return {"receipt_id": "receipt-metadata-reconcile-0001"}
+                with mock.patch("control_plane.node_agent._request", side_effect=request_fn), \
+                     mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+                     mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+                     mock.patch("control_plane.node_agent.recovery_exec_bridge", return_value=(terminal, None)) as bridge, \
+                     mock.patch("control_plane.node_agent._run_bounded_exec") as runner, redirect_stdout(io.StringIO()):
+                    self.assertEqual(poll_exec_once(self.args()), 0)
+                runner.assert_not_called()
+                self.assertEqual(bridge.call_args.args[2]["operation"], "exec_poll")
+                self.assertEqual(receipts[0]["receipt_state"], "unknown")
+                self.assertEqual(receipts[0]["payload"]["code"], "CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID")
 
     def test_stop_bridge_timeout_keeps_stop_pending_until_terminal_and_acknowledged(self) -> None:
         journal_path, _journal, request, running_result = self.running_journal()

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "stop",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "observed_at": "2026-10-12T15:57:58.325Z",
+  "observed_at_ms": 1791820678325,
+  "ok": false,
+  "stage": "package_proof",
+  "code": "FINAL_PARITY_AND_ISOLATED_SMOKE_REQUIRED",
+  "mutating_action_started": false,
+  "retry_instruction": "Resolve the read-only gate before applying.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\stop-failure-1791820678325.json"
+}

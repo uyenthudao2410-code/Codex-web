@@ -10,6 +10,9 @@ function runGit(args) {
   return spawnSync('git', args, {
     encoding: 'utf8',
     windowsHide: true,
+    // Retained .coding-tools evidence can push the tracked-path list past
+    // spawnSync's default 1 MiB output cap.
+    maxBuffer: 8 * 1024 * 1024,
   });
 }
 

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "operation": "offline_original_create_scope_diagnosis",
+  "observed_at_ms": 1791794423244,
+  "action_id": "act_ed8982433bf347ef8c32aebc17b23d43",
+  "attempt_id": "try_79756ada1f5c45c389f4c133ecb55c95",
+  "runtime_config": {
+    "primary_workspace": "E:\\DEV\\Codex-web",
+    "authorized_roots": []
+  },
+  "packaged_scope_guard": {
+    "server_sha256": "808a6dc888f6812cf30ae805e29d7f0abdd340d0ef9c91c534e05e451acf7aa9",
+    "workspace_scope_sha256": "40b8f32ff1d961735b0b6d3d04f623871b12bea0ef354d84c9407077a2dd2f1b",
+    "result": {
+      "allowed": false,
+      "code": "STALE_WORKSPACE_CONTEXT",
+      "category": "security",
+      "retryable": false,
+      "details": {
+        "field": "path",
+        "workspace": "E:\\DEV\\Codex-web",
+        "authorized_roots": [],
+        "received": "E:\\DEV\\Autocad"
+      }
+    }
+  },
+  "original_local_journal": {
+    "state": "unknown",
+    "receipt_state": "unknown",
+    "receipt_submitted": true,
+    "local_handle_present": false,
+    "code": "CONTROL_PLANE_DOCUMENT_WRITE_EFFECT_UNKNOWN",
+    "diagnostic_code": "CONTROL_PLANE_DOCUMENT_WRITE_MCP_REJECTED",
+    "reconciliation_required": true,
+    "native_original_error_retained": false
+  },
+  "filesystem_observation": {
+    "target_exists": false,
+    "autocad_evidence_tree_exists": false
+  },
+  "task_context_registry": {
+    "context_count": 20803,
+    "autocad_context_count": 0
+  },
+  "proof_limits": {
+    "is_original_native_receipt": false,
+    "proves_original_no_effect": false,
+    "supports_current_root_authorization_mismatch": true,
+    "native_tool_not_dispatched_by_this_observer": true,
+    "action_replayed_or_settled": false,
+    "runtime_or_journal_modified": false
+  }
+}

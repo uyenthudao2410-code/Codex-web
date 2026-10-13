@@ -150,6 +150,7 @@ test('NativeService refuses a rotated or unknown launch secret and takes exact r
   assert.equal(result.reused, false);
   assert.deepEqual(terminated, [{ pid: process.pid, process_start_token: OLD_PROCESS_TOKEN }]);
   assert.equal(spawnCalls.length, 1);
+  assert.equal(spawnCalls[0].args[0], '-B', 'the owned Python runtime must keep packaged resources free of bytecode caches');
   assert.equal(state.nativeConnectorAttestationSecretHash, connectorAttestationSecretHash(rotatedSecret));
   assert.equal(JSON.stringify(state).includes(oldSecret), false);
   assert.equal(JSON.stringify(state).includes(rotatedSecret), false);

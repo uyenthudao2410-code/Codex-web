@@ -508,6 +508,9 @@ test('central executor lists and retires only an opaque registered workspace aft
   const calls = [];
   const workspaceId = 'workspace_0123456789abcdef0123456789abcdef';
   const workspaceGeneration = 'generation_abcdef0123456789abcdef0123456789';
+  fs.writeFileSync(path.join(root, 'control-plane-workspaces.json'), JSON.stringify({ schema_version: 1, entries: [{
+    workspace_id: workspaceId, workspace_generation: workspaceGeneration, canonical_path: fs.realpathSync(root)
+  }] }));
   const service = new ControlPlaneEnrollmentService({
     paths: fixturePaths(root),
     environment: { PATH: '/safe/path', OPENAI_API_KEY: 'must-not-reach-agent', CUSTOM_SECRET: 'must-not-reach-agent' },
@@ -541,7 +544,8 @@ test('central executor lists and retires only an opaque registered workspace aft
     workspace_id: workspaceId,
     workspace_generation: workspaceGeneration,
     display_name: 'fixture-workspace',
-    capabilities: { read: true, write: false, exec: false }
+    capabilities: { read: true, write: false, exec: false },
+    workspace_path: fs.realpathSync(root)
   }]);
   const receipt = await service.retireWorkspace({ workspaceId, workspaceGeneration });
   assert.deepEqual(receipt, {

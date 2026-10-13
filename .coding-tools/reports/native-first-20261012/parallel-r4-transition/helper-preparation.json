@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "operation": "r3_to_r4_helpers_prepared",
+  "ok": true,
+  "observed_at": "2026-10-12T13:36:11.588354+00:00",
+  "old_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "new_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "expected_old_owner": {
+    "owner_pid": 12604,
+    "owner_process_start_token": "134362825905927480",
+    "instance_id": "c05d5a902dc55835b2cdc9263799dea7",
+    "installation_id": "1db86beab972872a3361551fcae3d06bf8065f37027effa20b030a8cb921a606"
+  },
+  "expected_old_epoch": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+  "helper_sha256": {
+    "packaged-operations.cjs": "380184a4c284be364d71513ddf5e483b41ed434c5c6728e5c9f15528883ea843",
+    "install-launch.ps1": "70a6c9ac0e6f1a835206f2621a3c57b20b94744721b34b93685124e2c5298b2f",
+    "retiring-r3-resource-snapshot.json": "6b844d620737a59cc0eeaba8ec08d20b7e5e96901325a037439b9df948115234"
+  },
+  "source_modified": false,
+  "runtime_modified": false,
+  "new_package_proof_pending": true,
+  "old_stop_failures_preserved": true,
+  "ready_inferred": false,
+  "production_mutations_performed": false
+}

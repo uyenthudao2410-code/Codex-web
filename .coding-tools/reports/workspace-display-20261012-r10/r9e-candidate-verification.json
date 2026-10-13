@@ -1,0 +1,80 @@
+{
+  "ok": true,
+  "observed_at": "2026-10-12T10:03:02.476Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "application_source_files_verified": 91,
+  "package_metadata_verified": true,
+  "resources": {
+    "exact_source": true,
+    "file_count": 298
+  },
+  "adapters": {
+    "exact_source": true,
+    "file_count": 9
+  },
+  "sanitation": {
+    "scanned_entries": 332,
+    "sanitized": true
+  },
+  "backend_hashes": {
+    "wxc-exec.exe": "0ab60f0d5ed3ae87870536173335eea9f9cb469bae737ad6656695855232c4d3",
+    "wxc-windows-sandbox-daemon.exe": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+    "wxc-windows-sandbox-guest.exe": "c2e9d947b1650584210d500513241850c6afe6e9e2c748e7c5abde7178523a1c",
+    "mxc-windows-sandbox.provenance.json": "862a59e2d20e86c9dcb9732869e4c69f016bad663fda206b811d66449b3dcc06"
+  },
+  "nativeProvenance": {
+    "directory": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked\\resources\\resources\\tools\\mxc-windows-sandbox",
+    "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "local_patch_sha256": "6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579",
+    "hashes": {
+      "wxc-exec.exe": "0ab60f0d5ed3ae87870536173335eea9f9cb469bae737ad6656695855232c4d3",
+      "wxc-windows-sandbox-daemon.exe": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+      "wxc-windows-sandbox-guest.exe": "c2e9d947b1650584210d500513241850c6afe6e9e2c748e7c5abde7178523a1c"
+    }
+  },
+  "previous_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked",
+  "previous_app_asar_sha256": "2fba385f52d679dc005b8a55d8d05a971bb0312e0bcbc9a3acabd69885ed7589",
+  "changed_application_files": [
+    "electron\\app-icon.ico",
+    "electron\\app-icon.png",
+    "renderer\\app-icon.png",
+    "renderer\\app.js",
+    "renderer\\index.html"
+  ],
+  "non_ui_application_files_unchanged": true,
+  "control_plane_adapters_unchanged": true,
+  "executor_binaries_unchanged": true,
+  "all_resources_unchanged": true,
+  "generated_icon_assets": {
+    "command": "node scripts/generate-icon.js",
+    "input": "docs/ICON.png",
+    "input_sha256": "3b121acd98c85df46d5d576f01e559b74724f611280c67cf4678c37d51183f64",
+    "generator_sha256": "d931dca9a87ffcb94f5418b8ea819952259ab4a872ca31304b3dfc030ecc2aff",
+    "hashes": {
+      "electron/app-icon.ico": {
+        "previous_sha256": "42b7fabfef659f9443366a38991e5f70a9fcb30ff19697535b2a38d93d88a185",
+        "current_source_sha256": "debac3cad583a342b969767fa0dbe28ae4518081b1e9fc8b0f41f0c394dc2bd9",
+        "packaged_sha256": "debac3cad583a342b969767fa0dbe28ae4518081b1e9fc8b0f41f0c394dc2bd9"
+      },
+      "electron/app-icon.png": {
+        "previous_sha256": "7758684a18ad65ca4b917ef7d267f7d2266e9317bedbba47b783534426ca0988",
+        "current_source_sha256": "225023495c96a89df10e5994cca7efc4cf5ebb24b4149877b6d4689b49c4302b",
+        "packaged_sha256": "225023495c96a89df10e5994cca7efc4cf5ebb24b4149877b6d4689b49c4302b"
+      },
+      "renderer/app-icon.png": {
+        "previous_sha256": "7758684a18ad65ca4b917ef7d267f7d2266e9317bedbba47b783534426ca0988",
+        "current_source_sha256": "225023495c96a89df10e5994cca7efc4cf5ebb24b4149877b6d4689b49c4302b",
+        "packaged_sha256": "225023495c96a89df10e5994cca7efc4cf5ebb24b4149877b6d4689b49c4302b"
+      }
+    },
+    "explanation": "The normal build workflow regenerated three UI icon assets from the current source image; packaged bytes exactly match the generated source. No electron service or native resource changed."
+  },
+  "renderer_source_hashes": {
+    "renderer/app.js": "8dbc227e9f762c035d339d37e1f37aa4a4785c69dd48f46a50283f5b2c2e70ab",
+    "renderer/index.html": "0bdce1403a81b2c3a12082912520de931beb0e63dd1b53913ee0c8cf89883505"
+  },
+  "packaged_adapter_sha256": "3147cb5d6a4f1a9ca908a240f7955b8598cdde0e4258e031a348eae77d8521d9",
+  "executable_sha256": "e7bb35634d7e765c24c156fb6a12ce9e707f3b26a4596329a2fa4dbb0e7c5f05",
+  "app_asar_sha256": "0b119f1b740faa1713c9a004015c20bfee66668aa8707e1cfab67a1c07b3e901",
+  "recovery_host_launcher_sha256": "04999b097376ba69c95927db6936df21f8ada58198af9b14e803e8fcc1137fd1"
+}

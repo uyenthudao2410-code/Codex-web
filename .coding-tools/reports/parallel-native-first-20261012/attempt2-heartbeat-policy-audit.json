@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "operation": "attempt2_heartbeat_policy_lock_audit",
+  "read_only": true,
+  "observed_at_utc": "2026-10-12T13:32:04.592486+00:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "canary_attempt_id": "bf3876b82a8a4eafbc83fec7c6e9b244",
+  "canary_final": {
+    "observed_at_ms": 1791811544130,
+    "ok": false,
+    "error_code": "SHARED_MCP_TARGET_NOT_READY",
+    "proof_counts": {
+      "reads": 57,
+      "patches": 0,
+      "readbacks": 0,
+      "node_jobs": 0,
+      "git_jobs": 0
+    },
+    "unresolved_original_actions": [],
+    "requires_reconciliation": false,
+    "task_closed_verified": true,
+    "writer_released_verified": true,
+    "elapsed_seconds": 197.191
+  },
+  "central_failure_snapshot_at_ms": 1791811582428,
+  "central_node_at_failure": {
+    "last_seen_at_ms": 1791811482028,
+    "policy_expires_at_ms": 1791811541682,
+    "heartbeat_age_ms": 100186,
+    "heartbeat_fresh_60000_ms": false,
+    "runtime_instance_id": "r2fiLBRSmrFcAi4T",
+    "mcp_server_instance_id": "3ps0AJwnJfhbwdYt",
+    "activation_epoch": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+    "readiness": "ready"
+  },
+  "last_heartbeat_age_at_canary_failure_ms": 62102,
+  "policy_expired_before_canary_failure_ms": 2448,
+  "local_worker_observation": {
+    "agent_instance_id": "851b93c33f2344099657cd520cc6a4e3",
+    "agent_pid": 50420,
+    "agent_started_at_ms": 1791808911914,
+    "kind": "control_plane_connected_agent_status",
+    "last_attempt_at_ms": 1791811919618,
+    "last_error_code": null,
+    "last_error_scope": null,
+    "last_heartbeat_at_ms": 1791811920124,
+    "last_heartbeat_state": "succeeded",
+    "last_iteration": 140,
+    "last_iteration_state": "completed",
+    "schema_version": 1,
+    "updated_at_ms": 1791811924132
+  },
+  "local_supervisor_observation": {
+    "state": "healthy",
+    "control_plane_agent_state": "running_heartbeat_only",
+    "control_plane_agent_pid": 50420,
+    "control_plane_agent_last_started_at": "2026-10-12T12:41:51.6465529+00:00",
+    "control_plane_agent_last_error_code": null,
+    "last_check_at": "2026-10-12T13:31:59.6147266+00:00"
+  },
+  "worker_lock_pid_matches_observed_supervisor_and_status": true,
+  "new_unknown_action_ids_since_attempt2_preflight": [],
+  "retained_unknowns": [
+    {
+      "action_id": "act_048df93488874a70aa97a7ee18ccbd03",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "created_at_ms": 1790241951218,
+      "disposition": "quarantined_unknown",
+      "task_id": null,
+      "diagnostics": [
+        "CONTROL_PLANE_FILE_READ_AGENT_EXCEPTION"
+      ]
+    },
+    {
+      "action_id": "act_744496c6bd514d38a746cf8819aae9ad",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "created_at_ms": 1790338044700,
+      "disposition": "quarantined_unknown",
+      "task_id": null,
+      "diagnostics": [
+        "CONTROL_PLANE_FILE_READ_RESULT_IDENTITY_INVALID"
+      ]
+    },
+    {
+      "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "created_at_ms": 1791800399782,
+      "disposition": "quarantined_unknown",
+      "task_id": "task_fb96cac3b5a946e9918e625beb5e0925",
+      "diagnostics": [
+        "CONTROL_PLANE_FILE_READ_TARGET_MISSING"
+      ]
+    },
+    {
+      "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "created_at_ms": 1791800659555,
+      "disposition": "quarantined_unknown",
+      "task_id": "task_fb96cac3b5a946e9918e625beb5e0925",
+      "diagnostics": [
+        "CONTROL_PLANE_FILE_READ_TARGET_MISSING"
+      ]
+    },
+    {
+      "action_id": "act_3849e259d55546639794cec40f63fea8",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "created_at_ms": 1791801476851,
+      "disposition": "quarantined_unknown",
+      "task_id": "task_3dc9c3c9599f400196b6422c2ff74a69",
+      "diagnostics": [
+        "CONTROL_PLANE_FILE_READ_TARGET_MISSING"
+      ]
+    }
+  ],
+  "evidence_sha256": {
+    "before_server": "2d250e898b48e5ea30b6e1906aef53563fe79fd4765317ae6146d60ec7ebffa5",
+    "after_server": "dcb25f8a32e014ba5f85ac030b82d0eaaa6f7cd70c02713d1947db10fbcfdea3",
+    "local_worker_status": "f53c887d6876e1bf215b97a98f41624d29dd66bb79fbc0dc3de8e25fa79e64e3",
+    "local_supervisor_status": "c323f1543eddcfe2b1322d91971f37238571f2365f146d9e48f5cb2b162463de",
+    "local_worker_lock": "ba77577b5146785c8efd4f912393dfe717924d034e920f50527d51501db9c5e7",
+    "canary_ndjson": "9ad994f42e49593a02f2e4735c8fc4f4c00d53e64b16e87364d57375013cf9db",
+    "current_working_tree_node_agent": "fca440c9fc9faa32e4beea9085b2828a85b1c27247a17217aef7230698ce2537"
+  },
+  "source_failure_path": "A typed busy poll escapes a successful-heartbeat iteration; shared failures then delay all heartbeat work up to300s",
+  "source_fix": "Skip only exact typed busy lane; preserve successful-heartbeat interval on other capability failure; retain heartbeat transport backoff",
+  "proof_limit": "The prior per-iteration error is not retained by the overwritten diagnostic status. Canonical stale heartbeat and unchanged worker identity plus reproduced source path support the scheduling diagnosis; exact historical busy reason remains inferred.",
+  "production_mutation_performed": false,
+  "historical_receipts_modified": false
+}

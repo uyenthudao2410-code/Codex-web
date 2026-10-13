@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "operation": "observe_actual_chatgpt_plugin_ui_update",
+  "observed_at": "2026-10-12T05:05:33.9575363Z",
+  "app_id": "asdk_app_6ab6437e65808191919261aee4994606",
+  "version_id": "asdk_app_v_6ab6437e658c8191826336b0d95d5a6a",
+  "refresh_button_clicked": true,
+  "refresh_ui_transition": "enabled_to_disabled_to_enabled",
+  "refresh_success_toast_or_persisted_schema_observed": false,
+  "discovery_corroboration_path": "actual-chatgpt-refresh-tunnel-correlation.json",
+  "discovery_corroboration": "current_canonical_tunnel_served_one_remote_server_discover_and_one_tools_list_with_http_200_since_restart",
+  "discovery_individual_request_timestamp_available": false,
+  "description_saved_and_observed": true,
+  "description": "Kết nối cá nhân tới Ubuntu Control Plane qua Secure MCP Tunnel. Đọc, ghi file và chạy lệnh Windows trong sandbox theo quyền của thư mục đã chọn trong ứng dụng.",
+  "screenshot_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\chatgpt-plugin-updated.jpg",
+  "screenshot_sha256": "c99dbe8b88e38765641512fecc79ff08a3f65efa020d28b4a6e6a8485c05cb17",
+  "permissions_changed": false,
+  "chat_messages_sent": false,
+  "model_tool_invocation_performed": false,
+  "original_user_chat_tab_restored": true,
+  "proof_boundary": "Live canonical MCP write_patch_exec passed; actual ChatGPT model invocation and persisted imported schema remain unobserved."
+}

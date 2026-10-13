@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "operation": "original_patch_native_failure_observation",
+  "observed_at_ms": 1791780006838,
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "mutation_performed_by_observer": false,
+  "central_disposition": "unchanged_reconcile_required_unknown",
+  "native_idempotency": {
+    "idempotency_key": "cpap_0320d9d467b0c0fb72a721709786f60b613d4dd78df3c74d67d3fb21",
+    "operation": "agent_workflow",
+    "status": "unknown",
+    "process_instance_id": "ev_bVSX46CWc8WG5",
+    "run_id": "",
+    "wave_id": "",
+    "started_at": "2026-10-12T04:33:02.729Z",
+    "finished_at": "2026-10-12T04:33:07.915Z",
+    "error_code": "PROTECTED_PATH_WRITE",
+    "workflow_patch_preflight": 0
+  },
+  "native_context_id": "cpap_ec84998048093669b0a8114dac0226e058016266b284122236d94156",
+  "native_context_projection_path": ".coding-tools/task-contexts/226730f9e6d4fb8cb6f1d436.json",
+  "policy_sha256": "7c91e5868f2b6e65b38cd3a3663f5de802a8fba4fc82224fd9d71a3e6eea02b6",
+  "patch_sha256": "21d709267ec6d2284fc12ab8857f94f4e1527a77ee018a991670555738da893b",
+  "original_action": "act_051f354f679c45779fc32dab793e43c6",
+  "original_attempt": "try_764317ee30904d34ab41452a7c25bfb7",
+  "original_task": "task_44cc616e4b8b4180b046974651f52557",
+  "run_id": "4ea601f3f7154ecda879a6986a5d7f41",
+  "wave_id": "2b840f59702f4d4ba34e2b3f96496ab5",
+  "events": [
+    {
+      "seq": 59881,
+      "event_id": "778349a2a9b6435e89e73b8aa8a01cec",
+      "event_type": "run_started",
+      "state_before": "",
+      "state_after": "PREFLIGHT",
+      "event_time": "2026-10-12T04:33:03.544Z",
+      "event_hash": "a97c1d86692c919fbde8889a09e40e9a9878d48be3cab4eed5d18cf37d643a22",
+      "payload_sha256": "516b086c94f982cd2c542421949b7d49e8c72679e346e7708408800bf3a3f2c7",
+      "safe_evidence": {}
+    },
+    {
+      "seq": 59882,
+      "event_id": "80803b49e84d413bbe6a750d3725a3a7",
+      "event_type": "observation_span_recorded",
+      "state_before": "",
+      "state_after": "",
+      "event_time": "2026-10-12T04:33:03.928Z",
+      "event_hash": "21f98899f1c1d2e5575fdd3b0bea8daab37e4e85fd3afb33ef50783b59ffa29a",
+      "payload_sha256": "15d2d873e257617265ae2747f12232eeef4a1a1e6cbbb005bb1e1d96d6731c19",
+      "safe_evidence": {}
+    },
+    {
+      "seq": 59883,
+      "event_id": "1920346f490b4a908def0d483cc42cb4",
+      "event_type": "readiness_checked",
+      "state_before": "PREFLIGHT",
+      "state_after": "PREFLIGHT",
+      "event_time": "2026-10-12T04:33:04.122Z",
+      "event_hash": "0ee36cde6e080042cbc4f253e95c99d8718cd1c5d5b38b3574d6d36a573a9127",
+      "payload_sha256": "5751c716c74f545d56b3ee6f66c343ac8cc627b7abf46d5bda4effc04ed12380",
+      "safe_evidence": {}
+    },
+    {
+      "seq": 59884,
+      "event_id": "7ca533a2178844c18cda19bc565cdaf0",
+      "event_type": "state_transition",
+      "state_before": "PREFLIGHT",
+      "state_after": "READY",
+      "event_time": "2026-10-12T04:33:04.337Z",
+      "event_hash": "90680fa5f550a3c8b7533da6c76e3bf9f1e1c1605f34f2dec0fa38901e9bbcfe",
+      "payload_sha256": "7bad8471528145f42661a4e92f0de7a2e5792ea13eed5a676985199bd953e698",
+      "safe_evidence": {
+        "reason": "preflight_ready"
+      }
+    },
+    {
+      "seq": 59885,
+      "event_id": "8066fb3a5d0646de97dd3d37118cc1e3",
+      "event_type": "route_selected",
+      "state_before": "READY",
+      "state_after": "READY",
+      "event_time": "2026-10-12T04:33:04.597Z",
+      "event_hash": "85a8e7a198054e7ca87959b4f97691f83f2934eddbbed339af322f6a0afd7c73",
+      "payload_sha256": "74faac89dcb19198fff882c8bb46355b96cff11efabb29cdcc53ac9cb37bc07a",
+      "safe_evidence": {
+        "reason": "caller_supplied_change_set"
+      }
+    },
+    {
+      "seq": 59886,
+      "event_id": "3819345bf5644530a77151842f9691ba",
+      "event_type": "state_transition",
+      "state_before": "READY",
+      "state_after": "ROUTED",
+      "event_time": "2026-10-12T04:33:04.788Z",
+      "event_hash": "0b84ed18885364377a26139c0aab151132126f0d3edccaa1b8f51a2def1b30e3",
+      "payload_sha256": "13e5bc091fa15d4fa2e45307848de676c3809c9f4a0577742ba2bec8d2dadc04",
+      "safe_evidence": {
+        "reason": "route_selected"
+      }
+    },
+    {
+      "seq": 59887,
+      "event_id": "3a24051b557e47c0a1d88fbde4f8874a",
+      "event_type": "observation_span_recorded",
+      "state_before": "",
+      "state_after": "",
+      "event_time": "2026-10-12T04:33:04.995Z",
+      "event_hash": "21cec1f881d7a7bc9a935ebb692f68c434ba4f4fd18462e0482c82b9efbd5276",
+      "payload_sha256": "f6a8ff3675c8d2983a2982f329549a1bd7bc166685ca7966a4739b6588251081",
+      "safe_evidence": {}
+    },
+    {
+      "seq": 59888,
+      "event_id": "03bb206eba9043a5af89b7b1000091a2",
+      "event_type": "write_lease_acquired",
+      "state_before": "ROUTED",
+      "state_after": "ROUTED",
+      "event_time": "2026-10-12T04:33:05.661Z",
+      "event_hash": "83fe9bfcf83725bf7b2957498385fb8e1a78eea6299c1fdc92de9c79cc1441b9",
+      "payload_sha256": "1142b142a57fcbe9961f68a32f90af7eb55bda7b71a28dac1af9dda0b338d3a1",
+      "safe_evidence": {
+        "allowed_paths": [
+          ".coding-tools/reports/shared-write-exec-20261012/shared-write-proof.txt"
+        ],
+        "lease_state": "active",
+        "protected_paths": [
+          ".coding-tools",
+          ".git"
+        ]
+      }
+    },
+    {
+      "seq": 59889,
+      "event_id": "fe5337e45be0479680eb9a1bcac5ac82",
+      "event_type": "state_transition",
+      "state_before": "ROUTED",
+      "state_after": "EXECUTING",
+      "event_time": "2026-10-12T04:33:05.667Z",
+      "event_hash": "4f0703f48d542e5a6d110a91f4f6ac2274b84f84c62d958ede66d8ef5be1b5b6",
+      "payload_sha256": "22c31954db00f5ad31199bfd86386c4ffe726dd452b00856271a309b48124ffb",
+      "safe_evidence": {
+        "reason": "write_authority_acquired"
+      }
+    },
+    {
+      "seq": 59890,
+      "event_id": "e44e086596ca4048a846d68431a3363b",
+      "event_type": "observation_span_recorded",
+      "state_before": "",
+      "state_after": "",
+      "event_time": "2026-10-12T04:33:06.031Z",
+      "event_hash": "557e46403ab2da5d785b32dbd2ff28d175b95659ffe1846d5418e5a5b5661186",
+      "payload_sha256": "ca1069aa45062c5c67622088d474fa5b5b5fe14eb5af17507021f8c7dc221248",
+      "safe_evidence": {}
+    },
+    {
+      "seq": 59891,
+      "event_id": "e607c0915d61418d84b8a6585e51f3a6",
+      "event_type": "failure_observed",
+      "state_before": "EXECUTING",
+      "state_after": "EXECUTING",
+      "event_time": "2026-10-12T04:33:06.440Z",
+      "event_hash": "5da61b85049614b4909b26e02891a368c63ee4f5d68b78173211f56754ca9e45",
+      "payload_sha256": "980628b5898e79b786aea8151457c3788a7ab4dc816f42e572d221ecd41e1c60",
+      "safe_evidence": {}
+    },
+    {
+      "seq": 59892,
+      "event_id": "a25d3bdc7edd434895023cc287175ff1",
+      "event_type": "write_lease_revoked",
+      "state_before": "EXECUTING",
+      "state_after": "EXECUTING",
+      "event_time": "2026-10-12T04:33:07.122Z",
+      "event_hash": "4c7d69319faec5417de8e3c6bb1fa8dfa683d26d35d941eb69c5cb4e51c2d592",
+      "payload_sha256": "6d2f133f0cd65f535aecdb779ddd6c4b53e7eff2569b1d2076c6f56fd7093b70",
+      "safe_evidence": {
+        "lease_state": "released",
+        "reason": "state_transition:replan"
+      }
+    },
+    {
+      "seq": 59893,
+      "event_id": "1bc4629eaa0a46188f66c54c381725ee",
+      "event_type": "state_transition",
+      "state_before": "EXECUTING",
+      "state_after": "REPLAN",
+      "event_time": "2026-10-12T04:33:07.394Z",
+      "event_hash": "b90869e371fcbd47fab0951dea14a0cd1d36e21720bd956b0b466bbb82e4a49d",
+      "payload_sha256": "197be2092e3fa3ca32fbbbf6dfa3438ba88c13479675261409c14364d29715ad",
+      "safe_evidence": {
+        "reason": "PROTECTED_PATH_WRITE"
+      }
+    },
+    {
+      "seq": 59894,
+      "event_id": "1f56b2bb543e44168fe940186211c809",
+      "event_type": "wave_processes_quiesced",
+      "state_before": "",
+      "state_after": "",
+      "event_time": "2026-10-12T04:33:07.624Z",
+      "event_hash": "5fed1216a78919c98bc98a8a9ba0f86e667342d77ce3d9a4813e052a6af6da3f",
+      "payload_sha256": "47ca8aa82c48b1246c3be5db6b44c74bfe31dbb9f69aa65ca18ceaf5b60ad3d7",
+      "safe_evidence": {
+        "active_command_count": 0,
+        "quiescent": true,
+        "reason": "orchestration_state:replan",
+        "run_id": "4ea601f3f7154ecda879a6986a5d7f41",
+        "terminated": 0,
+        "wave_id": "2b840f59702f4d4ba34e2b3f96496ab5"
+      }
+    }
+  ],
+  "observed_file": {
+    "path": ".coding-tools/reports/shared-write-exec-20261012/shared-write-proof.txt",
+    "bytes": 62,
+    "sha256": "b3084c24820d66e71ac91588ae169f283969a26d7630551cb0d098f4592931ce",
+    "matches_initial_preimage": true,
+    "matches_final_postimage": false
+  },
+  "resources": {
+    "managed_job_count": 0,
+    "controller_lease_count": 0,
+    "proof_count": 0
+  },
+  "scoped_projection": {
+    "status": "waiting",
+    "modified_files": [],
+    "current_command": null,
+    "orchestration_state": "REPLAN",
+    "write_owner": "",
+    "write_lease_id": ""
+  },
+  "effect_classification": "native_guard_rejected_before_apply_changes_and_verify_per_source_order",
+  "native_semantic_acceptance_performed": false
+}

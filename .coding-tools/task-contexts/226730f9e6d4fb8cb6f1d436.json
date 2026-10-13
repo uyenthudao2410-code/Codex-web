@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "task_id": "04bebb7e4a884f66998cb6920a1782f6",
+  "orchestration": {
+    "run_id": "4ea601f3f7154ecda879a6986a5d7f41",
+    "wave_id": "2b840f59702f4d4ba34e2b3f96496ab5",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "worktree_fp": "405022b52e3f55f3026ac5fa6209daeaf2e72ebae48e7c0d8c35f4857d5a3db8",
+    "contract_fp": "e735f063bff6630d690f2fe5b890f8159f226781365e73f396426c4b4b35de42"
+  },
+  "objective": "Apply one owner-approved exact local patch.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Path '.coding-tools/reports/shared-write-exec-20261012/shared-write-proof.txt' is protected from source mutation.",
+  "next_step": "Provide replan_reason after correcting the failure cause.",
+  "created_at": "2026-10-12T04:33:02.728Z",
+  "updated_at": "2026-10-12T04:33:08.015Z",
+  "events": [
+    {
+      "time": "2026-10-12T04:33:02.728Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Apply one owner-approved exact local patch."
+      }
+    },
+    {
+      "time": "2026-10-12T04:33:03.904Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-10-12T04:33:04.975Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-10-12T04:33:05.964Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-10-12T04:33:07.907Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-10-12T04:33:07.907Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-12T04:33:08.015Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INTERNAL_ERROR"
+      }
+    }
+  ]
+}

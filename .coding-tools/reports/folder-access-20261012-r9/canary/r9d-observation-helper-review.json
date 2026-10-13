@@ -1,0 +1,9 @@
+{
+  "operation": "r9d_canary_observation_review_before_first_dispatch",
+  "previous_script_sha256": "8426e27b2f10905c19fe3f1b5bd049f6f80bf6976980dbc35c9ec65ccca5021a",
+  "script_sha256": "dfe1fda063f4ebd7d55d164d6470456ec00d5c4623ac4914e4d35f4f99eb6fe5",
+  "change": "Return the original observation when central_lifecycle_state is reconcile_required, even when the facade omits the top-level flag.",
+  "dispatch_arguments_changed": false,
+  "unknown_is_success": false,
+  "unknown_cleanup_remains_deferred": true
+}

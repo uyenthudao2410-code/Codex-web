@@ -1,0 +1,8 @@
+﻿{
+    "operation":  "cleanup_owned_failed_sandbox_probe",
+    "vm_id":  "DD55131F-FC1E-479E-8300-E8979D0555EF",
+    "observed_at":  "2026-10-12T02:19:51.2333215+00:00",
+    "mutated":  false,
+    "ok":  true,
+    "state":  "OWNED_PROCESS_ALREADY_EXITED"
+}

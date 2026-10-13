@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "operation": "original_owned_stop_readonly_supplement",
+  "ok": true,
+  "observation_state": "verified_owned_hosts_absent",
+  "observation_started_at_ms": 1791787023931,
+  "observation_finished_at_ms": 1791787030623,
+  "producer_sha256": "8ab29b114c2184e1a4696647e477c502ee91b3ee6b38469a85ff615e15f07168",
+  "original_stop_producer_sha256": "5eb4615b8ef5aefbba2cec3835f087f2f537584f554c33dbe7802c10c8533fde",
+  "original_stop_attempt_id": "b18bb16d623240db9d014361770302db",
+  "original_stop_result_preserved": "UNKNOWN",
+  "dispatch_sha256": "9a9ab3a8c454cede1fb9d573b8a94c1a32762eb0f7c04e4a9ed9297c2d04ea08",
+  "reviewed_plan_sha256": "6766eca6876315a16511bebcaf462f855207237a20ee72dc61452d3dcb53b33a",
+  "original_unknown_sha256": "867c480fb5ebe671e8f1fa74807f43785dc19c7a47a8269a783a74d0cd808302",
+  "original_binding_sha256": "eec85b4a62f0452c3d83c9ae24a8d7867f8be275f03b8a0ba9ca6a0671b382c1",
+  "stop_invocation_count_by_observer": 0,
+  "automatic_retry_permitted": false,
+  "nonce_saved": false,
+  "database_mutated": false,
+  "node_journal_modified": false,
+  "processes_terminated": false,
+  "original_action_replayed": false,
+  "authority": {
+    "original_writer_generation": 1,
+    "current_writer": {
+      "task_id": "task_91b8033f78254a52bd83120411c7674e",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "lease_generation": 2,
+      "expires_at_ms": 1791787087535,
+      "released_at_ms": null
+    },
+    "current_writer_fresh_unexpired": true,
+    "original_lineage_unchanged": true
+  },
+  "owned_host_absence_first_at_ms": 1791787024940,
+  "pinned_backend_cooldown_seconds": 5,
+  "kernel_absence_required_by_pinned_backend": false,
+  "pinned_backend_contract": "https://raw.githubusercontent.com/microsoft/mxc/cbe1774364ea2ec846f56ab744e43a416f751420/docs/windows-sandbox/windows-sandbox-reference.md",
+  "pinned_backend_implementation": "https://raw.githubusercontent.com/microsoft/mxc/cbe1774364ea2ec846f56ab744e43a416f751420/src/backends/windows_sandbox/lifecycle/src/vm.rs",
+  "observed": {
+    "sandbox_id": "wsb:e68057a4",
+    "record_state": "stopped",
+    "record_sha256": "e9fd0f4fc1ebaae96e784e85bb6e4d19e814623985e87d2c9e304f4be6c7b9a5",
+    "mapped_folders_sha256": "b51f69daf254c8000b88b9166dfbbbcf5201ffaf34307b2f525985cb7ed6d4a6",
+    "daemon_record_absent": true,
+    "host_vm_process_count": 0,
+    "kernel_memory_process_count": 0,
+    "host_processes": {
+      "user_mode_hosts": [],
+      "kernel_memory_observations": []
+    },
+    "same_native_runtime_alive": true,
+    "active_native_jobs": 0,
+    "original_cold_warm_lineage_unchanged": true,
+    "same_task_writer_fresh_unexpired": true
+  }
+}

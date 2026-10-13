@@ -1,0 +1,34 @@
+{
+  "observed_at": "2026-10-12T10:07:15.1570116+00:00",
+  "prepared_only": true,
+  "runtime_mutations": 0,
+  "js_syntax": "PASS",
+  "powershell_syntax": "PASS",
+  "launch_dry_run": {
+    "runtime_effects": 0,
+    "package_verified": true
+  },
+  "shortcut_dry_run": {
+    "changed_shortcuts": 0,
+    "originals_verified": 2,
+    "backups_verified": 2
+  },
+  "preserved_autocad_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+  "preserved_autocad_pilot": "pilot_833530c73c72491ba0163037ae80e8f0",
+  "file_hashes": {
+    "packaged-operations.cjs": "ae94f39dfd694dd2baa2b0a180c44b7c04f94530d7cb1f0a6dd5f6eae9fb8192",
+    "observe-r9e-machine.cjs": "4fd2ff44335eb5c007e76f83f45809902792d439470ad1dc0136e6c14c6ebb27",
+    "invoke-packaged.ps1": "e30c135a6b4753614a428839b04ac9ffd938bc8346657dece9ba7e7b4064195d",
+    "launch-r9e.ps1": "c24f80a3ccd96f3ddc8735bc87134a443dd41763b9789b9b69345ac885e64eaf",
+    "update-coding-tools-shortcuts-r9e.ps1": "b66cfd98f60aa665baf6c5ddfa5e494a3c4b7bc04524f92333be9e867ab12668"
+  },
+  "isolated_packaged_smoke": "PASS",
+  "production_descriptor_stable": true,
+  "old_stop_owner": {
+    "process_start_token": "134362696871111330",
+    "epoch": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+    "pid": 3476,
+    "installation": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+    "instance": "dbf2536afedb8b4e554a29fc9e88cb50"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "operation": "status",
+  "observed_at": "2026-10-12T12:29:12.710Z",
+  "observed_at_ms": 1791808152710,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r2\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "runtime": {
+      "fullyReady": false,
+      "mcpRunning": true,
+      "nativeAlive": true,
+      "executionRole": "central_executor",
+      "authorityReady": false,
+      "centralConnected": false,
+      "centralStatusReason": "LOCAL_EXECUTOR_NOT_READY",
+      "updateIncomplete": true,
+      "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv587m4p-0c2b59f01b1d25ba52938db8923db9da",
+      "operation_id": "full-clean-mv587be0-057f8d2c0cc51d5a65e066f4",
+      "state": "UPDATE_INCOMPLETE",
+      "epoch_state": "VERIFYING",
+      "admission_open": false,
+      "update_incomplete": true,
+      "ready_commit_digest": null,
+      "expires_at_unix_ms": 1791808571690,
+      "ready_at": null,
+      "error": null
+    },
+    "census": {
+      "schema_version": 1,
+      "safe": false,
+      "code": "RUNTIME_BUSY",
+      "reason": "live_runtime_state_process",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "7243eaf4738adea697855417779858d31fc1ce4e325197efdf883c1281a082ec",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "50523deaac350064e5405d183efadf262bec56b64d508436d6efb86302354377",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T12:29:10.794Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": [
+          "live_runtime_state_process"
+        ]
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791808151.669452,
+      "census_fingerprint": "6a1aee87f77dbd2527137725db00358a100fc201be084420f7b142438690a107"
+    },
+    "owner": {
+      "owner_pid": 35428,
+      "owner_process_start_token": "134362815903498960",
+      "instance_id": "a233b450199c09cd3118fb4ca2d7068b",
+      "installation_id": "1f61bc22f8a5b5c999710b319733ce8983f2ab6ab90ee6f7ab447f615b3facbb"
+    },
+    "preserved_fingerprints": {
+      "control-plane-workspaces.json": {
+        "present": true,
+        "sha256": "ebae316a43229f62a7cccc554615a019ceddfcdc9966d300dba0a8264a6b3ce4"
+      },
+      "control-plane-node.json": {
+        "present": true,
+        "sha256": "bcd3d6cc4b1fa8445709b3e0a710f32445b0995502e4085fdc77af571a10d1bc"
+      },
+      "control-plane-read-only-policy.json": {
+        "present": true,
+        "sha256": "a820ab1f2ec4e15eee9c9dacbb4bc4457f9f449c8c68ac76c1f36cac39aeb016"
+      },
+      "control-plane-file-read-policy.json": {
+        "present": true,
+        "sha256": "1bae52ac155305be0e51c148158062b3286543ed53dcc018583371c88dab28f2"
+      },
+      "control-plane-approved-patch-policy.json": {
+        "present": true,
+        "sha256": "f5dd13bcc2689e490bce54c7c071605d8393a1ff3daafb2c990c25748c7184e9"
+      },
+      "control-plane-document-write-policy.json": {
+        "present": false
+      },
+      "control-plane-exec-policy.json": {
+        "present": true,
+        "sha256": "78e3a929c929aa3792245d95ef3f80d4062f69479677dbe1a841c19575f57520"
+      }
+    },
+    "original_stop_not_replayed": false
+  },
+  "mutating": false,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "a0a7bd1252f1a0b2294520dc7dbbe22c284eebedb4938fb942edbe77228dec90",
+  "smoke_proof_sha256": "42b6f405502550865f7e439a666f9aa36c5f5cacad2537fd0eff206d2e73cfc6",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r2-transition\\status-1791808152710-16727032.json"
+}

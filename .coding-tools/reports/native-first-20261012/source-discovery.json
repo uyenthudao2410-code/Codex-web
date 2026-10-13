@@ -1,0 +1,32 @@
+{
+  "operation": "readonly_serving_source_discovery",
+  "pid": 946413,
+  "cwd": "/home/svhome",
+  "exe": "/usr/bin/python3.14",
+  "python_path_candidates": [
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b/control-plane"
+  ],
+  "matching_source_paths": [
+    "/home/svhome/.local/lib/codex-control-plane/staging/codex-control-plane-97f26a13b0def2795421c454bc32e1f301aa0704/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-70de202d93c9a759befe5d38491ce54e9ef4b3cd/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-81434af400b8f6ecd1b7ca8d50ca36b1066b0fd4/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-5b5c775d668fa3ac4f564de0d018bd6933243bad/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-7d247347585720d2adf6ccaa325d053de672bf03/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-7dec4b6e684c975ef40e949b1e06eab3c67b5811/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae1044-scoped-artifacts-94b96e1b0fe2/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-d8a24432d644697c31a0a72c3b91ed2e9374ea58/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-528035fd94b0a6c127ad116a8c038596f187169e/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-da7d8273fe94d082d873d186b95bf75886c3dbfa/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-e44b0a4613a780e2239027c085b54257e1df266c/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-496a9be7d5987eb41b23a2069956c27119af45be/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-02e2a6b5dfa8d138be403b64617c2a3e6f3489aa/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-1238e19f6e58dccf88bcaeacc64b84f8371c3426/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-f31683823dd49eddea4f7a8dca883fa72246002e/control-plane/control_plane/http_api.py",
+    "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-5ce5c51fc97584501d5d091e8c21df88250f55eb42e6e756384b234da8837b1f/control-plane/control_plane/http_api.py"
+  ],
+  "external_mutations_performed": false
+}

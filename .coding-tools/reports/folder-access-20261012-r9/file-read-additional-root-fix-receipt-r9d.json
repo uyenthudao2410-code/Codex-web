@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "operation": "bounded_file_read_additional_root_fix",
+  "observed_at": "2026-10-12T09:03:53.6772999Z",
+  "original_action_id": "act_5e96e41f520d44d99a2b36bf749e658b",
+  "original_attempt_id": "try_df0e7870613c4eee8d1e9ff90b3a4d5b",
+  "diagnostic_code": "CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID",
+  "diagnosis_evidence": "original-read-path-diagnosis-r9c-1791795633356.json",
+  "changed_files": [
+    "electron/services/runtimeOrchestrator.js",
+    "tests/control-plane-file-read-runtime.test.js"
+  ],
+  "scope": "Project exact canonical registered absolute file response to admitted relative path; retain root, reparse, content, range, digest validators",
+  "validation": {
+    "command": "node --test tests/control-plane-file-read-runtime.test.js tests/control-plane-file-read-bridge.test.js",
+    "tests": 13,
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0,
+    "diff_check": "pass",
+    "cases": [
+      "existing relative response",
+      "exact additional-root absolute response",
+      "different file rejected",
+      "different root rejected",
+      "junction alias rejected",
+      "junction target rejected"
+    ]
+  },
+  "source_receipt": {
+    "runtime_orchestrator_sha256": "1bb1003254906de8b3b3ea612270f54f0ea99940a959c629fab2ab231ce1bd00",
+    "test_sha256": "e04bce5f34983dabff41f622faddd67d38c84afe05964a271149ee17108632ea",
+    "note": "Runtime hash precedes separately assigned concurrent exec branch fix"
+  },
+  "runtime_modified": false,
+  "original_action_replayed": false,
+  "original_receipt_posted": false,
+  "commit_or_deploy_performed": false
+}

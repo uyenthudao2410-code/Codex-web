@@ -1,0 +1,249 @@
+{
+  "operation": "refresh",
+  "observed_at": "2026-10-12T07:08:19.855Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r8\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "runtime": {
+      "updateIncomplete": true,
+      "recoveryHost": {
+        "state": "healthy",
+        "pid": 47216,
+        "process_start_token": "134362624714764110",
+        "instance_id": "765254f193d9577f88de22eecc266161",
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "device_instance_id": "765254f193d9577f88de22eecc266161",
+        "device_display_name": "DESKTOP-63643J4",
+        "started_at": "2026-10-12T07:07:51.700Z",
+        "watchdog_interval_ms": 5000,
+        "gateway": "healthy",
+        "gateway_metrics": {
+          "measurement": "resident_gateway_upstream_round_trip",
+          "scope": "electron_loopback_proxy_to_local_mcp",
+          "sample_cap": 256,
+          "excludes": [
+            "client_upload_time",
+            "provider_model_latency_attribution"
+          ],
+          "by_kind": {
+            "mcp": {
+              "n": 0,
+              "p50_ms": null,
+              "p90_ms": null,
+              "p99_ms": null,
+              "max_ms": null,
+              "failures": 0,
+              "status_classes": {}
+            },
+            "heartbeat": {
+              "n": 0,
+              "p50_ms": null,
+              "p90_ms": null,
+              "p99_ms": null,
+              "max_ms": null,
+              "failures": 0,
+              "status_classes": {}
+            },
+            "telemetry": {
+              "n": 0,
+              "p50_ms": null,
+              "p90_ms": null,
+              "p99_ms": null,
+              "max_ms": null,
+              "failures": 0,
+              "status_classes": {}
+            }
+          }
+        },
+        "code_revision": {
+          "running_revision": "6f4f1808502acc079b33510d6c2920f3823d10075bf364ee787f2147b895f624",
+          "disk_revision": "6f4f1808502acc079b33510d6c2920f3823d10075bf364ee787f2147b895f624",
+          "update_pending": false,
+          "state": "current",
+          "checked_at": "2026-10-12T07:08:18.895Z",
+          "file_count": 40
+        },
+        "full_clean_activation": {
+          "available": true,
+          "contract_version": 1,
+          "running_revision": "6f4f1808502acc079b33510d6c2920f3823d10075bf364ee787f2147b895f624",
+          "disk_revision": "6f4f1808502acc079b33510d6c2920f3823d10075bf364ee787f2147b895f624",
+          "state": "current",
+          "activation_epoch_id": "activation-mv4wugb2-5e180b73c087c346a95073c382bc90ab"
+        },
+        "recovery_bootstrap": null,
+        "capabilities": {
+          "full_clean_activation": true,
+          "activation_epoch": true
+        },
+        "electron_ui_revision": {
+          "running_revision": null,
+          "disk_revision": "cf75a743978974b26e84e79435b33fa1fcbebfc548d16294f683d11f5544d673",
+          "update_pending": null,
+          "state": "unknown",
+          "checked_at": "2026-10-12T07:08:19.271Z",
+          "file_count": 32
+        },
+        "electron_ui_recovery": {
+          "state": "missing",
+          "registered": true,
+          "alive": false,
+          "pid": 45548,
+          "instance_id": "c97b7ea0d4f2f87da41837a9d80636a4",
+          "started_at_unix_ms": 1791788871316,
+          "runtime_mode": "packaged",
+          "recovery_host_runtime_mode": "packaged",
+          "recovery_host_installation_id": "6169e7f206f69e2d5364248f93d965c97f58340a908844b2c8f9ef2832f17228",
+          "ui_runtime_mode": "packaged",
+          "ui_installation_id": "6169e7f206f69e2d5364248f93d965c97f58340a908844b2c8f9ef2832f17228",
+          "suppressed": false,
+          "suppression_reason": "",
+          "attempts_in_window": 0,
+          "last_launch_pid": null,
+          "initial_registration_grace_until_unix_ms": null,
+          "pending_registration_until_unix_ms": null,
+          "next_attempt_at_unix_ms": null,
+          "circuit_suppressed_until_unix_ms": null,
+          "last_error_code": null
+        },
+        "auto_activation": {
+          "trust_model": "running_baseline_accepted_receipts_v2",
+          "continuity_mode": "detached_runtime_children_v1",
+          "running": true,
+          "processing": false,
+          "pending": 0,
+          "deferred": 0,
+          "awaiting": 0,
+          "blocked": 0,
+          "failed": 0,
+          "completed": 0,
+          "baseline_head": "7f26754657c5a1e933dea000fb75a0624e72f152",
+          "processed_checkpoints": 0,
+          "closure_input": null,
+          "last_error": null
+        },
+        "activation_closure": {
+          "schema_version": 1,
+          "source_checkpoint_id": "",
+          "run_id": "",
+          "wave_id": "",
+          "proof_fingerprint": "",
+          "accepted_head": "",
+          "valid": false,
+          "checkpoint_identity_valid": false,
+          "closure_input_schema_supported": false,
+          "source_accepted": false,
+          "accepted_receipts_complete": false,
+          "activation_eligible": false,
+          "eligibility_code": null,
+          "affected_components": [],
+          "affected_components_valid": true,
+          "component_receipts": {},
+          "component_receipts_valid": false,
+          "postflight_receipts": {},
+          "postflight_receipts_valid": false,
+          "component_current": {},
+          "components_current": false,
+          "connector_contract_state": "UNAVAILABLE",
+          "connector_continuity_only": false,
+          "connector_refresh_required": null,
+          "connector_acknowledgement_pending": null,
+          "connector_rediscovered_at": null,
+          "connector_compatibility_acknowledged_at": null,
+          "connector_current_sha256": null,
+          "connector_acknowledged_sha256": null,
+          "connector_contract_current": false,
+          "lifecycle_decision": null,
+          "lifecycle_clean": false,
+          "lifecycle_code": null,
+          "runtime_running": false,
+          "tunnel_running": false,
+          "runtime_fully_ready": false,
+          "observed_at": "2026-10-12T07:08:19.345Z",
+          "release_state": "NOT_RELEASED",
+          "production_state": "NOT_CLAIMED",
+          "closure_state": "NO_ACCEPTED_CHECKPOINT",
+          "live_closure": "NO_ACCEPTED_CHECKPOINT"
+        },
+        "activation_epoch": {
+          "activation_epoch_id": "activation-mv4wugb2-5e180b73c087c346a95073c382bc90ab",
+          "operation_id": "full-clean-mv4wu6jx-aa1f931efad39ace7564ab71",
+          "state": "UPDATE_INCOMPLETE",
+          "epoch_state": "HANDOFF",
+          "admission_open": false,
+          "update_incomplete": true,
+          "ready_commit_digest": null,
+          "expires_at_unix_ms": 1791789483119,
+          "ready_at": null,
+          "error": null
+        },
+        "ready_adoption": {
+          "state": "adopted"
+        },
+        "recovery_plane_mode": "central-node-agent-v1",
+        "recovery_plane": {
+          "mode": "independent_mcp_tunnel_v1",
+          "state": "healthy",
+          "activation_epoch_id": "activation-mv4vxaab-907c8a927b8eb80e4e7b8b56bdb150ed",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "device_instance_id": "765254f193d9577f88de22eecc266161",
+          "mcp": {
+            "state": "healthy",
+            "pid": 18320,
+            "process_start_token": "134362624723026730",
+            "instance_id": "7331796bd4b3ecfbccef2c1817625a3b",
+            "port": 18767,
+            "revision": "6f4a0eaf7af2a911ee11faf2cbad61b816fc62cf5e5a229e0c1c5d316203e9dd",
+            "replaced": false,
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "device_instance_id": "765254f193d9577f88de22eecc266161",
+            "activation_epoch_id": "activation-mv4vxaab-907c8a927b8eb80e4e7b8b56bdb150ed"
+          },
+          "tunnel": {
+            "state": "not_configured",
+            "configured": false,
+            "pid": null,
+            "instance_id": null
+          },
+          "checked_at": "2026-10-12T07:08:12.895Z"
+        },
+        "last_progress": {
+          "step": "stopped",
+          "percent": 100,
+          "message": "Tất cả các dịch vụ do trợ lý khởi động đã dừng",
+          "time": "2026-10-12T07:08:17.020Z"
+        },
+        "runtime": {
+          "mcp": false,
+          "tunnel": false,
+          "execution_role": "central_executor",
+          "central_connected": true,
+          "authority_ready": true,
+          "central_status_reason": "LOCAL_EXECUTOR_NOT_READY",
+          "fully_ready": false,
+          "update_incomplete": true,
+          "connector_ready": false,
+          "connector_ack_sha_matches": false,
+          "connector_current_sha256": null,
+          "connector_acknowledged_sha256": null,
+          "activation_epoch_id": "activation-mv4wugb2-5e180b73c087c346a95073c382bc90ab",
+          "recovering": false,
+          "recovery_blocked": false
+        }
+      }
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv4wugb2-5e180b73c087c346a95073c382bc90ab",
+      "operation_id": "full-clean-mv4wu6jx-aa1f931efad39ace7564ab71",
+      "state": "UPDATE_INCOMPLETE",
+      "epoch_state": "HANDOFF",
+      "admission_open": false,
+      "update_incomplete": true,
+      "ready_commit_digest": null,
+      "expires_at_unix_ms": 1791789483119,
+      "ready_at": null,
+      "error": null
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-transition\\packaged-refresh-receipt-1791788899855.json"
+}

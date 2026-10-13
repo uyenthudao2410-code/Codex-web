@@ -1,0 +1,20 @@
+{
+  "operation": "isolated_idle_canary_wrapper",
+  "observed_at_ms": 1791834853336,
+  "attempt_id": "3ce1bdc402dc492396a84c5addc400c8",
+  "remote_exit_code": 0,
+  "observer_exited": true,
+  "observer_exit_code": 1,
+  "remote_receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-remote-3ce1bdc402dc492396a84c5addc400c8.ndjson",
+  "observation_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-3ce1bdc402dc492396a84c5addc400c8.json",
+  "policy_receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-isolate-1791834484938-fac7767e.json",
+  "pins_sha256": "9c3c0142457edae0fec972595c378633498f40c6047c5bda18eafc331c3e9a68",
+  "source_sha256": {
+    "run-native-first-canary.py": "3b3c6cc3dee35d37a76a0237bab9a653766db30ba82caa95c09ef85311b84c66",
+    "run-isolated-idle-canary-timefix.py": "e9bd4e7b62fe3fafd440a8e6fb42955d94b7c3b1aaab91129747b69aaa0cc8ff",
+    "observe-isolated-idle.py": "ff0de6e53e5e806c003ee07273abe2214d059e99e1d69c022a0b4fe4726b8b5f",
+    "run-parallel-overlap-canary.py": "93de6ee983283b97487ca3292b35013b412aa54505776f30d28b8cc8908da4d3"
+  },
+  "lifecycle_stop_dispatched": false,
+  "restoration_remaining": true
+}

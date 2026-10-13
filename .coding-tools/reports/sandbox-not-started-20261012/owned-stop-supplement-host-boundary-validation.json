@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "operation": "original_stop_supplement_offline_validation",
+  "producer_sha256": "865cb44d68b320a300cb37a964c8a95cb00576b46c306e15c778189b1e0b0a2c",
+  "ast_parse": "PASS",
+  "cases_passed": 10,
+  "cases": [
+    "Complete absence accepted without stop replay",
+    "Kernel aggregate remaining is observational and does not reject owned host absence",
+    "User-mode host remaining reports shutdown pending",
+    "Changed mapping rejected",
+    "Original generation one remains immutable while renewed current generation two accepted",
+    "Changed original intent generation rejected",
+    "Expired renewed writer rejected",
+    "Released renewed writer rejected",
+    "Different current generation rejected",
+    "Changed original action settlement rejected"
+  ],
+  "live_boundary_functions_replaced": true,
+  "stop_effect_performed": false,
+  "network_requests_performed": false,
+  "database_mutated": false,
+  "node_journal_modified": false
+}

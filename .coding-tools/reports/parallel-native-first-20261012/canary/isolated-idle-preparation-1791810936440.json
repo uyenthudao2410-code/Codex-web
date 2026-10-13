@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "operation": "isolated_idle_helper_preparation",
+  "observed_at": "2026-10-12T13:15:36.4405558+00:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "supersedes_hash_receipt": "isolated-idle-preparation-1791810445317.json",
+  "source_sha256": {
+    "run-isolated-idle-canary.py": "aaa4e197bf9dafda113f3120a0255e2517de8a4071928d9be27717d9a8beef13",
+    "observe-isolated-idle.py": "ff0de6e53e5e806c003ee07273abe2214d059e99e1d69c022a0b4fe4726b8b5f",
+    "sandbox-idle-policy.cjs": "410014092fa4ea0f5c7b3b7526c55d61bc797c16abfbf68df948f724bbb443e4",
+    "invoke-isolated-idle-canary.ps1": "0acccfee36b59ed698b5fcebcf925aa4bc6dc04ac794d094f5f445549abd7b60",
+    "test-isolated-idle-canary.py": "1ee7d6ca772c28b4a30784f595f1df26c367cec382352cdf3bac9902425db5e4",
+    "test-isolated-idle-runtime.py": "77e11543e47637815c49e0ce8fdcb3b297e7110574b663ba4159581f664bbce1",
+    "ISOLATED_IDLE_ACCEPTANCE.md": "1c691278818e791219a9daad774ed1befac450023bd08683c2ea74f7cb833a2f",
+    "run-parallel-overlap-canary.py": "93de6ee983283b97487ca3292b35013b412aa54505776f30d28b8cc8908da4d3",
+    "prepare-reviewed-idle-pins.py": "47dd8a05c94b9b469bbd7a96f5b46c36272bd0eec0c2d7f7921dd919b00a0cb0"
+  },
+  "validation": {
+    "remote_runner_boundaries": 6,
+    "remote_runner_passed": 6,
+    "runner_result_reused": true,
+    "launcher_identity_boundaries": 4,
+    "launcher_identity_passed": 4,
+    "constructor_independent_docs_boundaries": 3,
+    "constructor_independent_docs_passed": 3,
+    "constructor_result_author": "/root/production_docs",
+    "sampler_ast_ok": true,
+    "wrapper_powershell_parse_ok": true,
+    "scoped_source_whitespace_ok": true
+  },
+  "proof_stage": "separate launcher and MCP identities bound; live acceptance pending",
+  "pins_contract": {
+    "purpose": "isolated-idle",
+    "codex_execution_mode": "isolated",
+    "autocad_execution_mode": "native_first",
+    "supervisor_instance_id": "exact separately generated launcher nonce",
+    "native_pid": "exact current launcher receipt",
+    "native_process_start_token": "exact original Win32 FILETIME",
+    "mcp_process_instance_id": "independent MCP identity; never equated to launcher nonce",
+    "codex_policy_hash": "must equal isolate receipt; stale pins never overwritten",
+    "native_fixture_approval_reused": false
+  },
+  "runtime_mutations": 0,
+  "policy_installs": 0,
+  "exec_dispatches": 0,
+  "vm_start_stop_calls": 0,
+  "commit": false,
+  "push": false,
+  "next_action": "Root constructs fresh isolated-idle pins, invokes sampler-backed canary once, reviews exact terminal/idle evidence, then restores policy through original settled receipt gate."
+}

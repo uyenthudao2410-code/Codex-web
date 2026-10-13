@@ -1,0 +1,24 @@
+{
+  "operation": "files",
+  "observed_at": "2026-10-12T09:09:32.334Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "state": "read_and_patch",
+    "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+    "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+    "file_read": {
+      "kind": "file_read",
+      "authority_mode": "standing",
+      "policy_sha256": "77ab07253d412ab54c8115e37cfd002e655b04999575e77bd782c473cbb8c6f4",
+      "windows_acl_verified": false
+    },
+    "approved_patch": {
+      "kind": "approved_patch",
+      "authority_mode": "standing",
+      "policy_sha256": "b86758a26dc93540d9f13211d0f244df9fc51f6798eb8d25d0d937154c0882b6",
+      "windows_acl_verified": false
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-transition\\packaged-files-receipt-1791796172334.json"
+}

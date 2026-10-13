@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "operation": "ordinary-stop-result",
+  "observed_at": "2026-10-12T12:05:20.495Z",
+  "observed_at_ms": 1791806720496,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "runtime": {
+      "updateIncomplete": false
+    },
+    "owner": {
+      "owner_pid": 38436,
+      "owner_process_start_token": "134362736855547600",
+      "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+      "installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a"
+    },
+    "epoch": {
+      "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+      "operation_id": "full-clean-mv53hzd3-3e0396c548cce5166fb43fdd",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "72125227cfd0026b9e8b07d8cb1d2df4492d6e034767b00b163cd623409c3f33",
+      "expires_at_unix_ms": 1791800671240,
+      "ready_at": "2026-10-12T10:15:16.247Z",
+      "error": null
+    },
+    "before_census": {
+      "schema_version": 1,
+      "safe": false,
+      "code": "RUNTIME_BUSY",
+      "reason": "live_runtime_state_process",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "06450a97fed9c446ba082909e624f642c9523c03159a64c67fa2e4677511e6eb",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "73ef41c021674c5510c28474e12543c18ab3dba40d0b0acacb0d006d5bc2b652",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T12:05:04.076Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": [
+          "live_runtime_state_process"
+        ]
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791806704.887265,
+      "census_fingerprint": "5f6c26170e6a844ad11d62bd2dcc47e2e9582ce85194608c02bccbb45270c3fc"
+    },
+    "server_fence": {
+      "receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-deployment-receipt.json",
+      "sha256": "c9ac73acab1c287a31ea7e385f0d6097ff2d1ef56d9ff4b2b5d09010c17e8c62",
+      "observed_at_ms": 1791806665566
+    },
+    "preserved_fingerprints": {
+      "control-plane-workspaces.json": {
+        "present": true,
+        "sha256": "ebae316a43229f62a7cccc554615a019ceddfcdc9966d300dba0a8264a6b3ce4"
+      },
+      "control-plane-node.json": {
+        "present": true,
+        "sha256": "bcd3d6cc4b1fa8445709b3e0a710f32445b0995502e4085fdc77af571a10d1bc"
+      },
+      "control-plane-read-only-policy.json": {
+        "present": true,
+        "sha256": "a820ab1f2ec4e15eee9c9dacbb4bc4457f9f449c8c68ac76c1f36cac39aeb016"
+      },
+      "control-plane-file-read-policy.json": {
+        "present": true,
+        "sha256": "1bae52ac155305be0e51c148158062b3286543ed53dcc018583371c88dab28f2"
+      },
+      "control-plane-approved-patch-policy.json": {
+        "present": true,
+        "sha256": "f5dd13bcc2689e490bce54c7c071605d8393a1ff3daafb2c990c25748c7184e9"
+      },
+      "control-plane-document-write-policy.json": {
+        "present": false
+      },
+      "control-plane-exec-policy.json": {
+        "present": true,
+        "sha256": "78e3a929c929aa3792245d95ef3f80d4062f69479677dbe1a841c19575f57520"
+      }
+    },
+    "historical_acceptance_preserved": true,
+    "sandbox": {
+      "observed_at_ms": 1791806705863,
+      "processes": [],
+      "ownership_not_inferred": true
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-transition\\ordinary-stop-result-1791806720496-0185378c.json"
+}

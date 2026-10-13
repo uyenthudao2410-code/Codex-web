@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operation": "failure",
+  "ok": false,
+  "lane": "patch_001",
+  "code": "ACCEPT_CURRENT_FAILED",
+  "error_message": "{}",
+  "error_stack": "Error: {}\n    at IncomingMessage.<anonymous> (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-accept-current.cjs:1:1146)\n    at IncomingMessage.emit (node:events:521:24)\n    at endReadableNT (node:internal/streams/readable:1729:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)",
+  "partial_mutation_possible": true,
+  "automatic_retry_forbidden": true
+}

@@ -3,7 +3,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('./recoveryIpc');
 const { sameInstallationIdentity } = require('./runtimeIdentity');
-const { sameAbsolutePath } = require('./pathSemantics');
+const { sameAbsolutePath, normalizeAbsolutePath } = require('./pathSemantics');
 const {
   normalizeProcessStartToken,
   observeLifecycleProcessIdentity,
@@ -164,19 +164,45 @@ function suppressDevelopmentRecoverySupervisor({
   expectedAppRoot = '',
   expectedExecutable = ''
 } = {}) {
-  const localAppData = String(env?.LOCALAPPDATA || '').trim();
-  if (!localAppData || !path.isAbsolute(localAppData)) return { suppressed: false, reason: 'local_app_data_unavailable' };
-  const installRoot = path.join(localAppData, 'WebMcpRecoverySupervisor');
-  const manifestFile = path.join(installRoot, 'manifest.json');
+  const stateError = (reason) => Object.assign(new Error('Installed Recovery Supervisor state could not be verified.'), {
+    code: 'RECOVERY_HOST_DEV_HANDOFF_SUPERVISOR_UNVERIFIED', details: { reason }
+  });
+  const appData = String(env?.APPDATA || '').trim();
+  if (!appData || !path.isAbsolute(appData)) throw stateError('app_data_unavailable');
+  let installRoot = path.join(appData, 'web-mcp-assistant', 'recovery-supervisor');
+  let manifestFile = path.join(installRoot, 'manifest.json');
+  let currentManifest = true;
+  let stat;
+  try {
+    stat = fsApi.statSync(manifestFile);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw stateError('manifest_unavailable');
+    currentManifest = false;
+    const localAppData = String(env?.LOCALAPPDATA || '').trim();
+    if (!localAppData || !path.isAbsolute(localAppData)) return { suppressed: false, reason: 'local_app_data_unavailable' };
+    installRoot = path.join(localAppData, 'WebMcpRecoverySupervisor');
+    manifestFile = path.join(installRoot, 'manifest.json');
+  }
   let manifest;
   try {
-    const stat = fsApi.statSync(manifestFile);
-    if (!stat.isFile() || stat.size > MAX_SUPERVISOR_MANIFEST_BYTES) return { suppressed: false, reason: 'manifest_invalid' };
+    stat ||= fsApi.statSync(manifestFile);
+    if (!stat.isFile() || stat.size > MAX_SUPERVISOR_MANIFEST_BYTES) {
+      if (currentManifest) throw stateError('manifest_invalid');
+      return { suppressed: false, reason: 'manifest_invalid' };
+    }
     manifest = JSON.parse(fsApi.readFileSync(manifestFile, 'utf8'));
-  } catch {
+  } catch (error) {
+    if (currentManifest) throw stateError(error?.details?.reason || 'manifest_invalid');
     return { suppressed: false, reason: 'manifest_unavailable' };
   }
-  if (manifest?.schema_version !== 1 || String(manifest?.mode || '') !== 'development') {
+  if (manifest?.schema_version !== 1 || !['development', 'packaged'].includes(String(manifest?.mode || ''))) {
+    if (currentManifest) throw stateError('manifest_invalid');
+    return { suppressed: false, reason: 'not_development_supervisor' };
+  }
+  if (currentManifest && (!normalizeAbsolutePath(manifest.app_root) || !normalizeAbsolutePath(manifest.executable))) {
+    throw stateError('manifest_invalid');
+  }
+  if (manifest.mode !== 'development') {
     return { suppressed: false, reason: 'not_development_supervisor' };
   }
   if (sameAbsolutePath(manifest.app_root, expectedAppRoot)

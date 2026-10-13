@@ -1,0 +1,11 @@
+{"phase": "warm_owned_sandbox_observed", "sandbox_id": "wsb:a461c231", "observed_at_ms": 1791835566741}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": false, "observed_at_ms": 1791835572705}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835620562}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835666227}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835712274}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835760823}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835809021}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835857363}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835905529}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791835953179}
+{"ok": true, "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json", "error_code": null}

@@ -1,0 +1,17 @@
+{
+  "manual_state_edit": false,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-transition\\r7-owned-orphan-cleanup-9dfb9b9895db47f58279d56891692b0c.json",
+  "user_hosts_absent": true,
+  "prior_daemon_pid": 27616,
+  "original_r7_job": "d618111e6a4e4e9484a48c76121ef259",
+  "prior_daemon_absent": true,
+  "exit_code": 1,
+  "sandbox_id": "wsb:6973cf0f",
+  "supported_result": null,
+  "daemon_record_sha256": "d4d22b11657e4fbd7d58821058a27005d61b20f936c7367f6d746261172da5fd",
+  "operation": "supported_exact_r7_orphan_deprovision",
+  "sandbox_record_sha256": "919564b29be2d495d43ac6c04d1117e483c5f52367d7ce31d117e3b44865ccec",
+  "ok": false,
+  "observed_at": "2026-10-12T14:15:08.6114262+07:00",
+  "nonce_saved": false
+}

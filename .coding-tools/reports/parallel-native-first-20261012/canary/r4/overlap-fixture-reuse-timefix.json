@@ -1,0 +1,63 @@
+{
+  "operation": "parallel_overlap_fixture_reuse_preparation",
+  "prepared": true,
+  "targets": [
+    {
+      "workspace_label": "Codex-web",
+      "repository_root": "E:\\DEV\\Codex-web",
+      "fixture": "tests/fixtures/parallel-native-overlap-20261012",
+      "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "native_argv": [
+        "node",
+        "tests/fixtures/parallel-native-overlap-20261012/hold.cjs"
+      ],
+      "native_cwd": "",
+      "native_source_sha256": "bfb8efed667726888d56f6487c6c037be1a667aa023220b621329fc35b147319",
+      "files": [
+        {
+          "path": "tests/fixtures/parallel-native-overlap-20261012/probe.txt",
+          "sha256": "960965cf03705565754930605694430bcd5ca53c0b8561f4201568b346e69558",
+          "size_bytes": 56
+        },
+        {
+          "path": "tests/fixtures/parallel-native-overlap-20261012/hold.cjs",
+          "sha256": "bfb8efed667726888d56f6487c6c037be1a667aa023220b621329fc35b147319",
+          "size_bytes": 451
+        }
+      ]
+    },
+    {
+      "workspace_label": "Autocad",
+      "repository_root": "E:\\DEV\\Autocad",
+      "fixture": "tests/fixtures/parallel-native-overlap-20261012",
+      "git_head": "4d6c6aee0733c334756c3220d4df40767c74322e",
+      "native_argv": [
+        "node",
+        "tests/fixtures/parallel-native-overlap-20261012/hold.cjs"
+      ],
+      "native_cwd": "",
+      "native_source_sha256": "368fa63eab51b902f65d492ad412c37d2c285481abc1ea5bb1059a5587079d46",
+      "files": [
+        {
+          "path": "tests/fixtures/parallel-native-overlap-20261012/probe.txt",
+          "sha256": "284fa9578bb31abbf77453f62d4adedc3f0b90d7cbec7ea0ad621100ab3aba53",
+          "size_bytes": 54
+        },
+        {
+          "path": "tests/fixtures/parallel-native-overlap-20261012/hold.cjs",
+          "sha256": "368fa63eab51b902f65d492ad412c37d2c285481abc1ea5bb1059a5587079d46",
+          "size_bytes": 449
+        }
+      ]
+    }
+  ],
+  "shared_mcp_creation_claimed": false,
+  "implementation_or_build_files_changed": false,
+  "source_sha256": {
+    "run-native-first-canary.py": "3b3c6cc3dee35d37a76a0237bab9a653766db30ba82caa95c09ef85311b84c66",
+    "run-parallel-overlap-canary.py": "93de6ee983283b97487ca3292b35013b412aa54505776f30d28b8cc8908da4d3"
+  },
+  "observed_at_ms": 1791825446232,
+  "mutations": 0,
+  "source_scope": "additive read-only binding of existing fixture files to current r4 harness"
+}

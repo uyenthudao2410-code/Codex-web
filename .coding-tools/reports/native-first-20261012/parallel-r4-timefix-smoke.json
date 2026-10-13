@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": null,
+  "capture_finished_utc": null,
+  "scope": "isolated temporary packaged recovery profile only; production profile and Scheduled Task untouched",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "command": "CODEX_PACKAGED_APP_ROOT=<parallel-r4-timefix candidate> node scripts/packaged-recovery-smoke.js",
+  "sha256": {
+    "executable": "f88e1f0c810031c50b07532130fe946c07047c895780387313ad008f60aa2937",
+    "app_asar": "3c86b63ff32a7c750cc0576722cc24cd377856e97b7aa5159965a5449dd750ae",
+    "source_smoke_script": "170aaeae11b191376860f30f52fda45cb3ca7afb0870d0d0d94ef3e98c1329ea",
+    "source_resource_verifier": "44c73e9f0b2a7db5643b206abbd1de55f7a72d6f0b79b8651bc0dd67e20a4bde",
+    "source_package_parity_receipt": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c"
+  },
+  "exit_code": 0,
+  "timed_out": false,
+  "ok": true,
+  "package": {
+    "executable": true,
+    "app_asar": true,
+    "required_resources": 18,
+    "smart_tool_contract": {
+      "profile": "smart-v3",
+      "task_context_id": {
+        "agent_workflow": true,
+        "task_control": true,
+        "workspace_context": true
+      },
+      "tools": [
+        "agent_workflow",
+        "command_control",
+        "document_workflow",
+        "exec_command",
+        "request_permissions",
+        "task_control",
+        "view_image",
+        "workspace_context"
+      ]
+    }
+  },
+  "isolation": {
+    "user_data_isolated": true,
+    "production_descriptor_stable": true
+  },
+  "recovery": {
+    "host_ready": true,
+    "device_identity_present": true,
+    "mode": "independent_mcp_tunnel_v1",
+    "mcp_alive": true
+  },
+  "supervisor": {
+    "healthy": true,
+    "live_owner_fail_closed": true,
+    "hash_mismatch_fail_closed": true,
+    "scheduled_task_mutation": false
+  }
+}

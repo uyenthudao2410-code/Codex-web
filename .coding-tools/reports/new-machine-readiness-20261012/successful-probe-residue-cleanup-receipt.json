@@ -1,0 +1,9 @@
+﻿{
+    "operation":  "cleanup_exact_successful_probe_residue",
+    "observed_at":  "2026-10-12T02:33:45.3376041+00:00",
+    "vm_id":  "b96e61fb-9f42-4a74-8361-aa02c95ed242",
+    "pid":  41744,
+    "ok":  true,
+    "mutated":  false,
+    "state":  "OWNED_PROCESS_ALREADY_EXITED"
+}

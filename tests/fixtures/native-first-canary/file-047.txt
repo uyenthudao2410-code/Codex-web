@@ -1,0 +1,3 @@
+NATIVE_FIRST_CANARY_V1
+file=047
+stage=seed

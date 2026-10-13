@@ -1,0 +1,7 @@
+{
+  "operation": "install_r4_supervisor_intent",
+  "observed_at_ms": 1791815583955,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "retirement_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\retire-1791815550588-f42e2f48.json",
+  "no_replay": true
+}

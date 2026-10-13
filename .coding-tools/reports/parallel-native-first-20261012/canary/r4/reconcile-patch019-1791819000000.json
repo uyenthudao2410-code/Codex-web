@@ -1,0 +1,24 @@
+{
+  "operation": "reconcile_r4_patch019",
+  "ok": true,
+  "receipt_state": "failed",
+  "central_delivery_state": "settled",
+  "original_unknown_receipt_preserved": true,
+  "action_replayed": false,
+  "response": {
+    "receipt_id": "rcpt_52d0f02988784ea3bbba310c6036b05c",
+    "action_id": "act_65fa937277dd4963a5ca39ffe9e291ec",
+    "attempt_id": "try_8a7f3fedcddd4de8a1267eb87a7e39ed",
+    "receipt_state": "failed",
+    "delivery_state": "settled"
+  },
+  "payload_sha256": "877c849f309159699a445f77a3fd2d191ee38b787c4ba1088a336973f9d0a762",
+  "evidence": {
+    "context_sha256": "e59b1e971c26b9e27a997882306efceaf4f786bed59dc163bd3e9eb54b3a14c6",
+    "ledger_sha256": "417c6e134881f3b6ad7be42c08365aa56d8475b8b233134daafe8991acd2ed32",
+    "postimage_sha256": "59609162479b3a662adfefe82646a4d43302a4790de10f67d533368f68f1b8a5",
+    "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+    "wave_id": "4987ffee3e1b4781b313b52ba2700717"
+  },
+  "observed_at_ms": 1791818465300
+}

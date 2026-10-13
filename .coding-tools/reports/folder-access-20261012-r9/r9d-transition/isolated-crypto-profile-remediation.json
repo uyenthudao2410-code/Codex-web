@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-12T09:32:30.0802416Z",
+  "operation": "generated_isolated_crypto_profile_remediation",
+  "ok": true,
+  "source": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-transition\\canary-controller-profile",
+  "destination": "C:\\Users\\Admin\\AppData\\Local\\Temp\\web-mcp-assistant-r9d-canary-controller-profile-20261012-crypto-remediation",
+  "source_removed_from_evidence_tree": true,
+  "destination_in_os_temp": true,
+  "generated_profile_only": true,
+  "active_helper_count": 0,
+  "product_profile_modified": false,
+  "credentials_read_or_printed": false,
+  "crypto_payload_emitted": false,
+  "reason": "Generated isolated Electron Local State contains its own encrypted profile key; move outside repository evidence tree to satisfy AGENTS.md secret/evidence retention invariant. Product crypto key was not copied.",
+  "canary_run_id": "a123ac6f4c484f15a21033e0059d63d9",
+  "canary_wave_id": "8aaccbc6dea74f9c96ffe6deb4844d82",
+  "canary_terminalized": false
+}

@@ -1,0 +1,40 @@
+{
+  "operation": "approved_overlay_fingerprint_repair",
+  "ok": true,
+  "service_pid": 912047,
+  "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+  "archive_sha256": "819c917e290029c1512b88bf85f60f875a1adc42e496a24490a8aee61ea4fd4e",
+  "package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+  "actual_manifest_expected_agree": true,
+  "runtime_files_unchanged_from_reviewed_overlay": 38,
+  "official_release_verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+    "file_count": 38
+  },
+  "activation_config": {
+    "operation": "control_plane_activation_config_prepare",
+    "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+    "environment_matches": true,
+    "drop_in_matches": true,
+    "changed": true
+  },
+  "backup_remote_path": "/home/svhome/.local/state/codex-control-plane/backups/pre-fingerprint-repair-20261012T030154Z.sqlite3",
+  "backup": {
+    "sqlite_integrity": "ok",
+    "schema_version": 29,
+    "bytes": 6369280,
+    "snapshot_sha256": "4f6f3f8f7b089750c265ff03445abb1abd4070694ba809f75033f936e8fc0420"
+  },
+  "schema_version": 29,
+  "sqlite_integrity": "ok",
+  "historical_family_sha256": "724cb852c916eb91bb16e8631ef423ce2cdda0b3d0e8e58e1f1c69bdf7d83d2f",
+  "old_pilot_all_grants_unchanged": true,
+  "pilot_transfer_performed": false,
+  "completed_at_ms": 1791774115978
+}

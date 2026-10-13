@@ -1,0 +1,9 @@
+{
+  "operation": "failure",
+  "ok": false,
+  "code": "ENOENT",
+  "partial_mutation_possible": false,
+  "automatic_retry_forbidden": true,
+  "next_action": "Inspect original RUN/WAVE through audit; do not repeat acceptance/transfer after uncertain response.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-failure-1791829092795-359ec0ef.json"
+}

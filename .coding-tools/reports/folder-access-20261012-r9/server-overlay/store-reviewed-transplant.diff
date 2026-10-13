@@ -1,0 +1,247 @@
+--- serving/control-plane/control_plane/store.py
++++ candidate/control-plane/control_plane/store.py
+@@ -1977,15 +1977,15 @@
+         """Keep an audited read unknown on a fenced prior root as history.
+ 
+         This never settles the unknown or authorizes its replay. Only the same
+-        owner's, device's, workspace's and service principal's fully verified
+-        bounded read can stop blocking a distinct current generation, after
++        owner's, device's and service principal's fully verified bounded read
++        can stop blocking another current local root, after
+         expiry and retirement have fenced its registration, binding and context.
+         """
+         if (
+             action["owner_id"] != owner_id
+             or action["device_id"] != device_id
+-            or action["workspace_id"] != workspace_id
+-            or action["workspace_generation"] == workspace_generation
++            or (action["workspace_id"] == workspace_id
++                and action["workspace_generation"] == workspace_generation)
+             or action["expires_at_ms"] > self.clock()
+             or action["settled_at_ms"] is not None
+         ):
+@@ -2010,7 +2010,7 @@
+               AND b.binding_id = ? AND b.owner_id = ? AND b.endpoint_id = ?
+               AND c.context_id = ?
+             """,
+-            (device_id, workspace_id, action["workspace_generation"],
++            (device_id, action["workspace_id"], action["workspace_generation"],
+              action["binding_id"], owner_id, action["endpoint_id"], action["context_id"]),
+         ).fetchone()
+         if current is None or historical is None or any(
+@@ -2021,9 +2021,10 @@
+         # new generation does not replace any field in that causal evidence.
+         return self._quarantined_file_read_unknown_matches_pilot_target(
+             connection, action=action, owner_id=owner_id, principal_id=principal_id,
+-            binding_id=action["binding_id"], workspace_id=workspace_id,
++            binding_id=action["binding_id"], workspace_id=action["workspace_id"],
+             workspace_generation=action["workspace_generation"],
+         )
++
+ 
+     def _blocking_unresolved_action_count_for_pilot(
+         self,
+@@ -2664,7 +2665,9 @@
+                 "observed_at_ms": now,
+             }
+ 
+-    def node_authority_status(self, *, device_id: str, node_secret: str) -> dict[str, Any]:
++    def node_authority_status(
++        self, *, device_id: str, node_secret: str, principal_id: str | None = None,
++    ) -> dict[str, Any]:
+         """Return a path-free account/binding projection for one node.
+ 
+         Enrollment proves only that Ubuntu accepted the machine identity.  A
+@@ -2672,16 +2675,19 @@
+         account target that was actually bound to a registered workspace.  The
+         node authenticates with its existing credential and receives only
+         display labels, lifecycle states and capability/presence summaries.
+-        Owner IDs, OAuth subjects, binding/workspace IDs, paths, credentials
++        A configured private service sees only its selected live pilot target.
++        Owner IDs, OAuth subjects, binding IDs, paths, credentials
+         and task/context records never cross this boundary.
+         """
+ 
+         device_id = _text(device_id, "device_id")
++        if principal_id is not None:
++            principal_id = _text(principal_id, "principal_id")
+         node_secret = str(node_secret or "")
+         credential_hash = _digest({"node_secret": node_secret})
+         with self._connection() as connection:
+             node = connection.execute(
+-                "SELECT device_id, owner_id, display_name, credential_hash, credential_generation, revoked_at_ms FROM nodes WHERE device_id = ?",
++                "SELECT device_id, endpoint_id, owner_id, display_name, credential_hash, credential_generation, revoked_at_ms FROM nodes WHERE device_id = ?",
+                 (device_id,),
+             ).fetchone()
+             request = connection.execute(
+@@ -2727,6 +2733,21 @@
+                 target for target in self.list_account_targets(owner_id=owner_id)
+                 if target.get("device_id") == device_id
+             ]
++            has_bindings = bool(targets)
++            if principal_id is not None:
++                selected = connection.execute(
++                    "SELECT d.* FROM scoped_pilot_decisions d JOIN oauth_principals p "
++                    "ON p.principal_id = d.principal_id "
++                    "WHERE d.revoked_at_ms IS NULL AND d.expires_at_ms > ? "
++                    "AND p.revoked_at_ms IS NULL AND p.owner_id = d.owner_id "
++                    "AND p.principal_kind = 'private_tunnel_service'", (now,),
++                ).fetchall()
++                pilot = selected[0] if len(selected) == 1 and self._admission_mode(connection) == "scoped_pilot" else None
++                targets = [target for target in targets if pilot is not None
++                           and pilot["owner_id"] == owner_id and pilot["principal_id"] == principal_id
++                           and pilot["device_id"] == device_id and pilot["endpoint_id"] == node["endpoint_id"]
++                           and all(target[field] == pilot[field] for field in
++                                   ("binding_id", "endpoint_id", "workspace_id", "workspace_generation"))]
+             with self._connection() as workspace_connection:
+                 workspace_count_row = workspace_connection.execute(
+                     "SELECT COUNT(*) AS count FROM node_workspaces WHERE device_id = ? AND retired_at_ms IS NULL",
+@@ -2758,7 +2779,7 @@
+             if node["revoked_at_ms"] is not None:
+                 state = "revoked"
+             elif not safe_targets:
+-                state = "no_binding"
++                state = "blocked" if principal_id is not None and has_bindings else "no_binding"
+             elif dispatchable:
+                 state = "active"
+             elif all(target["binding_state"] == "revoked" for target in safe_targets):
+@@ -2780,6 +2801,7 @@
+                 "observed_at_ms": now,
+             }
+ 
++
+     def enrollment_request(self, *, enrollment_id: str) -> dict[str, Any]:
+         enrollment_id = _text(enrollment_id, "enrollment_id")
+         with self._connection() as connection:
+@@ -2787,6 +2809,131 @@
+         if row is None:
+             raise NotFoundError("enrollment request does not exist.")
+         return _row(row) or {}
++
++    def activate_node_workspace(
++        self, *, device_id: str, principal_id: str, workspace_id: str,
++        workspace_generation: str,
++    ) -> dict[str, Any]:
++        """Select a registered folder within this node's existing pilot window.
++
++        The authenticated node represents its local owner. This operation
++        cannot enroll a device, grant a principal, extend authority or open
++        admission. A new immutable decision preserves the previous target's
++        causal history, and the whole change rolls back if the device is busy.
++        """
++        device_id = _text(device_id, "device_id")
++        principal_id = _text(principal_id, "principal_id")
++        workspace_id = _text(workspace_id, "workspace_id")
++        workspace_generation = _text(workspace_generation, "workspace_generation")
++        with self._connection() as connection:
++            connection.execute("BEGIN IMMEDIATE")
++            now = self.clock()
++            if self._admission_mode(connection) != "scoped_pilot":
++                raise ConflictError("local folder activation requires an existing scoped pilot.")
++            node = connection.execute("SELECT * FROM nodes WHERE device_id = ?", (device_id,)).fetchone()
++            if node is None:
++                raise NotFoundError("device is not enrolled.")
++            if node["revoked_at_ms"] is not None:
++                raise ConflictError("device credential is revoked.")
++            owner_id = str(node["owner_id"])
++            principal = connection.execute(
++                "SELECT * FROM oauth_principals WHERE principal_id = ?", (principal_id,),
++            ).fetchone()
++            if (principal is None or principal["owner_id"] != owner_id
++                    or principal["principal_kind"] != "private_tunnel_service"
++                    or principal["revoked_at_ms"] is not None):
++                raise PermissionError("node is not owned by the configured active MCP service principal.")
++            decisions = connection.execute(
++                "SELECT * FROM scoped_pilot_decisions WHERE revoked_at_ms IS NULL AND expires_at_ms > ?",
++                (now,),
++            ).fetchall()
++            if len(decisions) != 1:
++                raise ConflictError("local folder activation requires exactly one live pilot.")
++            previous = decisions[0]
++            if (previous["owner_id"] != owner_id or previous["principal_id"] != principal_id
++                    or previous["device_id"] != device_id or previous["endpoint_id"] != node["endpoint_id"]):
++                raise PermissionError("the existing pilot does not authorize this node and service principal.")
++            old_binding = connection.execute(
++                "SELECT * FROM bindings WHERE binding_id = ?", (previous["binding_id"],),
++            ).fetchone()
++            if (old_binding is None or old_binding["revoked_at_ms"] is not None
++                    or any(old_binding[field] != previous[field] for field in
++                           ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"))):
++                raise ConflictError("the existing pilot target is no longer current.")
++            self._require_current_workspace_registration(
++                connection, device_id=device_id, workspace_id=str(previous["workspace_id"]),
++                workspace_generation=str(previous["workspace_generation"]),
++            )
++            selected = self._require_current_workspace_registration(
++                connection, device_id=device_id, workspace_id=workspace_id,
++                workspace_generation=workspace_generation,
++            )
++            if previous["workspace_id"] == workspace_id and previous["workspace_generation"] == workspace_generation:
++                result = {"device_id": device_id, "workspace_id": workspace_id,
++                          "workspace_generation": workspace_generation, "binding_id": previous["binding_id"],
++                          "pilot_decision_id": previous["decision_id"], "expires_at_ms": previous["expires_at_ms"],
++                          "replayed": True, "state": "active"}
++                connection.execute("COMMIT")
++                return result
++            if connection.execute(
++                "SELECT COUNT(*) FROM mcp_task_sessions WHERE device_id = ? "
++                "AND closed_at_ms IS NULL AND expires_at_ms > ?", (device_id, now),
++            ).fetchone()[0]:
++                raise ConflictError("selected node has open tasks; close them before changing folders.")
++            if connection.execute(
++                "SELECT COUNT(*) FROM mcp_task_writer_leases l JOIN bindings b ON b.binding_id = l.binding_id "
++                "WHERE b.device_id = ? AND l.released_at_ms IS NULL AND l.expires_at_ms > ?", (device_id, now),
++            ).fetchone()[0]:
++                raise ConflictError("selected node has a live workspace writer.")
++            if connection.execute(
++                "SELECT COUNT(*) FROM actions WHERE device_id = ? AND delivery_state = 'queued'",
++                (device_id,),
++            ).fetchone()[0]:
++                raise ConflictError("selected node has queued prior actions.")
++            binding = connection.execute(
++                "SELECT * FROM bindings WHERE owner_id = ? AND device_id = ? AND endpoint_id = ? "
++                "AND workspace_id = ? AND workspace_generation = ? AND revoked_at_ms IS NULL "
++                "ORDER BY created_at_ms, binding_id LIMIT 1",
++                (owner_id, device_id, node["endpoint_id"], workspace_id, workspace_generation),
++            ).fetchone()
++            binding_id = str(binding["binding_id"]) if binding is not None else f"bind_{uuid.uuid4().hex}"
++            if self._blocking_unresolved_action_count_for_pilot(
++                connection, device_id=device_id, owner_id=owner_id, principal_id=principal_id,
++                binding_id=binding_id, workspace_id=workspace_id, workspace_generation=workspace_generation,
++            ):
++                raise ConflictError("selected node has unresolved prior actions.")
++            if binding is None:
++                connection.execute(
++                    "INSERT INTO bindings VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
++                    (binding_id, owner_id, device_id, node["endpoint_id"], workspace_id,
++                     workspace_generation, selected["display_name"], now),
++                )
++                self._event(connection, "binding", binding_id, "binding_created",
++                            {"device_id": device_id, "workspace_id": workspace_id, "source": "local_owner_activation"})
++            decision_id = f"pilot_{uuid.uuid4().hex}"
++            connection.execute("UPDATE scoped_pilot_decisions SET revoked_at_ms = ? WHERE decision_id = ?",
++                               (now, previous["decision_id"]))
++            connection.execute(
++                """INSERT INTO scoped_pilot_decisions
++                   (decision_id, owner_id, principal_id, binding_id, device_id, endpoint_id,
++                    workspace_id, workspace_generation, reason, created_at_ms, expires_at_ms, revoked_at_ms)
++                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
++                (decision_id, owner_id, principal_id, binding_id, device_id, node["endpoint_id"],
++                 workspace_id, workspace_generation, "Local owner selected a registered folder", now,
++                 previous["expires_at_ms"]),
++            )
++            self._event(connection, "scoped_pilot_decision", str(previous["decision_id"]),
++                        "scoped_pilot_decision_revoked_by_local_folder_activation", {"replacement_decision_id": decision_id})
++            self._event(connection, "scoped_pilot_decision", decision_id, "scoped_pilot_decision_created",
++                        {"binding_id": binding_id, "device_id": device_id, "principal_id": principal_id,
++                         "expires_at_ms": previous["expires_at_ms"], "previous_decision_id": previous["decision_id"],
++                         "source": "local_owner_activation"})
++            connection.execute("COMMIT")
++            return {"device_id": device_id, "workspace_id": workspace_id,
++                    "workspace_generation": workspace_generation, "binding_id": binding_id,
++                    "pilot_decision_id": decision_id, "expires_at_ms": previous["expires_at_ms"],
++                    "replayed": False, "state": "active"}
++
+ 
+     def list_enrollment_requests(self) -> list[dict[str, Any]]:
+         with self._connection() as connection:

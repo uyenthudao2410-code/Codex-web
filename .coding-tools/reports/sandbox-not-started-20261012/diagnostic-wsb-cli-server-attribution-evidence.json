@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "operation": "diagnostic_wsb_list_parent_attribution_readonly_evidence",
+  "source": "Microsoft-Windows-AppModel-Runtime/Admin bounded observation",
+  "observation_window_utc": ["2026-10-12 06:12:30", "2026-10-12 06:13:10"],
+  "observed_event_count": 4,
+  "probe_errors": [],
+  "events": [
+    {
+      "at_utc": "2026-10-12 06:12:59.0575036",
+      "event_id": 201,
+      "operation": "FinishPackageActivation",
+      "created_process_id": 3724,
+      "application": "MicrosoftWindows.WindowsSandbox_cw5n1h2txyewy!AppCli",
+      "package": "MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy"
+    },
+    {
+      "at_utc": "2026-10-12 06:12:59.055406",
+      "event_id": 211,
+      "operation": "Added process to Desktop AppX container",
+      "process_id": 3724,
+      "container": "e7ccb009-c600-11f1-9c26-74a25be84c30",
+      "package": "MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy"
+    },
+    {
+      "at_utc": "2026-10-12 06:12:59.0553173",
+      "event_id": 210,
+      "operation": "Created Desktop AppX container",
+      "container": "e7ccb009-c600-11f1-9c26-74a25be84c30",
+      "package": "MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy"
+    }
+  ],
+  "subsequent_live_process": {
+    "name": "WindowsSandboxServer.exe",
+    "pid": 27568,
+    "parent_pid": 3724,
+    "created_at_utc": "2026-10-12 06:12:59.350811",
+    "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+  },
+  "known_diagnostic_invocation": {
+    "command": "wsb.exe list --raw",
+    "count_by_local_checks": 1,
+    "documented_purpose": "read-only list environments",
+    "reported_environment_count": 0,
+    "process_id_captured_at_invocation": false,
+    "process_creation_token_captured_at_invocation": false,
+    "tool_wall_time_seconds": 1.2478148
+  },
+  "strongest_proof": "Server parent3724 was the Windows Sandbox AppCli activated immediately before server creation",
+  "per_tool_call_ownership": "No original child PID captured; review known invocation and event correlation before any authority decision",
+  "followup_observation_performed_only": true,
+  "processes_terminated": false,
+  "services_restarted": false,
+  "stop_replayed": false,
+  "database_mutated": false,
+  "node_journal_modified": false
+}

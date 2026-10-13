@@ -1,0 +1,34 @@
+{
+  "operation": "exact_pending_action_readonly_observation",
+  "service_pid": 970133,
+  "rows": [
+    {
+      "action_id": "act_572b2c6838b04c66b09f2e5eda80a2c5",
+      "request_id": "req_0ac63301db564419b818c9a6d6c3021f",
+      "context_id": "ctx_daa574ce1a3849ca978c2b958e439051",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "workspace_context",
+      "created_at_ms": 1791846897028,
+      "expires_at_ms": 1791847197028,
+      "delivery_state": "settled",
+      "settled_at_ms": 1791846900666,
+      "receipts": [
+        {
+          "receipt_id": "rcpt_697e5a18da714ca7adb0b0cb2a11cbe2",
+          "receipt_state": "completed",
+          "received_at_ms": 1791846900666
+        }
+      ],
+      "attempts": [
+        {
+          "attempt_id": "try_f5878b9eafcb45f28be2e7ac68378fa9",
+          "attempt_number": 1
+        }
+      ]
+    }
+  ],
+  "database_mutations_performed": false,
+  "observed_at_ms": 1791847214169
+}

@@ -1,0 +1,1 @@
+{"operation": "close_exact_read067_task", "ok": false, "phase": "preflight", "error_code": "IndexError", "automatic_retry_forbidden": true, "next_action": "Observe exact original task and writer before retry."}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operation": "r4_fixture_reuse_preparation",
+  "ok": true,
+  "observed_at_ms": 1791822377292,
+  "repository": "E:\\DEV\\Codex-web",
+  "fixture": "tests/fixtures/native-first-canary",
+  "manifest_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\fixture-preparation-timefix2.json",
+  "manifest_sha256": "2ee2c0556e54a5771f4038938891ca94f99e65eaff06a36bc1142bd89972cc9d",
+  "harness_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\run-native-first-canary.py",
+  "harness_sha256": "3b3c6cc3dee35d37a76a0237bab9a653766db30ba82caa95c09ef85311b84c66",
+  "fixture_file_count": 101,
+  "build_artifact_absent": true,
+  "shared_mcp_creation_claimed": false,
+  "mutations": 0,
+  "source_scope": "r4 wrapper input validation only; no fixture write or shared MCP claim"
+}

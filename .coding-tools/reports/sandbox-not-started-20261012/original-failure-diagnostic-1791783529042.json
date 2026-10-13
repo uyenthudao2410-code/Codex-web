@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "operation": "original_sandbox_not_started_readonly_diagnostic",
+  "observed_at_ms": 1791783529042,
+  "producer_sha256": "9b884414ad77033d5e307f4074ea7bfb0468df136c8c7c2de87eddd484279a8b",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "supersedes_intent_shape_parsing_in": "original-failure-diagnostic-1791783479887.json",
+  "evidence_window_start_utc": "2026-10-12T05:10:00Z",
+  "sample_size_failed_jobs": 1,
+  "canonical_ledger_mutated": false,
+  "node_journal_modified": false,
+  "failed_action_replayed": false,
+  "new_execution_or_vm_started": false,
+  "native": {
+    "jobs": [
+      {
+        "job_id": "65c2908a7371487cbfbb22ee1d60c262",
+        "run_id": "",
+        "wave_id": "",
+        "command_id": "rGvwOG9A-yEHoioWxEvkl_6p",
+        "owner": "control-plane-exec-bridge",
+        "checkout_id": "25c93def8586e1639a68032b71a2239ea0242d3787ab252590647dff4c8f4ad2",
+        "resource_class": "LIGHT",
+        "root_pid": 43748,
+        "root_process_token": "134362546741355040",
+        "process_instance_id": "ev_bVSX46CWc8WG5",
+        "runtime_instance_id": "XobFwIqZETgu9SLo",
+        "lifecycle_state": "exited",
+        "started_at": "2026-10-12T04:57:36.859Z",
+        "updated_at": "2026-10-12T04:58:00.715Z",
+        "finished_at": "2026-10-12T04:58:00.715Z",
+        "metadata_sha256": "3ec3138da09b1e94949db7b207bb067409f80499e779c5497ed0a15fdaa2b286",
+        "exit_code": 0
+      },
+      {
+        "job_id": "41d336e59e8340078b97d35760b4a649",
+        "run_id": "",
+        "wave_id": "",
+        "command_id": "E8P8BFQ0Tjgc7Zk6p4jir4bE",
+        "owner": "control-plane-exec-bridge",
+        "checkout_id": "25c93def8586e1639a68032b71a2239ea0242d3787ab252590647dff4c8f4ad2",
+        "resource_class": "LIGHT",
+        "root_pid": 48040,
+        "root_process_token": "134362556714610912",
+        "process_instance_id": "ev_bVSX46CWc8WG5",
+        "runtime_instance_id": "XobFwIqZETgu9SLo",
+        "lifecycle_state": "exited",
+        "started_at": "2026-10-12T05:14:31.240Z",
+        "updated_at": "2026-10-12T05:14:31.599Z",
+        "finished_at": "2026-10-12T05:14:31.599Z",
+        "metadata_sha256": "46bf18e457354ed71e9d6c2fb3faa7a58e17eb9b3fe7ce9887f9117b20a321f4",
+        "exit_code": 1
+      }
+    ],
+    "idempotency_since_utc0510": [
+      {
+        "idempotency_key": "cpex_2f4f2dc954f84301d2ad88f86b87d7c922d5d282581c80a6448f9b3c",
+        "operation": "exec_command",
+        "status": "completed",
+        "process_instance_id": "ev_bVSX46CWc8WG5",
+        "run_id": "",
+        "wave_id": "",
+        "started_at": "2026-10-12T05:14:31.073Z",
+        "finished_at": "2026-10-12T05:14:31.833Z",
+        "error_code": ""
+      }
+    ],
+    "exact_identity_events_since_utc0510": [],
+    "native_active_managed_job_count": 0,
+    "read_contract": {
+      "mode": "ro",
+      "query_only": true,
+      "transaction": true,
+      "canonical_writer_instantiated": false
+    }
+  },
+  "node_journal": {
+    "path": "C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\control-plane-node.json.exec-journal.json",
+    "sha256": "4a6d169d501897f59bd690b30c4eaa0628ccee48ea1cfcbc7128ea315f635d15",
+    "entries": [
+      {
+        "entry_key": "act_e054bbb4d7854e51b23d792e2774b293|try_803840f20bfa42efb04552e016fe5b25",
+        "entry_sha256": "7fadbcf00f0a33077b166c58b62d2f68711452b246f608e80abcae5a5520df66",
+        "state": "completed",
+        "action_id": "act_e054bbb4d7854e51b23d792e2774b293",
+        "attempt_id": "try_803840f20bfa42efb04552e016fe5b25",
+        "receipt_state": "completed",
+        "receipt_submitted": true,
+        "safe_payload": {
+          "job_id": "65c2908a7371487cbfbb22ee1d60c262",
+          "command_id": "rGvwOG9A-yEHoioWxEvkl_6p",
+          "status": "exited",
+          "exit_code": 0,
+          "runtime_identity": {
+            "activation_epoch_id": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+            "process_instance_id": "ev_bVSX46CWc8WG5",
+            "server_instance_id": "XobFwIqZETgu9SLo",
+            "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+          },
+          "output_bytes": 329,
+          "timed_out": false,
+          "truncated": false,
+          "run_id": "",
+          "wave_id": ""
+        },
+        "outputs": {
+          "stdout": {
+            "bytes": 329,
+            "sha256": "09922f46bbe8296a5b7a0ed087e0eba136f15fe439508a328f3f36651d997e02",
+            "contains_not_started": false,
+            "sandbox_ids": []
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "contains_not_started": false,
+            "sandbox_ids": []
+          }
+        }
+      },
+      {
+        "entry_key": "act_f1b0df9d4be84f31b931696ff8d8f295|try_55721243bed143e5a5ce5435d4569bf0",
+        "entry_sha256": "0e53cbae0d04eefa2ff5dcd9f16e9f6df86c32547221b28bc2ed6345846b24f2",
+        "state": "failed",
+        "action_id": "act_f1b0df9d4be84f31b931696ff8d8f295",
+        "attempt_id": "try_55721243bed143e5a5ce5435d4569bf0",
+        "receipt_state": "failed",
+        "receipt_submitted": true,
+        "safe_payload": {
+          "job_id": "41d336e59e8340078b97d35760b4a649",
+          "command_id": "E8P8BFQ0Tjgc7Zk6p4jir4bE",
+          "status": "exited",
+          "exit_code": 1,
+          "runtime_identity": {
+            "activation_epoch_id": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+            "process_instance_id": "ev_bVSX46CWc8WG5",
+            "server_instance_id": "XobFwIqZETgu9SLo",
+            "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+          },
+          "output_bytes": 81,
+          "timed_out": false,
+          "truncated": false,
+          "run_id": "",
+          "wave_id": ""
+        },
+        "outputs": {
+          "stdout": {
+            "bytes": 81,
+            "sha256": "f69da0c917b4bcf932b72425b7c8828fa3a2165bd5212b2c7b7ec1ed1e8fefd4",
+            "contains_not_started": true,
+            "sandbox_ids": [
+              "wsb:90b652fe"
+            ]
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "contains_not_started": false,
+            "sandbox_ids": []
+          }
+        }
+      }
+    ],
+    "modified_by_observer": false
+  },
+  "backend": {
+    "sandbox_id": "wsb:90b652fe",
+    "global_daemon_record_exists": false,
+    "token_record": {
+      "path": "E:\\Caches\\Temp\\wxc-wsb\\state-aware\\90b652fe\\record.json",
+      "sha256": "47880e3110941ea8d725e50f5e4a47c554868fc0ea0b46991c791d830ac339a4",
+      "state": "started",
+      "sandbox_id": "wsb:90b652fe",
+      "modified_at_unix_ms": 1791781074079
+    },
+    "daemon_log": {
+      "path": "E:\\Caches\\Temp\\wxc-wsb\\state-aware\\90b652fe\\daemon.log",
+      "sha256": "1f64db5bd04cb955c5aa26c46925c00b5770b46cea038458520d8bc3be441289",
+      "bytes": 996,
+      "line_count": 17,
+      "modified_at_unix_ms": 1791781969614,
+      "classified_lines": {
+        "prior_guest_ready": [
+          {
+            "line": 7,
+            "sha256": "d6fd2304c3a767bd69aae8c7827eec3c5490261c5508d4bef23b1e31affe8d53"
+          }
+        ],
+        "prior_daemon_ready": [
+          {
+            "line": 9,
+            "sha256": "1e5490517e0e723a0ab81ce64b185339861d828f9567dfafe4e3e21ca2b71917"
+          }
+        ],
+        "unexpected_vm_exit": [
+          {
+            "line": 12,
+            "sha256": "1bde7f50ed7504b23d9ccd45c8bb663501dd3c8180f405c64ea3458dbd90372c"
+          }
+        ],
+        "host_processes_confirmed_gone": [
+          {
+            "line": 15,
+            "sha256": "d70cd3a04f330439fb9f8e8abd9d0decd2241f9e7e56424807a7b02a654221cb"
+          }
+        ],
+        "teardown_confirmed_record_cleared": [
+          {
+            "line": 16,
+            "sha256": "9bda77577d4fe633db78b7e1d2429c7ca198295a55ed317e054c38d7a571d4d8"
+          }
+        ],
+        "daemon_exited": [
+          {
+            "line": 17,
+            "sha256": "0c72ae4bb63d1b7e1f2933dfba221593ad06e392bf9f3d3b78836bd87d90388b"
+          }
+        ]
+      }
+    }
+  },
+  "central": {
+    "observed_at_ms": 1791783528880,
+    "service_pid": 921509,
+    "action": {
+      "action_id": "act_f1b0df9d4be84f31b931696ff8d8f295",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "delivery_state": "settled",
+      "created_at_ms": 1791782060034,
+      "settled_at_ms": 1791782071989
+    },
+    "intent": {
+      "task_id": "task_e8ab407036634b658a99dd02faec9712",
+      "idempotency_key": "r5b-chatgpt-node-version-20261012-1213",
+      "created_at_ms": 1791782060034,
+      "writer_lease_generation": 1,
+      "argv_sha256": "6d99887913847087252198de4ca60d754c9510455b65a150347f4504b6767c42",
+      "argv_storage_schema": "object_with_argv_list",
+      "executable_basename": "node",
+      "argv_tail_is_version": true
+    },
+    "attempts": [
+      {
+        "attempt_id": "try_55721243bed143e5a5ce5435d4569bf0",
+        "attempt_number": 1,
+        "dispatched_at_ms": 1791782069301
+      }
+    ],
+    "receipts": [
+      {
+        "receipt_id": "rcpt_303dee61e27848a4adcdf2da441d970c",
+        "receipt_state": "failed",
+        "local_handle": "cp_exec_f20c23be411a8b1c62d2a989f1ed79db9074251c219a645d",
+        "received_at_ms": 1791782071989,
+        "payload_sha256": "71db6143ff79239ca1fcaf3cbd81637bd889d04a4492c55f3ed9a93e26555c93",
+        "safe_payload": {
+          "job_id": "41d336e59e8340078b97d35760b4a649",
+          "command_id": "E8P8BFQ0Tjgc7Zk6p4jir4bE",
+          "exit_code": 1,
+          "status": "exited",
+          "runtime_identity": {
+            "activation_epoch_id": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+            "process_instance_id": "ev_bVSX46CWc8WG5",
+            "server_instance_id": "XobFwIqZETgu9SLo",
+            "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+          },
+          "run_id": "",
+          "wave_id": ""
+        }
+      }
+    ],
+    "task": {
+      "task_id": "task_e8ab407036634b658a99dd02faec9712",
+      "closed_at_ms": 1791782152969,
+      "expires_at_ms": 1791868444811
+    },
+    "writer": {
+      "task_id": "task_e8ab407036634b658a99dd02faec9712",
+      "lease_generation": 1,
+      "released_at_ms": 1791782152383
+    },
+    "current_generation_census": {
+      "open_tasks": 0,
+      "unreleased_writers": 0,
+      "unsettled_actions": 0
+    },
+    "node": {
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "readiness": "ready",
+      "runtime_instance_id": "ev_bVSX46CWc8WG5",
+      "mcp_server_instance_id": "XobFwIqZETgu9SLo",
+      "activation_epoch": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+      "last_seen_at_ms": 1791783522822
+    }
+  },
+  "current_runtime": {
+    "nativePid": 30620,
+    "nativeProcessStartToken": "134362529688484730",
+    "nativeInstanceId": "173c2155059c22fd9090319a",
+    "nativeActivationEpochId": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+    "startedAt": "2026-10-12T04:29:29.178Z",
+    "manualStop": false
+  },
+  "current_epoch": {
+    "activation_epoch_id": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+    "state": "READY",
+    "admission_state": "OPEN",
+    "ready_at": "2026-10-12T04:30:04.722Z",
+    "updated_at": "2026-10-12T04:30:04.722Z"
+  },
+  "packaged_adapter": {
+    "path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-write-exec-1012-r5b\\win-unpacked\\resources\\resources\\coding-tools-mcp\\coding_tools_mcp\\windows_mxc_state_aware.py",
+    "sha256": "9577306c1063fdf6061f7e48b01e30b54905fe462c2bcc7dfcadf422d45dc68b",
+    "cached_same_workspace_return_before_host_count": true
+  },
+  "classification": {
+    "reason": "cached_backend_identity_after_confirmed_vm_exit",
+    "inference_from_measured_lifecycle_and_source_order": true,
+    "native_process_and_runtime_match_prior_success": true,
+    "native_epoch_stale_supported": false,
+    "initial_spawn_race_supported": false,
+    "failed_phase": "state_aware_exec_before_guest_argv_dispatch",
+    "vm_disappearance_trigger": "not_established_by_available_evidence",
+    "current_quiescence_requires_live_os_corroboration": true
+  }
+}

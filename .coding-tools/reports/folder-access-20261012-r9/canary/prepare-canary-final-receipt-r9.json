@@ -1,0 +1,32 @@
+{
+  "operation": "autocad_folder_canary_preparation_final",
+  "prepared_only": true,
+  "live_mutations": false,
+  "supersedes_preparation": "prepare-canary-receipt-r9.json",
+  "target_root": "E:\\DEV\\Autocad",
+  "target_relative_path": "mcp-access-smoke-20261012-r9.txt",
+  "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+  "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+  "stages": [
+    "create",
+    "read_initial",
+    "patch",
+    "read_final",
+    "exec",
+    "dotnet"
+  ],
+  "expected_final_bytes": 62,
+  "expected_final_sha256": "1b01d2277bbc79f2ddd2543fbcf8332d6adb575a1dadfa578d56c2b9bb4361ad",
+  "dotnet_version": "10.0.102",
+  "inline_node_argv_bytes": 1142,
+  "verification": [
+    "python_compile",
+    "powershell_parser",
+    "node_check_only",
+    "inline_argv_bounds"
+  ],
+  "scripts": {
+    "run-autocad-folder-access-canary-r9.py": "3f6339d63faa0f4f8c8c13c5098a20da76daf69a3ec40f78b40e99255cfed4e6",
+    "invoke-autocad-folder-access-canary-r9.ps1": "2a00d93f129104d284e1a9c50bcd1a649ee23fd3c0337265514c93b71ec678b8"
+  }
+}

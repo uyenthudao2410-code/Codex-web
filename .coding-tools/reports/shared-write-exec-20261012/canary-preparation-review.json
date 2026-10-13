@@ -1,0 +1,51 @@
+{
+  "next_action": "root_review_and_authorize_with_fresh_r5_identity_actual_facade_contract_and_service_pid",
+  "validation": {
+    "offline_controller_tests": 5,
+    "offline_lost_response_subcases": 3,
+    "python_syntax": "pass",
+    "additional_store_authority_fence_cases": 8,
+    "node_syntax": "pass",
+    "additional_store_authority_fences": [
+      "task_expired",
+      "binding_revoked",
+      "node_revoked",
+      "workspace_retired"
+    ],
+    "powershell_syntax": "pass"
+  },
+  "observed_at": "2026-10-12T04:29:22.2310984Z",
+  "semantic_acceptance_performed": false,
+  "branch": "main",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "operation": "shared_write_exec_canary_preparation",
+  "effects_executed": false,
+  "files": [
+    {
+      "path": "run-shared-write-exec-canary.py",
+      "sha256": "b61111ff23b06449908c6bae5e29eda2c5aa65c62cf72dca898183b7e5a39b9c"
+    },
+    {
+      "path": "invoke-shared-write-exec-canary.ps1",
+      "sha256": "303a9d13e53aaa7bc4b803157b45e2e097a36f57051b3cbc2cf1b0b2dd8b4796"
+    },
+    {
+      "path": "shared-write-exec-check.cjs",
+      "sha256": "f531ccd803ffd4a2b5798ff3c08495547bdd896be44e979d58e0994fbcccb882"
+    },
+    {
+      "path": "test-canary-offline.py",
+      "sha256": "b155d3b7dff55563503fd79b5db4a97f1fd7dff969f145d0823581c626eb88b5"
+    }
+  ],
+  "schema_version": 1,
+  "independent_review": "shared_surface_review_incorporated_settled_unknown_preservation",
+  "scope": [
+    "doc_create_no_overwrite",
+    "read_initial_exact_bytes",
+    "write_exact_existing_file_patch",
+    "read_final_exact_bytes",
+    "one_original_structured_node_job"
+  ],
+  "scratch_target_absent": true
+}

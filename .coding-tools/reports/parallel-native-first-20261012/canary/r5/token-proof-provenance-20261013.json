@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "operation": "native_child_token_source_package_adapter_provenance",
+  "observed_at": "2026-10-13T06:28:10+07:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "proof": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-native-fixture-1791847677802.json",
+    "command_id": "RIOyzMEdinjoT9a0zmChXIE3",
+    "execution_owner_job_id": "cdc526baca3946b5aca9624d01748623",
+    "durable_lifecycle_state": "exited",
+    "durable_terminal": true,
+    "durable_exit_code": 0,
+    "native_child_app_container": true,
+    "native_child_integrity_rid": 4096,
+    "native_child_elevated": false,
+    "native_child_admin_group_deny_only": true,
+    "native_child_sensitive_privileges_enabled": 0,
+    "vm_adapter_calls": 0,
+    "stderr_empty": true
+  },
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "source_adapter_root": "E:\\DEV\\Codex-web\\resources\\coding-tools-mcp\\coding_tools_mcp",
+  "packaged_adapter_root": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\resources\\resources\\coding-tools-mcp\\coding_tools_mcp",
+  "exact_adapter_parity": [
+    {"name":"windows_mxc_sandbox.py","source_sha256":"a355fbae8a956bc9c49d253848fe2b8d06b18edeae96e600a7a07516a9315d58","packaged_sha256":"a355fbae8a956bc9c49d253848fe2b8d06b18edeae96e600a7a07516a9315d58","matches":true},
+    {"name":"processes.py","source_sha256":"7bec816f59f9cc93e475406eaed26d34820fcce592be191fed9f780d5782c37f","packaged_sha256":"7bec816f59f9cc93e475406eaed26d34820fcce592be191fed9f780d5782c37f","matches":true},
+    {"name":"exec_tools.py","source_sha256":"0e241227147ff30314ed730c9b685c147b9aff973f8c6dd6018dab43d4d1448c","packaged_sha256":"0e241227147ff30314ed730c9b685c147b9aff973f8c6dd6018dab43d4d1448c","matches":true},
+    {"name":"session_control.py","source_sha256":"46e79de45e879ff08dae96d801c8c7487e32ef4b29f26f8f70003c218eb9e5cb","packaged_sha256":"46e79de45e879ff08dae96d801c8c7487e32ef4b29f26f8f70003c218eb9e5cb","matches":true},
+    {"name":"windows_execution_policy.py","source_sha256":"64ddb0c698fd3ac2f81a38553ff525bd59dd356bb5160836e8ed81b853eef986","packaged_sha256":"64ddb0c698fd3ac2f81a38553ff525bd59dd356bb5160836e8ed81b853eef986","matches":true}
+  ],
+  "chronology": [
+    {
+      "attempt": "initial-source-fixture",
+      "capture_started_utc": "2026-10-12T23:26:03.668686+00:00",
+      "capture_finished_utc": "2026-10-12T23:26:05.863213+00:00",
+      "command_id": "g4yWdK9pRLNnpVPyZ3CO_AfY",
+      "exit_code": 1,
+      "native_result": "native/process_container/native_explicit_approval",
+      "stderr_sha256": "06e7591c502c53096f285fe995e5571f418586244a3ff38a3a8a850c07da5819",
+      "failure_class": "fixture_scope_error",
+      "detail": "The Node launcher was referenced at the repository evidence path while the granted ProcessContainer workspace was a separate temporary root. The outside-root launcher was correctly inaccessible."
+    },
+    {
+      "attempt": "initial-source-fixture-parser-investigation",
+      "capture_started_utc": "2026-10-12T23:26:25.772736+00:00",
+      "capture_finished_utc": "2026-10-12T23:26:27.752961+00:00",
+      "command_id": "3Iivh3eAf0Rr40lvpF26WgOg",
+      "exit_code": 1,
+      "native_result": "native/process_container/native_explicit_approval",
+      "stderr_sha256": "06e7591c502c53096f285fe995e5571f418586244a3ff38a3a8a850c07da5819",
+      "failure_class": "same_fixture_scope_error",
+      "detail": "Parser inspection confirmed the child never produced a token report; subsequent fixture copies both launcher and binary into its exact granted root."
+    },
+    {
+      "attempt": "corrected-source-fixture",
+      "capture_started_utc": "2026-10-12T23:26:42.652203+00:00",
+      "capture_finished_utc": "2026-10-12T23:26:44.236440+00:00",
+      "command_id": "94TdwBkdLsXuOlzDM-nodip7",
+      "exit_code": 0,
+      "failure_class": null,
+      "detail": "Copied launcher and static native child into exact temporary root; token query complete and native child AppContainer=true, low integrity."
+    },
+    {
+      "attempt": "owner-job-binding-corrected",
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-native-fixture-20261013.json",
+      "command_id": "e9JoBK_esHTh3Qoo1REVkyrA",
+      "execution_owner_job_id": "34f2eec64d5d4de5861c504980eae549",
+      "exit_code": 0,
+      "detail": "Read execution_owner.job_id rather than nonexistent top-level job_id."
+    },
+    {
+      "attempt": "durable-job-observation",
+      "command_id": "RIOyzMEdinjoT9a0zmChXIE3",
+      "execution_owner_job_id": "cdc526baca3946b5aca9624d01748623",
+      "exit_code": 0,
+      "detail": "Observed exact durable Job before Runtime.close; terminal exited, succeeded. Receipt output now uses exclusive unique files."
+    }
+  ],
+  "strongest_claim": "On this Windows host, the exact native adapter bytes present in r4-timefix produced a native ProcessContainer child with a complete, low-integrity non-elevated AppContainer token observation and zero enabled listed sensitive privileges, under a terminal durable source-fixture Job.",
+  "proof_limits": [
+    "Source Runtime fixture used an isolated temporary workspace and per-call attested bridge native approval; it did not execute through production MCP or mutate production policy.",
+    "Adapter hash equality links mechanism bytes to the packaged candidate, but does not convert this into a new live production dispatch receipt.",
+    "CPython exit126 remains an independent loader/toolchain compatibility failure; this probe bypasses the CPython dependency and closes only the child token measurement gap.",
+    "AppContainer token observation does not replace filesystem, network, resource-cap or hypervisor-isolation evidence."
+  ]
+}

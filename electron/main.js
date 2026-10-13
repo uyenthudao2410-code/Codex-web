@@ -30,6 +30,7 @@ const {
 } = require('./services/recoveryHostLauncher');
 const { ComponentRevisionTracker } = require('./services/componentRevision');
 const { activationSourceCheckpoint } = require('./services/activationClosure');
+const { canonicalLedgerCensus } = require('./services/fullCleanActivation');
 const { startRecoveryHostApplication } = require('./recoveryHost');
 const { UiPerformanceMetrics, jsonByteLength } = require('./services/uiPerformanceMetrics');
 const { loadOrCreateDeviceIdentity } = require('./services/deviceIdentity');
@@ -54,6 +55,7 @@ const trustedRendererUrl = pathToFileURL(trustedRendererPath).href;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
 const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
 const PANEL_ANALYTICS_TIMEOUT_MS = 10000;
+const TOOLBAR_HEIGHT = 112;
 const runtimePaths = createElectronRuntimePaths(app);
 runtimePathApi.configureRuntimePaths(runtimePaths);
 const settings = new SettingsStore(runtimePaths);
@@ -928,6 +930,42 @@ function registerIpc() {
       capabilities: request?.capabilities
     });
   }));
+  secureHandle('control-plane:activate-workspace', (event, request) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Kích hoạt thư mục yêu cầu máy đã kết nối Ubuntu.'), { code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED' });
+    }
+    if (request?.confirmActivate !== true) {
+      throw Object.assign(new Error('Chủ máy cần xác nhận thư mục trước khi kích hoạt.'), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVATION_CONFIRMATION_REQUIRED' });
+    }
+    const census = await canonicalLedgerCensus({ paths: runtimePaths, workspace: settings.load().workspace, allowAcceptancePending: true });
+    const counts = ['active_tool_calls', 'active_commands', 'starting_commands', 'active_background_operations',
+      'active_managed_processes', 'foreign_heavy_processes', 'active_agent_lanes', 'owned_codex_sidecar_residues'];
+    if (!Array.isArray(census.lifecycle?.blockers)
+      || census.lifecycle.blockers.some((reason) => reason !== 'live_runtime_state_process')
+      || (census.safe !== true && census.reason !== 'live_runtime_state_process')
+      || census.lifecycle.unexplained_active_runs !== 0 || census.lifecycle.unbound_live_resource_residues !== 0
+      || counts.some((key) => census.counts?.[key] !== 0)) {
+      throw Object.assign(new Error('Có công việc đang chạy hoặc trạng thái chưa rõ. Hoàn tất công việc rồi thêm thư mục lại.'), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVE_WORK' });
+    }
+    const workspaceRoot = controlPlaneEnrollment.registeredWorkspaceRoot({
+      workspaceId: request?.workspaceId, workspaceGeneration: request?.workspaceGeneration
+    });
+    const currentSettings = settings.load();
+    const roots = Array.isArray(currentSettings.authorizedRoots) ? currentSettings.authorizedRoots : [];
+    const key = (value) => path.normalize(value).toLowerCase();
+    if (key(workspaceRoot) !== key(currentSettings.workspace) && !roots.some((root) => key(root) === key(workspaceRoot))) {
+      if (roots.length >= 32) {
+        throw Object.assign(new Error('Đã đạt giới hạn thư mục được cho phép trên máy này.'), { code: 'CONTROL_PLANE_WORKSPACE_ROOT_LIMIT' });
+      }
+      // Preserve the native default root and epoch; grant this owner-selected
+      // root through the existing native authorization API before pilot switch.
+      await orchestrator.updateAuthorizedRoots([...roots, workspaceRoot]);
+    }
+    return controlPlaneEnrollment.activateWorkspace({
+      workspaceId: request?.workspaceId, workspaceGeneration: request?.workspaceGeneration, confirmActivate: true
+    });
+  }));
   secureHandle('control-plane:replace-workspace', (event, request) => invokeSafely(async () => {
     // Replacement is deliberately separate from registration.  It requires
     // an explicit local confirmation and the packaged node-agent journals the
@@ -1015,14 +1053,16 @@ function registerIpc() {
       replaceExisting: request.replaceExisting
     });
   }));
-  secureHandle('control-plane:inspect-standing-file-policies', (event) => invokeSafely(async () => {
+  secureHandle('control-plane:inspect-standing-file-policies', (event, request) => invokeSafely(async () => {
     assertManagerIpc(event);
     if (settings.load().executionRole !== 'central_executor') {
       throw Object.assign(new Error('Kiểm tra quyền file Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
         code: 'CONTROL_PLANE_FILE_POLICY_ROLE_REQUIRED'
       });
     }
-    return controlPlaneEnrollment.inspectStandingWorkspaceFilePolicies();
+    return controlPlaneEnrollment.inspectStandingWorkspaceFilePolicies({
+      workspaceId: request?.workspaceId, workspaceGeneration: request?.workspaceGeneration
+    });
   }));
   secureHandle('control-plane:install-exec-policy', (event, request) => invokeSafely(async () => {
     assertManagerIpc(event);
@@ -1039,7 +1079,10 @@ function registerIpc() {
     return controlPlaneEnrollment.installStandingWorkspaceExecPolicy({
       workspaceId: request?.workspaceId,
       workspaceGeneration: request?.workspaceGeneration,
-      replaceExisting: request.replaceExisting
+      replaceExisting: request.replaceExisting,
+      probeSandbox: request.probeSandbox === undefined ? false : request.probeSandbox,
+      executionMode: request?.executionMode,
+      nativeArgvPrefixes: request?.nativeArgvPrefixes
     });
   }));
   secureHandle('control-plane:inspect-exec-policy', (event, request) => invokeSafely(async () => {
@@ -1051,7 +1094,9 @@ function registerIpc() {
     }
     return controlPlaneEnrollment.inspectStandingWorkspaceExecPolicy({
       workspaceId: request?.workspaceId,
-      workspaceGeneration: request?.workspaceGeneration
+      workspaceGeneration: request?.workspaceGeneration,
+      probeSandbox: request?.probeSandbox === true,
+      executionMode: request?.executionMode
     });
   }));
   secureHandle('control-plane:retire-workspace', (event, request) => invokeSafely(async () => {

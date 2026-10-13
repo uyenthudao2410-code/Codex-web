@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "operation": "status",
+  "observed_at": "2026-10-12T14:35:52.167Z",
+  "observed_at_ms": 1791815752167,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "runtime": {
+      "fullyReady": false,
+      "mcpRunning": false,
+      "nativeAlive": false,
+      "executionRole": "central_executor",
+      "authorityReady": true,
+      "centralConnected": true,
+      "centralStatusReason": "LOCAL_EXECUTOR_NOT_READY",
+      "updateIncomplete": true,
+      "connectorContractState": "UNAVAILABLE",
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+      "operation_id": "full-clean-mv58sx36-cbc3d9246bc1a521561017b2",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "fbd0fd5195b69788d847d2cb7ea06d91e57f2cc44eb17d924cca98193331f6f4",
+      "expires_at_unix_ms": 1791809579587,
+      "ready_at": "2026-10-12T12:43:37.814Z",
+      "error": null
+    },
+    "census": {
+      "schema_version": 1,
+      "safe": true,
+      "code": "READY",
+      "reason": "canonical_ledger_quiescent",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "6a430ed50b323b2ca60af41ee0d90857809b29f4d32031e1254e92cf2647c273",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "ba29d43ecdf3990202e8fc829112485e2817112d152ac005f960eb9d7742e517",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T14:35:50.495Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": []
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791815751.27686,
+      "census_fingerprint": "341cf5fcd3a96cf76607f879d4ee6985df826a45a48c841612e1fafd13640fd1"
+    },
+    "owner": {
+      "owner_pid": 28320,
+      "owner_process_start_token": "134362892044765170",
+      "instance_id": "55b9f13fe35baf2fed1851250f8247a7",
+      "installation_id": "491e1d67970775eb93c7085942ad76fb233707c40672f9b37e8c8e13e5c20b96"
+    },
+    "preserved_fingerprints": {
+      "control-plane-workspaces.json": {
+        "present": true,
+        "sha256": "ebae316a43229f62a7cccc554615a019ceddfcdc9966d300dba0a8264a6b3ce4"
+      },
+      "control-plane-node.json": {
+        "present": true,
+        "sha256": "951bd2dc2325f497be19c34e4bb52be2577309495f528c39478ecee0f43484b3"
+      },
+      "control-plane-read-only-policy.json": {
+        "present": true,
+        "sha256": "a820ab1f2ec4e15eee9c9dacbb4bc4457f9f449c8c68ac76c1f36cac39aeb016"
+      },
+      "control-plane-file-read-policy.json": {
+        "present": true,
+        "sha256": "fad22661a51a444fedffea46d480c505276e3a728bebad861a68dd6e93d7c58b"
+      },
+      "control-plane-approved-patch-policy.json": {
+        "present": true,
+        "sha256": "de9043afdaf797f561e47191adffa03036ff168103c9352aa9e131e9c51a8ff4"
+      },
+      "control-plane-document-write-policy.json": {
+        "present": false
+      },
+      "control-plane-exec-policy.json": {
+        "present": true,
+        "sha256": "133e2ef59eacec3b0e707d7b1dc2f0b682a29ae1be3d43effac93e135f267588"
+      }
+    },
+    "original_stop_not_replayed": false
+  },
+  "mutating": false,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "38ef1c6c9be12939ed3d20f58570726b04dd310436eba484bf4bbebf9c478f7e",
+  "smoke_proof_sha256": "cf49710194b26c03e2e7188b9b6028d414a39b2b64cabdd015bc430e23c3a174",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\status-1791815752168-e48fdb45.json"
+}

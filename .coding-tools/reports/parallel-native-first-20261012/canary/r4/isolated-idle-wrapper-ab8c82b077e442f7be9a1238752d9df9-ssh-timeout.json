@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operation": "isolated_idle_canary_wrapper_abort",
+  "ok": false,
+  "observed_at": "2026-10-12T20:03:36.187114+00:00",
+  "observed_at_ms": 1791835416187,
+  "attempt_id": "ab8c82b077e442f7be9a1238752d9df9",
+  "remote_receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-remote-ab8c82b077e442f7be9a1238752d9df9.ndjson",
+  "pins_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-pins-ab8c82b077e442f7be9a1238752d9df9.json",
+  "remote_exit_code": 255,
+  "failure_code": "SSH_CONNECT_TIMEOUT",
+  "action_dispatch_observed": false,
+  "observer_process_stopped_after_no_dispatch": true,
+  "lifecycle_stop_dispatched": false,
+  "restoration_remaining": true,
+  "reason": "SSH transport timed out before the remote runner emitted a dispatch record; owned local observer was stopped after verifying no action record and no VM host."
+}

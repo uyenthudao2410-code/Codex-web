@@ -1,0 +1,11 @@
+{
+  "operation": "launch_parallel_ui",
+  "ok": true,
+  "observed_at": "2026-10-12T12:11:18.6837880+00:00",
+  "observed_at_ms": 1791807078686,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r1\\win-unpacked",
+  "spawned_pid": 33820,
+  "install_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-transition\\install_parallel_supervisor-1791807066391.json",
+  "readiness_not_inferred": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-transition\\launch_parallel_ui-1791807078690.json"
+}

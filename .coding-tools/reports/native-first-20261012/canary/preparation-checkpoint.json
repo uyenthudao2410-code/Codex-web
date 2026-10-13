@@ -1,0 +1,28 @@
+{
+  "operation": "native_first_canary_preparation_checkpoint",
+  "prepared": true,
+  "live_canary_executed": false,
+  "fixtures_created": false,
+  "ssh_executed": false,
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "observed_at_ms": 1791804800715,
+  "validation": {
+    "python_syntax": "passed",
+    "powershell_syntax": "passed",
+    "exact_patch_roundtrips": 20,
+    "lost_response_original_handle_tests": 2
+  },
+  "base_actions": 153,
+  "optional_build_actions": 155,
+  "files": {
+    "invoke-native-first-canary.ps1": "1d201656c4788f741cdc3e89ffb71cfab9a6c1355bb714aad6fc6ff478b23b86",
+    "prepare-native-first-fixtures.py": "9500e53b0a8ced360c3235aa73f71af6a6b4d88497e810db90f9defb5157681b",
+    "README.md": "115265683148f3b0ac00ddf957b2af22f8cc9226a1c121e1c3e25f7c80c84665",
+    "run-native-first-canary.py": "96718183e9a314103a95ccad8a273c4bfa260c2fec6d9e7e33feb2438baeea4d",
+    "test-native-first-canary.py": "44e3da3ef9e715ba8424fe27db57266867e0e81f24ad88f975b997a2d8d62600"
+  },
+  "blocker": "Exact scoped pilot not activated for Codex-web; three historical UNKNOWN actions preserved. Owner Console also enforces same admission guard.",
+  "service_operations_performed": false,
+  "commit_performed": false,
+  "push_performed": false
+}

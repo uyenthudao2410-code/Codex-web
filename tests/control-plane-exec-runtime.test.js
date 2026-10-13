@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
 const {
@@ -109,6 +110,28 @@ function send(response, id, structuredContent) {
   response.end(payload);
 }
 
+function assertLocalMcpSchemaAccepts(calls) {
+  const code = [
+    'import json,sys',
+    'from coding_tools_mcp.tool_schema import validate_arguments',
+    'for call in json.load(sys.stdin):',
+    ' args=dict(call["params"]["arguments"])',
+    ' if call["params"]["name"] == "exec_command":',
+    '  args.pop("_windows_execution_mode", None); args.pop("_windows_native_argv_prefixes", None)',
+    ' validate_arguments(call["params"]["name"],args)',
+    'print("EXEC_BRIDGE_SCHEMA_OK")'
+  ].join('\n');
+  const result = spawnSync(process.execPath, [
+    path.join(__dirname, '..', 'scripts', 'run-python.js'), '-B', '-c', code
+  ], {
+    cwd: path.join(__dirname, '..', 'resources', 'coding-tools-mcp'),
+    input: JSON.stringify(calls), encoding: 'utf8', timeout: 15_000, windowsHide: true
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /EXEC_BRIDGE_SCHEMA_OK/);
+}
+
 async function execFailure(t, failure, status = 200) {
   const item = fixture(t);
   const action = admission(item.workspace);
@@ -146,6 +169,8 @@ test('control-plane exec accepts a native command token completing before the fi
   const timeouts = captureRequestTimeouts(t);
   const item = fixture(t);
   const action = admission(item.workspace);
+  action.execution_mode = 'native_only';
+  action.native_argv_prefixes = [['python', '-m', 'pytest']];
   const calls = [];
   const server = http.createServer((request, response) => {
     const chunks = [];
@@ -167,6 +192,8 @@ test('control-plane exec accepts a native command token completing before the fi
       assert.equal(body.params.name, 'exec_command');
       assert.equal(body.params.arguments.cmd, 'python');
       assert.deepEqual(body.params.arguments.argv, action.argv);
+      assert.equal(body.params.arguments._windows_execution_mode, 'native_only');
+      assert.deepEqual(body.params.arguments._windows_native_argv_prefixes, action.native_argv_prefixes);
       assert.equal(body.params.arguments.workdir, 'tests');
       assert.equal(body.params.arguments.task_context_id, calls[0].params.arguments.task_context_id);
       assert.match(body.params.arguments.idempotency_key, /^cpex_[a-f0-9]{56}$/);
@@ -179,6 +206,9 @@ test('control-plane exec accepts a native command token completing before the fi
         truncated: false,
         timed_out: false,
         output_refs: null,
+        execution_backend: 'native',
+        isolation_level: 'process_container',
+        policy_decision: 'native_explicit_approval',
         execution_owner: {
           job_id: 'job-control-plane-exec-0001',
           run_id: '',
@@ -202,6 +232,9 @@ test('control-plane exec accepts a native command token completing before the fi
   assert.equal(result.exit_code, 0);
   assert.equal(result.command_id, '-4hBa9tkNAYi4ngWamUIO4Ba');
   assert.equal(result.job_id, 'job-control-plane-exec-0001');
+  assert.equal(result.execution_backend, 'native');
+  assert.equal(result.isolation_level, 'process_container');
+  assert.equal(result.policy_decision, 'native_explicit_approval');
   assert.equal(result.task_id, action.task_id);
   assert.equal(result.writer_lease_generation, 1);
   assert.match(result.local_handle, /^cp_exec_[a-f0-9]{48}$/);
@@ -238,6 +271,8 @@ test('native command tokens keep their exact identity through run, poll and stop
     await t.test(commandId[0], async (t) => {
       const item = fixture(t);
       const action = admission(item.workspace);
+      const primaryWorkspace = path.join(path.dirname(item.workspace), 'unrelated-primary');
+      fs.mkdirSync(primaryWorkspace);
       const jobId = 'job-control-plane-exec-token-0001';
       const calls = [];
       const server = http.createServer((request, response) => {
@@ -253,6 +288,10 @@ test('native command tokens keep their exact identity through run, poll and stop
           const stop = body.params.arguments.action === 'kill';
           if (body.params.name === 'command_control') {
             assert.equal(body.params.arguments.command_id, commandId);
+            const bootstrap = calls.at(-2);
+            assert.equal(bootstrap.params.name, 'workspace_context');
+            assert.equal(bootstrap.params.arguments.path, item.workspace);
+            assert.equal(body.params.arguments.task_context_id, bootstrap.params.arguments.task_context_id);
           }
           send(response, body.id, {
             command_id: commandId,
@@ -268,7 +307,7 @@ test('native command tokens keep their exact identity through run, poll and stop
       });
       await listen(server);
       t.after(() => server.close());
-      const { orchestrator } = createOrchestrator({ port: server.address().port, workspace: item.workspace });
+      const { orchestrator } = createOrchestrator({ port: server.address().port, workspace: primaryWorkspace });
       const running = await orchestrator.controlPlaneExec(action);
       const controls = {
         command_id: running.command_id,
@@ -299,6 +338,7 @@ test('native command tokens keep their exact identity through run, poll and stop
         ...action, ...controls, operation: 'exec_poll', workspace_id: '_workspace-invalid'
       }), { code: 'CONTROL_PLANE_EXEC_ADMISSION_INVALID' });
       assert.equal(calls.length, 6, 'command token syntax does not broaden workspace identifiers');
+      if (commandId.startsWith('-')) assertLocalMcpSchemaAccepts(calls);
     });
   }
 });
@@ -419,6 +459,94 @@ test('control-plane exec stop maps a terminal kill result to stopped', async (t)
   assert.equal(result.status, 'stopped');
   assert.equal(result.exit_code, 143);
   assert.equal(result.job_id, action.job_id);
+});
+
+test('native requests for two roots overlap with separate task contexts, approvals and Jobs', { timeout: 5000 }, async (t) => {
+  const first = fixture(t);
+  const second = fixture(t);
+  const actions = [first, second].map((item, index) => admission(item.workspace, {
+    workspace_id: `workspace-parallel-${index}`,
+    workspace_generation: `generation-parallel-${index}`,
+    context_id: `context-parallel-${index}`,
+    binding_id: `binding-parallel-${index}`,
+    action_id: `action-parallel-${index}`,
+    attempt_id: `attempt-parallel-${index}`,
+    task_id: `task_${String(index + 1).repeat(32)}`,
+    execution_mode: 'native_only',
+    argv: ['node', `overlap-${index}.cjs`],
+    native_argv_prefixes: [['node', `overlap-${index}.cjs`]],
+    cwd: ''
+  }));
+  const contexts = new Map();
+  const pending = [];
+  const calls = [];
+  const server = http.createServer((request, response) => {
+    const chunks = [];
+    request.on('data', (chunk) => chunks.push(chunk));
+    request.on('end', () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      calls.push(body);
+      const args = body.params.arguments;
+      if (body.params.name === 'workspace_context') {
+        const index = actions.findIndex((item) => item.workspace_root === args.path);
+        assert.ok(index >= 0);
+        assert.ok(!contexts.has(args.task_context_id) || contexts.get(args.task_context_id) === index);
+        contexts.set(args.task_context_id, index);
+        send(response, body.id, { workspace: args.path });
+        return;
+      }
+      const index = contexts.get(args.task_context_id);
+      assert.notEqual(index, undefined);
+      const result = {
+        command_id: `command-parallel-${index}`,
+        status: body.params.name === 'exec_command' ? 'running' : 'exited',
+        exit_code: body.params.name === 'exec_command' ? null : 0,
+        stdout: '', stderr: '', truncated: false, timed_out: false,
+        execution_backend: 'native', isolation_level: 'process_container',
+        policy_decision: 'native_explicit_approval',
+        execution_owner: { job_id: `job-parallel-${index}`, run_id: '', wave_id: '' }
+      };
+      if (body.params.name === 'exec_command') {
+        assert.deepEqual(args.argv, actions[index].argv);
+        assert.deepEqual(args._windows_native_argv_prefixes, actions[index].native_argv_prefixes);
+        assert.equal(args._windows_execution_mode, 'native_only');
+        assert.ok(args.yield_time_ms <= 1000);
+        pending.push({ response, body, result });
+        // Neither initial result can finish until both independent requests arrive.
+        if (pending.length === 2) {
+          for (const item of pending) send(item.response, item.body.id, item.result);
+        }
+      } else {
+        assert.equal(body.params.name, 'command_control');
+        assert.equal(args.action, 'poll');
+        assert.equal(args.command_id, result.command_id);
+        send(response, body.id, result);
+      }
+    });
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const { orchestrator } = createOrchestrator({ port: server.address().port, workspace: first.workspace });
+  const running = await Promise.all(actions.map((action) => orchestrator.controlPlaneExec(action)));
+  assert.equal(contexts.size, 2);
+  assert.equal(new Set(running.map((item) => item.job_id)).size, 2);
+  assert.equal(new Set(running.map((item) => item.command_id)).size, 2);
+  assert.equal(new Set(running.map((item) => item.local_handle)).size, 2);
+  assert.equal(new Set(pending.map((item) => item.body.params.arguments.idempotency_key)).size, 2);
+  const finished = await Promise.all(actions.map((action, index) => orchestrator.controlPlaneExec({
+    ...action, operation: 'exec_poll', command_id: running[index].command_id,
+    job_id: running[index].job_id, local_handle: running[index].local_handle,
+    consumer_id: `control-plane-exec:${action.task_id}`, yield_time_ms: 0, run_id: '', wave_id: ''
+  })));
+  for (let index = 0; index < actions.length; index += 1) {
+    assert.equal(running[index].status, 'running');
+    assert.equal(finished[index].status, 'exited');
+    assert.equal(finished[index].job_id, running[index].job_id);
+    assert.equal(finished[index].local_handle, running[index].local_handle);
+  }
+  assert.equal(calls.filter((item) => item.params.name === 'exec_command').length, 2);
+  assert.equal(calls.filter((item) => item.params.name === 'command_control').length, 2);
+  assert.equal(orchestrator.settingsStore.load().workspace, first.workspace);
 });
 
 test('control-plane exec retains native Sandbox diagnostics without inventing terminal evidence', async (t) => {

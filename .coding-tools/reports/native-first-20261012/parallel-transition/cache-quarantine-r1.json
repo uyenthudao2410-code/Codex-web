@@ -1,0 +1,160 @@
+{
+  "source": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r1\\win-unpacked\\resources\\resources\\coding-tools-mcp\\coding_tools_mcp\\__pycache__",
+  "operation": "quarantine_generated_package_bytecode",
+  "files": [
+    {
+      "sha256": "b4590d4acf4c0a8a4e53aca24df4501e2aee38fc59da8e1b4af414b714859fef",
+      "name": "__init__.cpython-312.pyc"
+    },
+    {
+      "sha256": "b1a459d065e3cd1a00b4bae74ce8e87e63487e19d2a55561d5f80b8bf107d407",
+      "name": "activation_ledger_census.cpython-312.pyc"
+    },
+    {
+      "sha256": "b5943ab2bebeb30c22bcffb0b65c1116cd72fe413e2a54bc40cf9160aa01d606",
+      "name": "artifact_refs.cpython-312.pyc"
+    },
+    {
+      "sha256": "2d3c29f1de9968f228c76930d1e62ef1a755d055b05b08dc856f1920ed2552d4",
+      "name": "build_verify.cpython-312.pyc"
+    },
+    {
+      "sha256": "90a5bb84067903996feb1fd5a1cbdaa9b81fc3c2025bd51304e678d14e538655",
+      "name": "command_parse.cpython-312.pyc"
+    },
+    {
+      "sha256": "019dddc0fe983438533b439daef178eb3f9c4f92d7621f8177bb07c37d56013b",
+      "name": "context_observability.cpython-312.pyc"
+    },
+    {
+      "sha256": "6e8c88b5bd503a210591115617dc0333a2f5c2bab21afd6e36c694fc4478c617",
+      "name": "continuation_consent_http.cpython-312.pyc"
+    },
+    {
+      "sha256": "9c8ad7a68bfddb9876cdd735f3624e0a7d1c89104de68757d1849f72c80f32a7",
+      "name": "continuation_contract.cpython-312.pyc"
+    },
+    {
+      "sha256": "7387964aecb629fbe16ded6f9a47a30f23b493197553e19454a73e91432e04d9",
+      "name": "continuity_telemetry.cpython-312.pyc"
+    },
+    {
+      "sha256": "32eede946543649caba3d1e9a73d54db2285d9223297a1464e46a9934b4d2413",
+      "name": "controller_continuity.cpython-312.pyc"
+    },
+    {
+      "sha256": "b054cefb4cb74cc9dd3110cc3d6bfb2b3e793baee268a623f8925e6fba5caa18",
+      "name": "controller_reattach.cpython-312.pyc"
+    },
+    {
+      "sha256": "c210179ee9bd6971e31ef639c69b6caf6b61f4ae12444000a7ada6f14b37c9e9",
+      "name": "envutils.cpython-312.pyc"
+    },
+    {
+      "sha256": "fa84642998d9248b85cf8cc6b7f53215cb1bb4de5cb4b8d838682ef278843823",
+      "name": "errors.cpython-312.pyc"
+    },
+    {
+      "sha256": "81112c0304f7e2be2be89972ba17b7e405048e609c6c30c7e64bfa1e03f00c9d",
+      "name": "execution_resources.cpython-312.pyc"
+    },
+    {
+      "sha256": "a4856aaf2b59ea3cac721973302f80f64a7129b1d6ab35280b9b0f93eacfe76b",
+      "name": "goal_continuation_ledger.cpython-312.pyc"
+    },
+    {
+      "sha256": "a2851b57acdd87ca19c7dd72a5e4880b94033527cd50e175cd0d91c20b76ffa0",
+      "name": "goal_pursuit.cpython-312.pyc"
+    },
+    {
+      "sha256": "9b14889656a2f8f5c2c7e9260f8b3c3bdfab7e44b6b4163f1c8d75b2a9042014",
+      "name": "host_correlation.cpython-312.pyc"
+    },
+    {
+      "sha256": "70eed72d2afba742646d830b005f1b582911facf42856dd328dcea0415a851bb",
+      "name": "idempotency_codec.cpython-312.pyc"
+    },
+    {
+      "sha256": "b6cc8ef2ed4e00c9b050df534a230b81313b4d148039d613a2a8ca3e1391c318",
+      "name": "ledger_analysis.cpython-312.pyc"
+    },
+    {
+      "sha256": "15efb90859ef989bc229f3abf4ece5a088f9cfaae152cb7ead6220cd44e8b864",
+      "name": "ledger_event_chain.cpython-312.pyc"
+    },
+    {
+      "sha256": "5e08add8ba63266641f0a07b6c0bec711cfdba3cecabef6800d05c7abcb4199b",
+      "name": "ledger_file_gate.cpython-312.pyc"
+    },
+    {
+      "sha256": "f7b1639805cf1d93ba7c992f1f14ac308f67f5eb92eaba5f55705fb07ce53f1f",
+      "name": "lifecycle_census.cpython-312.pyc"
+    },
+    {
+      "sha256": "282223779299fd26d0a4b5b3faf125d2d97504ecc0edc98fec7686fa0f856371",
+      "name": "lifecycle_reconciliation.cpython-312.pyc"
+    },
+    {
+      "sha256": "37be2a8e4dac396c86d2651ca4f94f8a08dc2d55848cc942fbb9726a71c7c670",
+      "name": "observation_spans.cpython-312.pyc"
+    },
+    {
+      "sha256": "9878fb16602046f728d6392962b4bd6e88dd42e9b0b694dff8107dc76b1ed8ce",
+      "name": "orchestration_ledger.cpython-312.pyc"
+    },
+    {
+      "sha256": "953c7a0a7b83b2775b3eb9edf064f7c028a2098ec1dbc63100f5e0a1293c9f9e",
+      "name": "p5_experiment_store.cpython-312.pyc"
+    },
+    {
+      "sha256": "a700201de9d210af145bcad0f1365bea5aeae304649385637b988c39421a6bad",
+      "name": "p5_experiment.cpython-312.pyc"
+    },
+    {
+      "sha256": "37ae1ca6d2e2284e7fcd9e2a10d23f48ca2af7e3e9be50cc9648a3a5a306cb36",
+      "name": "problem_lineage.cpython-312.pyc"
+    },
+    {
+      "sha256": "a9be76d6b52f27fb9f7de4ca6053326aefa4d2294544b79f3e383742732c11db",
+      "name": "processes.cpython-312.pyc"
+    },
+    {
+      "sha256": "e772ff200f234dd5c825b7fa197b274fc11a46d36568d421b1c12abc14632321",
+      "name": "quality_outcomes.cpython-312.pyc"
+    },
+    {
+      "sha256": "14b897bcdaa8eca31c8eb758ca66d3e48ae757186c16ae5f30466af01f704129",
+      "name": "resolution_contract.cpython-312.pyc"
+    },
+    {
+      "sha256": "13cc60947f755ca09d81a28c8c903750098dc9b1f1d91f76f183c474cfd280c0",
+      "name": "run_continuation_ledger.cpython-312.pyc"
+    },
+    {
+      "sha256": "fc20cd18b4793ffc4d043484cea7bce14921e7a41a761e61dc948238d0037e8f",
+      "name": "run_continuation.cpython-312.pyc"
+    },
+    {
+      "sha256": "0bce0d196f00ba2ae6e8fd0759b534416028b9f72d4d3d42aae5a7b0230ba261",
+      "name": "runtime_behavior_identity.cpython-312.pyc"
+    },
+    {
+      "sha256": "680a543cd84bef27b5031cb877d24b97a192d043056d752131be2baec54b473f",
+      "name": "textutils.cpython-312.pyc"
+    },
+    {
+      "sha256": "51d3461f277e94c6e1d732387f45e33c6e39a6542cac351b66ab3c1ac095c4eb",
+      "name": "usage_events.cpython-312.pyc"
+    },
+    {
+      "sha256": "e3c89bb358970d9583dded9e9c0f8299e777c0c93e355114327b537131391658",
+      "name": "usage_ledger.cpython-312.pyc"
+    },
+    {
+      "sha256": "880d8f16024c563ac3a91792e2507025732a5991af5ca5c44daca9410fc997f2",
+      "name": "usage_pricing.cpython-312.pyc"
+    }
+  ],
+  "observed_at_ms": 1791807692585,
+  "destination": "E:\\DEV\\Codex-web\\dist\\package-cache-quarantine-parallel-native-1012-r1"
+}

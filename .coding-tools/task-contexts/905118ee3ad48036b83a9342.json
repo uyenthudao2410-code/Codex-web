@@ -1,0 +1,255 @@
+{
+  "version": 2,
+  "task_id": "26d498e0a5fb4e25ac46d3a3cfa6f556",
+  "orchestration": {
+    "run_id": "3d9a3ad822054c49a0ebf2ec857bad2e",
+    "wave_id": "a1a9c1536b34490fb610b89ba8244c14",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "worktree_fp": "f81461747411c39e5fe17a005e2d4098a90146d58d0d7bae519ceb01c40a5972",
+    "contract_fp": "fcf43000818b666addacc53786983d7403ac143285eafd7109ed486d675daf13"
+  },
+  "objective": "Apply one owner-approved exact local patch.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-10-12T14:51:23.051Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-10-12T14:51:23.051Z"
+    }
+  ],
+  "current_step": "Acceptance decision - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "canonical_patch_surface_observations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "2d8e92233039482d85c1829b0fcae43d",
+            "seq": 60096,
+            "event_time": "2026-10-12T14:51:20.940Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "c70c2fd527b55d4f7149f874017d51ff06436db72c46d694f4c09436ac4e98c6"
+            ],
+            "file_count": 1,
+            "additions": 3,
+            "removals": 3,
+            "line_changes": 6,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 16,
+        "head_hash": "a4f3d628ecf171c812de9c6cb9aa754391d11a7a60b4a65807efb74990275af7"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3d9a3ad822054c49a0ebf2ec857bad2e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3d9a3ad822054c49a0ebf2ec857bad2e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "3d9a3ad822054c49a0ebf2ec857bad2e",
+      "wave_id": "a1a9c1536b34490fb610b89ba8244c14",
+      "checkpoint_id": "",
+      "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "worktree_fp": "f81461747411c39e5fe17a005e2d4098a90146d58d0d7bae519ceb01c40a5972",
+      "contract_fp": "fcf43000818b666addacc53786983d7403ac143285eafd7109ed486d675daf13",
+      "objective_provenance": {
+        "effective_objective": "Apply one owner-approved exact local patch.",
+        "objective_revision": 1,
+        "objective_sha256": "4eeedbc0220f5e63e04e69598363e92378f3246e371efb9cf5ca46f2a66b7555",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "19acee74be83dad43ed16d24a79a9d64a3f8fe1c840a54f086caae398ac57359",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "tests/fixtures/native-first-canary/file-010.txt",
+      "operation": "update",
+      "updated_at": "2026-10-12T14:51:24.181Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+  "created_at": "2026-10-12T14:51:16.683Z",
+  "updated_at": "2026-10-12T14:51:24.181Z",
+  "events": [
+    {
+      "time": "2026-10-12T14:51:16.683Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Apply one owner-approved exact local patch."
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:18.068Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:19.031Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:20.428Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:20.431Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:22.014Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:23.051Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:23.051Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:23.838Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:23.838Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:23.945Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "19acee74be83dad43ed16d24a79a9d64a3f8fe1c840a54f086caae398ac57359"
+      }
+    },
+    {
+      "time": "2026-10-12T14:51:24.181Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    }
+  ]
+}

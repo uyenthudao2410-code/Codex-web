@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operation": "isolated-idle-policy-failure",
+  "ok": false,
+  "observed_at_ms": 1791848260474,
+  "mode": "prepare",
+  "code": "EXACT_SOURCE_PACKAGE_AND_SMOKE_REQUIRED",
+  "mutating_action_started": false,
+  "next_action": "Resolve read-only gate.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-failure-1791848260474-1c536b4e.json"
+}

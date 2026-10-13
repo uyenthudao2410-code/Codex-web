@@ -1,0 +1,974 @@
+/* ==========================================================================
+   STACORP ONE - ENTERPRISE LOGIN DESIGN SYSTEM & VISUAL EFFECTS
+   Focus: Maximum Legibility & Typography Contrast on Bright/Dynamic Backdrops
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Color Tokens */
+  --bg-dark-900: #060a12;
+  --bg-dark-800: #0b1324;
+  --bg-dark-700: #131d33;
+  
+  --primary-blue: #2563eb;
+  --primary-blue-hover: #1d4ed8;
+  --primary-blue-glow: rgba(37, 99, 235, 0.4);
+  
+  --accent-cyan: #06b6d4;
+  --accent-cyan-glow: #38bdf8;
+  --accent-gold: #fbbf24;
+  --accent-gold-glow: rgba(251, 191, 36, 0.4);
+  --accent-green: #10b981;
+  --accent-danger: #ef4444;
+
+  --text-white: #ffffff;
+  --text-muted: #94a3b8;
+  --text-dark: #0f172a;
+  --text-dark-secondary: #475569;
+
+  /* Glassmorphism Variables */
+  --glass-bg-dark: rgba(11, 19, 36, 0.65);
+  --glass-bg-card: rgba(255, 255, 255, 0.92);
+  --glass-bg-card-dark: rgba(15, 23, 42, 0.85);
+  --glass-border-light: rgba(255, 255, 255, 0.25);
+  --glass-border-glow: rgba(56, 189, 248, 0.35);
+  --glass-blur: blur(24px) saturate(190%);
+
+  /* Elevation Shadows */
+  --shadow-glass: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 40px rgba(37, 99, 235, 0.15);
+  --shadow-text-heavy: 0 4px 20px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.95);
+  --shadow-glow-cyan: 0 0 25px rgba(6, 182, 212, 0.5);
+
+  --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-secondary: 'Plus Jakarta Sans', sans-serif;
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
+  --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  --login-card-bg: rgba(255, 255, 255, 0.94);
+  --login-card-text: #0f172a;
+  --login-card-subtext: #475569;
+  --login-card-border: rgba(255, 255, 255, 0.8);
+  --login-input-bg: #f8fafc;
+  --login-input-border: #cbd5e1;
+}
+
+/* Dark Theme Theme Tokens */
+[data-theme="dark"] {
+  --login-card-bg: rgba(15, 23, 42, 0.88);
+  --login-card-text: #f8fafc;
+  --login-card-subtext: #94a3b8;
+  --login-card-border: rgba(255, 255, 255, 0.12);
+  --login-input-bg: rgba(30, 41, 59, 0.8);
+  --login-input-border: rgba(255, 255, 255, 0.15);
+}
+
+/* Reset & Basic Setup */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-main);
+  background-color: var(--bg-dark-900);
+  color: var(--text-white);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Root Viewport Layout */
+.app-viewport {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.8s ease-in-out;
+}
+
+/* Dynamic Background Image Layers */
+.bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+  transform: scale(1.02);
+  transition: transform 10s ease-out, opacity 0.8s ease;
+  opacity: 0;
+}
+
+.bg-layer.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 
+==========================================================================
+CRITICAL: HIGH CONTRAST SCRIM & BACKDROP OVERLAYS
+Guarantees font clarity on bright building/cloud backdrop highlights
+========================================================================== 
+*/
+.scrim-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  /* Multi-stage gradient mask: Dark blue-black tint on left side to guarantee text contrast */
+  background: 
+    linear-gradient(100deg, 
+      rgba(6, 10, 18, 0.88) 0%, 
+      rgba(11, 19, 36, 0.72) 42%, 
+      rgba(11, 19, 36, 0.35) 68%, 
+      rgba(6, 10, 18, 0.60) 100%
+    );
+  pointer-events: none;
+}
+
+.scrim-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.2) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* 
+==========================================================================
+LEFT BRANDING PANEL (HERO VISUAL & TYPOGRAPHY)
+========================================================================== 
+*/
+.brand-panel {
+  position: relative;
+  z-index: 5;
+  flex: 1.25;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 44px 56px;
+  height: 100vh;
+}
+
+/* Top Branding Header */
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.brand-logo-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(10, 18, 32, 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  padding: 12px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.brand-icon-box {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.brand-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.brand-title span {
+  color: var(--accent-gold);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+/* Central Hero Slogan Container with Glass Card Protection */
+.hero-content {
+  max-width: 640px;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* Glass Card Text Protection - Guarantees High Contrast on Bright Background */
+.hero-glass-card {
+  background: rgba(8, 14, 26, 0.72);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 5px solid #38bdf8;
+  border-radius: 24px;
+  padding: 38px 44px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  transition: var(--transition-smooth);
+}
+
+.hero-glass-card:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.3);
+}
+
+.kicker-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #38bdf8;
+  margin-bottom: 22px;
+}
+
+.kicker-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #38bdf8;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* Slogan Typography - Extra Legibility & Visual Power */
+.hero-slogan {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  color: #ffffff;
+  margin-bottom: 22px;
+  text-shadow: var(--shadow-text-heavy);
+}
+
+.hero-slogan .gradient-text-blue {
+  background: linear-gradient(135deg, #ffffff 0%, #93c5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-slogan .gradient-text-gold {
+  background: linear-gradient(135deg, #fbbf24 0%, #fef08a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.5));
+}
+
+.hero-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  font-weight: 400;
+  margin-bottom: 28px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+/* Feature Tag Pills */
+.feature-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pill-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  transition: var(--transition-smooth);
+  cursor: default;
+}
+
+.pill-item:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+}
+
+.pill-icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-cyan-glow);
+  box-shadow: 0 0 8px var(--accent-cyan-glow);
+}
+
+/* Brand Footer Info */
+.brand-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #94a3b8;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.bg-switcher-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 18, 32, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(14px);
+  padding: 6px 14px;
+  border-radius: 100px;
+}
+
+.bg-switcher-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.bg-switcher-btn.active, .bg-switcher-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  color: #38bdf8;
+}
+
+/* 
+==========================================================================
+RIGHT LOGIN CONTAINER (FLOATING GLASS CARD)
+========================================================================== 
+*/
+.login-panel {
+  position: relative;
+  z-index: 5;
+  flex: 0.95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  height: 100vh;
+}
+
+/* Floating Login Container */
+.login-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--login-card-bg);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid var(--login-card-border);
+  border-radius: var(--radius-lg);
+  padding: 40px 36px;
+  box-shadow: var(--shadow-glass);
+  transition: var(--transition-smooth);
+  animation: card-enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Card Top Bar (Badges & Settings) */
+.card-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.enterprise-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 100px;
+}
+
+.ms-partner-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Login Heading */
+.login-heading {
+  margin-bottom: 22px;
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--login-card-text);
+  line-height: 1.2;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.login-title span {
+  color: #2563eb;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: var(--login-card-subtext);
+  line-height: 1.5;
+}
+
+/* Alert Banner (Error / Warning State Demo) */
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 22px;
+  animation: shake 0.4s ease-in-out;
+}
+
+.alert-banner.hidden {
+  display: none;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.alert-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.alert-text {
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 500;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.alert-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Navigation Tabs for Auth Modes */
+.auth-nav-tabs {
+  display: flex;
+  background: rgba(241, 245, 249, 0.85);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 22px;
+  gap: 4px;
+}
+
+[data-theme="dark"] .auth-nav-tabs {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .tab-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+/* Tab View Switcher Panel */
+.tab-content-panel {
+  display: none;
+}
+
+.tab-content-panel.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Primary Microsoft SSO Action Button */
+.btn-ms-sso {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  color: #ffffff;
+  font-family: var(--font-main);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.38);
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ms-sso:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.52);
+}
+
+.btn-ms-sso:active {
+  transform: translateY(0);
+}
+
+/* Microsoft 4-Color Grid Icon */
+.ms-grid-icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.ms-grid-icon span:nth-child(1) { background-color: #f25022; }
+.ms-grid-icon span:nth-child(2) { background-color: #7fba00; }
+.ms-grid-icon span:nth-child(3) { background-color: #00a4ef; }
+.ms-grid-icon span:nth-child(4) { background-color: #ffb900; }
+
+.btn-arrow {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.btn-ms-sso:hover .btn-arrow {
+  transform: translateX(4px);
+}
+
+/* Form Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 22px 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(203, 213, 225, 0.5);
+}
+
+[data-theme="dark"] .divider::before, [data-theme="dark"] .divider::after {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.divider span {
+  padding: 0 16px;
+}
+
+/* Secondary Button & Form Inputs */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--login-card-text);
+  margin-bottom: 6px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.form-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 16px 0 44px;
+  background: var(--login-input-bg);
+  border: 1px solid var(--login-input-border);
+  border-radius: 12px;
+  font-family: var(--font-secondary);
+  font-size: 14px;
+  color: var(--login-card-text);
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.form-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
+}
+
+[data-theme="dark"] .form-input:focus {
+  background: rgba(30, 41, 59, 1);
+}
+
+.btn-toggle-pw {
+  position: absolute;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.btn-secondary {
+  width: 100%;
+  height: 48px;
+  background: transparent;
+  border: 1px solid var(--login-input-border);
+  border-radius: 12px;
+  color: var(--login-card-text);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-secondary:hover {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* Security Compliance Pills Footer */
+.security-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+[data-theme="dark"] .security-features {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.sec-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(241, 245, 249, 0.6);
+  padding: 8px 4px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--login-card-subtext);
+  text-align: center;
+}
+
+[data-theme="dark"] .sec-item {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.sec-item svg {
+  width: 14px;
+  height: 14px;
+  color: #2563eb;
+}
+
+/* Footer Controls: Language & Support */
+.login-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.footer-link {
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: #2563eb;
+}
+
+.lang-selector {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  z-index: 10;
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 18, 32, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.lang-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #38bdf8;
+}
+
+/* QR Code Section Design */
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.qr-box {
+  width: 170px;
+  height: 170px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.qr-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qr-scan-line {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #2563eb, transparent);
+  box-shadow: 0 0 10px #2563eb;
+  animation: qr-scan 2.5s infinite linear;
+}
+
+@keyframes qr-scan {
+  0% { top: 12px; }
+  50% { top: 150px; }
+  100% { top: 12px; }
+}
+
+/* MFA OTP Code Box */
+.otp-input-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 16px 0 24px;
+}
+
+.otp-box {
+  width: 46px;
+  height: 52px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid var(--login-input-border);
+  background: var(--login-input-bg);
+  color: var(--login-card-text);
+  outline: none;
+}
+
+.otp-box:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+/* Demo Control Floating Palette */
+.demo-control-palette {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 12px 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.demo-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+.demo-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.demo-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .app-viewport {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .brand-panel {
+    flex: none;
+    padding: 32px 24px;
+    height: auto;
+  }
+
+  .hero-slogan {
+    font-size: 32px;
+  }
+
+  .login-panel {
+    flex: none;
+    padding: 24px 20px 60px;
+    height: auto;
+  }
+
+  .lang-selector {
+    position: relative;
+    top: 0;
+    right: 0;
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "operation": "operator_stop_development_for_packaged_installation",
+  "observed_at": "2026-10-12T02:39:03.712Z",
+  "old_host_pid": 25400,
+  "old_host_instance_id": "171b6a35b2d827143aefe58968916539",
+  "old_installation_id": "2628d627fb21b539eef81c4bf57ce0107d362532edd516a475500fef9359a1a6",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "supervisor": {
+    "suppressed": true,
+    "reason": "development_supervisor_disabled"
+  },
+  "retirement": {
+    "state": "terminated",
+    "identity": {
+      "pid": 25400,
+      "process_start_token": "134362436988041360"
+    },
+    "exit_state": "exited"
+  },
+  "canonical_safe_after_primary_stop": true,
+  "accepting_history_preserved": true,
+  "source_acceptance_created": false,
+  "durable_state_deleted": false
+}

@@ -44,6 +44,31 @@ with open_lifecycle_census_snapshot(workspace) as snapshot:
 print(json.dumps({"accepting_run_id": accepting, "snapshot": initial_snapshot}))
 `;
 
+test('canonical census leaves a clean packaged Python resource tree unchanged', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-census-bytecode-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, 'workspace');
+  const resourcesRoot = path.join(root, 'resources');
+  const packageRoot = path.join(resourcesRoot, 'coding-tools-mcp', 'coding_tools_mcp');
+  const paths = createRuntimePaths({ dataRoot: path.join(root, 'data'), resourcesRoot, appRoot: REPO_ROOT });
+  const ledger = path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  fs.mkdirSync(path.dirname(ledger), { recursive: true });
+  fs.mkdirSync(packageRoot, { recursive: true });
+  fs.writeFileSync(ledger, 'bytecode-regression-fixture');
+  fs.writeFileSync(path.join(packageRoot, '__init__.py'), '');
+  fs.writeFileSync(path.join(packageRoot, 'imported_leaf.py'), 'VALUE = 1\n');
+  fs.writeFileSync(path.join(packageRoot, 'activation_ledger_census.py'),
+    'import json, sys\nfrom . import imported_leaf\nprint(json.dumps({"observed_at_unix_seconds": int(sys.dont_write_bytecode)}))\n');
+  const before = fs.readdirSync(packageRoot).sort();
+  const python = await pythonStatus(paths);
+  assert.equal(python.installed, true);
+
+  const census = await canonicalLedgerCensus({ paths, workspace, pythonStatusFn: async () => python });
+
+  assert.equal(census.observed_at_unix_seconds, 1, 'the actual interpreter must disable bytecode writes');
+  assert.deepEqual(fs.readdirSync(packageRoot).sort(), before, 'census and its import closure must not create __pycache__');
+});
+
 async function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-activation-census-'));
   const workspace = path.join(root, 'workspace');

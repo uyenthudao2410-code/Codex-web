@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "observed_at": "2026-10-12T05:50:23.479Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked",
+  "application_source_files_verified": 91,
+  "package_metadata_verified": true,
+  "resources": {
+    "exact_source": true,
+    "file_count": 298
+  },
+  "adapters": {
+    "exact_source": true,
+    "file_count": 9
+  },
+  "sanitation": {
+    "scanned_entries": 332,
+    "sanitized": true
+  },
+  "backend_hashes": {
+    "wxc-exec.exe": "0ab60f0d5ed3ae87870536173335eea9f9cb469bae737ad6656695855232c4d3",
+    "wxc-windows-sandbox-daemon.exe": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+    "wxc-windows-sandbox-guest.exe": "c2e9d947b1650584210d500513241850c6afe6e9e2c748e7c5abde7178523a1c",
+    "mxc-windows-sandbox.provenance.json": "862a59e2d20e86c9dcb9732869e4c69f016bad663fda206b811d66449b3dcc06"
+  },
+  "nativeProvenance": {
+    "directory": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\tools\\mxc-windows-sandbox",
+    "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "local_patch_sha256": "6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579",
+    "hashes": {
+      "wxc-exec.exe": "0ab60f0d5ed3ae87870536173335eea9f9cb469bae737ad6656695855232c4d3",
+      "wxc-windows-sandbox-daemon.exe": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+      "wxc-windows-sandbox-guest.exe": "c2e9d947b1650584210d500513241850c6afe6e9e2c748e7c5abde7178523a1c"
+    }
+  },
+  "packaged_adapter_sha256": "7eddd508dcc51ccecb5e2457ddd7bca20609eda6a03078bd7cafcb7295b422f8",
+  "executable_sha256": "a18ba16a640c30ad67758d6ba19aaf7044d947cea2f8026796b6e88f930243a8",
+  "app_asar_sha256": "69bac603b0dab1ad27f86fa114da140b059a93c695a4b7dfdbe24b53b3c007ae",
+  "recovery_host_launcher_sha256": "04999b097376ba69c95927db6936df21f8ada58198af9b14e803e8fcc1137fd1"
+}

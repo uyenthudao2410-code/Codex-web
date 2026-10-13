@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "operation": "native_child_token_probe_build",
+  "observed_at": "2026-10-13T06:24:23+07:00",
+  "scope": "Offline source/package preparation only; no MCP dispatch, policy mutation, service restart, or live endpoint",
+  "source": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-probe.c",
+    "sha256": "fdf8c2fbccc8c36a1943f2a4c5d1db747be7992f131dea73741bc665ebd39325"
+  },
+  "binary": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-probe.exe",
+    "sha256": "8afec55900734a83443c56bd6a85de48936f1f35ca4c212fb13fe667fff2e75f",
+    "architecture": "x64",
+    "linkage": "static CRT",
+    "dependencies": ["ADVAPI32.dll", "KERNEL32.dll"]
+  },
+  "build": {
+    "compiler": "Visual Studio Build Tools 17.14.36 / MSVC 14.44.35207",
+    "windows_sdk": "10.0.26100.0",
+    "flags": ["/O1", "/MT", "/W4", "/DUNICODE", "/D_UNICODE", "/incremental:no"],
+    "link": ["advapi32.lib"]
+  },
+  "direct_host_smoke": {
+    "command": "cmd.exe /d /c E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-probe.exe",
+    "exit_code": 0,
+    "complete": true,
+    "facts": {
+      "elevated": false,
+      "app_container": false,
+      "integrity_rid": 8192,
+      "high_or_system_integrity": false,
+      "administrator_group_present": true,
+      "administrator_group_enabled": false,
+      "administrator_group_deny_only": true,
+      "sensitive_privileges_enabled": 0,
+      "sensitive_luid_lookup_success_count": 11,
+      "query_errors_all_zero": true
+    }
+  },
+  "launcher": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-launcher.js",
+    "command": ["node", "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-launcher.js"],
+    "shell": false,
+    "timeout_ms": 10000,
+    "output_bound": 4096,
+    "role": "approved Node top-level process starts the direct WinAPI child"
+  },
+  "bounded_native_fixture_command": {
+    "cmd": "node",
+    "argv": ["node", "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-launcher.js"],
+    "execution_mode": "native_only",
+    "native_argv_prefixes": [["node", "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\token-child-launcher.js"]],
+    "cwd": "E:\\DEV\\Codex-web",
+    "timeout_ms": 30000,
+    "max_output_bytes": 65536,
+    "policy_mutation": false
+  },
+  "acceptance_facts_required": [
+    "result.execution_backend == native",
+    "result.isolation_level == process_container",
+    "result.policy_decision == native_explicit_approval",
+    "result.exit_code == 0",
+    "child_facts.complete == true",
+    "child_facts.open_process_token == true",
+    "child_facts.integrity_sid_valid == true",
+    "child_facts.admin_sid_query_ok == true",
+    "child_facts.sensitive_luid_lookup_success_count == 11",
+    "child_facts.query_errors values are all 0",
+    "child_facts.elevated == false",
+    "child_facts.high_or_system_integrity == false",
+    "result.stderr_empty == true",
+    "VM adapter call count == 0",
+    "durable Job has command_id, job_id, terminal state and exit code"
+  ],
+  "limitations": [
+    "Direct host smoke is not ProcessContainer proof; only the bounded native fixture command supplies that claim.",
+    "The probe reports non-identifying token posture and does not prove filesystem/network policy by itself.",
+    "Current persisted policy has no native_argv_prefixes; the fixture uses a per-call attested bridge prefix and does not alter policy."
+  ]
+}

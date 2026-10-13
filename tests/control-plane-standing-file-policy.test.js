@@ -22,6 +22,11 @@ function fixturePaths(root) {
   const agent = path.join(root, 'node_agent.py');
   fs.writeFileSync(python, 'fixture');
   fs.writeFileSync(agent, 'fixture');
+  fs.writeFileSync(path.join(root, 'control-plane-workspaces.json'), JSON.stringify({
+    schema_version: 1, entries: [{
+      workspace_id: workspaceId, workspace_generation: workspaceGeneration, canonical_path: root
+    }]
+  }));
   return {
     runtimeMode: () => 'packaged', portablePython: () => python,
     controlPlaneNodeAgent: () => agent,
@@ -37,7 +42,7 @@ function authority() {
     workspace_id: workspaceId, workspace_generation: workspaceGeneration,
     facade_contract: facade, binding_count: 1, standing_write_enabled: true,
     exec_enabled: true, exec_binding_count: 1,
-    observed_at_ms: Date.now(), runtime_mode: 'packaged'
+    observed_at_ms: Date.now(), server_observed_at_ms: Date.now(), runtime_mode: 'packaged'
   };
 }
 
@@ -108,7 +113,7 @@ test('packaged policy service gets authenticated authority and scopes standing r
   assert.equal(result.approved_patch.policy_sha256, 'c'.repeat(64));
   assert.deepEqual(calls.map(({ args }) => args[2]), [
     'list-workspaces', 'inspect-policy-authority', 'inspect-file-read-policy',
-    'inspect-approved-patch-policy', 'inspect-exec-policy',
+    'inspect-approved-patch-policy',
     'install-file-read-policy', 'install-approved-patch-policy'
   ]);
   for (const { args, options } of calls.slice(-2)) {
@@ -201,7 +206,7 @@ test('file contract observation preserves the server write admission gate indepe
   assert.equal(result.approved_patch.reason, 'CONTROL_PLANE_PATCH_POLICY_NOT_ADMITTED');
 });
 
-test('read-only policy transition disables a previously enabled patch lane before installing a new read lane', async (t) => {
+test('read-only policy transition disables only the selected generation patch lane before installing its read lane', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-file-read-only-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const commands = [];
@@ -210,6 +215,11 @@ test('read-only policy transition disables a previously enabled patch lane befor
     runner: async (_command, args) => {
       const operation = args[2];
       commands.push(operation);
+      if (operation.startsWith('inspect-') && operation !== 'inspect-policy-authority'
+        || operation === 'disable-approved-patch-policy') {
+        assert.equal(args[args.indexOf('--workspace-id') + 1], workspaceId);
+        assert.equal(args[args.indexOf('--workspace-generation') + 1], workspaceGeneration);
+      }
       const payload = operation === 'list-workspaces'
         ? { workspaces: [{ workspace_id: workspaceId, workspace_generation: workspaceGeneration,
           display_name: 'fixture', capabilities: { read: true, write: false, exec: false } }] }

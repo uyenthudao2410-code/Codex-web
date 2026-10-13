@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "operation": "final-policy-target",
+  "observed_at": "2026-10-12T19:37:58.732Z",
+  "observed_at_ms": 1791833878732,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "workspace_label": "Codex-web",
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "removed_canary_argv": [],
+    "policy": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_first",
+      "native_argv_prefixes": []
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\final-policy-target-1791833878732-38f863ab.json"
+}

@@ -1,0 +1,326 @@
+{
+  "operation": "codex_unsettled_readonly_provenance",
+  "ok": true,
+  "observed_at_ms": 1791817988821,
+  "service_pid": 970133,
+  "serving_principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+  "actions": [
+    {
+      "action_id": "act_d4e6ce3ca8064311bf0a8601e5ec1711",
+      "owner_id": "owner_default",
+      "request_id": "req_f89979a2312b418cb8a32f0b52f826c3",
+      "context_id": "ctx_1131fb5ff1a3401c8864fd96a195cddd",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "workspace_context",
+      "action_digest": "473bc7e2c35736d5de4447dfd272bbe301831ff8574aea404c3948e7cd6347ed",
+      "created_at_ms": 1791809164868,
+      "expires_at_ms": 1791809464868,
+      "delivery_state": "settled",
+      "settled_at_ms": 1791809195061,
+      "exact_compact_metadata_arguments": false,
+      "arguments_sha256": "819e567b31473b21a360726786a12a98a9f9ff7d9dc84387933e783f6bf4f90d",
+      "idempotency_key_sha256": "4bfb23f29b9768e26050e36417cbd5707eb67e1c30eabfe61a169dafcfaf6abf",
+      "known_canary_idempotency_prefix": false,
+      "expired": true,
+      "intents": [
+        {
+          "intent_kind": "mcp_file_read_intents",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "intent_digest": "2f3a02b17dc0340fd906726b1cd79811c42de66f6624da0952a762529d9ab5f7",
+          "created_at_ms": 1791809164868,
+          "matches_serving_principal": true
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_state": "completed",
+          "received_at_ms": 1791809195061,
+          "has_local_handle": true
+        }
+      ],
+      "events": [
+        {
+          "event_type": "action_sealed",
+          "created_at_ms": 1791809164869
+        },
+        {
+          "event_type": "action_delivery_attempted",
+          "created_at_ms": 1791809193290
+        },
+        {
+          "event_type": "action_receipt_recorded",
+          "created_at_ms": 1791809195062
+        }
+      ],
+      "delivery_attempt_count": 1
+    },
+    {
+      "action_id": "act_ac60e7c1abf14e97a208f907801c571a",
+      "owner_id": "owner_default",
+      "request_id": "req_9bfcc76f74074ea185ae0f2bbd0dd735",
+      "context_id": "ctx_62f4dbb8096f41d2a60675683433b3fd",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "workspace_context",
+      "action_digest": "b56263a54a012b8c45282d7cb291d9b656ce50b11327bdc777615252ed2b47db",
+      "created_at_ms": 1791809164890,
+      "expires_at_ms": 1791809464890,
+      "delivery_state": "settled",
+      "settled_at_ms": 1791809217406,
+      "exact_compact_metadata_arguments": false,
+      "arguments_sha256": "6e5df258d8e53db60781a02de9a524998ac2bbdacb58463e6666b2825bfb553a",
+      "idempotency_key_sha256": "b2cbc306c247388caffe95127bdc99a5e412f17f66e5613d37bd56679217584a",
+      "known_canary_idempotency_prefix": false,
+      "expired": true,
+      "intents": [
+        {
+          "intent_kind": "mcp_file_read_intents",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "intent_digest": "2ea2a73e3fdc32672f3da1220c267860a6369e93fc209e417e7285cde8850523",
+          "created_at_ms": 1791809164890,
+          "matches_serving_principal": true
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_state": "completed",
+          "received_at_ms": 1791809217406,
+          "has_local_handle": true
+        }
+      ],
+      "events": [
+        {
+          "event_type": "action_sealed",
+          "created_at_ms": 1791809164893
+        },
+        {
+          "event_type": "action_delivery_attempted",
+          "created_at_ms": 1791809215393
+        },
+        {
+          "event_type": "action_receipt_recorded",
+          "created_at_ms": 1791809217407
+        }
+      ],
+      "delivery_attempt_count": 1
+    },
+    {
+      "action_id": "act_cdd2e63ad9cc427f9372462e9fca51b6",
+      "owner_id": "owner_default",
+      "request_id": "req_e0d93ae7c06c42eab7df9940523a702a",
+      "context_id": "ctx_3d792fe810804db5a97ff447e1bae684",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "workspace_context",
+      "action_digest": "714b0ad68152177793b86a2fddc039ebf78cfa410a1e77faa1a42252061fc448",
+      "created_at_ms": 1791809236509,
+      "expires_at_ms": 1791809536509,
+      "delivery_state": "settled",
+      "settled_at_ms": 1791809241550,
+      "exact_compact_metadata_arguments": false,
+      "arguments_sha256": "5d0cf9eacebd9b1186adf393f11f3fc038af34541403e60a87c2bc0950a2cdf8",
+      "idempotency_key_sha256": "f6ace6f659f365a4f59b97a8ad99b3a19333076ccdf5a5069a899d616f4a60c9",
+      "known_canary_idempotency_prefix": false,
+      "expired": true,
+      "intents": [
+        {
+          "intent_kind": "mcp_file_read_intents",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "intent_digest": "3722af23ef22507e2edbb8b549d2eb72bc93f28a927d938ad11d725ba0773575",
+          "created_at_ms": 1791809236509,
+          "matches_serving_principal": true
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_state": "completed",
+          "received_at_ms": 1791809241550,
+          "has_local_handle": true
+        }
+      ],
+      "events": [
+        {
+          "event_type": "action_sealed",
+          "created_at_ms": 1791809236513
+        },
+        {
+          "event_type": "action_delivery_attempted",
+          "created_at_ms": 1791809240032
+        },
+        {
+          "event_type": "action_receipt_recorded",
+          "created_at_ms": 1791809241551
+        }
+      ],
+      "delivery_attempt_count": 1
+    },
+    {
+      "action_id": "act_97f01939475c46fca95aa1428d2441be",
+      "owner_id": "owner_default",
+      "request_id": "req_d047a20913fd4c0d84f7d552b0a5bd38",
+      "context_id": "ctx_12720733769d4882b68b793f8f25d667",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "workspace_context",
+      "action_digest": "e6c60d4df61fbf582c072ecaae66cd0bea21bea93d203b660043adc62ebbe09c",
+      "created_at_ms": 1791809236796,
+      "expires_at_ms": 1791809536796,
+      "delivery_state": "settled",
+      "settled_at_ms": 1791809264437,
+      "exact_compact_metadata_arguments": false,
+      "arguments_sha256": "1c711388df5dad78d360d9c1fc76f67a0341d891ae56ec74a611a015800eeeb1",
+      "idempotency_key_sha256": "fe1f88b423a9ad0d7d0b5487a3ae27534f1a0063742b00bf89345af17a3bcd28",
+      "known_canary_idempotency_prefix": false,
+      "expired": true,
+      "intents": [
+        {
+          "intent_kind": "mcp_file_read_intents",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "intent_digest": "7c2ac0cad9bbc8d408d4a3633f08cafcb8aff1c0488afc43c13981d81d08693d",
+          "created_at_ms": 1791809236796,
+          "matches_serving_principal": true
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_state": "completed",
+          "received_at_ms": 1791809264437,
+          "has_local_handle": true
+        }
+      ],
+      "events": [
+        {
+          "event_type": "action_sealed",
+          "created_at_ms": 1791809236799
+        },
+        {
+          "event_type": "action_delivery_attempted",
+          "created_at_ms": 1791809262719
+        },
+        {
+          "event_type": "action_receipt_recorded",
+          "created_at_ms": 1791809264438
+        }
+      ],
+      "delivery_attempt_count": 1
+    },
+    {
+      "action_id": "act_0eb81c71305e472ca6a91b9107362e17",
+      "owner_id": "owner_default",
+      "request_id": "req_aa1a2a171f3c460186fc67f30e3ec3e2",
+      "context_id": "ctx_da642b3391114dd8aadc1709bd2132d2",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "workspace_context",
+      "action_digest": "3fcdebc8adc8b8672f349a51e0b20efc2f28bf955a23766d77b72443c1cfe1d6",
+      "created_at_ms": 1791809236818,
+      "expires_at_ms": 1791809536818,
+      "delivery_state": "settled",
+      "settled_at_ms": 1791809285062,
+      "exact_compact_metadata_arguments": false,
+      "arguments_sha256": "7c7193efad30e0c3c8db81bc1731f41c899ed9c3cb2b97d081b6ada87b2ff40b",
+      "idempotency_key_sha256": "796c39e4bb0c30c925006d8e9db04c3081ff739ada6fa1922ca573deab6c47cb",
+      "known_canary_idempotency_prefix": false,
+      "expired": true,
+      "intents": [
+        {
+          "intent_kind": "mcp_file_read_intents",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "intent_digest": "3165e257cb14b7074ce83318354b1787564b8b8ef53a8f7670ff9d53652f8aca",
+          "created_at_ms": 1791809236818,
+          "matches_serving_principal": true
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_state": "rejected",
+          "received_at_ms": 1791809285062,
+          "has_local_handle": true
+        }
+      ],
+      "events": [
+        {
+          "event_type": "action_sealed",
+          "created_at_ms": 1791809236824
+        },
+        {
+          "event_type": "action_delivery_attempted",
+          "created_at_ms": 1791809284710
+        },
+        {
+          "event_type": "action_receipt_recorded",
+          "created_at_ms": 1791809285062
+        }
+      ],
+      "delivery_attempt_count": 1
+    },
+    {
+      "action_id": "act_65fa937277dd4963a5ca39ffe9e291ec",
+      "owner_id": "owner_default",
+      "request_id": "req_fa834eb81f9d4a868cb397d8bffcddbd",
+      "context_id": "ctx_7ea752887b4f48079cbed584ca6931c9",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "tool_name": "agent_workflow",
+      "action_digest": "ef88a27d1e76b0966d0f77a41953b11923b273b1bb2afe9f217a96eccff70ba7",
+      "created_at_ms": 1791816803643,
+      "expires_at_ms": 1791817403643,
+      "delivery_state": "reconcile_required",
+      "settled_at_ms": null,
+      "exact_compact_metadata_arguments": false,
+      "arguments_sha256": "3c7601f81f007d034567b3228b87130c6fb353cd2a18f193e5ffd67020b4b818",
+      "idempotency_key_sha256": "bfef4e74e8c4e5259cccd777850a7e0107109a7f83b82c39a1844e9ca988bc36",
+      "known_canary_idempotency_prefix": false,
+      "expired": true,
+      "intents": [
+        {
+          "intent_kind": "mcp_standing_patch_intents",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "intent_digest": "1157080c423e5c274699f49567a58de58d269620dc8c956ce7839c3c5b6f5ef7",
+          "created_at_ms": 1791816803643,
+          "matches_serving_principal": true
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_state": "unknown",
+          "received_at_ms": 1791816818393,
+          "has_local_handle": true
+        }
+      ],
+      "events": [
+        {
+          "event_type": "action_sealed",
+          "created_at_ms": 1791816803646
+        },
+        {
+          "event_type": "action_delivery_attempted",
+          "created_at_ms": 1791816804791
+        },
+        {
+          "event_type": "action_receipt_recorded",
+          "created_at_ms": 1791816818394
+        }
+      ],
+      "delivery_attempt_count": 1
+    }
+  ],
+  "read_only_database": true,
+  "unsettled_action_count": 1,
+  "all_exact_current_principal_read_only": false,
+  "observer_sha256": "86ee4505d17b29972edc7337928704f40ea0024aad0ce181cec24919e849b196",
+  "ssh_exit_code": 0
+}

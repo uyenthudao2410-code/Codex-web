@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "operation": "exact-retirement-intent",
+  "observed_at_ms": 1791821485511,
+  "owner": {
+    "owner_pid": 28800,
+    "owner_process_start_token": "134362894309253220",
+    "instance_id": "121b28e1a1d93d1d5a03775fc6c9a5e6",
+    "installation_id": "491e1d67970775eb93c7085942ad76fb233707c40672f9b37e8c8e13e5c20b96"
+  },
+  "stopped_observation": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\timefix-old-stopped-observation-1791821449831-0069da81.json",
+  "server": {
+    "receipt_path": "E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/server-readiness-timefix-retire3.json",
+    "sha256": "a9ab3fda45b543d4853098fd4fa48f1e2b00204785af143facfd113217398336",
+    "capture_completed_at_ms": 1791821477964,
+    "admission_fence_claimed": false,
+    "preserved_autocad_quarantines": [
+      "act_3849e259d55546639794cec40f63fea8",
+      "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "act_9db9b985a3d648b5b941f2e13a30ee47"
+    ],
+    "foreign_expired_blockers": [
+      "act_0f0a49c6424d42d3bc7bc49ad46e4ffa"
+    ]
+  },
+  "no_replay": true
+}

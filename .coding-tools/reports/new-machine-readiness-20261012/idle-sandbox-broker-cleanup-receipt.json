@@ -1,0 +1,16 @@
+﻿{
+    "operation":  "cleanup_exact_idle_sandbox_broker",
+    "observed_at":  "2026-10-12T02:26:27.0710868+00:00",
+    "pid":  40676,
+    "mutated":  true,
+    "ok":  true,
+    "active_sessions":  0,
+    "hcs_census":  [
+                       "e3f88531-2a66-4891-8a74-c09d33357948",
+                       "    VM,                       \tSavedAsTemplate, E3F88531-2A66-4891-8A74-C09D33357948, CmService",
+                       ""
+                   ],
+    "saved_templates":  1,
+    "active_compute_systems":  0,
+    "state":  "EXACT_IDLE_BROKER_STOPPED"
+}

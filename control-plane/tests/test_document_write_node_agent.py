@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -21,6 +23,7 @@ from control_plane.node_agent import (
     _safe_document_write_bridge_result,
     _policy_digest,
     _write_json_atomic,
+    poll_document_write_once,
 )
 
 
@@ -255,6 +258,84 @@ class DocumentWriteNodeAgentTests(unittest.TestCase):
             self.assertEqual(submit.call_count, 1)
             _flush_document_write_journal(self.config, journal_path, loaded)
             self.assertEqual(submit.call_count, 1)
+
+    def _assert_bridge_rejection_receipt(self, code: str, state: str) -> dict[str, object]:
+        self.install_policy()
+        action = self.action()
+        receipts: list[dict[str, object]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            if path.endswith("/poll"):
+                self.assertEqual(payload, {"limit": 1, "lane": "document_write"})
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            receipts.append(payload)
+            return {"receipt_id": "receipt-document-write-rejection-0001"}
+
+        status = {
+            "state": "CURRENT", "host": "available", "installation": "current",
+            "mcp_update_pending": "false", "mcp_running_revision": "sha-current",
+            "mcp_disk_revision": "sha-current", "components_ready": "true",
+            "fully_ready": "true", "runtime_update_incomplete": "false",
+            "runtime_telemetry_available": "true", "runtime_signal_stale": "false",
+            "connector_state": "CURRENT_ACKNOWLEDGED", "connector_rediscovered": "true",
+            "connector_rediscovered_at": "2026-10-12T00:00:00Z",
+            "connector_freshness_mode": "current_process_discovery",
+            "connector_refresh_required": "false", "connector_ack_pending": "false",
+            "connector_current_sha": "sha-current", "connector_ack_sha": "sha-current",
+            "error_code": "none",
+        }
+        identity = {
+            "observation_schema_version": 1, "observation_kind": "mcp_identity_read_only",
+            "mcp_ready": True, "identity_current": True,
+            "mcp_process_instance_id": "process-document-write-0001",
+            "mcp_server_instance_id": "server-document-write-0001",
+            "activation_epoch_id": "activation-document-write-0001",
+            "current_activation_epoch_id": "activation-document-write-0001",
+            "tool_contract_sha256": "a" * 64,
+        }
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=status), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=identity), \
+             mock.patch("control_plane.node_agent.recovery_document_write_bridge", return_value=(None, code)) as bridge, \
+             redirect_stdout(output):
+            self.assertEqual(poll_document_write_once(self.args()), 0)
+            # Re-delivery may only observe the durable receipt, never call the
+            # document mutation bridge again.
+            self.assertEqual(poll_document_write_once(self.args()), 0)
+
+        bridge.assert_called_once()
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(receipts[0]["receipt_state"], state)
+        self.assertEqual(receipts[0]["local_handle"], "")
+        observation = json.loads(output.getvalue().splitlines()[0])
+        self.assertEqual(observation[f"{state}_action_ids"], [action["action_id"]])
+        self.assertEqual(observation["unknown_action_ids" if state == "rejected" else "rejected_action_ids"], [])
+        saved = _read_document_write_journal(_document_write_journal_path(self.config_path))["entries"][
+            f"{action['action_id']}|{action['attempt_id']}"
+        ]
+        self.assertEqual(saved["state"], state)
+        self.assertEqual(saved["receipt"]["payload"], receipts[0]["payload"])
+        self.assertTrue(saved["receipt"]["receipt_submitted"])
+        self.assertFalse((self.root / "docs/result.md").exists())
+        return receipts[0]["payload"]
+
+    def test_bind_rejection_is_terminal_before_document_effect(self) -> None:
+        payload = self._assert_bridge_rejection_receipt("CONTROL_PLANE_DOCUMENT_WRITE_BIND_REJECTED", "rejected")
+        self.assertEqual(payload, {
+            "schema_version": 1, "operation_kind": "control_plane_document_write",
+            "code": "CONTROL_PLANE_DOCUMENT_WRITE_BIND_REJECTED",
+        })
+
+    def test_mcp_rejection_keeps_unknown_document_effect(self) -> None:
+        payload = self._assert_bridge_rejection_receipt("CONTROL_PLANE_DOCUMENT_WRITE_MCP_REJECTED", "unknown")
+        self.assertEqual(payload, {
+            "schema_version": 1, "operation_kind": "control_plane_document_write",
+            "code": "CONTROL_PLANE_DOCUMENT_WRITE_EFFECT_UNKNOWN",
+            "diagnostic_code": "CONTROL_PLANE_DOCUMENT_WRITE_MCP_REJECTED",
+            "reconciliation_required": True,
+        })
 
 
 if __name__ == "__main__":

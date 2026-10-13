@@ -1,0 +1,2 @@
+{"operation":"activate","ok":true,"code":null,"stage":null,"report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9c-transition\\packaged-activate-receipt-1791795300142.json","activation":null,"target":{"workspace_id":"workspace_bc86004be2684b958ab7a9a6f9530cd7","workspace_generation":"generation_03f9c04f1b14414fa4bfa7d91cc8ea7a","binding_id":"bind_8cd903180f3146099fea128bf55c0b4b","pilot_decision_id":"pilot_833530c73c72491ba0163037ae80e8f0","workspace_path":"E:\\DEV\\Autocad","expires_at_ms":1791847531435},"runtime":null}
+PROCESS_EXIT=0

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "operation": "execution_workspace_source_checkpoint",
+  "observed_at_utc": "2026-10-12T12:17:38.8183643Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "git_branch": "main",
+  "source_frozen": true,
+  "source_sha256": {
+    "control-plane/control_plane/node_agent.py": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+    "control-plane/control_plane/workspace_policy_store.py": "e8c12f38bccd0fa2c9d54b77c4eb5e592afce17540228cba5321dbd78033f98c",
+    "electron/services/controlPlanePolicyStore.js": "b15de2fac5088ddd6066e53d0a537aa5180a5bf6cfc3b6ee5fdfbcbdc793059f",
+    "electron/services/controlPlaneReadOnlyBridge.js": "e75a6ea7f26757cee13cc4461d8ab3939830d029377d66903e2b3ffe841dbc50",
+    "electron/services/controlPlaneFileReadBridge.js": "4ae69729be7d9703fc28c2e79d6395b97b426da574a24bead47329baf0d58e7c",
+    "electron/services/controlPlaneApprovedPatchBridge.js": "0bf11073b074739229b69d8007b5518923fdf092bf9d833db62f04430d961a85",
+    "electron/services/controlPlaneExecBridge.js": "3aaad6be3faa7fabb898a51401945b07cbf354ac3c0151dc8be0f0f74c2e6968",
+    "electron/services/runtimeOrchestrator.js": "e9d42d7e78e8605b5da8d52d90e659ccc6dfa7480e37fb08b9dbaee5bf355e60",
+    "control-plane/tests/test_workspace_policy_store.py": "57b5fa6a8c4c787a4f76d8788d5f799bbea12c4fe1454c9a548d8d9c1d36b014",
+    "tests/control-plane-exec-runtime.test.js": "3ec98857fa54c2a4e8e8fae54e90328993cf9832d218f2a4ba58e0314d4d9a8f",
+    "tests/control-plane-exec-bridge.test.js": "6ec0e05858557dc0fcd1000927474e487966a4d396eaf0737ebb02ec6a6f254a"
+  },
+  "validation": [
+    {
+      "cwd": "control-plane",
+      "passed": 59,
+      "command": "python -B -m unittest tests.test_workspace_policy_store tests.test_file_read_node_agent tests.test_document_write_node_agent tests.test_exec_node_agent"
+    },
+    {
+      "passed": 5,
+      "purpose": "added exact two-scope standing heartbeat assertion",
+      "command": "python -B -m unittest tests.test_workspace_policy_store"
+    },
+    {
+      "passed": 38,
+      "failed": 1,
+      "command": "node --test tests/control-plane-exec-bridge.test.js tests/control-plane-exec-runtime.test.js tests/control-plane-file-read-runtime.test.js tests/control-plane-standing-file-policy.test.js tests/control-plane-document-write-runtime.test.js",
+      "failure_classification": "new overlap fixture used cwd dot, denied by existing contract; fixture corrected to empty cwd"
+    },
+    {
+      "passed": 12,
+      "failed": 0,
+      "purpose": "corrected fixture plus simultaneous request barrier, exact root/task/native approvals, unique Jobs, poll original handles",
+      "command": "node --test tests/control-plane-exec-runtime.test.js"
+    },
+    {
+      "passed": true,
+      "purpose": "direct-file sibling module import",
+      "command": "python -B control-plane/control_plane/node_agent.py --help"
+    },
+    {
+      "command": "git diff --check for execution lane files",
+      "passed": true
+    }
+  ],
+  "strongest_proof": "source and focused tests; mocked MCP concurrency proof",
+  "live_two_root_overlap_proven": false,
+  "production_activation_performed_by_this_lane": false,
+  "commit_push_release_deploy_service_operations_performed_by_this_lane": false,
+  "remaining": "Parent owns packaged activation and live canaries. Historical unknowns remain preserved."
+}

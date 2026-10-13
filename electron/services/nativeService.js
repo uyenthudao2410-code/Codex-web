@@ -583,6 +583,7 @@ class NativeService {
     });
     const args = [
       ...python.prefixArgs,
+      '-B',
       '-m', 'coding_tools_mcp',
       '--workspace', settings.workspace,
       '--host', '127.0.0.1',
@@ -676,12 +677,17 @@ class NativeService {
     };
   }
 
-  async stop() {
+  async stop(options = {}) {
     const state = readJson(this.paths.stateFile(), {});
     const identity = await this.ownedIdentity(state);
     if (!identity) {
       this.clearOwnedState(storedProcessReceipt(state, 'nativePid', 'nativeProcessStartToken'));
       return false;
+    }
+    if (options.expectedIdentity && !sameProcessIdentity(identity, options.expectedIdentity)) {
+      throw Object.assign(new Error('Coding MCP owner changed after executor cleanup preparation.'), {
+        code: 'NATIVE_PROCESS_STATE_CHANGED'
+      });
     }
     return this.terminateOwnedIdentity(identity);
   }

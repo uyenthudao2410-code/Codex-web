@@ -420,7 +420,7 @@ function approvedPatchVerificationHost(t, { execDenied = false, differentExecWor
 test('Recovery Host initial verification denies exec authority before the patch orchestrator', async t => {
   for (const scenario of [
     { name: 'argv outside independent exec policy', options: { execDenied: true }, code: 'CONTROL_PLANE_EXEC_ALLOWLIST_DENIED' },
-    { name: 'exec registration resolves another workspace', options: { differentExecWorkspace: true }, code: 'CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH' }
+    { name: 'exec registration resolves another workspace', options: { differentExecWorkspace: true }, code: 'CONTROL_PLANE_EXEC_POLICY_INVALID' }
   ]) {
     await t.test(scenario.name, async child => {
       const item = approvedPatchVerificationHost(child, scenario.options);

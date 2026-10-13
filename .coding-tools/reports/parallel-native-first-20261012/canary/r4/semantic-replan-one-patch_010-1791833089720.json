@@ -1,0 +1,565 @@
+{
+  "schema_version": 1,
+  "operation": "replan-proof-accept-one",
+  "ok": true,
+  "observed_at": "2026-10-12T19:25:10.427Z",
+  "lane": "patch_010",
+  "run_id": "9bb77434054e4c508f110fc473646a43",
+  "original_wave_id": "f738ae67902a460f9094ce4e5f3ee9fe",
+  "proof_wave_id": "768af856edbc4b0c99682638cf9e8a42",
+  "task_context_id": "cpap_958f92ae71ac5745d6f5e71d45147a633ae005b1784204567df4a228",
+  "report_id": "5e50aed50168f05a827d90c174de04d6d51fe6fd4a4bc16e9b2010387076fa64",
+  "verifier_command": "node tests/fixtures/native-first-canary/verify-postimages.cjs",
+  "verifier_sha256": "a92245b8502e4693cd67bd748366147bcae00464e91e1758c5b638d49cb1d848",
+  "proof": {
+    "artifact_ref": {
+      "content_addressed": false,
+      "durability": "workspace_ledger",
+      "input_fingerprint": "77f3aa40233b29ea11cb723d3388208604e95ac523cd5472c98fadffcbbeb6f5",
+      "kind": "orchestration_proof",
+      "locator": {
+        "proof_id": "03f005a3dd2c4bbbb04b2aae8bf0af33"
+      },
+      "owner_run": "9bb77434054e4c508f110fc473646a43",
+      "owner_wave": "768af856edbc4b0c99682638cf9e8a42",
+      "restart_safe": true,
+      "retrieval": {
+        "action": "audit",
+        "run_id": "9bb77434054e4c508f110fc473646a43",
+        "tool": "task_control"
+      },
+      "schema_version": 1,
+      "scope": "orchestration_ledger",
+      "source": "proof_ledger",
+      "stage_id": "check:a8c1c5acc25c3fec",
+      "stage_version": "1",
+      "status": "passed"
+    },
+    "cache_hit": false,
+    "duration_ms": 1442,
+    "exit_code": 0,
+    "finished_at": "2026-10-12T19:25:03.043Z",
+    "proof_id": "03f005a3dd2c4bbbb04b2aae8bf0af33",
+    "stage_id": "check:a8c1c5acc25c3fec",
+    "status": "passed",
+    "wave_id": "768af856edbc4b0c99682638cf9e8a42"
+  },
+  "accepted": true,
+  "final_state": {
+    "build_results": [],
+    "completion_report": {
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "current_state": {
+        "integrity": {
+          "checked": 50,
+          "head_hash": "1dc719ae7ad0f160509de5425f5df9947a68c11c59cf09670a5d53aea7deec50",
+          "ok": true
+        },
+        "orchestration_state": "CHECKPOINTED",
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-9bb77434054e4c508f110fc473646a43\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-9bb77434054e4c508f110fc473646a43\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-9bb77434054e4c508f110fc473646a43\\wave-002.md"
+          ]
+        },
+        "run_status": "accepted",
+        "task_status": "completed",
+        "wave_status": "accepted"
+      },
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave.",
+      "operator_visible_required": true,
+      "proof_actually_run": {
+        "all_recorded_proofs_passed": true,
+        "count": 1,
+        "proofs": [
+          {
+            "cache_hit": false,
+            "duration_ms": 1442,
+            "exit_code": 0,
+            "proof_id": "03f005a3dd2c4bbbb04b2aae8bf0af33",
+            "stage_id": "check:a8c1c5acc25c3fec",
+            "status": "passed"
+          }
+        ]
+      },
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "schema_version": 1,
+      "source_run_wave": {
+        "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+        "checkpoint_id": "bc0e1842f7604581be33dea4f6730d04",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Apply one owner-approved exact local patch.",
+          "legacy_fallback": false,
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "objective_revision": 1,
+          "objective_sha256": "4eeedbc0220f5e63e04e69598363e92378f3246e371efb9cf5ca46f2a66b7555",
+          "objective_source": "replan_request"
+        },
+        "run_id": "9bb77434054e4c508f110fc473646a43",
+        "wave_id": "768af856edbc4b0c99682638cf9e8a42",
+        "worktree_fp": "0d9b36b9609104909122283e92be3ce13743150aa4568680ebfb2f9aa6c3be05"
+      },
+      "what_changed": {
+        "files": [
+          {
+            "path": "tests/fixtures/native-first-canary/file-010.txt",
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "9bb77434054e4c508f110fc473646a43",
+            "sha256": "1e2d21562b8e52c62710d15a66ac31199e76036cd3eba35c9594cf1b5f455619",
+            "size_bytes": 46,
+            "state": "file",
+            "wave_id": "768af856edbc4b0c99682638cf9e8a42"
+          }
+        ],
+        "raw_source_or_command_output_included": false,
+        "source": "accepted_checkpoint_file_attestations"
+      },
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator."
+    },
+    "completion_report_acknowledged_at": null,
+    "completion_report_acknowledged_id": "",
+    "completion_report_id": "5dd0de7db9c1bfe5691ddf8d39d430f7d753adbc248680474dd741994291a95c",
+    "created_at": "2026-10-12T17:06:48.951Z",
+    "current_command": null,
+    "current_step": "Completed - operator report required",
+    "events": [
+      {
+        "details": {
+          "objective": "Apply one owner-approved exact local patch."
+        },
+        "event": "task_auto_started",
+        "time": "2026-10-12T17:06:48.951Z"
+      },
+      {
+        "details": {
+          "state": "PREFLIGHT"
+        },
+        "event": "orchestration_context_ready",
+        "time": "2026-10-12T17:06:50.281Z"
+      },
+      {
+        "details": {
+          "state": "ROUTED"
+        },
+        "event": "orchestration_routed",
+        "time": "2026-10-12T17:06:51.730Z"
+      },
+      {
+        "details": {
+          "state": "EXECUTING"
+        },
+        "event": "mcp_write_lease_active",
+        "time": "2026-10-12T17:06:53.024Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        },
+        "event": "continuous_workflow_started",
+        "time": "2026-10-12T17:06:53.029Z"
+      },
+      {
+        "details": {
+          "state": "PROVING"
+        },
+        "event": "orchestration_proving",
+        "time": "2026-10-12T17:06:54.530Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        },
+        "event": "task_updated",
+        "time": "2026-10-12T17:06:55.510Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        },
+        "event": "continuous_workflow_completed",
+        "time": "2026-10-12T17:06:55.518Z"
+      },
+      {
+        "details": {
+          "state": "ACCEPTING"
+        },
+        "event": "awaiting_final_acceptance",
+        "time": "2026-10-12T17:06:56.391Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "final_acceptance_required",
+        "time": "2026-10-12T17:06:56.391Z"
+      },
+      {
+        "details": {
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "command_id": "",
+          "report_id": "063b68be7c858d091c2199cb5f558c92c69587c553e7ebc8afbe4d5e9a6fce3f"
+        },
+        "event": "command_completion_report_required",
+        "time": "2026-10-12T17:06:56.480Z"
+      },
+      {
+        "details": {
+          "count": 1
+        },
+        "event": "files_modified",
+        "time": "2026-10-12T17:06:56.680Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "orchestration_projection_reconciled",
+        "time": "2026-10-12T18:51:10.122Z"
+      },
+      {
+        "details": {
+          "state": "REPLAN"
+        },
+        "event": "final_acceptance_rejected",
+        "time": "2026-10-12T19:08:30.783Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "task_rejected",
+        "time": "2026-10-12T19:08:30.785Z"
+      },
+      {
+        "details": {
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "command_id": "",
+          "report_id": "5e50aed50168f05a827d90c174de04d6d51fe6fd4a4bc16e9b2010387076fa64"
+        },
+        "event": "command_completion_report_required",
+        "time": "2026-10-12T19:08:30.895Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "orchestration_projection_reconciled",
+        "time": "2026-10-12T19:08:31.126Z"
+      },
+      {
+        "details": {
+          "report_id": "5e50aed50168f05a827d90c174de04d6d51fe6fd4a4bc16e9b2010387076fa64"
+        },
+        "event": "operator_completion_report_acknowledged",
+        "time": "2026-10-12T19:24:54.067Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "orchestration_projection_reconciled",
+        "time": "2026-10-12T19:24:54.117Z"
+      },
+      {
+        "details": {
+          "state": "PREFLIGHT"
+        },
+        "event": "orchestration_context_ready",
+        "time": "2026-10-12T19:24:56.181Z"
+      },
+      {
+        "details": {
+          "state": "ROUTED"
+        },
+        "event": "orchestration_routed",
+        "time": "2026-10-12T19:24:57.456Z"
+      },
+      {
+        "details": {
+          "state": "EXECUTING"
+        },
+        "event": "mcp_write_lease_active",
+        "time": "2026-10-12T19:24:58.981Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        },
+        "event": "continuous_workflow_started",
+        "time": "2026-10-12T19:24:58.988Z"
+      },
+      {
+        "details": {
+          "state": "PROVING"
+        },
+        "event": "orchestration_proving",
+        "time": "2026-10-12T19:25:00.751Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        },
+        "event": "task_updated",
+        "time": "2026-10-12T19:25:01.383Z"
+      },
+      {
+        "details": {
+          "command": "node tests/fixtures/native-first-canary/verify-postimages.cjs",
+          "session_id": "c4BksfzBsk5QF-MqRF9xP-ZH"
+        },
+        "event": "command_started",
+        "time": "2026-10-12T19:25:02.550Z"
+      },
+      {
+        "details": {
+          "command": "node tests/fixtures/native-first-canary/verify-postimages.cjs",
+          "status": "passed"
+        },
+        "event": "command_finished",
+        "time": "2026-10-12T19:25:03.034Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        },
+        "event": "task_updated",
+        "time": "2026-10-12T19:25:03.469Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        },
+        "event": "continuous_workflow_completed",
+        "time": "2026-10-12T19:25:03.485Z"
+      },
+      {
+        "details": {
+          "state": "ACCEPTING"
+        },
+        "event": "awaiting_final_acceptance",
+        "time": "2026-10-12T19:25:04.281Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "final_acceptance_required",
+        "time": "2026-10-12T19:25:04.283Z"
+      },
+      {
+        "details": {
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "command_id": "",
+          "report_id": "8c67d1370cdf33eea592e13d0e4a9a644741c5da8f624834d81de4c1c0c404ff"
+        },
+        "event": "command_completion_report_required",
+        "time": "2026-10-12T19:25:04.449Z"
+      },
+      {
+        "details": {
+          "count": 0
+        },
+        "event": "files_modified",
+        "time": "2026-10-12T19:25:04.659Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "orchestration_projection_reconciled",
+        "time": "2026-10-12T19:25:04.874Z"
+      },
+      {
+        "details": {
+          "state": "CHECKPOINTED"
+        },
+        "event": "final_acceptance_recorded",
+        "time": "2026-10-12T19:25:09.223Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "task_accepted",
+        "time": "2026-10-12T19:25:09.225Z"
+      },
+      {
+        "details": {
+          "accepted_or_not": "ACCEPTED",
+          "command_id": "",
+          "report_id": "5dd0de7db9c1bfe5691ddf8d39d430f7d753adbc248680474dd741994291a95c"
+        },
+        "event": "command_completion_report_required",
+        "time": "2026-10-12T19:25:09.477Z"
+      },
+      {
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        },
+        "event": "orchestration_projection_reconciled",
+        "time": "2026-10-12T19:25:09.803Z"
+      }
+    ],
+    "failure": null,
+    "last_build_report": null,
+    "last_command_result": {
+      "command_id": "c4BksfzBsk5QF-MqRF9xP-ZH",
+      "duration_ms": 944,
+      "exit_code": 0,
+      "finished_at": "2026-10-12T19:25:03.034Z",
+      "kind": "command",
+      "result_status": "passed",
+      "status": "exited"
+    },
+    "modified_files": [
+      {
+        "operation": "update",
+        "path": "tests/fixtures/native-first-canary/file-010.txt",
+        "updated_at": "2026-10-12T17:06:56.680Z"
+      }
+    ],
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "objective": "Apply one owner-approved exact local patch.",
+    "orchestration": {
+      "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "contract_fp": "",
+      "delegation_id": "",
+      "execution_mode": "mcp_only",
+      "orchestration_state": "CHECKPOINTED",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "run_id": "9bb77434054e4c508f110fc473646a43",
+      "wave_id": "768af856edbc4b0c99682638cf9e8a42",
+      "worktree_fp": "0d9b36b9609104909122283e92be3ce13743150aa4568680ebfb2f9aa6c3be05",
+      "write_lease_id": "",
+      "write_owner": ""
+    },
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "status": "completed",
+        "text": "Adopt existing or apply workspace changes",
+        "updated_at": "2026-10-12T19:25:03.485Z"
+      },
+      {
+        "id": "checks",
+        "status": "completed",
+        "text": "Run requested checks",
+        "updated_at": "2026-10-12T19:25:03.485Z"
+      },
+      {
+        "id": "finalize",
+        "status": "completed",
+        "text": "Finalize verified result",
+        "updated_at": "2026-10-12T19:25:03.485Z"
+      }
+    ],
+    "task_id": "e2f257a22ddd42bca62303218aa565d1",
+    "test_results": [],
+    "updated_at": "2026-10-12T19:25:09.803Z",
+    "version": 2
+  },
+  "patch_reapplied": false,
+  "native_execution_claimed": false,
+  "original_actions_replayed": false
+}

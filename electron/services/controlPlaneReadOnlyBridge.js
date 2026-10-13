@@ -8,6 +8,7 @@
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const { MAX_COLLECTION_BYTES, selectWorkspacePolicy } = require('./controlPlanePolicyStore');
 const { URL } = require('node:url');
 
 const POLICY_SCHEMA_VERSION = 2;
@@ -264,7 +265,7 @@ function normalisePolicy(value, { now = Date.now() } = {}) {
   });
 }
 
-function loadReadOnlyBridgePolicy(paths, { now = Date.now() } = {}) {
+function loadReadOnlyBridgePolicy(paths, { target = null, now = Date.now() } = {}) {
   const policyFile = typeof paths?.controlPlaneReadOnlyPolicyFile === 'function'
     ? paths.controlPlaneReadOnlyPolicyFile()
     : '';
@@ -274,7 +275,7 @@ function loadReadOnlyBridgePolicy(paths, { now = Date.now() } = {}) {
   let raw;
   try {
     const stat = fs.statSync(policyFile);
-    if (!stat.isFile() || stat.size > MAX_POLICY_BYTES) {
+    if (!stat.isFile() || stat.size > MAX_COLLECTION_BYTES) {
       throw bridgeError('CONTROL_PLANE_BRIDGE_POLICY_INVALID', 'control-plane read-only bridge policy is invalid.');
     }
     raw = JSON.parse(fs.readFileSync(policyFile, 'utf8'));
@@ -282,7 +283,7 @@ function loadReadOnlyBridgePolicy(paths, { now = Date.now() } = {}) {
     if (error?.code?.startsWith('CONTROL_PLANE_BRIDGE_')) throw error;
     throw bridgeError('CONTROL_PLANE_BRIDGE_POLICY_INVALID', 'control-plane read-only bridge policy cannot be parsed.');
   }
-  const policy = normalisePolicy(raw, { now });
+  const policy = normalisePolicy(selectWorkspacePolicy(raw, target, { code: 'CONTROL_PLANE_BRIDGE_POLICY_INVALID', maxPolicyBytes: MAX_POLICY_BYTES }), { now });
   return Object.freeze({ ...policy, policy_sha256: digest(policy) });
 }
 

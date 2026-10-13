@@ -1,0 +1,523 @@
+{
+  "operation": "native_first_local_fixture_preparation",
+  "prepared": true,
+  "repository": "E:\\DEV\\Codex-web",
+  "fixture": "tests/fixtures/native-first-canary",
+  "seed_file_count": 100,
+  "trusted_build_argv": [
+    "node",
+    "trusted-build.js"
+  ],
+  "trusted_build_cwd": "tests/fixtures/native-first-canary",
+  "shared_mcp_creation_claimed": false,
+  "files": [
+    {
+      "path": "tests/fixtures/native-first-canary/file-001.txt",
+      "sha256": "366013fba5d1ebe611d15a22bc2b98385fa6ea6ef312b7d2dbfb2f84352cf870",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-002.txt",
+      "sha256": "a33aa3b35adf5119190b19854d03974ca99b3149ad4bb0b0bb0cb72e03c8ee97",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-003.txt",
+      "sha256": "56881ea1dfeb98b39277b1427faf5766f5771bada7469b45eea4b7959bc0deab",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-004.txt",
+      "sha256": "f7d543043fda55183af0454c780453a4378a81683a889d9caf391ca9e91bb293",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-005.txt",
+      "sha256": "d73e7f73384a19f2a0eef8d9b7e49cd3efea963d72af686170e9f536d240e6f8",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-006.txt",
+      "sha256": "7c54c029a691172300a2b2d20aaff7cd13f373daf0fbd0403b14db616ef82492",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-007.txt",
+      "sha256": "746b69c418224b9ef29a2ae790b1ea8a532512e49a281633db1a3af54414d758",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-008.txt",
+      "sha256": "3e05dede6b25f6a347deeb684a856e9476d1971c37995ae35c0033d0cea93749",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-009.txt",
+      "sha256": "6149f592dab0d1afed1855c754b96e35f173c0a4221d0a79512be26f09d66bd4",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-010.txt",
+      "sha256": "e7fdbee19420143c80c0014618f93f50f34c7b594da7121385cd1921e6b95b7c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-011.txt",
+      "sha256": "6b3b29b53ebe65a9eafaa9f92dcde87198ceee8fec5935b1a5aa27032861ae95",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-012.txt",
+      "sha256": "bc1086604f236ce671978c1f705261501c97ef8a707c27f23a6045256914f21e",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-013.txt",
+      "sha256": "159d38fae4917056eb3bd26aadfae2e5e5bb08e9cdba0e1b88be336da879b5fb",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-014.txt",
+      "sha256": "cdcf6fc13eb8ae9a441bc7a6fdb8a2726a44ac62d18e50267e46204913f2d4a3",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-015.txt",
+      "sha256": "fa6eec15c641938323013ccb61f3460f106498cf1f83b039b6edff2ef7795b4b",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-016.txt",
+      "sha256": "fb640665f89aeec27a781be26e56b7a9e7f00cdc5bdd43b609f5a679c2be0e79",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-017.txt",
+      "sha256": "79f1f8d25cc19c664cbae13e310591407d82648cac0598e078a01743ea54248d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-018.txt",
+      "sha256": "3114903217c6588729ca01c394d6231c5f01df554956d2a0754068b5dc598e5a",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-019.txt",
+      "sha256": "03e980c6120541672b4ac1a642c48797e514c90f1235475ee7d83b32edf0cf20",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-020.txt",
+      "sha256": "17554aa52f72ba3b72f5131a175aa9637ad6ae3484b623a9e4c04d4f44622ac9",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-021.txt",
+      "sha256": "bf190b35ffd59ed18f987f588ca7debfbab5edffb4efa3e67a697c2e3d818547",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-022.txt",
+      "sha256": "e29ccd70423f4f7de972d62e25d3578d01f14f28d0cac400ef1398aa271b241e",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-023.txt",
+      "sha256": "ed821a6e4108fc5706478e8d8027a040f0e6a90bf46360d44b8ae32e939f34b1",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-024.txt",
+      "sha256": "8824c47980de25cf261cce926c34a3bd3e9c083948a030a04642f5dac43fd7f6",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-025.txt",
+      "sha256": "5392628f41a557b80fb89a276a5889c4027df066e0218f3f07ee181fb5f9b5c8",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-026.txt",
+      "sha256": "eab8ab48611ac3006d47d9895652b76f4c936f3c159853a2508c6cb11652345d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-027.txt",
+      "sha256": "35484e8b69a1b376f142e66087b1f20f9f11f111789e56be5e5e69106abb798e",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-028.txt",
+      "sha256": "fdf2a573bbcdb3e3e6def7b341b7d01dbcfb008a2e01c78d4071503cc31a60e7",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-029.txt",
+      "sha256": "d702ade78e344c4ea5e35e8522482f832108d5dd74099dfdf1d90adbc6de3b60",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-030.txt",
+      "sha256": "78bf3a70b04e4e9e4707242e4f0e49bbb2cd4580d6e618f8213a4a775c82468c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-031.txt",
+      "sha256": "3bd77356f997be373556f033fece708c3573e9bbb0eb301a084f7e085751bc05",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-032.txt",
+      "sha256": "3ef670b6cfb17531fa565caa30621fc414325552c79f4ed43b939f77a1d5321b",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-033.txt",
+      "sha256": "3977a77a651d7a29f0b1f92c8434c4b8ab19b06b7f35dab141ce00346f991e2e",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-034.txt",
+      "sha256": "22d99dd37c21cac29f20263d760fabbf0a4ef7484d76ec467780e6dfd01b5dfd",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-035.txt",
+      "sha256": "5da40c153c20a2024c7f447a0dfb2a9b5739282a94c270511d147925f2d7d09f",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-036.txt",
+      "sha256": "a2c3fa6f3f9cfe3ca014de575d9d17d997e6b3a41c1106698c67d441bcb74df3",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-037.txt",
+      "sha256": "691bba572e2dd281fd6723329ffd791cf5c9fdb29e8ccd65a1fe8711c176f3c8",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-038.txt",
+      "sha256": "11ead7515beba414aaa5605b34e73b3f034586f8ba7423cf7dbd7cac34caf5c1",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-039.txt",
+      "sha256": "fc60dbc564dfed421ee447dca2c6bc787d6df3f0345c376e13db73d24f33dcfa",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-040.txt",
+      "sha256": "cf24603af0f3e10a9cb01cf299dd5a04e124b5310fdcccc408188a8d44100957",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-041.txt",
+      "sha256": "5d17cd8c232db4dde7ca861faa1783d88f7b45e9b69127ba0d36c8b1e29c1459",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-042.txt",
+      "sha256": "355c003b6370eb22b12538e922cccd8134ef61d042987fc062efa5b2cbf967ec",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-043.txt",
+      "sha256": "acd0524ef17b08fca9bb67085be37851af25b4825cdaeb817fed41e7cc802a0d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-044.txt",
+      "sha256": "747f145daa40f71547b755744cf19410aca7ef8d3868bbe5217a0cb35a449f01",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-045.txt",
+      "sha256": "f89e72d90a9f95cd471210d354871f6cf06faf238f073cb51eb0b3c828a82f5f",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-046.txt",
+      "sha256": "d225cce83dddb9d00e6f6400a20f3ddb18fe2ce9bc2310453cb4e9888e5986c4",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-047.txt",
+      "sha256": "97172081889f395d41360da63c345baf8a7cadcadde7d1d7d1755798dca58e5c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-048.txt",
+      "sha256": "fba7ea528ae5dd28c5537a406eca06c72b731b54d5130a190638853c23637011",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-049.txt",
+      "sha256": "03ccccd7bc88bec8529304a7362af6725a17c4845a3ee6c9a7197155df4f3a29",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-050.txt",
+      "sha256": "620710542f923827bfbe667b258ebd6b1e55448d533b3fd0231c5a3c01926ace",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-051.txt",
+      "sha256": "a269aeaf070dbe779e544ec0d4f3f1c685d369c3eb704af1ab550a72dfbac533",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-052.txt",
+      "sha256": "b39236183c5fe11b464512286abce4f34a6feeab790bde3ee1d61213fe46c96c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-053.txt",
+      "sha256": "266bfad26f407e08f58cc4957d71c43f00cc38fd97de25cf2edc8a5c1924e592",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-054.txt",
+      "sha256": "b068fab76d8d8e1bb08d784e742fae19b5a4757d94a9050c7172d1d73ba8f42d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-055.txt",
+      "sha256": "b0d1bc536c1bfb74402fe383cc900604a096ba804e3cd82f2a87d45cdb5d1174",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-056.txt",
+      "sha256": "01a5a3015be02dfa8ba9cdd870d434fa4677521cde928b5108b3f35e6624940f",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-057.txt",
+      "sha256": "cddd36e96264bf5c9083cdbdf89aaf54869503e87c7ab907fb5b1f1c10d8989a",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-058.txt",
+      "sha256": "ccc72fff40e70f241bed3e2c3f975071f0e9af5c08b79e0873c0c087375d4505",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-059.txt",
+      "sha256": "a1dd1cc7d5ab27a0d8880f5f4a0bc9753b621152e8c11cf03d458ab07acd43fe",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-060.txt",
+      "sha256": "0e54331f515a96e2ceea3afde6b913eb8d7fc4b196f03ee91b84e77360e3aec8",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-061.txt",
+      "sha256": "a5c9985fb8fa10c6014aa4fb10c7dd0bb048f3b7456e0854f7e38282afd29c84",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-062.txt",
+      "sha256": "f28185d42a1fce1e9987cc394450fe21a9901d5ca9a5acb6ff04d9ba6edb1c2d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-063.txt",
+      "sha256": "d94de12c99a904a1fd06a4651d6c2facbd394675e3defbde2013fb4975942200",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-064.txt",
+      "sha256": "7213f9a46107b05b26f9676867ea4550836df20f06af80907f9b87305bba329b",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-065.txt",
+      "sha256": "49ed108660d9192790a78f3ab9af0448d9c6b51a4a5f4bb7b16a6c477d90113f",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-066.txt",
+      "sha256": "a13805ad5e749a466a6b614b1dc5f82317fdcbeb1c74a9f54ba32cbdcfe26ee4",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-067.txt",
+      "sha256": "308252ef51ba2897a0f82b8aea46d6708d070356def4a02baf26a0c8f514fa28",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-068.txt",
+      "sha256": "072e9351c7d7d20bd45b74f595db0c314158e49d722675ebc2c9ce64252a0d72",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-069.txt",
+      "sha256": "dcfedd0fb6a0b623df6c535c427394016e58c55960ea255b055564609fa2499d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-070.txt",
+      "sha256": "0ab1268da8716dd0ebd958af2127046cda4711862b0620ba5a0c1a8023b970aa",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-071.txt",
+      "sha256": "40b754d92b47f08a0ec7e94ea18eb29701a5fc37f9051597140d1f6e7f6bbc0e",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-072.txt",
+      "sha256": "47dec5a639b31a3211bf2c1994f53a47e555c509b055ece22c2c49c3137eba1c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-073.txt",
+      "sha256": "76c8d50ebec42d3339b96ce584b99e4974ea3a2f55085e430e6e3e473e605fb8",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-074.txt",
+      "sha256": "80f565cd11e5d5f7bb021355faef60d882d67141b6f2f290bc35c343847a90b7",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-075.txt",
+      "sha256": "c982fd9c232b341af3fb22b18e60770503b57c112f3c963e3579220a4e7fbffa",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-076.txt",
+      "sha256": "480f469b597a7dbd4b07b3b908290d65694298def8310468f47a4d6801ac0b2a",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-077.txt",
+      "sha256": "0ee1aec6df0d4a0913e080000b93daf294a150f6176acfdae10653dcb3efc598",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-078.txt",
+      "sha256": "586c1bacc860994012580ca010b33d7fb433e681e8a14b56a6d8edaac16da64a",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-079.txt",
+      "sha256": "c82a6a31a2b004fe8f013119d47a1eeb9f3c9c120d58d29c6e26ba2b97307015",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-080.txt",
+      "sha256": "4874aa54da39eec28ae2f716d0bee7acd8180af29bbbc4f0de7b8d3101c84e1d",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-081.txt",
+      "sha256": "2911d8a78493b78a0b815294b11823eb14df2352e4f8ea8eaa049af772bfad54",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-082.txt",
+      "sha256": "861a0de45f31fdc679a1119f38029ac67ca6a4e506491b580dd7ebaa46eb7113",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-083.txt",
+      "sha256": "2a17d8b488ead7e44848d34dc59609f24127403f21d22ab51381d76668b7797c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-084.txt",
+      "sha256": "25ac33f31e523fce453280b7675d5958b8c58e612250f17185ff2710fd9726be",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-085.txt",
+      "sha256": "8622518af048a9c4a8ac122efaa28ff134293475069257ffa8f2d7ed782dd62c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-086.txt",
+      "sha256": "c27523ac696f5afbde3c58a68d061b5a286575a85833f48e9e9dbeabaf915ca2",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-087.txt",
+      "sha256": "3feabe6eddd0d401353d75dc906aa502478a310a654335df25861245f3efdc81",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-088.txt",
+      "sha256": "0012e69aec77a2167c8f02ba0547ebb09f9279af2c78202537cb4c3416219a12",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-089.txt",
+      "sha256": "504204801915003b6df40f5e3ddc391176cc59e8e577619bb76cb90a353ecff4",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-090.txt",
+      "sha256": "001c4aba28107e8c802ca655732cfb50772d53587385263b956caabc02054523",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-091.txt",
+      "sha256": "9ff3a95a411a6281ed29400f540623d564f8fa27f42e4ba86cde07b862f6ca0f",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-092.txt",
+      "sha256": "c0b4932b058d2dfdaab26de7322c51e59f472ef5e8ee008ed9f134f153d78714",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-093.txt",
+      "sha256": "e07c68015425b885e75ceba51bfad487a8a4b1ccbfdcbdbe3a39b0b9b23c75c4",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-094.txt",
+      "sha256": "fb5c2f2e70b43a576ba4168a51030716180a8cd1fddb188ffee3df9c8f7c9b4b",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-095.txt",
+      "sha256": "650bbb9d54025e809624aceda5e168f1745b46f7c0249dd07212800c3f98cc94",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-096.txt",
+      "sha256": "3dc31b22ce75e86d670f6e334ccd40bfc9c2e5214ba6716505f6ee091fe5cc32",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-097.txt",
+      "sha256": "7b2aa5813df402a99bcaeaf592570a31ab4c6e10c6179c99c915ab8bc9a7d22c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-098.txt",
+      "sha256": "5b4c5349ad4149b5757dd8d2c87dcc2b7630cc478fc3bef859f51a43ef9f245c",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-099.txt",
+      "sha256": "a18b81dfa2ac3b4f57cb832ed656332855e4b77963a7615335eed21bdb7b3bb6",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/file-100.txt",
+      "sha256": "7ff30668b0da6e17adee3e4bd53ffafaa389e87075ff2977da74e00985e4ac10",
+      "size_bytes": 43
+    },
+    {
+      "path": "tests/fixtures/native-first-canary/trusted-build.js",
+      "sha256": "f9e65f66adb6fc7937333ce4b04937f995d060dee9ed1d49973bf001430c9533",
+      "size_bytes": 726
+    }
+  ],
+  "observed_at_ms": 1791806854603,
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "harness_sha256": "fda0fa1c33a3d5e5dbfc24adabc01ad54b1819a3cf1ff497b77ee956951df990"
+}

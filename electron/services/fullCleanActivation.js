@@ -1071,7 +1071,7 @@ async function canonicalLedgerCensus({
   };
   const args = [
     ...(python.prefixArgs || []),
-    '-u', '-m', 'coding_tools_mcp.activation_ledger_census',
+    '-B', '-u', '-m', 'coding_tools_mcp.activation_ledger_census',
     '--workspace', root
   ];
   if (sourceCheckpoint && typeof sourceCheckpoint === 'object') {
@@ -1626,6 +1626,19 @@ class FullCleanActivation {
       expires_at_unix_ms: Number(metadata.expires_at_unix_ms || 0) || null,
       metadata: { ...metadata, reason: metadata.reason || 'operator_restart' }
     });
+  }
+
+  async prepareOwnedExecutorStop(operationIdValue) {
+    // A service stop needs the same authenticated, quiescent executor fence
+    // as replacement, without creating a replacement activation epoch.
+    const fence = await this._prepareFence(
+      operationIdValue,
+      this.now() + EXECUTOR_CLEANUP_BUDGET_MS + MCP_PREPARE_FENCE_TTL_MS,
+      null,
+      true
+    );
+    if (fence?.code === 'COMPONENT_STOPPED') return fence;
+    return this._requireExactPreparedFence(fence, operationIdValue, 'before service stop');
   }
 
   async _prepareFence(operationIdValue, expiresAtUnixMs, sourceCheckpoint, allowAcceptancePending) {
@@ -2229,7 +2242,7 @@ class FullCleanActivation {
     }
     const args = [
       ...(python.prefixArgs || []),
-      '-u', script,
+      '-B', '-u', script,
       '--workspace', root
     ];
     for (const runId of ids) args.push('--run-id', runId);

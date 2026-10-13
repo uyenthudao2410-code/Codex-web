@@ -1,0 +1,27 @@
+{
+  "operation": "observe_original_node_version_native_job",
+  "observed_at_ms": 1791783288268,
+  "content_free": true,
+  "mutation_performed": false,
+  "original_action_replayed": false,
+  "native_job": {
+    "job_id": "41d336e59e8340078b97d35760b4a649",
+    "command_id": "E8P8BFQ0Tjgc7Zk6p4jir4bE",
+    "owner": "control-plane-exec-bridge",
+    "checkout_id": "25c93def8586e1639a68032b71a2239ea0242d3787ab252590647dff4c8f4ad2",
+    "run_id": "",
+    "wave_id": "",
+    "resource_class": "LIGHT",
+    "root_pid": 48040,
+    "root_process_token": "134362556714610912",
+    "process_instance_id": "ev_bVSX46CWc8WG5",
+    "runtime_instance_id": "XobFwIqZETgu9SLo",
+    "lifecycle_state": "exited",
+    "started_at": "2026-10-12T05:14:31.240Z",
+    "updated_at": "2026-10-12T05:14:31.599Z",
+    "finished_at": "2026-10-12T05:14:31.599Z"
+  },
+  "exit_code": 1,
+  "command_sha256": "545ea538461003efdc8c81c244531b003f6f26cfccf6c0073b3239fdedf49446",
+  "evidence_boundary": "actual native Job exited1; adapter-lifecycle failure classification is in matching central receipt"
+}

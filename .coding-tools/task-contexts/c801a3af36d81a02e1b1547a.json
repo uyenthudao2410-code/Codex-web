@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "870a1a89b6ab4bfca30db1138216e266",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "CVW8pA7gONrLHvRsehNhGATm",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 638,
+    "finished_at": "2026-10-12T17:38:45.482Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-12T17:38:44.633Z",
+  "updated_at": "2026-10-12T17:38:45.482Z",
+  "events": [
+    {
+      "time": "2026-10-12T17:38:44.633Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-12T17:38:45.102Z",
+      "event": "command_started",
+      "details": {
+        "command": "node",
+        "session_id": "CVW8pA7gONrLHvRsehNhGATm"
+      }
+    },
+    {
+      "time": "2026-10-12T17:38:45.482Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node",
+        "status": "passed"
+      }
+    }
+  ]
+}

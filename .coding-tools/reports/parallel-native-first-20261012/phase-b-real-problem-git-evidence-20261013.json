@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "receipt_type": "phase_b_real_problem",
+  "recorded_at": "2026-10-13T00:06:27.5210026+00:00",
+  "problem": {
+    "title": "Automatic activation identity rejected by retained runtime evidence volume",
+    "affected_boundary": "Electron recovery automatic-activation Git identity",
+    "user_impact": "A large retained .coding-tools evidence tree could block automatic activation before source identity was evaluated."
+  },
+  "reproduction": {
+    "observed_at": "2026-10-13T00:00:47.394Z",
+    "raw_status_records": 2339,
+    "retained_runtime_evidence_records": 2129,
+    "pre_fix_outcome": "failed_closed",
+    "pre_fix_error_code": "AUTO_ACTIVATION_GIT_TOO_LARGE",
+    "pre_fix_behavior": "workspaceIdentity rejected the current repository before filtering retained runtime evidence."
+  },
+  "patch": {
+    "changed_files": [
+      "electron/services/recoveryActionStore.js",
+      "tests/accepted-code-activation.test.js"
+    ],
+    "summary": "gitStatus now applies rooted .coding-tools exclude pathspecs before the bounded output and source-entry checks; actual source-entry limits remain enforced.",
+    "pathspec_policy": ":(top)** plus rooted .coding-tools exclusions; Windows uses case-insensitive exclusion."
+  },
+  "validation": {
+    "focused_command": "node --test tests/accepted-code-activation.test.js",
+    "result": "passed",
+    "tests_passed": 38,
+    "tests_failed": 0,
+    "elapsed_ms": 77540,
+    "focused_regression": "2,001 retained evidence files are ignored; evidence edits do not change the source fingerprint; source edits do; 2,001 source files still fail closed with AUTO_ACTIVATION_GIT_TOO_LARGE.",
+    "diff_check": "git diff --check passed for the changed files."
+  },
+  "errors_and_intervention": {
+    "initial_validation_error": "The first test assertion called an unfiltered Python status helper and therefore hit the same intentional 2,000-source-entry guard.",
+    "resolution": "The test was corrected to compare the Node identity fingerprint with the canonical Python fingerprint helper; no product behavior was weakened.",
+    "manual_intervention": "One source-test assertion correction; no production intervention.",
+    "production_restart": false,
+    "packaged_activation": false
+  },
+  "behavior_confirmation": {
+    "observed_at": "2026-10-13T00:02:11.737Z",
+    "source_status_entries": 212,
+    "source_identity_entries": 212,
+    "coding_tools_present_in_identity": false,
+    "outcome": "workspaceIdentity accepted the current repository and returned a source fingerprint."
+  },
+  "source_and_package_status": {
+    "source_patch_ready_for_review": true,
+    "package_rebuilt": false,
+    "packaged_runtime_changed": false,
+    "commit_created": false,
+    "pushed": false,
+    "released": false,
+    "production_runtime_untouched": true
+  },
+  "git_context": {
+    "branch": "main",
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "worktree_state": "existing dirty worktree preserved"
+  },
+  "timing": {
+    "reproduction_started_at": "2026-10-13T00:00:47.394Z",
+    "behavior_confirmed_at": "2026-10-13T00:02:11.737Z",
+    "reproduction_to_behavior_ms": 84343,
+    "focused_validation_ms": 77540,
+    "timing_scope": "observed reproduction-to-behavior interval plus separately measured focused validation; not total end-to-end agent wall time"
+  }
+}

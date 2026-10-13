@@ -1,0 +1,7 @@
+{
+  "operation": "complete",
+  "observed_at": "2026-10-12T02:46:59.820Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "ok": false,
+  "code": "UPDATE_INCOMPLETE"
+}

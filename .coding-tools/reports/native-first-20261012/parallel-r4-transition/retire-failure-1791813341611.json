@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "retire",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "observed_at": "2026-10-12T13:55:41.611Z",
+  "observed_at_ms": 1791813341611,
+  "ok": false,
+  "stage": "supervisor_suppression",
+  "code": "FRESH_EXACT_IDLE_SERVER_CENSUS_REQUIRED",
+  "mutating_action_started": true,
+  "retry_instruction": "Observe exact current state and original operation receipt; do not replay uncertain mutations.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\retire-failure-1791813341611.json"
+}

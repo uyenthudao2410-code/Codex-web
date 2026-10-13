@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_utc": "2026-10-12T11:04:15.1855800Z",
+  "source_lane": "lifecycle_audit",
+  "scoped_ui_tests": {
+    "command": "node --test tests/folder-permission-editor.test.js",
+    "failed": 0,
+    "passed": 67
+  },
+  "earlier_combined_ui_tests": {
+    "command": "node --test tests/folder-permission-editor.test.js tests/system-setup-console.test.js",
+    "failed": 0,
+    "passed": 87
+  },
+  "syntax": "node --check renderer/app.js passed",
+  "scoped_whitespace": "git diff --check passed for owned lifecycle source/tests",
+  "token_proof": {
+    "host": {
+      "elevated": false,
+      "integrity_rid": 8192,
+      "sensitive_privileges": [],
+      "administrator_group_deny_only": true
+    },
+    "native_child": "unknown: whoami groups/priv exit1; Python fixture exit126 before token query",
+    "interpretation": "Empty native whoami flags are unavailable observations, not verified absence of privileges",
+    "receipts": [
+      "native-token-proof.json",
+      "native-token-winapi-proof.json"
+    ]
+  },
+  "stale_test_cleanup": {
+    "guard": "PID, creation second, process name and exact owned suite substring all matched before Stop-Process",
+    "node_parent": "exited itself after child stop",
+    "creation_local": "2026-10-12T17:53:12",
+    "stopped_pid": 38460,
+    "final_matching_process_census": [],
+    "initial_tree": [
+      {
+        "pid": 25708,
+        "name": "pwsh.exe",
+        "parent": 22228
+      },
+      {
+        "pid": 45884,
+        "name": "node.exe",
+        "parent": 25708
+      },
+      {
+        "pid": 38460,
+        "name": "node.exe",
+        "parent": 45884
+      }
+    ],
+    "ownership": "exact earlier lane suites folder-permission-editor.test.js and system-setup-console.test.js",
+    "deviation": "original exec session ID unavailable after compaction; used guarded OS process identity"
+  },
+  "operations": {
+    "commit": false,
+    "service_restart": false,
+    "push": false,
+    "deploy": false,
+    "vm_adapter_calls": 0,
+    "release": false
+  },
+  "remaining": "Packaged parity/smoke delegated separately after core source stabilizes"
+}

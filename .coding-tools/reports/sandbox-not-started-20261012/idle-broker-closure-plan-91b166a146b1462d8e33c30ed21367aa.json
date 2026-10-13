@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "operation": "prepare_exact_idle_broker_closure",
+  "observed_at_ms": 1791786973968,
+  "producer_sha256": "ac297d106baa8d982a3aab84a29812d0546313921e071746b136ce9d23315174",
+  "reviewed_readonly_helper_sha256": "8ab29b114c2184e1a4696647e477c502ee91b3ee6b38469a85ff615e15f07168",
+  "closure_dispatched": false,
+  "automatic_retry_permitted": false,
+  "owned_vm_claimed": false,
+  "authorization_scope": "user_requested_reversible_local_repair",
+  "binding": {
+    "closure_attempt_id": "91b166a146b1462d8e33c30ed21367aa",
+    "broker": {
+      "pid": 27568,
+      "exact_creation_filetime": "134362591793508117",
+      "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe",
+      "owner_sid": "S-1-5-21-3701392583-1527660463-1969581198-1001",
+      "current_user_sid": "S-1-5-21-3701392583-1527660463-1969581198-1001",
+      "session_id": 1,
+      "same_current_user_and_session": true,
+      "termination_handle_identity_verified": true
+    },
+    "attribution": {
+      "evidence_sha256": "c662f981239698bdc8516910018fe4498a7135542b45fdf789f2475bd3afa1af",
+      "prior_microsecond_creation_filetime": "134362591793508110",
+      "parent_cli_pid": 3724,
+      "per_tool_call_child_pid_capture": false,
+      "strongest_claim": "exact live server matches reviewed AppCli parent correlation"
+    },
+    "signed_image": {
+      "trust_kind": "Microsoft Store installed AppX deployment plus exact installed block map",
+      "individual_executable_authenticode_claimed": false,
+      "package": {
+        "name": "MicrosoftWindows.WindowsSandbox",
+        "publisher": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        "package_full_name": "MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy",
+        "signature_kind": "Store",
+        "status": "Ok",
+        "install_location": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy"
+      },
+      "blockmap_sha256": "1965e24ec4cc94c5021634e9fa4f66dd8f3059411c3d8f7e5f9e9bc8129bad01",
+      "manifest_sha256": "4a0901c7c34b97d56f217c865f53ac1b50e401088a90661544dced9ae2ccf230",
+      "broker_blocks_verified": 5,
+      "executable_sha256": "0eea154eb84b6059b6ef86186e2cf1b22e9cd570519d654828e1ef17cca2c428",
+      "code_integrity_catalog": {
+        "present": true,
+        "signature": {
+          "status": "Valid",
+          "thumbprint": "7654D417160F24E94FE47F0A2A009FFB8F4E7FEA",
+          "subject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+        },
+        "signature_observer_path": "C:\\Users\\Admin\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "signature_observer_sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+        "checked": true,
+        "algorithm": "SHA256 SIP",
+        "member_digest": "901EF6BB985B9F9E5446723D109990E054A2FFBE160D012DEC3BCC40FEC062BE",
+        "catalog_sha256": "a5cd4096113be4c7240049327b55d7018c06ee009809999a42cd7ecaca035905",
+        "member_present": true
+      }
+    },
+    "boundary": {
+      "package_manifest_sha256": "335b47effc6ff85ffc94cd8eed8466cbb9a4512c2327b989cd754776f8448df3",
+      "runtime": {
+        "activation_epoch": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+        "process_instance_id": "gT3FDNVLRDcHAVhw",
+        "server_instance_id": "lK5WnRGPSmCvtD4w",
+        "native_process": {
+          "pid": 16280,
+          "creation_time": "134362579801951257",
+          "executable_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\native-python\\pythonw.exe",
+          "supported_native_process_start_token": "134362579801951250",
+          "native_token_normalization": "exact_FILETIME_minus_modulo_10"
+        },
+        "native_module_root": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\coding-tools-mcp",
+        "epoch_state": "READY",
+        "admission_state": "OPEN"
+      },
+      "native_job_count": 0,
+      "authority": {
+        "original_writer_generation": 1,
+        "current_writer": {
+          "task_id": "task_91b8033f78254a52bd83120411c7674e",
+          "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+          "lease_generation": 2,
+          "released_at_ms": null
+        },
+        "current_writer_fresh_unexpired": true,
+        "original_lineage_unchanged": true
+      },
+      "original_stop_attempt_id": "b18bb16d623240db9d014361770302db",
+      "original_stop_result_preserved": "UNKNOWN",
+      "stopped_record_sha256": "e9fd0f4fc1ebaae96e784e85bb6e4d19e814623985e87d2c9e304f4be6c7b9a5",
+      "mapped_folders_sha256": "b51f69daf254c8000b88b9166dfbbbcf5201ffaf34307b2f525985cb7ed6d4a6",
+      "daemon_record_absent": true,
+      "hosts": {
+        "user_mode_hosts": [
+          {
+            "name": "WindowsSandboxServer.exe",
+            "pid": 27568
+          }
+        ],
+        "kernel_memory_observations": []
+      },
+      "owned_vm_claimed": false
+    },
+    "original_dispatch_sha256": "9a9ab3a8c454cede1fb9d573b8a94c1a32762eb0f7c04e4a9ed9297c2d04ea08",
+    "original_plan_sha256": "6766eca6876315a16511bebcaf462f855207237a20ee72dc61452d3dcb53b33a",
+    "original_unknown_sha256": "867c480fb5ebe671e8f1fa74807f43785dc19c7a47a8269a783a74d0cd808302"
+  },
+  "binding_sha256": "3cff940faef02624618ad5e0db6b9d9d71db90223651c66bf8a75533250c30b7"
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "operation": "packaged-token-restore-failure",
+  "observed_at_ms": 1791849843526,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "ok": false,
+  "code": "TOKEN_POLICY_RESTORE_NOT_EXACT",
+  "mutating_action_started": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\packaged-token-packaged-token-restore-failure-1791849843525-3129da00.json"
+}

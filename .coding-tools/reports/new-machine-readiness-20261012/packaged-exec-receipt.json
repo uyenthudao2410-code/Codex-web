@@ -1,0 +1,23 @@
+{
+  "operation": "exec",
+  "observed_at": "2026-10-12T02:43:49.919Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "state": "enabled",
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "policy_sha256": "bfb5b1a4fe463649c032ff71ab0dbe8613185ddd7cce99460e3f09525f4e5e10",
+    "allowed_argv_prefix_count": 6,
+    "allowed_argv_prefixes_sha256": "6c67e3aa54d9dae49c41feff2d2b5c56100760b60cdef6a2a4eca392d9063597",
+    "sandbox": {
+      "state": "available",
+      "backend": "windows_sandbox",
+      "child_process_spawn": true,
+      "reason": null,
+      "binary_sha256": "19dead991dc4a544d6f66b879ffdf3d2c2a3e72208154a340cd7fa8515bc6357",
+      "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+      "release": "microsoft-mxc-source-cbe1774-0.10.0-alpha-experimental"
+    }
+  }
+}

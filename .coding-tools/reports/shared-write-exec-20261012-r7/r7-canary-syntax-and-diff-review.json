@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "operation": "additive_r7_shared_canary_syntax_and_diff_review",
+  "controller_sha256": "66b5c8a9b367f0c564080946812f2a31a3e9a730182aab9f8b51d28034ceefec",
+  "wrapper_sha256": "bd41561c0381df1b133a8716947372e7c53de1d144215e8904a0fec4c1f062e4",
+  "checker_sha256": "e29267a0f63a10a26f539f03e142ec2f132537e55ca96dc7dcb8c7a99a3d7c2e",
+  "copy_preparation_receipt_sha256": "90ee21a5a5d1329081be4f18da8fa6ecd6f58767140ecf3c3840133b07f02fd0",
+  "checks": {
+    "python_ast_parse": "PASS",
+    "powershell_parser": "PASS",
+    "node_check_syntax": "PASS",
+    "reverse_copy_exact_reviewed_r2_source": "PASS",
+    "target_did_not_exist_at_preparation": true
+  },
+  "reviewed_diff": {
+    "controller_changed_lines": ["CANARY path", "TARGET path", "idempotency prefix"],
+    "wrapper_changed_lines": ["report directory", "controller filename", "receipt prefix", "target path"],
+    "checker_changed_lines": ["target basename"],
+    "logic_changes": false,
+    "expected_no_index_diff_exit_code": 1
+  },
+  "canary_executed": false,
+  "runtime_jobs_started": false,
+  "remote_system_changed": false,
+  "semantic_acceptance_performed": false,
+  "next_action": "Root supplies fresh r7 READY identity and reviews exact hashes before one canary invocation"
+}

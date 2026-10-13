@@ -1,0 +1,38 @@
+{
+  "observed_at": "2026-10-12T03:22:56.174Z",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "reviewed": [
+    "RecoveryHost completion reservation and focused concurrency fixture",
+    "APPDATA supervisor suppression and fail-closed identity tests",
+    "Control Plane retired-generation unknown-read historical preservation and scope/fence negatives",
+    "MXC guest C-drive mapping plus bounded cold-start deadlines",
+    "Native provenance binary SHA256/size and all six pinned-patch consumers",
+    "Exact patch ignore exception"
+  ],
+  "source_findings": [],
+  "delivery_findings": [
+    {
+      "priority": 2,
+      "code": "PATCH_RAW_HASH_EOL_NOT_PINNED",
+      "file": ".gitattributes",
+      "cause": "Pinned patch file currently has LF bytes; * text=auto with core.autocrlf=true and unspecified eol can turn a future Windows checkout into CRLF, breaking pinned raw SHA256 verification.",
+      "recommendation": "Pin scripts/patches/mxc-windows-sandbox-c-drive-share.patch text eol=lf."
+    }
+  ],
+  "native_provenance": {
+    "patch_sha256": "88b8987bbe55f8e1fead1d263cd78175b2b1ffed2385638ac082108bdc5ca1f5",
+    "binary_hash_size_checks_pass": true,
+    "pinned_hash_consumers_consistent": true,
+    "development_candidate_only": true
+  },
+  "validation": {
+    "source_whitespace_clean": true,
+    "git_unmerged_entries": 0,
+    "conflict_markers_found": false,
+    "r4_recovery_host_source_hash_unchanged": true,
+    "observer_syntax_pass": true,
+    "tests_rerun": false,
+    "production_observer_executed_by_this_agent": false
+  },
+  "active_jobs_owned_by_this_agent": 0
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule Coding Tools control-plane health checks
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+Persistent=true
+RandomizedDelaySec=1min
+Unit=codex-control-plane-healthcheck.service
+
+[Install]
+WantedBy=timers.target

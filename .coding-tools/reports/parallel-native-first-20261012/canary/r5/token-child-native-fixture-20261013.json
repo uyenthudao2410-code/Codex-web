@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "operation": "native_child_token_source_fixture",
+  "ok": true,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T23:27:03.781949+00:00",
+  "capture_finished_utc": "2026-10-12T23:27:05.812959+00:00",
+  "scope": "source Runtime native-only temporary workspace; no production MCP/service/policy mutation",
+  "argv": [
+    "node",
+    "E:\\codex-token-native-fixture-bvk24lo7\\token-probe\\token-child-launcher.js"
+  ],
+  "receipt": {
+    "command_id": "e9JoBK_esHTh3Qoo1REVkyrA",
+    "job_id": "34f2eec64d5d4de5861c504980eae549",
+    "status": "exited",
+    "durable_lifecycle_state": "exited",
+    "exit_code": 0,
+    "execution_backend": "native",
+    "isolation_level": "process_container",
+    "policy_decision": "native_explicit_approval",
+    "owner_run_id": "",
+    "owner_wave_id": "",
+    "stderr_empty": true,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vm_adapter_calls": 0
+  },
+  "launcher_report": {
+    "schema_version": 1,
+    "operation": "native_child_token_winapi_probe",
+    "top_level_execution": "node_native_approved",
+    "child_argv": [
+      "E:\\codex-token-native-fixture-bvk24lo7\\token-probe\\token-child-probe.exe"
+    ],
+    "shell": false,
+    "timeout_ms": 10000,
+    "child_status": 0,
+    "child_signal": null,
+    "child_error": null,
+    "child_facts": {
+      "schema_version": 1,
+      "complete": true,
+      "open_process_token": true,
+      "elevated": false,
+      "app_container": true,
+      "integrity_rid": 4096,
+      "integrity_sid_valid": true,
+      "high_or_system_integrity": false,
+      "admin_sid_query_ok": true,
+      "administrator_group_present": true,
+      "administrator_group_enabled": false,
+      "administrator_group_deny_only": true,
+      "sensitive_privileges_enabled": 0,
+      "sensitive_luid_lookup_success_count": 11,
+      "query_errors": {
+        "elevation": 0,
+        "app_container": 0,
+        "integrity": 0,
+        "groups": 0,
+        "privileges": 0
+      }
+    },
+    "stderr_empty": true,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "child_facts": {
+    "schema_version": 1,
+    "complete": true,
+    "open_process_token": true,
+    "elevated": false,
+    "app_container": true,
+    "integrity_rid": 4096,
+    "integrity_sid_valid": true,
+    "high_or_system_integrity": false,
+    "admin_sid_query_ok": true,
+    "administrator_group_present": true,
+    "administrator_group_enabled": false,
+    "administrator_group_deny_only": true,
+    "sensitive_privileges_enabled": 0,
+    "sensitive_luid_lookup_success_count": 11,
+    "query_errors": {
+      "elevation": 0,
+      "app_container": 0,
+      "integrity": 0,
+      "groups": 0,
+      "privileges": 0
+    }
+  },
+  "production_native_claim": false
+}

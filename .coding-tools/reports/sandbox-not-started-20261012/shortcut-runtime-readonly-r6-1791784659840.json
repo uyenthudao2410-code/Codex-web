@@ -1,0 +1,15 @@
+{
+  "operation": "shortcut_runtime_readonly_r6",
+  "ok": true,
+  "observed_at": "2026-10-12T05:57:39.840Z",
+  "activation_epoch_id": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+  "state": "READY",
+  "admission_open": true,
+  "host_pid": 25028,
+  "host_instance_id": "8b8992a71407cd61f37317ae0b438cb4",
+  "installation_id": "4eedacadb4c7d463a2c00d7790db84198f7b31a22abf683163d55b1503c935f5",
+  "code_revision_current": true,
+  "fully_ready": true,
+  "authority_ready": true,
+  "central_connected": true
+}

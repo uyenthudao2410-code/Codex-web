@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import tempfile
+import hashlib
+import json
 import unittest
 from pathlib import Path
+from unittest import mock
 
-from control_plane.mcp_facade import ControlPlaneMcpFacade
+from control_plane.mcp_facade import ControlPlaneMcpFacade, _completed_exec_relay
 from control_plane.store import ConflictError, ControlPlaneStore, ValidationError
 
 ISSUER = "https://identity.example.test/tenant-exec"
@@ -63,6 +66,46 @@ class McpExecCentralTests(unittest.TestCase):
         by_name = {tool["name"]: tool for tool in self.facade.contract["tools"]}
         self.assertEqual(by_name["exec_command"]["_meta"]["control_plane"]["implemented_operations"], ["exec_run", "exec_status"])
         self.assertEqual(by_name["command_control"]["_meta"]["control_plane"]["implemented_operations"], ["exec_output", "exec_stop"])
+
+    def test_exec_receipt_metadata_is_optional_verified_and_tamper_evident(self) -> None:
+        output = {"status": "exited", "exit_code": 0, "stdout": "ok\n", "stderr": "",
+                  "truncated": False, "timed_out": False, "command_id": "command-exec-0001",
+                  "job_id": "job-exec-0001", "run_id": "", "wave_id": "", "output_refs": None}
+        payload = {"schema_version": 1, "operation_kind": "control_plane_exec", "facade_contract": self._contract(),
+                   "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
+                   "task_id": "task_" + "a" * 32, "writer_lease_generation": 1, "local_handle": "cp_exec_" + "a" * 48,
+                   "output_bytes": 3, "runtime_identity": {"activation_epoch_id": "epoch-001", "process_instance_id": "process-001",
+                   "server_instance_id": "server-001", "tool_contract_sha256": "d" * 64}}
+        action = {"tool_name": "exec_command", "task_id": payload["task_id"], "writer_lease_generation": 1, "delivery_state": "settled"}
+        for metadata in ({}, {"execution_backend": "native", "isolation_level": "process_container", "policy_decision": "native_safe_command"},
+                         {"execution_backend": "isolated", "isolation_level": "hypervisor", "policy_decision": "isolated_preferred"}):
+            projected = {**output, **metadata}
+            receipt = {**payload, **projected, "response_sha256": hashlib.sha256(json.dumps(
+                projected, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")).hexdigest()}
+            action["receipts"] = [{"receipt_state": "completed", "payload_json": json.dumps(receipt)}]
+            relay = _completed_exec_relay(action, self._contract())
+            self.assertIsNotNone(relay)
+            with mock.patch.object(self.store, "mcp_exec_action_observation", return_value=action), \
+                 mock.patch.object(self.store, "request_mcp_exec_stop", return_value={}), \
+                 mock.patch.object(self.facade, "_action_lifecycle_projection", return_value={}):
+                args = {"owner_id": self.owner_id, "principal_id": self.principal["principal_id"], "action_id": "action-test-0001"}
+                status = self.facade._exec_status(**args)["structuredContent"]["exec"]
+                output_page = self.facade._exec_output(**args, cursor=0, max_bytes=1024)["structuredContent"]
+                stop = self.facade._exec_stop(**args)["structuredContent"]
+                for observation in (status, output_page, stop):
+                    self.assertEqual({key: observation[key] for key in metadata}, metadata)
+                    if not metadata:
+                        self.assertNotIn("execution_backend", observation)
+            if metadata:
+                self.assertEqual(relay["execution_backend"], metadata["execution_backend"])
+                changed = {**receipt, "policy_decision": "native_explicit_approval"}
+                action["receipts"] = [{"receipt_state": "completed", "payload_json": json.dumps(changed)}]
+                self.assertIsNone(_completed_exec_relay(action, self._contract()))
+            else:
+                self.assertNotIn("execution_backend", relay)
+                action["receipts"] = [{"receipt_state": "completed", "payload_json": json.dumps({**receipt, "execution_backend": "native"})}]
+                self.assertIsNone(_completed_exec_relay(action, self._contract()))
 
     def test_shell_metacharacters_and_absolute_cwd_rejected(self) -> None:
         bad = self._call("exec_command", {

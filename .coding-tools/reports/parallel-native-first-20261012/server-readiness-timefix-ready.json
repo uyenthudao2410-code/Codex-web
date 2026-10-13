@@ -1,0 +1,26 @@
+{
+  "operation": "native_first_ubuntu_readonly_readiness",
+  "ok": false,
+  "error_code": "IDENTIFIER_INVALID",
+  "external_mutations_performed": false,
+  "local_observation": {
+    "ssh_exit_code": 1,
+    "captured_utc": "2026-10-12T16:14:46.721936+00:00",
+    "observer_sha256": "aec8ccfe1df5be5461f51d8a2fd7f5421a9b09468aa20c468709c60c1403e258",
+    "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "current_python_sha256": {
+      "__init__.py": "e7d59cf831e78f9ad0172617d7ff022492e25f6d8a3606a4e17c6c071a19e2d9",
+      "__main__.py": "a7ff6743394255f544f8bcb981e582e8835c6d8fc38f1f4cc90f19cd935e7073",
+      "deployment_verifier.py": "8f41b5413c6a9fed2c3725955e6d87a2430502fc317e8f6819f915b9a456c825",
+      "http_api.py": "40e8c2ee0f1b64b35a4b176d63ede12eedf7e3ab3cb4d206c2abdbc381279ebb",
+      "maintenance.py": "98c866649a56c88da5bbebe10da84c27f1ead1ad906c062eda67d5a1b0ca59fa",
+      "mcp_facade.py": "82b007a8f1d153b02e791e67b2c258ea73a6a84c2c815fc22259e5049efb3d9d",
+      "mcp_oauth.py": "99d19968daaad120a9c583f26f31414bc134c4cd0ddfee687aaa5f3f307f82c6",
+      "mcp_status.py": "303d0d8114db63caf7aa544e3150b4b86ccb0f4f1f209b2bb2128fefe0e514f9",
+      "node_agent.py": "63ff1d1e22e55935231f45d0c323f687aa441449aaa07afbb0a130205ab64820",
+      "store.py": "cd08571dfc82798e92c76c2ad7f3640d588246de5887f289398d02eba4c971c8",
+      "web_ui.py": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b",
+      "workspace_policy_store.py": "e8c12f38bccd0fa2c9d54b77c4eb5e592afce17540228cba5321dbd78033f98c"
+    }
+  }
+}

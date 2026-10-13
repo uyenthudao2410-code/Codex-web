@@ -1,0 +1,18 @@
+{
+  "operation": "activate",
+  "observed_at": "2026-10-12T08:19:49.278Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+    "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+    "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+    "pilot_decision_id": "pilot_833530c73c72491ba0163037ae80e8f0",
+    "expires_at_ms": 1791847531435,
+    "replayed": false,
+    "state": "active",
+    "workspace_path": "E:\\DEV\\Autocad"
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\transition\\packaged-activate-receipt-1791793189278.json"
+}

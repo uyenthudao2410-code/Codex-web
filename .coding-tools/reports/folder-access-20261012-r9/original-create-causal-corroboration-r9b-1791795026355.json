@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "operation": "original_create_causal_corroboration",
+  "observed_at_ms": 1791795026355,
+  "action_id": "act_ed8982433bf347ef8c32aebc17b23d43",
+  "attempt_id": "try_79756ada1f5c45c389f4c133ecb55c95",
+  "source_sha256": {
+    "server": "808a6dc888f6812cf30ae805e29d7f0abdd340d0ef9c91c534e05e451acf7aa9",
+    "registry": "e9d34f604ed17b39dea657bc8a1ee40ed88b24f80da6c95fc8101ca36527c4b5",
+    "packaged_app": "a9a8c2007c12ecf7654f3eb38ae44a82df0a7c69888189090b517be361bc16fe"
+  },
+  "metadata_receipt_sha256": "f4758b1ca2ea7b9578af7ed737650fa5a1109a89cfd211a9523e0fc70b6b2b65",
+  "policy_sha256": "b86758a26dc93540d9f13211d0f244df9fc51f6798eb8d25d0d937154c0882b6",
+  "expected_local_task_context_id": "cpdw_0aa500396f46f2b950b6006ac62bf136f065dd7f4be90bd38e0f95e5",
+  "registry_snapshot_sha256": "c2591640b8d273a32f7234c60c106199cc2377db668ad870e40ecc84ec2d0074",
+  "registry_schema_version": 1,
+  "expected_context_present": false,
+  "autocad_context_count": 0,
+  "registry_context_count": 20814,
+  "settings_last_write_unix_ns": 1790160650015643800,
+  "settings_predates_original_runtime_start": true,
+  "packaged_persistence_order": [
+    "workspace_context scope resolution",
+    "bind exact opaque task context",
+    "registry write, flush, fsync, atomic replace",
+    "bootstrap returns exact workspace",
+    "bridge checks returned workspace",
+    "bridge dispatches document_workflow"
+  ],
+  "registry_context_delete_or_eviction_method_present": false,
+  "authorized_roots_update_replaces_registry": false,
+  "autocad_evidence_tree_exists": false,
+  "original_target_exists": false,
+  "inference": "Successful ordinary Autocad bootstrap would leave the exact durable context. Its absence corroborates that the bridge did not dispatch document_workflow.",
+  "limits": {
+    "retained_original_native_error": false,
+    "retrospective_corroboration": true,
+    "assumes_no_external_registry_or_target_deletion": true,
+    "proves_original_error_code": false,
+    "reconciliation_posted": false,
+    "original_action_replayed": false
+  }
+}

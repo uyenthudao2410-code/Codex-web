@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "prepared_only": true,
+  "native_calls_performed": false,
+  "credentials_read": false,
+  "electron": {
+    "executable": "E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.exe",
+    "sha256": "8593db40c0c6e5e3c4b6b0a225b1dc9a549ecdf10f6cf2010cf5b6ce869ce07f"
+  },
+  "files": [
+    {
+      "path": "canary-controller-app/package.json",
+      "sha256": "6cd1ee0c38923c100f41ac680aeee56842a179fd96929154c84474f0338e73f7"
+    },
+    {
+      "path": "canary-controller-app/controller.cjs",
+      "sha256": "96d458f46c09d37217f8fa99ab6fedabe032f9812cf05eed3fb8a84e5374b830"
+    },
+    {
+      "path": "invoke-canary-controller.cjs",
+      "sha256": "342264476671bb2161bfdd0d38b05dae8563d7bdfcf6a90eec6c992099f556ae"
+    }
+  ]
+}

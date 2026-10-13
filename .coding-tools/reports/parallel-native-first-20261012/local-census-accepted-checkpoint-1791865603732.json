@@ -1,0 +1,66 @@
+{
+  "operation": "canonical_local_idle_census_readonly",
+  "observed_at": "2026-10-13T04:26:43.731Z",
+  "safe": true,
+  "code": "READY",
+  "counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "threshold_sensitive_stale_candidates": 18,
+    "owned_codex_sidecar_residues": 0
+  },
+  "lifecycle": {
+    "blockers": [],
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "awaiting_acceptance_runs": [
+      "0d4f567d1e5c4f90b174bad40d9e3efa",
+      "0dfb72d0c6944d2d87ecb741dc439267",
+      "28a5f750466048438307b96872e24f01",
+      "2cc8555d10fa4739b07ef55ec715f79c",
+      "351a78fd610d4f0baa15faa62f1aa39b",
+      "372352c060a34387bf1641e355fbc775",
+      "3d9a3ad822054c49a0ebf2ec857bad2e",
+      "435e64ffe1b041eea2cab17bb36ae994",
+      "490900eb8d37453baa8fb5bfb9eb72e6",
+      "4967dd953ce74b5d97cbf01aad827139",
+      "4a80ae60c2e441d8896c1ace8710c384",
+      "598f9c7aafaa4e1aa764a8392fdf7a3e",
+      "631c9d4ebee141c49471cad7d1d69366",
+      "6664f948cfb14a75958518548352896e",
+      "69f3491b6b7c45249af33903bb3221a5",
+      "6c0b08fa765b423584a42213d7f62024",
+      "7563451dc47742b39de3e3fa40ad3810",
+      "79f51b49525c459c864e94a662682759",
+      "95e909f0040a448faa9f1f3257e2ee2c",
+      "98513cec254841d4b2a2a3cabb854925",
+      "9dcd730aca3641feb460d06e9c63f21b",
+      "a8d2132df3474d85939cf0df30b4c91e",
+      "e478c0fb1ad24b428bfcab79bd3532b1",
+      "e8cef362cfe94b0ba733b73a75fbe09d",
+      "ea155e531cca4ce89f77d81bd688072b",
+      "fbaf4b0700d04794af4062671c1bcd2b",
+      "fc90e0d41d3847e2ab16961739d4df38"
+    ]
+  },
+  "snapshot": {
+    "backup_api_copy": true,
+    "foreign_key_check_rows": 0,
+    "immutable": true,
+    "integrity_check": [
+      "ok"
+    ],
+    "logical_sha256": "e63395338298c32a05b5a4ea6f18e690adc1ff9da7bd0e032d5840df4184a903",
+    "query_only": true,
+    "schema_version": 12,
+    "sha256": "ddff99fe4914bbc361cf3131e3dd41edbe2e2bf03953039273387c295f950042",
+    "size_bytes": 101113856,
+    "snapshot_at": "2026-10-13T04:26:41.948Z"
+  },
+  "mutated_canonical_ledger": false
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "operation": "installed_file_read_pre_effect_source_proof",
+  "read_only": true,
+  "ok": true,
+  "observed_at": "2026-10-12T11:19:06.119Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "package": {
+    "executable_sha256": "e7bb35634d7e765c24c156fb6a12ce9e707f3b26a4596329a2fa4dbb0e7c5f05",
+    "app_asar_sha256": "0b119f1b740faa1713c9a004015c20bfee66668aa8707e1cfab67a1c07b3e901"
+  },
+  "source": {
+    "bridge_asar_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked\\resources\\app.asar\\electron\\services\\controlPlaneFileReadBridge.js",
+    "bridge_sha256": "3b04ba39be1053d06b88962110f35d200fb5e1ff3087e4ea9d1438a6f5d5e351",
+    "bridge_saved_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r9e-installed-controlPlaneFileReadBridge.js",
+    "resolver_sha256": "a6d3e50aed69ff17a6ce4fc68454272005f96e96914a39a339155a84e1bf56b9",
+    "resolver_saved_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r9e-installed-resolveDirectRegisteredFile.js",
+    "recovery_host_sha256": "e12b56a5d6365704f4c31e496100471f2ac8ef7dcaa763a5ecead9d1f2db3dd8",
+    "recovery_host_function_sha256": "d220f9c2f0aa76b4f2291d1aaea36bd6f3092b4de93775646afb0509a8e5119b",
+    "recovery_host_excerpt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r9e-installed-controlPlaneFileRead-host-excerpt.js"
+  },
+  "missing_throw_before_content_io": true,
+  "root_and_ancestor_validation_only": true,
+  "recovery_validation_before_orchestrator_dispatch": true,
+  "limitations": [
+    "Source proof establishes rejection location; selected UNKNOWN journal/attempt/receipt lineage must independently match this diagnostic before reconciliation"
+  ],
+  "production_operations_performed": []
+}

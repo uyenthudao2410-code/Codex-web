@@ -249,7 +249,7 @@ test('initial verification observes the original background workflow and retains
   assert.equal(result.patch_applied, true);
   assert.equal(result.local_semantic_acceptance, 'pending');
   assert.equal(result.initial_verification.proof_status, 'failed');
-  assert.deepEqual(requestTimeouts, [12_000, 330_000, 15_000]);
+  assert.deepEqual(requestTimeouts, [35_000, 330_000, 15_000]);
   assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
   assert.equal(result.response_sha256, digest({ file: result.file, initial_verification: proof }));
   assertLocalMcpSchemaAccepts(calls);
@@ -303,6 +303,12 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
   const item = fixture(t);
   const action = admission(item.registeredRoot);
   const calls = [];
+  const requestTimeouts = [];
+  const originalRequest = http.request;
+  t.mock.method(http, 'request', function (options, ...argumentsList) {
+    requestTimeouts.push(options.timeout);
+    return Reflect.apply(originalRequest, this, [options, ...argumentsList]);
+  });
   const server = http.createServer((request, response) => {
     const chunks = [];
     request.on('data', (chunk) => chunks.push(chunk));
@@ -349,6 +355,7 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
   const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });
   const result = await context.orchestrator.controlPlaneApprovedPatch(action);
   assert.equal(calls.length, 2);
+  assert.deepEqual(requestTimeouts, [35_000, 35_000]);
   assertLocalMcpSchemaAccepts(calls);
   assert.equal(fs.readFileSync(item.target, 'utf8'), action._after);
   assert.equal(result.patch_applied, true);

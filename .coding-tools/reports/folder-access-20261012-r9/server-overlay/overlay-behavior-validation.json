@@ -1,0 +1,10 @@
+{
+  "operation": "exact_overlay_activation_behavior_validation",
+  "candidate_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\server-overlay\\codex-control-plane-local-folder-activation-1012-r9-3e6b43d70a57",
+  "package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+  "tests_run": 15,
+  "failures": 0,
+  "errors": 0,
+  "passed": true,
+  "remote_mutations": false
+}

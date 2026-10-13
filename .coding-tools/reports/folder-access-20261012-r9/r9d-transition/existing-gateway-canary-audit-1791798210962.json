@@ -1,0 +1,45 @@
+{
+  "ok": true,
+  "operation": "exact_canary_audit_via_existing_gateway",
+  "observed_at": "2026-10-12T09:43:30.961Z",
+  "root": "E:\\DEV\\Autocad",
+  "task_context_id": "cpap_ced36a9e27d7ccbbf19ebca90c3d0393772f98ce3a1910982450c850",
+  "run_id": "a123ac6f4c484f15a21033e0059d63d9",
+  "wave_id": "8aaccbc6dea74f9c96ffe6deb4844d82",
+  "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+  "postimage_sha256": "3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023",
+  "actor": {
+    "client_id": "codex-desktop",
+    "client_type": "codex_desktop",
+    "identity_spoofed": false
+  },
+  "orchestration": {
+    "run_id": "a123ac6f4c484f15a21033e0059d63d9",
+    "wave_id": "8aaccbc6dea74f9c96ffe6deb4844d82",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only"
+  },
+  "run": {
+    "run_id": "a123ac6f4c484f15a21033e0059d63d9",
+    "task_id": "2bcd9e37daed477586a399f0732d221c",
+    "status": "active",
+    "started_at": "2026-10-12T09:11:23.666Z",
+    "finished_at": null
+  },
+  "proofs": [],
+  "integrity": {
+    "checked": 16,
+    "head_hash": "9e0bacced280e7c63c690237cc1b34741f6e8bc2078642d05f4ec19c329605f0",
+    "ok": true
+  },
+  "controller_lease_before": null,
+  "controller_lease_after": null,
+  "controller_lease_same": true,
+  "lifecycle_read_only": true,
+  "native_report_export_performed": true,
+  "acceptance_performed": false,
+  "stop_performed": false,
+  "credential_copied": false,
+  "crypto_profile_started": false,
+  "secret_values_emitted": false
+}

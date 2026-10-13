@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "operation": "isolated_idle_lineage_timefix_offline_validation",
+  "ok": true,
+  "failed_attempt": ".coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-remote-9705978a47394551ac1f707c8f440cc7.ndjson",
+  "failed_attempt_sha256": "76ceda419b218c7f9bc011cbedde77586cff82d7975ad407d4c08554166b9491",
+  "failure_code": "ORIGINAL_JOB_IDENTITY_NOT_EXACT",
+  "observed_isolated_payload": {
+    "task_id": "task_1cb910ce7f0c421ab5f19732829fec6a",
+    "command_id": "lrRwLfnvev7u9ZchgMlmVPHC",
+    "run_id": "",
+    "execution_backend": "isolated",
+    "wave_id": "",
+    "exit_code": 0,
+    "status": "exited",
+    "isolation_level": "hypervisor",
+    "local_handle": "cp_exec_0e859bd778c763081f5d30c8e663917a97a15aa271dacf38",
+    "job_id": "c4d7fa5b20d44734811e7f238cfcb7cb"
+  },
+  "acceptance_rule": "Allow empty run_id/wave_id only when execution_backend=isolated and isolation_level=hypervisor; continue requiring job_id, command_id, local_handle, terminal status and exact routing",
+  "helpers": [
+    {
+      "path": "run-isolated-idle-canary-timefix.py",
+      "sha256": "e9bd4e7b62fe3fafd440a8e6fb42955d94b7c3b1aaab91129747b69aaa0cc8ff"
+    },
+    {
+      "path": "invoke-isolated-idle-canary-timefix2.ps1",
+      "sha256": "5d97097334dda9132cabfd9bf41d19f517177c467bf57dbafe62a78530b67e81"
+    },
+    {
+      "path": "test-isolated-idle-canary-timefix.py",
+      "sha256": "f6d5107f35341ddc7e4a7dc4353b2c24c40a4bce3c69b3c73887fd50781dafcc"
+    }
+  ],
+  "offline_checks": [
+    "python -B test-isolated-idle-canary-timefix.py (7 passed)",
+    "python -B -m py_compile run-isolated-idle-canary-timefix.py test-isolated-idle-canary-timefix.py",
+    "PowerShell Parser::ParseFile invoke-isolated-idle-canary-timefix2.ps1"
+  ],
+  "live_mutation_performed": false,
+  "redispatch_performed": false,
+  "policy_changed": false
+}

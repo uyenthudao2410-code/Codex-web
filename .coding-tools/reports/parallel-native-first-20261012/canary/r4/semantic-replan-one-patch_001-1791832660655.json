@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operation": "failure",
+  "ok": false,
+  "lane": "patch_001",
+  "code": "MCP_REJECTED",
+  "error_message": "MCP_REJECTED",
+  "error_stack": "Error: MCP_REJECTED\n    at need (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-replan-one.cjs:3:334)\n    at payload (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-replan-one.cjs:5:24)\n    at invoke (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-replan-one.cjs:6:1330)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async main (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-replan-one.cjs:6:2845)",
+  "partial_mutation_possible": true,
+  "automatic_retry_forbidden": true
+}

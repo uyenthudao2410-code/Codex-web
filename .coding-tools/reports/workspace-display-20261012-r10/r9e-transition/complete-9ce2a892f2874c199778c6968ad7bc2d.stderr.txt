@@ -1,0 +1,1 @@
+{"operation":"complete","observed_at":"2026-10-12T10:15:14.319Z","candidate":"E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked","ok":false,"code":"RUNTIME_BUSY","report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\packaged-complete-failure-1791800114319.json"}

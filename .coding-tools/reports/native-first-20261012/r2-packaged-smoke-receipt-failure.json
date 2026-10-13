@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "capture_utc": "2026-10-12T11:08:27.8210750Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "scope": "isolated packaged smoke evidence wrapper",
+  "result": "receipt_generation_failed",
+  "failure_code": "WRAPPER_EXECUTABLE_NAME_ASSUMPTION",
+  "underlying_smoke_result": "not retained; do not claim pass",
+  "source_defect": false,
+  "correction": "derive productName from package.json and compute hashes before fixture",
+  "next_action": "repeat incomplete observation once and preserve full sanitized terminal receipt"
+}

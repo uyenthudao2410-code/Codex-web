@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "operation": "windows_r4_source_delta_interpretation_correction",
+  "ok": true,
+  "observed_at_utc": "2026-10-12T15:20:01.4527934Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "original_receipt_path": ".coding-tools/reports/parallel-native-first-20261012/r4-server/windows-r4-source-delta-receipt.json",
+  "original_receipt_sha256": "8559f0b435876492642beb0f8632940c04cc5ea43e26977528d3ccf47075805b",
+  "constructor_script_sha256": "cbbd8e1db27782b48ef8c5b657816633a601f82f46aa5378f4e3a64875abcc5b",
+  "serving_http_entrypoint": "python3 -B -m control_plane -> .http_api.serve_from_environment",
+  "corrected_interpretation": {
+    "http_transitive_local_imports": [
+      "mcp_facade",
+      "node_agent"
+    ],
+    "http_node_agent_role": "facade relay validators and request helpers only",
+    "http_does_not_execute": [
+      "_connected_agent_iteration",
+      "run_connected_agent"
+    ],
+    "renewal_imports_node_agent": false,
+    "renewal_does_not_execute_changed_connected_agent_loop": true
+  },
+  "source_delta_claim_unchanged": true,
+  "serving_node_agent_sha256": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+  "windows_r4_node_agent_sha256": "fca440c9fc9faa32e4beea9085b2828a85b1c27247a17217aef7230698ce2537",
+  "freshness": false,
+  "proof_limit": "Interpretation correction only; original source delta receipt is immutable dated evidence and no new serving observation or production operation was performed"
+}

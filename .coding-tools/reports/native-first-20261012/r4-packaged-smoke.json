@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T11:17:24.256956+00:00",
+  "capture_finished_utc": "2026-10-12T11:17:34.096142+00:00",
+  "scope": "isolated temporary packaged recovery profile only; production profile and Scheduled Task untouched",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-native-first-1012-r4\\win-unpacked",
+  "command": "CODEX_PACKAGED_APP_ROOT=<r4 candidate> node scripts/packaged-recovery-smoke.js",
+  "sha256": {
+    "executable": "e5b54d71065a9f111ac2fb029c92fdd04cc06cb973b0a7d1ee02301e5a8c384a",
+    "app_asar": "8f8139eb806b6e1868d5e26944f68bc61375da02df096bc2c0d48ae0dde0a443",
+    "source_smoke_script": "170aaeae11b191376860f30f52fda45cb3ca7afb0870d0d0d94ef3e98c1329ea",
+    "source_resource_verifier": "b4923598b383306b6c384b6676aafb5aaa89ffbbae274669ca7b40b4262bc034",
+    "source_package_parity_receipt": "918bd2bdc957ff77d8b380354f6fc535f77e64af66d322644a18cf79db6aa4a0"
+  },
+  "exit_code": 0,
+  "timed_out": false,
+  "result": {
+    "ok": true,
+    "package": {
+      "executable": true,
+      "app_asar": true,
+      "required_resources": 18,
+      "smart_tool_contract": {
+        "profile": "smart-v3",
+        "task_context_id": {
+          "agent_workflow": true,
+          "task_control": true,
+          "workspace_context": true
+        },
+        "tools": [
+          "agent_workflow",
+          "command_control",
+          "document_workflow",
+          "exec_command",
+          "request_permissions",
+          "task_control",
+          "view_image",
+          "workspace_context"
+        ]
+      }
+    },
+    "isolation": {
+      "user_data_isolated": true,
+      "production_descriptor_stable": true
+    },
+    "recovery": {
+      "host_ready": true,
+      "device_identity_present": true,
+      "mode": "independent_mcp_tunnel_v1",
+      "mcp_alive": true
+    },
+    "supervisor": {
+      "healthy": true,
+      "live_owner_fail_closed": true,
+      "hash_mismatch_fail_closed": true,
+      "scheduled_task_mutation": false
+    }
+  },
+  "stdout_sha256": "4cd556110f0817685d91961f792e3d07221231544b592fb44a26ab5f5bc5b24e",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_empty": true,
+  "sanitized_failure_codes": [],
+  "production_descriptor_before": {
+    "owner_pid": 38436,
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10"
+  },
+  "production_descriptor_after": {
+    "owner_pid": 38436,
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10"
+  },
+  "production_descriptor_stable": true,
+  "fixture_processes_observed": [
+    {
+      "pid": 43376,
+      "parent_pid": 1708,
+      "name": "node.exe",
+      "created_at_utc": "2026-10-12T11:17:27.907636+00:00"
+    },
+    {
+      "pid": 31348,
+      "parent_pid": 43376,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:27.914083+00:00"
+    },
+    {
+      "pid": 31812,
+      "parent_pid": 43376,
+      "name": "python.exe",
+      "created_at_utc": "2026-10-12T11:17:28.321114+00:00"
+    },
+    {
+      "pid": 41964,
+      "parent_pid": 31812,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:28.345536+00:00"
+    },
+    {
+      "pid": 24400,
+      "parent_pid": 43376,
+      "name": "Coding Tools MCP.exe",
+      "created_at_utc": "2026-10-12T11:17:28.665420+00:00"
+    },
+    {
+      "pid": 47328,
+      "parent_pid": 24400,
+      "name": "Coding Tools MCP.exe",
+      "created_at_utc": "2026-10-12T11:17:28.850612+00:00"
+    },
+    {
+      "pid": 35016,
+      "parent_pid": 24400,
+      "name": "Coding Tools MCP.exe",
+      "created_at_utc": "2026-10-12T11:17:28.856549+00:00"
+    },
+    {
+      "pid": 27652,
+      "parent_pid": 24400,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T11:17:28.908518+00:00"
+    },
+    {
+      "pid": 17016,
+      "parent_pid": 27652,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:28.918449+00:00"
+    },
+    {
+      "pid": 12604,
+      "parent_pid": 24400,
+      "name": "python.exe",
+      "created_at_utc": "2026-10-12T11:17:29.511192+00:00"
+    },
+    {
+      "pid": 40788,
+      "parent_pid": 24400,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T11:17:29.520070+00:00"
+    },
+    {
+      "pid": 36796,
+      "parent_pid": 40788,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:29.528067+00:00"
+    },
+    {
+      "pid": 40036,
+      "parent_pid": 43376,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T11:17:30.296738+00:00"
+    },
+    {
+      "pid": 32800,
+      "parent_pid": 40036,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:30.303154+00:00"
+    },
+    {
+      "pid": 37144,
+      "parent_pid": 43376,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T11:17:31.445336+00:00"
+    },
+    {
+      "pid": 6588,
+      "parent_pid": 37144,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:31.474545+00:00"
+    },
+    {
+      "pid": 8108,
+      "parent_pid": 43376,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T11:17:32.318631+00:00"
+    },
+    {
+      "pid": 38232,
+      "parent_pid": 8108,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T11:17:32.325526+00:00"
+    }
+  ],
+  "fixture_generations_alive_after": [],
+  "candidate_process_census_before": [],
+  "candidate_process_census_after": [],
+  "profiles_observed": [
+    "E:\\Caches\\Temp\\webmcp-packaged-recovery-DcFJqL"
+  ],
+  "profiles_remaining_after": [],
+  "cleanup_proof": "existing smoke asserts each owned Recovery Host/MCP/Tunnel PID terminal; independent sampled descendant generation and package process census after exit",
+  "sampling_limitation": "100ms descendant sampling can miss short-lived children; the smoke's cleanup assertions additionally cover owned persistent fixture processes",
+  "operations": {
+    "production_activation": false,
+    "scheduled_task_mutation": false,
+    "rebuild": false,
+    "source_edit": false,
+    "vm_launch": false
+  },
+  "ok": true
+}

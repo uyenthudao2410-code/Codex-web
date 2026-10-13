@@ -1,0 +1,1 @@
+{"operation":"shared_exec_canary","phase":"final","observed_at_ms":1791774822968,"ok":false,"service_pid":912047,"binding_id":"bind_71661b1046884174b01c99af5f8546aa","workspace_generation":"generation_a420c8bfcfcb4e42b5bb7fc5e5cec097","attempt_id":"3517e4afc0344b3ea64902f492784795","error_code":"HTTP_400","task_id":null,"action_id":null}

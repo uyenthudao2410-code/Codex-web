@@ -1,0 +1,41 @@
+{
+  "operation": "folder_overlay_inert_upload_and_readonly_preflight",
+  "runtime_mutations": false,
+  "uploaded_artifacts": [
+    {
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b.tar.gz",
+      "sha256": "f7ea1c5eb7ee9a768a98ff32286a13bd9c0820bd5eed0943f53f63060c16bf2d"
+    },
+    {
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.review-folder-overlay-626768b49f4b.json",
+      "sha256": "60f9775b6aadefba2d9089795555ce5bb0cfd7216bba8bb4074a7c5eeb509b6d"
+    },
+    {
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.review-folder-overlay-626768b49f4b.py",
+      "sha256": "3dfcc8821d26ccc36c5456d5c9845f4d7d95249f06f1380cd5efbc8e45056712"
+    }
+  ],
+  "upload_guard": {
+    "operation": "inert_artifact_upload_guard",
+    "passed": true,
+    "count": 3
+  },
+  "preflight": {
+    "operation": "folder_overlay_readonly_preflight",
+    "passed": true,
+    "service_pid": 921509,
+    "release_name": "codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+    "authority": {
+      "authority_and_history_sha256": "3308299d84994c6470a7d38e15233250f52b1e1697bc8c1e07cece082a710536",
+      "table_counts": {
+        "control_plane_state": 1,
+        "bindings": 11,
+        "scoped_pilot_decisions": 20,
+        "mcp_service_grants": 2
+      },
+      "historical_unknown_count": 2
+    },
+    "remote_mutations": false
+  },
+  "root_rollout_command": "python3 -B /home/svhome/.local/lib/codex-control-plane/releases/.review-folder-overlay-626768b49f4b.py --receipt /home/svhome/.local/lib/codex-control-plane/releases/.review-folder-overlay-626768b49f4b.json --confirm-deploy-and-restart"
+}

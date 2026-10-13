@@ -1,0 +1,20 @@
+✔ build verification detects Electron package scripts (3.1239ms)
+✔ artifact collection rejects paths outside workspace and hashes files (7.5461ms)
+✔ workspace is required before build verification (0.3244ms)
+✔ electron packaging excludes volatile resource evidence and validates the packed tree (1.0322ms)
+✔ experimental MXC Windows Sandbox candidate is pinned and dev-only (19.8396ms)
+✔ legacy MXC Authenticode verification embeds literal arguments safely (11.2221ms)
+✔ packaged Electron proof requires an executable RunAsNode fuse (0.9ms)
+✔ dist cleaner removes stale package output before Electron Builder runs (1.5956ms)
+✔ packaged resources must be byte-identical to the current allowed source projection (21.1591ms)
+✔ packaged resources reject literal Windows environment-placeholder cache trees (1.9077ms)
+✔ packaged control-plane adapter has the exact allowlisted installed file set (8.4416ms)
+✔ packaged resource sanitation rejects raw reports and Python cache metadata (13.3466ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 245.6624

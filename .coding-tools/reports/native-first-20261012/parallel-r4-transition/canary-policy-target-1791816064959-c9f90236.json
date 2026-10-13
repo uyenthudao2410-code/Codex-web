@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "operation": "canary-policy-target",
+  "observed_at": "2026-10-12T14:41:04.959Z",
+  "observed_at_ms": 1791816064959,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "workspace_label": "Codex-web",
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "native_source_sha256": "f9e65f66adb6fc7937333ce4b04937f995d060dee9ed1d49973bf001430c9533",
+    "added_native_argv": [
+      "node",
+      "trusted-build.js"
+    ],
+    "added_native_cwd": "tests/fixtures/native-first-canary",
+    "policy": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "4ca0707dd6380a4c592fe24547c7b5d40affdb074c5c2b1639d497fcf6d5da57",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_only",
+      "native_argv_prefixes": [
+        [
+          "node",
+          "trusted-build.js"
+        ]
+      ]
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\canary-policy-target-1791816064959-c9f90236.json"
+}

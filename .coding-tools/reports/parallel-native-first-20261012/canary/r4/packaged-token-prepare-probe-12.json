@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "operation": "isolated-idle-policy-plan",
+  "ok": true,
+  "observed_at_ms": 1791848363186,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+  "owner_instance_id": "ecae23c8a75f4b28b3bc182104f3ed49",
+  "parity_sha256": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c",
+  "smoke_sha256": "b6eda372cbf5beb3e678c3c86976acaadcbc3848851b2e05cb50d56e20e4ed42",
+  "other_scope_sha256": "945174b0a088a5dd76c7a088d81886e85f6c3eadb1c9857db484debeebbeee9b",
+  "before": [
+    {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_first",
+      "native_argv_prefixes": []
+    },
+    {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_first",
+      "native_argv_prefixes": []
+    }
+  ],
+  "census": {
+    "schema_version": 1,
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "reason": "live_runtime_state_process",
+    "workspace": "E:\\DEV\\Codex-web",
+    "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "6191625a130bb64558ca676cc861793d0c25c3057ed03a835fab6e069eb1f9d2",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "6fd856a44e1f1c1dca8e38d366033793c5f810b4a624020c21d0e25eaedc07ee",
+      "size_bytes": 100651008,
+      "snapshot_at": "2026-10-12T23:39:19.607Z"
+    },
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 45,
+      "awaiting_acceptance_runs": [
+        "0d4f567d1e5c4f90b174bad40d9e3efa",
+        "0dfb72d0c6944d2d87ecb741dc439267",
+        "28a5f750466048438307b96872e24f01",
+        "2cc8555d10fa4739b07ef55ec715f79c",
+        "351a78fd610d4f0baa15faa62f1aa39b",
+        "372352c060a34387bf1641e355fbc775",
+        "3d9a3ad822054c49a0ebf2ec857bad2e",
+        "435e64ffe1b041eea2cab17bb36ae994",
+        "490900eb8d37453baa8fb5bfb9eb72e6",
+        "4967dd953ce74b5d97cbf01aad827139",
+        "4a80ae60c2e441d8896c1ace8710c384",
+        "598f9c7aafaa4e1aa764a8392fdf7a3e",
+        "631c9d4ebee141c49471cad7d1d69366",
+        "6664f948cfb14a75958518548352896e",
+        "69f3491b6b7c45249af33903bb3221a5",
+        "6c0b08fa765b423584a42213d7f62024",
+        "7563451dc47742b39de3e3fa40ad3810",
+        "79f51b49525c459c864e94a662682759",
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "98513cec254841d4b2a2a3cabb854925",
+        "9dcd730aca3641feb460d06e9c63f21b",
+        "a8d2132df3474d85939cf0df30b4c91e",
+        "e478c0fb1ad24b428bfcab79bd3532b1",
+        "e8cef362cfe94b0ba733b73a75fbe09d",
+        "ea155e531cca4ce89f77d81bd688072b",
+        "fbaf4b0700d04794af4062671c1bcd2b",
+        "fc90e0d41d3847e2ab16961739d4df38"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "source_checkpoint_verified": true,
+    "content_free": true,
+    "mutated_canonical_ledger": false,
+    "observed_at_unix_seconds": 1791848360.778811,
+    "census_fingerprint": "7d723899e1459a852a6c50183683ba44f44bcb11855e6993eeb7697134cd4898"
+  },
+  "mutations": 0,
+  "planned_argv": [
+    "node",
+    "--version"
+  ],
+  "planned_mode": "isolated",
+  "target": {
+    "workspaceId": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspaceGeneration": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "path": "E:\\DEV\\Codex-web"
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\packaged-token-prepare-probe-12.json"
+}

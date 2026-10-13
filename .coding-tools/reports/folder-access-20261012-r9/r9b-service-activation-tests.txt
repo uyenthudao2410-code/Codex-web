@@ -1,0 +1,25 @@
+✔ central enrollment accepts only a credential-free HTTPS Ubuntu origin (1.6982ms)
+✔ central enrollment invokes only the packaged node agent and never passes OpenAI secrets (4.133ms)
+✔ central enrollment reconciles durable status after reload without passing the node secret to renderer (2.6594ms)
+✔ packaged setup runs the node agent from the installation directory, not app.asar (3.2904ms)
+✔ central executor runs durable credential rotation through the packaged node agent without exposing a secret (2.1573ms)
+✔ central executor installs only a locally confirmed, assigned read-only policy for one registered workspace (2.8196ms)
+✔ central executor registers a local workspace with the safe read-only default without passing secrets or path to Ubuntu receipt (2.6461ms)
+✔ central executor passes owner-selected write and exec capabilities to the packaged node agent (2.0331ms)
+✔ central executor replaces a registered workspace generation only through explicit packaged confirmation (4.564ms)
+✔ workspace row replacement refuses local root drift before invoking the node agent (3.7716ms)
+✔ workspace capability input is exact, boolean-only, and always requires read (0.3118ms)
+✔ central executor lists and retires only an opaque registered workspace after a central receipt (3.4661ms)
+✔ central enrollment rejects malformed agent output and development source mode before an invocation (1.2467ms)
+✔ activation carries exact registered identity and returns only local canonical display path (5.5058ms)
+✔ activation rejects absent consent, wrong generation, development, duplicate or concurrent registry change (4.7356ms)
+✔ activation receipt rejects wrong target, expired authority, malformed identity and extra path/secret fields (0.6305ms)
+✔ manager activation IPC guards local work before mutation and keeps native root unchanged (2.072ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 132.1045

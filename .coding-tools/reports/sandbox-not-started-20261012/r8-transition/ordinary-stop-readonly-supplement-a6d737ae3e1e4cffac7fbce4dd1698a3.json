@@ -1,0 +1,21 @@
+{
+  "manual_kill": false,
+  "operation": "r8_original_ordinary_stop_readonly_supplement",
+  "independent_observation_sha256": "9ac0d062d3ff9cab2be2a64f73f6d5148cea33b9ce1d60886ca3266ca71145df",
+  "canonical_manual_edit": false,
+  "native_stopped": true,
+  "ok": true,
+  "sandbox_record_absent": true,
+  "user_hosts_absent": true,
+  "sandbox_id": "wsb:aa28a932",
+  "original_observer_sha256": "d1a3e37e4e1e4b44f42505dfddff67924072e19c2c9b6c70aac6ad1115942931",
+  "original_stop_not_replayed": true,
+  "independent_stopped_observation": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-transition\\packaged-stopped-observation-receipt-1791790062582.json",
+  "canonical_ledger_quiescent": true,
+  "observed_at": "2026-10-12T14:28:45.3014552+07:00",
+  "daemon_record_absent": true,
+  "original_stop_observer_ok": false,
+  "classification": "Original immediate producer gate failed; independent later census confirms stopped runtime and complete exact owned Sandbox teardown",
+  "kernel_ownership_inferred": false,
+  "original_stop_preserved": true
+}

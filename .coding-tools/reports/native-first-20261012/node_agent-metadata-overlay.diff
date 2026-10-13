@@ -1,0 +1,34 @@
+--- serving/control-plane/control_plane/node_agent.py
++++ candidate/control-plane/control_plane/node_agent.py
+@@ -218,6 +218,8 @@
+     "CONTROL_PLANE_FILE_READ_REQUEST_EXPIRED",
+     "CONTROL_PLANE_FILE_READ_REQUEST_TOO_LARGE",
+     "CONTROL_PLANE_FILE_READ_TARGET_MISMATCH",
++    # Only the Recovery Host pre-dispatch phase can emit this attestation.
++    "CONTROL_PLANE_FILE_READ_TARGET_MISSING_BEFORE_DISPATCH",
+     "CONTROL_PLANE_FILE_READ_TOOL_DENIED",
+     "CONTROL_PLANE_FILE_READ_CONTRACT_MISMATCH",
+     "CONTROL_PLANE_FILE_READ_PATH_DENIED",
+@@ -8585,6 +8587,22 @@
+             _write_json_atomic(journal_path, journal)
+             submitted += 1
+     return submitted
++
++
++def _safe_exec_metadata(value: dict[str, Any]) -> dict[str, str]:
++    keys = ("execution_backend", "isolation_level", "policy_decision")
++    present = [key for key in keys if key in value]
++    if not present:
++        return {}
++    if len(present) != len(keys) or not (
++        value["execution_backend"] == "native" and value["isolation_level"] == "process_container"
++        and value["policy_decision"] in ("native_safe_command", "native_explicit_approval")
++        or value["execution_backend"] == "isolated" and value["isolation_level"] == "hypervisor"
++        and value["policy_decision"] in ("isolated_unapproved_command", "isolated_preferred")
++    ):
++        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID")
++    return {key: value[key] for key in keys}
++
+ 
+ 
+ def _safe_exec_bridge_result(

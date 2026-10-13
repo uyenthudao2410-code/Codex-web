@@ -8,6 +8,7 @@
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const { MAX_COLLECTION_BYTES, selectWorkspacePolicy } = require('./controlPlanePolicyStore');
 const path = require('node:path');
 const { URL } = require('node:url');
 
@@ -125,8 +126,8 @@ function argv(value, code = 'CONTROL_PLANE_EXEC_REQUEST_INVALID') {
   return Object.freeze(normalized);
 }
 
-function argvPrefixes(value, code = 'CONTROL_PLANE_EXEC_POLICY_INVALID') {
-  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_ALLOWED_PREFIXES) {
+function argvPrefixes(value, code = 'CONTROL_PLANE_EXEC_POLICY_INVALID', allowEmpty = false) {
+  if (!Array.isArray(value) || value.length < (allowEmpty ? 0 : 1) || value.length > MAX_ALLOWED_PREFIXES) {
     throw bridgeError(code, 'allowed_argv_prefixes is invalid.');
   }
   const normalized = value.map((prefix) => {
@@ -150,6 +151,9 @@ function normalisePolicy(value, { now = Date.now(), allowExpired = false } = {})
     'facade_contract', 'allowed_argv_prefixes', 'max_timeout_ms', 'max_output_bytes', 'max_concurrent'
   ];
   if (standing) expected.push('authority_mode');
+  for (const key of ['execution_mode', 'native_argv_prefixes']) {
+    if (standing && Object.hasOwn(value, key)) expected.push(key);
+  }
   if (!exactKeys(value, expected) || (!standing && !legacy)) {
     throw bridgeError('CONTROL_PLANE_EXEC_POLICY_INVALID', 'control-plane exec policy has an invalid schema.');
   }
@@ -161,6 +165,16 @@ function normalisePolicy(value, { now = Date.now(), allowExpired = false } = {})
   const maxTimeout = Number(value.max_timeout_ms);
   const maxOutput = Number(value.max_output_bytes);
   const maxConcurrent = Number(value.max_concurrent);
+  const routing = {};
+  if (Object.hasOwn(value, 'execution_mode')) {
+    if (!['native_first', 'native_only', 'isolated'].includes(value.execution_mode)) {
+      throw bridgeError('CONTROL_PLANE_EXEC_POLICY_INVALID', 'control-plane execution mode is invalid.');
+    }
+    routing.execution_mode = value.execution_mode;
+  }
+  if (Object.hasOwn(value, 'native_argv_prefixes')) {
+    routing.native_argv_prefixes = argvPrefixes(value.native_argv_prefixes, 'CONTROL_PLANE_EXEC_POLICY_INVALID', true);
+  }
   if (!Number.isSafeInteger(maxTimeout) || maxTimeout < 1 || maxTimeout > MAX_TIMEOUT_MS
     || !Number.isSafeInteger(maxOutput) || maxOutput < 1024 || maxOutput > MAX_OUTPUT_BYTES
     || !Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > MAX_CONCURRENT) {
@@ -192,11 +206,12 @@ function normalisePolicy(value, { now = Date.now(), allowExpired = false } = {})
     allowed_argv_prefixes: argvPrefixes(value.allowed_argv_prefixes),
     max_timeout_ms: maxTimeout,
     max_output_bytes: maxOutput,
-    max_concurrent: maxConcurrent
+    max_concurrent: maxConcurrent,
+    ...routing
   });
 }
 
-function loadExecBridgePolicy(paths, { now = Date.now(), allowExpired = false } = {}) {
+function loadExecBridgePolicy(paths, { target = null, now = Date.now(), allowExpired = false } = {}) {
   const policyFile = typeof paths?.controlPlaneExecPolicyFile === 'function'
     ? paths.controlPlaneExecPolicyFile() : '';
   if (!policyFile || !fs.existsSync(policyFile)) {
@@ -205,13 +220,13 @@ function loadExecBridgePolicy(paths, { now = Date.now(), allowExpired = false } 
   let raw;
   try {
     const stat = fs.statSync(policyFile);
-    if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_POLICY_BYTES) throw new Error('invalid');
+    if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_COLLECTION_BYTES) throw new Error('invalid');
     raw = JSON.parse(fs.readFileSync(policyFile, 'utf8'));
   } catch (error) {
     if (error?.code?.startsWith('CONTROL_PLANE_EXEC_')) throw error;
     throw bridgeError('CONTROL_PLANE_EXEC_POLICY_INVALID', 'control-plane exec policy cannot be parsed.');
   }
-  const policy = normalisePolicy(raw, { now, allowExpired });
+  const policy = normalisePolicy(selectWorkspacePolicy(raw, target, { code: 'CONTROL_PLANE_EXEC_POLICY_INVALID', maxPolicyBytes: MAX_POLICY_BYTES }), { now, allowExpired });
   // Keep the cross-language policy fingerprint aligned with node_agent.py.
   // `enabled` is an admission gate, not part of the authority projection;
   // changing it to false must disable the policy rather than create a second
@@ -358,9 +373,25 @@ function admitExecBridgeRequest(policy, request, { now = Date.now() } = {}) {
     schema_version: POLICY_SCHEMA_VERSION,
     operation_kind: OPERATION_KIND,
     ...candidate,
+    execution_mode: policy.execution_mode || 'native_first',
+    native_argv_prefixes: policy.native_argv_prefixes || [],
     policy_sha256: policy.policy_sha256,
     actor: { client_id: BRIDGE_CLIENT_ID, client_type: BRIDGE_CLIENT_TYPE }
   });
+}
+
+function executionMetadata(value) {
+  const keys = ['execution_backend', 'isolation_level', 'policy_decision'];
+  const present = keys.filter((key) => Object.hasOwn(value, key));
+  if (!present.length) return {};
+  if (present.length !== keys.length
+    || !(value.execution_backend === 'native' && value.isolation_level === 'process_container'
+      && ['native_safe_command', 'native_explicit_approval'].includes(value.policy_decision))
+      && !(value.execution_backend === 'isolated' && value.isolation_level === 'hypervisor'
+        && ['isolated_unapproved_command', 'isolated_preferred'].includes(value.policy_decision))) {
+    throw bridgeError('CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID');
+  }
+  return Object.fromEntries(keys.map((key) => [key, value[key]]));
 }
 
 function normaliseExecResult(value, admission) {
@@ -410,7 +441,8 @@ function normaliseExecResult(value, admission) {
     job_id: jobId,
     run_id: text(value.run_id) || text(admission.run_id),
     wave_id: text(value.wave_id) || text(admission.wave_id),
-    output_refs: value.output_refs && typeof value.output_refs === 'object' ? value.output_refs : null
+    output_refs: value.output_refs && typeof value.output_refs === 'object' ? value.output_refs : null,
+    ...executionMetadata(value)
   };
   if ((output.stdout.length + output.stderr.length) > admission.max_output_bytes * 2) {
     throw bridgeError('CONTROL_PLANE_EXEC_RESULT_TOO_LARGE');
@@ -451,6 +483,7 @@ function normaliseExecResult(value, admission) {
     run_id: output.run_id,
     wave_id: output.wave_id,
     output_refs: output.output_refs,
+    ...executionMetadata(output),
     response_sha256: responseSha256
   });
 }
@@ -468,5 +501,6 @@ module.exports = {
   loadExecBridgePolicy,
   resolveRegisteredWorkspaceRoot,
   admitExecBridgeRequest,
+  executionMetadata,
   normaliseExecResult
 };

@@ -1,0 +1,10 @@
+{
+  "operation": "launch_r9e_ui",
+  "ok": true,
+  "observed_at": "2026-10-12T10:14:23.6509322+00:00",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "spawned_pid": 7264,
+  "install_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\install_r9e_supervisor-1791800054800.json",
+  "readiness_not_inferred": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\launch_r9e_ui-1791800063654.json"
+}

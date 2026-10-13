@@ -1,0 +1,23 @@
+{
+  "operation": "exact_new_machine_renewal_independent_review",
+  "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "reviewer": "/root/latest_readiness/renewal_script_review",
+  "script": ".coding-tools/reports/new-machine-20261012/retarget-exact-new-machine-renewal.py",
+  "mode": "read_only_review_no_execution",
+  "initial_findings": [
+    "Actual renewal unit ExecStart and EnvironmentFiles were not pinned to the SHA-checked helper and exact config.",
+    "Timer unchanged claim lacked a postflight identity, configuration and active/enabled comparison."
+  ],
+  "resolution": {
+    "exec_start_helper_and_environment_file_verified": true,
+    "unit_fragment_hashes_and_empty_dropins_verified": true,
+    "timer_and_unit_pre_edit_pre_start_postflight_compared": true,
+    "remaining_actionable_findings": []
+  },
+  "source_validation": {
+    "python_ast": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "execution_authorization": "Explicit user approval for a 20h pilot extension and existing automatic renewal is still required.",
+  "executed": false
+}

@@ -1,0 +1,748 @@
+{
+  "schema_version": 1,
+  "operation": "native_first_production_completion_evidence",
+  "observed_at_ms": 1791847176468,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "verdict": "OPERATIONAL_SCOPED_CRITERIA_COVERED_WITH_PROVISIONAL_GATES",
+  "scope": "Additive offline aggregate of retained r4/r5 receipts and latest read-only readiness/status; no live call, redispatch, replay, settlement, policy mutation, or database mutation performed.",
+  "runtime_identity": {
+    "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "windows_process_instance_id": "-s21-KH6ldxHjCSO",
+    "ubuntu_mcp_server_instance_id": "7GYqt3ZdkU47_HIr",
+    "ubuntu_service_pid": 970133,
+    "epoch_consistency": {
+      "continuation": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true
+      },
+      "plan": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true
+      },
+      "isolate": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true
+      },
+      "restore": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true
+      },
+      "status": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true
+      },
+      "readiness": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true
+      },
+      "parallel_overlap": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true,
+        "source_note": "first/target runtime_identity records in parallel-overlap receipt"
+      },
+      "isolated_idle": {
+        "observed": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+        "matches_expected": true,
+        "source_note": "isolated-idle observation runtime.activation_epoch_id"
+      }
+    },
+    "all_sources_with_epoch_match": true
+  },
+  "production_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "current_runtime": {
+    "windows_status_ok": true,
+    "fully_ready": true,
+    "mcp_running": true,
+    "native_alive": true,
+    "execution_role": "central_executor",
+    "authority_ready": true,
+    "central_connected": true,
+    "admission_open": true,
+    "activation_state": "READY",
+    "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+    "ubuntu_readiness_ok": true,
+    "ubuntu_node_readiness": "ready",
+    "service_stable": true,
+    "sqlite_integrity_ok": true
+  },
+  "policy_fingerprints": {
+    "windows_status_policy_sha256": null,
+    "windows_status_policy_observed_at_ms": null,
+    "roundtrip_plan_sha256": null,
+    "roundtrip_parity_sha256": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c",
+    "roundtrip_smoke_sha256": "b6eda372cbf5beb3e678c3c86976acaadcbc3848851b2e05cb50d56e20e4ed42",
+    "roundtrip_other_scope_sha256": "945174b0a088a5dd76c7a088d81886e85f6c3eadb1c9857db484debeebbeee9b",
+    "isolated_policy_sha256": "3ad8f06b18d7d72f836ad57b09361cd23e4eb3ae97f4e32ab7c1df7358449630",
+    "restored_native_first_policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+    "restored_execution_mode": "native_first",
+    "isolate_other_scope_unchanged": true,
+    "restore_other_scope_unchanged": true,
+    "policy_roundtrip_exact_workspace_generation": true
+  },
+  "native_continuation": {
+    "status": "lanes_complete_semantic_gate_separate",
+    "same_scope": {
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa"
+    },
+    "combined_proof_counts": {
+      "reads": 100,
+      "patches": 20,
+      "readbacks": 20,
+      "node_jobs": 10,
+      "git_jobs": 3,
+      "approved_build": 1,
+      "build_readback": 1
+    },
+    "counts_derived_from_exact_unique_lanes": true,
+    "distinct_proven_native_job_count": 14,
+    "all_contributing_tasks_closed": true,
+    "all_contributing_writers_released": true,
+    "replayed_original_actions": false,
+    "failed_parent_preserved": null,
+    "source_chain_validation": {
+      "all_declared_sources_regular": true,
+      "all_declared_hashes_match": true,
+      "sources": [
+        {
+          "declared_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-e343984bfcee4e8fb5f9de04038596a7.ndjson",
+          "declared_sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+          "declared_record_count": 426,
+          "resolved_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-e343984bfcee4e8fb5f9de04038596a7.ndjson",
+          "resolved_sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+          "hash_matches": true,
+          "regular_file": true
+        },
+        {
+          "declared_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson",
+          "declared_sha256": "fc85db8fa45fca92a0bd444d8d2665883b2813cb8f00f5cabc1958c756992dcb",
+          "declared_record_count": 13,
+          "resolved_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson",
+          "resolved_sha256": "fc85db8fa45fca92a0bd444d8d2665883b2813cb8f00f5cabc1958c756992dcb",
+          "hash_matches": true,
+          "regular_file": true
+        },
+        {
+          "declared_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\continuation-resume-receipt-9509199d0c7b49bba496c971676a4882.ndjson",
+          "declared_sha256": "af487390f5a2e19e52f39b9d2166914bcbb513de6c519fb469f38493d2dbf729",
+          "declared_record_count": 5,
+          "resolved_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\continuation-resume-receipt-9509199d0c7b49bba496c971676a4882.ndjson",
+          "resolved_sha256": "af487390f5a2e19e52f39b9d2166914bcbb513de6c519fb469f38493d2dbf729",
+          "hash_matches": true,
+          "regular_file": true
+        },
+        {
+          "declared_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\readback-finalizer-receipt-698fcc64e0b5431081e8a4e90fb7569f.ndjson",
+          "declared_sha256": "8da8e4c70eb01878ed0db2b8483de34e83ddf4fce8088f0f3bc816517fd541bd",
+          "declared_record_count": 2,
+          "resolved_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\readback-finalizer-receipt-698fcc64e0b5431081e8a4e90fb7569f.ndjson",
+          "resolved_sha256": "8da8e4c70eb01878ed0db2b8483de34e83ddf4fce8088f0f3bc816517fd541bd",
+          "hash_matches": true,
+          "regular_file": true
+        }
+      ]
+    }
+  },
+  "semantic_acceptance": {
+    "final_audit_ok": true,
+    "accepted_count": 20,
+    "proof_wave_count": 20,
+    "independent_audit_ok": true,
+    "independent_audit_sha256": "27cb096c65167fd6cdc4262e85227b27b0dec03bd7cc27746f769effcd1ccce9",
+    "original_actions_replayed": false,
+    "patch_reapplied_count": 0
+  },
+  "parallel_overlap": {
+    "source_final": {
+      "operation": "parallel_native_overlap_canary",
+      "phase": "final",
+      "observed_at_ms": 1791829436677,
+      "ok": true,
+      "attempt_id": "90307d8ef64b429aab250c9797538717",
+      "service_pid": 970133,
+      "reviewed_pins_sha256": "ba47a50ce3d3e3caf8f09fe85ed40e875e43d1ede58bb5a367bc026539554cbe",
+      "semantic_acceptance_performed": false,
+      "fixture_preparation": "local_additive_seeds_separate_from_remote_effect_proof",
+      "observation_client_recreated": true,
+      "reconnect_scope": "client_transport_only",
+      "no_second_exec_verified": true,
+      "overlap": {
+        "overlap_started_at_ms": 1791829410583,
+        "overlap_finished_at_ms": 1791829412661,
+        "overlap_duration_ms": 2078,
+        "clock_source": "same_windows_node_Date_now_correlated_with_hrtime_duration"
+      },
+      "targets": [
+        {
+          "workspace_label": "Codex-web",
+          "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "proofs": {
+            "read_probe": {
+              "receipt_id": "rcpt_90214104a45b4455a7bd5ea1c41ae168",
+              "action_id": "act_ee5eda8048c148ada0fb50af4bc9d452",
+              "attempt_id": "try_fc0bcb5441cb466abd850b34747866f5",
+              "attempt_number": 1,
+              "response_sha256": "34e6e45a68253bb666b95dea0291ec93a637f317f1de0b60fb434ebf759ae412",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "path": "tests/fixtures/parallel-native-overlap-20261012/probe.txt",
+              "content_sha256": "960965cf03705565754930605694430bcd5ca53c0b8561f4201568b346e69558"
+            },
+            "patch_probe": {
+              "receipt_id": "rcpt_108256091b464199bb7d958ff37e6e06",
+              "action_id": "act_f537db1ed00b41bea942d8bec5ed7b21",
+              "attempt_id": "try_e0733afb422c4a4990ac9d5d60899f70",
+              "attempt_number": 1,
+              "response_sha256": "15cf09e2ffbafd61a8b6582e139cc2ea943fcd64fead74f2768b82cde4d6adb2",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "postimage_sha256": "b5f5a914a66d62fd4ab4e3eff2ddb5af1422489994dd441466ae31f682bfff7f",
+              "run_id": "0dfb72d0c6944d2d87ecb741dc439267",
+              "wave_id": "290d5df22457426d93ab93aa8b15ad82"
+            },
+            "readback_probe": {
+              "receipt_id": "rcpt_ddc66d07bf024278be86ec50c6f1036e",
+              "action_id": "act_2c9d2e72018d46ae9c310f3e24ed16fa",
+              "attempt_id": "try_beb72619265c480ea66b8434872a2143",
+              "attempt_number": 1,
+              "response_sha256": "4335a69342260baba5ce7f3f0c1ec1e7517cb3abf39b25572713de3400083445",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "path": "tests/fixtures/parallel-native-overlap-20261012/probe.txt",
+              "content_sha256": "b5f5a914a66d62fd4ab4e3eff2ddb5af1422489994dd441466ae31f682bfff7f"
+            },
+            "node_overlap": {
+              "receipt_id": "rcpt_920d1c2677b34cb1a5dab0c944d7ee5e",
+              "action_id": "act_0df0cc25fab64a58abd1eb00f4b9be9a",
+              "attempt_id": "try_a2dca31c0055409081ab323bc3bb87f8",
+              "attempt_number": 1,
+              "response_sha256": "309837967ff1ba5a876ca45ab26a56ef2dab26a7c8ab8bafc85b8f4d666402db",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "accepted_at_ms": 1791829412048,
+              "job_id": "b2b2bc7c67854c98ba7d66891b3ec8fb",
+              "command_id": "pIIrUWER5J6H1sIfeWEiuzGR",
+              "local_handle": "cp_exec_41c021a913a37db7c8b2f9c967e295e8eba9eff902f7d8f8",
+              "pid": 28368,
+              "started_at_ms": 1791829410583,
+              "finished_at_ms": 1791829415587,
+              "duration_ms": 5003.8666,
+              "stdout_sha256": "fc3ba9f21da701d86800786d57a910a177596d0e84d9a789c4fc72c78dea5fca",
+              "run_id": "",
+              "wave_id": "",
+              "execution_backend": "native",
+              "isolation_level": "process_container",
+              "policy_decision": "native_explicit_approval"
+            }
+          },
+          "ok": true,
+          "retained_historical_unknown_actions": [],
+          "final_action_status": {
+            "read_probe": {
+              "action_id": "act_ee5eda8048c148ada0fb50af4bc9d452",
+              "settled_at_ms": 1791829303040,
+              "state": "completed",
+              "execution": "completed_file_read_relay",
+              "process_state": null,
+              "reconciliation_required": false
+            },
+            "patch_probe": {
+              "action_id": "act_f537db1ed00b41bea942d8bec5ed7b21",
+              "settled_at_ms": 1791829335708,
+              "state": "completed",
+              "execution": "effect_applied_pending_local_acceptance",
+              "process_state": null,
+              "reconciliation_required": false
+            },
+            "readback_probe": {
+              "action_id": "act_2c9d2e72018d46ae9c310f3e24ed16fa",
+              "settled_at_ms": 1791829381679,
+              "state": "completed",
+              "execution": "completed_file_read_relay",
+              "process_state": null,
+              "reconciliation_required": false
+            },
+            "node_overlap": {
+              "action_id": "act_0df0cc25fab64a58abd1eb00f4b9be9a",
+              "settled_at_ms": 1791829435977,
+              "state": "completed",
+              "execution": "completed_exec_relay",
+              "process_state": "completed",
+              "reconciliation_required": false
+            }
+          },
+          "task_id": "task_bc397a50dd074d668437a4898c30fa8d",
+          "writer_lease_generation": 1,
+          "action_ids": {
+            "read_probe": "act_ee5eda8048c148ada0fb50af4bc9d452",
+            "patch_probe": "act_f537db1ed00b41bea942d8bec5ed7b21",
+            "readback_probe": "act_2c9d2e72018d46ae9c310f3e24ed16fa",
+            "node_overlap": "act_0df0cc25fab64a58abd1eb00f4b9be9a"
+          },
+          "unresolved_original_actions": [],
+          "requires_reconciliation": false,
+          "task_closed_verified": true,
+          "writer_released_verified": true
+        },
+        {
+          "workspace_label": "Autocad",
+          "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "proofs": {
+            "read_probe": {
+              "receipt_id": "rcpt_dadb772ea2fd4174b20dea0d0fd1fde7",
+              "action_id": "act_0df7fed6fd05445db4fa7fe1e44e65ba",
+              "attempt_id": "try_97f5c9a4e6ad4f718539be9817e2dbff",
+              "attempt_number": 1,
+              "response_sha256": "830550a26d7bab3869867f5267a514b9acb522b4b12ab7fb5a818b62ffa8027a",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "path": "tests/fixtures/parallel-native-overlap-20261012/probe.txt",
+              "content_sha256": "284fa9578bb31abbf77453f62d4adedc3f0b90d7cbec7ea0ad621100ab3aba53"
+            },
+            "patch_probe": {
+              "receipt_id": "rcpt_0d2443c6a3d14b50b774bf5fde5742b6",
+              "action_id": "act_129b0d2012b341399ddd5565a7706000",
+              "attempt_id": "try_e0776ad563ff4657a464430943ed8176",
+              "attempt_number": 1,
+              "response_sha256": "f583c1005c8efdeea2993d9cd33e58d0d493e3e8f5f0eb847592a6d99ff5ac45",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "postimage_sha256": "02ae4fe061f2da7570629a57aff2fe1ea5e7aac94524d35cc9030dab728a143a",
+              "run_id": "94bd38be8d914fdda2ecb8e2fda4b8c2",
+              "wave_id": "ea96fe20475e4e939014f940496aac63"
+            },
+            "readback_probe": {
+              "receipt_id": "rcpt_55100acc4d23440dbd6d81a69111bee7",
+              "action_id": "act_69ec021341b547cab442dec240ec4a7c",
+              "attempt_id": "try_514aa71c5de34f8cba8ba42d2189b4c1",
+              "attempt_number": 1,
+              "response_sha256": "05fd06fafdeb27e0a8c32f320de0d2b89bc7ec36ff6be6d5924d5bb5d7fad7c7",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "path": "tests/fixtures/parallel-native-overlap-20261012/probe.txt",
+              "content_sha256": "02ae4fe061f2da7570629a57aff2fe1ea5e7aac94524d35cc9030dab728a143a"
+            },
+            "node_overlap": {
+              "receipt_id": "rcpt_f5e022ed5e42402ba3ad9d5a2d3727db",
+              "action_id": "act_7583c934035247a5a4fbd6721b4c71b3",
+              "attempt_id": "try_64bbf5fac613418282c78f7fdd72534a",
+              "attempt_number": 1,
+              "response_sha256": "80c2437614a70eaa8a282f9e6042127fa261e9f3932a20083b3b3bb9b8e85429",
+              "runtime_identity": {
+                "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+                "process_instance_id": "-s21-KH6ldxHjCSO",
+                "server_instance_id": "7GYqt3ZdkU47_HIr",
+                "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+              },
+              "accepted_at_ms": 1791829408635,
+              "job_id": "2683bd5f56644e7d9d16915ef4e2b259",
+              "command_id": "qum-Pz1WqVKLO2lAIUnwSf4B",
+              "local_handle": "cp_exec_c8e4ccc76f866b3e075d74f6a45e99c2680b2d060b5b59b5",
+              "pid": 49012,
+              "started_at_ms": 1791829407657,
+              "finished_at_ms": 1791829412661,
+              "duration_ms": 5003.5999,
+              "stdout_sha256": "7ba540ffa3470975e7753b48edba412ec7677fb346ece779fffd20beb25e03ef",
+              "run_id": "",
+              "wave_id": "",
+              "execution_backend": "native",
+              "isolation_level": "process_container",
+              "policy_decision": "native_explicit_approval"
+            }
+          },
+          "ok": true,
+          "retained_historical_unknown_actions": [
+            "act_9db9b985a3d648b5b941f2e13a30ee47",
+            "act_52409c69f1b84e08bb3fdd86747f79c3",
+            "act_3849e259d55546639794cec40f63fea8"
+          ],
+          "final_action_status": {
+            "read_probe": {
+              "action_id": "act_0df7fed6fd05445db4fa7fe1e44e65ba",
+              "settled_at_ms": 1791829324108,
+              "state": "completed",
+              "execution": "completed_file_read_relay",
+              "process_state": null,
+              "reconciliation_required": false
+            },
+            "patch_probe": {
+              "action_id": "act_129b0d2012b341399ddd5565a7706000",
+              "settled_at_ms": 1791829361240,
+              "state": "completed",
+              "execution": "effect_applied_pending_local_acceptance",
+              "process_state": null,
+              "reconciliation_required": false
+            },
+            "readback_probe": {
+              "action_id": "act_69ec021341b547cab442dec240ec4a7c",
+              "settled_at_ms": 1791829402530,
+              "state": "completed",
+              "execution": "completed_file_read_relay",
+              "process_state": null,
+              "reconciliation_required": false
+            },
+            "node_overlap": {
+              "action_id": "act_7583c934035247a5a4fbd6721b4c71b3",
+              "settled_at_ms": 1791829432936,
+              "state": "completed",
+              "execution": "completed_exec_relay",
+              "process_state": "completed",
+              "reconciliation_required": false
+            }
+          },
+          "task_id": "task_5d549af492b04505b3c035a8115ba67e",
+          "writer_lease_generation": 1,
+          "action_ids": {
+            "read_probe": "act_0df7fed6fd05445db4fa7fe1e44e65ba",
+            "patch_probe": "act_129b0d2012b341399ddd5565a7706000",
+            "readback_probe": "act_69ec021341b547cab442dec240ec4a7c",
+            "node_overlap": "act_7583c934035247a5a4fbd6721b4c71b3"
+          },
+          "unresolved_original_actions": [],
+          "requires_reconciliation": false,
+          "task_closed_verified": true,
+          "writer_released_verified": true
+        }
+      ],
+      "elapsed_seconds": 153.704
+    },
+    "ok": true,
+    "overlap_duration_ms": 2078,
+    "distinct_native_job_count": 2,
+    "reconnect_scope": "client_transport_only",
+    "no_second_exec_verified": true
+  },
+  "isolated_idle": {
+    "ok": true,
+    "terminal_to_teardown_ms": 390240,
+    "owned_record_absent": true,
+    "owned_daemon_absent": true,
+    "original_owned_hosts_absent": true,
+    "sandbox_named_memory_aggregate_absent": true,
+    "peak_observed_sandbox_working_set_bytes": 2860322816,
+    "final_sandbox_working_set_bytes": 0,
+    "limitation": "No dedicated idle teardown receipt exists. Kernel aggregates are observations and carry no process ownership authority."
+  },
+  "census": {
+    "latest_status": {
+      "schema_version": 1,
+      "safe": false,
+      "code": "RUNTIME_BUSY",
+      "reason": "live_runtime_state_process",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "11c0214704f58c0c2bda50d18f5d3bf0deadbf55b7da5577c50bf0e370b7566c",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "39fd5a1cfcd95144e21f12ba6acc593b3c328d0ef5036475e71b34e81f831b75",
+        "size_bytes": 100651008,
+        "snapshot_at": "2026-10-12T23:19:33.664Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 45,
+        "awaiting_acceptance_runs": [
+          "0d4f567d1e5c4f90b174bad40d9e3efa",
+          "0dfb72d0c6944d2d87ecb741dc439267",
+          "28a5f750466048438307b96872e24f01",
+          "2cc8555d10fa4739b07ef55ec715f79c",
+          "351a78fd610d4f0baa15faa62f1aa39b",
+          "372352c060a34387bf1641e355fbc775",
+          "3d9a3ad822054c49a0ebf2ec857bad2e",
+          "435e64ffe1b041eea2cab17bb36ae994",
+          "490900eb8d37453baa8fb5bfb9eb72e6",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "598f9c7aafaa4e1aa764a8392fdf7a3e",
+          "631c9d4ebee141c49471cad7d1d69366",
+          "6664f948cfb14a75958518548352896e",
+          "69f3491b6b7c45249af33903bb3221a5",
+          "6c0b08fa765b423584a42213d7f62024",
+          "7563451dc47742b39de3e3fa40ad3810",
+          "79f51b49525c459c864e94a662682759",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "98513cec254841d4b2a2a3cabb854925",
+          "9dcd730aca3641feb460d06e9c63f21b",
+          "a8d2132df3474d85939cf0df30b4c91e",
+          "e478c0fb1ad24b428bfcab79bd3532b1",
+          "e8cef362cfe94b0ba733b73a75fbe09d",
+          "ea155e531cca4ce89f77d81bd688072b",
+          "fbaf4b0700d04794af4062671c1bcd2b",
+          "fc90e0d41d3847e2ab16961739d4df38"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": [
+          "live_runtime_state_process"
+        ]
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791847174.599971,
+      "census_fingerprint": "a68627b39d96f0e469b98c06359373200a91a4e17a62f7eef69aabd0e249d5a9"
+    },
+    "latest_ubuntu_readiness": {
+      "unclosed_tasks": 0,
+      "live_open_tasks": 0,
+      "expired_unclosed_tasks": 0,
+      "unreleased_writers": 0,
+      "live_writers": 0,
+      "expired_unreleased_writers": 0,
+      "unsettled_actions": 5,
+      "unsettled_by_delivery_state": {
+        "reconcile_required": 5
+      },
+      "queued_actions": 0,
+      "active_dispatch_actions": 0,
+      "reconciliation_required_actions": 5
+    },
+    "zero_active_jobs_verified": true,
+    "zero_live_tasks_and_writers": true,
+    "reconciliation_required_actions": 5,
+    "awaiting_acceptance_runs_retained": [
+      "0d4f567d1e5c4f90b174bad40d9e3efa",
+      "0dfb72d0c6944d2d87ecb741dc439267",
+      "28a5f750466048438307b96872e24f01",
+      "2cc8555d10fa4739b07ef55ec715f79c",
+      "351a78fd610d4f0baa15faa62f1aa39b",
+      "372352c060a34387bf1641e355fbc775",
+      "3d9a3ad822054c49a0ebf2ec857bad2e",
+      "435e64ffe1b041eea2cab17bb36ae994",
+      "490900eb8d37453baa8fb5bfb9eb72e6",
+      "4967dd953ce74b5d97cbf01aad827139",
+      "4a80ae60c2e441d8896c1ace8710c384",
+      "598f9c7aafaa4e1aa764a8392fdf7a3e",
+      "631c9d4ebee141c49471cad7d1d69366",
+      "6664f948cfb14a75958518548352896e",
+      "69f3491b6b7c45249af33903bb3221a5",
+      "6c0b08fa765b423584a42213d7f62024",
+      "7563451dc47742b39de3e3fa40ad3810",
+      "79f51b49525c459c864e94a662682759",
+      "95e909f0040a448faa9f1f3257e2ee2c",
+      "98513cec254841d4b2a2a3cabb854925",
+      "9dcd730aca3641feb460d06e9c63f21b",
+      "a8d2132df3474d85939cf0df30b4c91e",
+      "e478c0fb1ad24b428bfcab79bd3532b1",
+      "e8cef362cfe94b0ba733b73a75fbe09d",
+      "ea155e531cca4ce89f77d81bd688072b",
+      "fbaf4b0700d04794af4062671c1bcd2b",
+      "fc90e0d41d3847e2ab16961739d4df38"
+    ],
+    "live_owned_runs": []
+  },
+  "autocad_unknown_quarantine": {
+    "status": "PRESERVED_QUARANTINE_REQUIRED",
+    "action_ids": [
+      "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "act_3849e259d55546639794cec40f63fea8"
+    ],
+    "latest_rows": [
+      {
+        "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+        "delivery_state": "reconcile_required",
+        "disposition": "quarantined_unknown",
+        "settled_at_ms": null,
+        "receipts": [
+          {
+            "receipt_id": "rcpt_3d630ce55e964c02b0d2e3baa9134723",
+            "receipt_state": "unknown",
+            "diagnostic": "CONTROL_PLANE_FILE_READ_TARGET_MISSING"
+          }
+        ]
+      },
+      {
+        "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+        "delivery_state": "reconcile_required",
+        "disposition": "quarantined_unknown",
+        "settled_at_ms": null,
+        "receipts": [
+          {
+            "receipt_id": "rcpt_86973663f5094f4c81de66b766939776",
+            "receipt_state": "unknown",
+            "diagnostic": "CONTROL_PLANE_FILE_READ_TARGET_MISSING"
+          }
+        ]
+      },
+      {
+        "action_id": "act_3849e259d55546639794cec40f63fea8",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+        "delivery_state": "reconcile_required",
+        "disposition": "quarantined_unknown",
+        "settled_at_ms": null,
+        "receipts": [
+          {
+            "receipt_id": "rcpt_6e8a829711c84f448fc77b3181a1aa2f",
+            "receipt_state": "unknown",
+            "diagnostic": "CONTROL_PLANE_FILE_READ_TARGET_MISSING"
+          }
+        ]
+      }
+    ],
+    "actions_settled": false,
+    "actions_replayed": false,
+    "readiness_unknown_count": 5,
+    "before_source": "server-readiness-post-quarantine.json",
+    "before_source_preserved_unknown_count": 5
+  },
+  "provisional_gates": {
+    "native_child_token": "OPEN_EVIDENCE_GAP_PROVISIONAL",
+    "real_dotnet_autocad_build": "NOT_GRANTED_NOT_EXECUTED",
+    "connector_direct_discovery": "CHANGED_NEEDS_DISCOVERY_DIAGNOSTIC_ONLY",
+    "dedicated_idle_teardown_receipt": "OBSERVATION_LIMITATION"
+  },
+  "source_receipts": [
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\native-first-continuation-evidence-join-20261013-v2.json",
+      "sha256": "157985de9727a4bad017260ee314f672db3cb87b1e82c5969cccef75dc17dfd5",
+      "size_bytes": 6961,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-acceptance-final-audit.json",
+      "sha256": "435f568baad3322e471cf9cf475e442eb8bcb11df367e9bc39ca044a6c92f35f",
+      "size_bytes": 5908,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-independent-audit-20261013.json",
+      "sha256": "27cb096c65167fd6cdc4262e85227b27b0dec03bd7cc27746f769effcd1ccce9",
+      "size_bytes": 7803,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\parallel-overlap-receipt-90307d8ef64b429aab250c9797538717.ndjson",
+      "sha256": "045bdfd9e4cf9a197d50fbefd17734bb342854a1b235f05d63fed9a121c2f1a7",
+      "size_bytes": 23332,
+      "json": false
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json",
+      "sha256": "825be034aadf91cf807795bbdcd0d93121832983eece18027dad964daa34fab9",
+      "size_bytes": 94698,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-plan-20261013-4.json",
+      "sha256": "ee0b05e5ca57f3277cefa18bc35c84a07327880fcc0e296ecca74f89d85fc087",
+      "size_bytes": 5400,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-isolate-1791835493184-fe35a0c9.json",
+      "sha256": "fc991fb9d05fe75a75f5659a5c554b757948432acf4f421b2b738fcbbe93cc8a",
+      "size_bytes": 1827,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-restore-1791836088800-1617a882.json",
+      "sha256": "040f9bcf42f7feae2aa62b420dc7645412d70a33fdf1b442efe63519b5675774",
+      "size_bytes": 1831,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-1791847175673-e8bc7ad6.json",
+      "sha256": "b1aa65e01e1c6beab0a377fd46d091a5856484f0b4ce340ec9bdbbc95a341499",
+      "size_bytes": 5943,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-completion-20261013-002.json",
+      "sha256": "6dd4df415c6f70398adc593808d20af5ea0435439e76e4e591f984ef3acc65ae",
+      "size_bytes": 35990,
+      "json": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-post-quarantine.json",
+      "sha256": "e37394a50bb1170ec0f02b2cc4eb7461861296ab75cfb5a4a2011e5046127c4f",
+      "size_bytes": 35207,
+      "json": true
+    }
+  ],
+  "validation": {
+    "source_hashes_captured": true,
+    "same_activation_epoch_verified": true,
+    "source_files_exist_and_are_regular": true,
+    "no_live_mutation_performed": true,
+    "no_claim_of_all_goal_complete": true,
+    "epoch_sources_checked": [
+      "continuation",
+      "parallel_overlap",
+      "isolated_idle",
+      "plan",
+      "isolate",
+      "restore",
+      "status",
+      "readiness"
+    ],
+    "source_internal_chain_hashes_verified": true
+  },
+  "remaining_gates": [
+    "native child token probe (provisional)",
+    "real .NET/AutoCAD build approval and compatibility",
+    "three AutoCAD UNKNOWN reconciliation (preserve quarantine)",
+    "direct connector discovery receipt if direct connector is required"
+  ]
+}

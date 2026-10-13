@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "operation": "r4_patch019_timeout_causal_audit",
+  "read_only": true,
+  "observed_at_utc": "2026-10-12T15:19:05.181138+00:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "action_id": "act_65fa937277dd4963a5ca39ffe9e291ec",
+  "attempt_id": "try_8a7f3fedcddd4de8a1267eb87a7e39ed",
+  "local_journal": {
+    "state": "unknown",
+    "receipt_state": "unknown",
+    "local_handle_present": false,
+    "payload": {
+      "code": "CONTROL_PLANE_APPROVED_PATCH_EFFECT_UNKNOWN",
+      "diagnostic_code": "CONTROL_PLANE_APPROVED_PATCH_TIMEOUT",
+      "operation_kind": "control_plane_approved_patch",
+      "schema_version": 1
+    },
+    "sha256": "4eff9a244dd936d666ac678eb68bc9e0a51817458526475c3d8c0d5c997c062f"
+  },
+  "canary_action_timeline": [
+    {
+      "phase": "queued_original_action",
+      "observed_at_ms": 1791816803661,
+      "lane": "patch_019",
+      "state": null,
+      "action_id": "act_65fa937277dd4963a5ca39ffe9e291ec"
+    },
+    {
+      "phase": "observing_original_action",
+      "observed_at_ms": 1791816803677,
+      "lane": "patch_019",
+      "state": "queued",
+      "action_id": "act_65fa937277dd4963a5ca39ffe9e291ec"
+    }
+  ],
+  "matching_performance": {
+    "bind": {
+      "started_at": "2026-10-12T14:53:25.371Z",
+      "finished_at": "2026-10-12T14:53:25.758Z",
+      "duration_ms": 391,
+      "ok": true,
+      "error_class": "",
+      "request_id": "control-plane-approved-patch-bind-8ab31995faf49d0e2b43d565",
+      "task_context_id": "cpap_fbab4df6429b10b4e31d056c64369abe42bb41d879f0044518cdea0a"
+    },
+    "workflow": {
+      "started_at": "2026-10-12T14:53:25.930Z",
+      "finished_at": "2026-10-12T14:53:38.766Z",
+      "duration_ms": 12843,
+      "ok": true,
+      "error_class": "",
+      "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+      "wave_id": "4987ffee3e1b4781b313b52ba2700717",
+      "orchestration_state": "ACCEPTING",
+      "request_id": "control-plane-approved-patch-workflow-8ab31995faf49d0e2b43d565",
+      "task_context_id": "cpap_fbab4df6429b10b4e31d056c64369abe42bb41d879f0044518cdea0a"
+    }
+  },
+  "durable_task_observation": {
+    "task_id": "1af5800a252c4d71aed167c3ad9b713e",
+    "status": "waiting",
+    "orchestration": {
+      "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+      "wave_id": "4987ffee3e1b4781b313b52ba2700717",
+      "orchestration_state": "ACCEPTING",
+      "execution_mode": "mcp_only",
+      "route_resolved": "deterministic"
+    },
+    "objective": "Apply one owner-approved exact local patch.",
+    "apply_step_updated_at": "2026-10-12T14:53:36.897Z",
+    "finalize_step_updated_at": "2026-10-12T14:53:36.897Z",
+    "completion_report_id": "f099a9f2d043fc1c7a505fb34dc16c282ac80527685cdadb32155bf2f3a2ecb1",
+    "modified_file_count": 1,
+    "modified_file_paths_are_sanitized": true,
+    "event_times": [
+      {
+        "event": "orchestration_proving",
+        "time": "2026-10-12T14:53:35.878Z"
+      },
+      {
+        "event": "continuous_workflow_completed",
+        "time": "2026-10-12T14:53:36.897Z"
+      },
+      {
+        "event": "awaiting_final_acceptance",
+        "time": "2026-10-12T14:53:37.677Z"
+      },
+      {
+        "event": "files_modified",
+        "time": "2026-10-12T14:53:38.588Z"
+      }
+    ],
+    "evidence_sha256": "e59b1e971c26b9e27a997882306efceaf4f786bed59dc163bd3e9eb54b3a14c6"
+  },
+  "timing_calculation": {
+    "electron_approved_patch_timeout_ms": 12000,
+    "workflow_observed_duration_ms": 12843,
+    "workflow_exceeded_electron_timeout_ms": 843,
+    "workflow_finished_after_canary_unknown_observation_is_possible": true,
+    "interpretation": "The exact local bridge deadline is shorter than this matching agent_workflow operation. The server projection recorded ok=true and the durable task reached final acceptance pending, while the local journal retained UNKNOWN because no bounded local receipt returned before the bridge deadline."
+  },
+  "source_proof": {
+    "runtime_orchestrator_constant": "electron/services/runtimeOrchestrator.js:171 CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS=12000",
+    "runtime_orchestrator_timeout_path": "approved-patch MCP HTTP request timeout and default tools/call workflow timeout",
+    "python_bridge_timeout_path": "control-plane/control_plane/node_agent.py recovery_approved_patch_bridge subprocess timeout uses args.timeout_seconds when no verification plan",
+    "runtime_orchestrator_sha256": "e9d42d7e78e8605b5da8d52d90e659cccd6dfa7480e37fb08b9dbaee5bf355e60",
+    "approved_patch_bridge_sha256": "0bf11073b074739229b69d8007b5518923fdf092bf9d833db62f04430d961a85",
+    "node_agent_sha256": "fca440c9fc9faa32e4beea9085b2828a85b1c27247a17217aef7230698ce2537"
+  },
+  "minimal_fix_proposal": {
+    "source_scope": "Future package only; do not mutate this historical UNKNOWN or replay its action",
+    "electron": "Keep 12s health/bind timeout; give the approved-patch workflow call an operation-specific >=30s deadline so observed 12.843s operations have margin.",
+    "python": "Give the approved-patch bridge subprocess a matching >30s bound (for example 35s) when no verification plan is present, so the outer bridge cannot expire first.",
+    "preserve": "Durable prepared journal and UNKNOWN-on-uncertain-effect semantics remain unchanged; a longer deadline reduces false UNKNOWN but cannot remove reconciliation requirements.",
+    "validation": "Add a fake workflow taking 12.843s to the approved-patch bridge test and assert completion before the operation deadline while a 12s health/bind request still times out normally."
+  },
+  "proof_limit": "The performance projection and durable task context correlate the exact workflow/run/wave but do not supply a valid local bounded patch receipt; this audit does not claim the historical patch as locally settled or semantically accepted.",
+  "production_mutation_performed": false,
+  "historical_unknown_modified": false
+}

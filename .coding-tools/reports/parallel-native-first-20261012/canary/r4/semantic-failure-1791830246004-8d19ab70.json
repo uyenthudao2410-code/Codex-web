@@ -1,0 +1,11 @@
+{
+  "operation": "failure",
+  "ok": false,
+  "code": "ADDITIVE_VERIFIER_ALREADY_EXISTS",
+  "error_message": "",
+  "error_stack": "Error\n    at need (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:20:65)\n    at main (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:312:5)\n    at Object.<anonymous> (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:510:77)\n    at Module._compile (node:internal/modules/cjs/loader:1872:14)\n    at Object..js (node:internal/modules/cjs/loader:2003:10)\n    at Module.load (node:internal/modules/cjs/loader:1594:32)\n    at Module._load (node:internal/modules/cjs/loader:1396:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47",
+  "partial_mutation_possible": true,
+  "automatic_retry_forbidden": true,
+  "next_action": "Inspect original RUN/WAVE through audit; do not repeat acceptance/transfer after uncertain response.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-failure-1791830246004-8d19ab70.json"
+}

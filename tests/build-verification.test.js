@@ -101,7 +101,7 @@ test('experimental MXC Windows Sandbox candidate is pinned and dev-only', () => 
   const resourcesRoot = path.join(__dirname, '..', 'resources');
   const candidate = assertMxcWindowsSandboxCandidate(resourcesRoot);
   assert.equal(candidate.source_commit, 'cbe1774364ea2ec846f56ab744e43a416f751420');
-  assert.equal(candidate.local_patch_sha256, '85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df');
+  assert.equal(candidate.local_patch_sha256, '6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579');
   assert.deepEqual(Object.keys(candidate.hashes).sort(), [
     'wxc-exec.exe',
     'wxc-windows-sandbox-daemon.exe',

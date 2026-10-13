@@ -1,0 +1,19 @@
+{
+  "operation": "registered_folder_consent_exact_path",
+  "source_only": true,
+  "runtime_operations": 0,
+  "external_mutations": 0,
+  "changed_behavior": "Existing registered folder consent prefers its exact local workspace_path over display_name when the path is available.",
+  "source_sha256": "fc044de5186e0728cf258781bf14ac11153c1112c5e2a4c10b6c5ecd2b1c40e9",
+  "test_sha256": "02372c6a3ad9f4afdbd361e903a0323e9ee18f721142e80044485d495184d878",
+  "validation": {
+    "command": "node --test --test-name-pattern='an existing folder confirmation|adding a folder picks once' tests/folder-permission-editor.test.js",
+    "passed": 2,
+    "failed": 0,
+    "syntax": "pass",
+    "git_diff_check": "pass",
+    "duplicate_display_name_test": true,
+    "new_folder_picker_path_test": true
+  },
+  "docs_live_acceptance_pending": true
+}

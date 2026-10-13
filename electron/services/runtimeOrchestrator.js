@@ -37,6 +37,7 @@ const {
   LOCAL_TOOL_NAME: FILE_READ_LOCAL_TOOL_NAME,
   OPERATION_KIND: FILE_READ_OPERATION_KIND,
   digest: fileReadProjectionDigest,
+  resolveDirectRegisteredFile,
   normaliseFileReadResult,
   fileContentDigest
 } = require('./controlPlaneFileReadBridge');
@@ -69,6 +70,7 @@ const {
   ACTION_TOOL_NAME: EXEC_ACTION_TOOL_NAME,
   OPERATION_KIND: EXEC_OPERATION_KIND,
   digest: execProjectionDigest,
+  executionMetadata,
   normaliseExecResult
 } = require('./controlPlaneExecBridge');
 const { readControlPlaneRouteEvidence } = require('./controlPlaneRouteEvidence');
@@ -163,10 +165,11 @@ const CONTROL_PLANE_FILE_READ_TIMEOUT_MS = 8_000;
 // JSON escaping plus envelope metadata can exceed the 16 KiB file-content
 // cap, but a local Coding MCP response for this lane must remain small.
 const MAX_FILE_READ_RESPONSE_BYTES = 96 * 1024;
-// A write stays below the node-agent subprocess deadline and carries a
-// durable prepared marker before this local request begins.  Timeout is never
-// a reason to repeat a patch; its caller must settle UNKNOWN and reconcile.
-const CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS = 12_000;
+// Health probing remains short, while the local workflow gets enough time to
+// finish its durable task/report boundary before the bridge classifies the
+// central action as UNKNOWN. Timeout is never a reason to repeat a patch.
+const CONTROL_PLANE_APPROVED_PATCH_HEALTH_TIMEOUT_MS = 12_000;
+const CONTROL_PLANE_APPROVED_PATCH_WORKFLOW_TIMEOUT_MS = 35_000;
 // MXC provisions for up to 30s and boots for up to 210s before the process
 // timeout starts. Observe the original workflow through that setup window.
 const CONTROL_PLANE_APPROVED_PATCH_PROVISIONING_BUDGET_MS = 240_000;
@@ -1721,6 +1724,27 @@ class RuntimeOrchestrator {
       });
     }
     const structured = await callLocalTool(FILE_READ_LOCAL_TOOL_NAME, readArguments, 'read');
+    let projectedPath = structured.path;
+    if (typeof projectedPath === 'string' && path.isAbsolute(projectedPath)) {
+      // Native read_file displays paths outside its primary root as absolute,
+      // even when this request is bound to another authorized workspace. Only
+      // project that exact canonical registered file back to the sealed path.
+      const expectedFile = resolveDirectRegisteredFile(expectedWorkspace, admission.path);
+      let returnedFile;
+      try { returnedFile = fs.realpathSync.native(projectedPath); }
+      catch {
+        throw Object.assign(new Error('Coding Tools MCP returned an unavailable file path.'), {
+          code: 'CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID'
+        });
+      }
+      if (workspaceKey(projectedPath) !== workspaceKey(expectedFile)
+        || workspaceKey(returnedFile) !== workspaceKey(expectedFile)) {
+        throw Object.assign(new Error('Coding Tools MCP returned a different file path.'), {
+          code: 'CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID'
+        });
+      }
+      projectedPath = admission.path;
+    }
     const localHandle = `cp_fr_${controlPlaneBridgeDigest({
       policy_sha256: policySha256,
       action_id: actionId,
@@ -1732,7 +1756,7 @@ class RuntimeOrchestrator {
       facade_contract: facadeContract
     }).slice(0, 48)}`;
     const fileProjection = {
-      path: structured.path,
+      path: projectedPath,
       content: structured.content,
       content_sha256: typeof structured.content === 'string' ? fileContentDigest(structured.content) : '',
       encoding: structured.encoding,
@@ -1885,7 +1909,7 @@ class RuntimeOrchestrator {
         code: 'MCP_AUTH_UNAVAILABLE'
       });
     }
-    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS });
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_APPROVED_PATCH_HEALTH_TIMEOUT_MS });
     if (!health?.ready || !health?.tool_contract?.sha256) {
       throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane approved-patch bridge.'), {
         code: 'CONTROL_PLANE_APPROVED_PATCH_RUNTIME_UNREADY'
@@ -1913,7 +1937,7 @@ class RuntimeOrchestrator {
       facade_contract: facadeContract,
       ...verificationBinding
     });
-    const callLocalTool = (name, toolArguments, idSuffix, timeoutMs = CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS) => new Promise((resolve, reject) => {
+    const callLocalTool = (name, toolArguments, idSuffix, timeoutMs = CONTROL_PLANE_APPROVED_PATCH_WORKFLOW_TIMEOUT_MS) => new Promise((resolve, reject) => {
       const body = JSON.stringify({
         jsonrpc: '2.0',
         id: `control-plane-approved-patch-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
@@ -2031,7 +2055,7 @@ class RuntimeOrchestrator {
         initial_verification_expires_at_ms: admission.expires_at_ms } : {})
     }, 'workflow', verificationPlan
       ? Math.max(1, verificationDeadline - Date.now())
-      : CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS);
+      : CONTROL_PLANE_APPROVED_PATCH_WORKFLOW_TIMEOUT_MS);
     if (verificationPlan && structured?.status === 'running') {
       const operationId = structured.background_operation?.operation_id;
       if (typeof operationId !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(operationId)
@@ -2351,12 +2375,21 @@ class RuntimeOrchestrator {
       request.end(body);
     });
 
-    const bootstrap = await callLocalTool('workspace_context', {
-      task_context_id: localTaskContextId,
-      path: expectedWorkspace,
-      detail: 'compact',
-      max_entries: 1
-    }, 'bind');
+    let bootstrap;
+    try {
+      bootstrap = await callLocalTool('workspace_context', {
+        task_context_id: localTaskContextId,
+        path: expectedWorkspace,
+        detail: 'compact',
+        max_entries: 1
+      }, 'bind');
+    } catch {
+      // This request only binds a read-only context. No document workflow has
+      // been dispatched, so the node can record a truthful pre-effect refusal.
+      throw Object.assign(new Error('Coding Tools MCP rejected document workspace binding before write dispatch.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_BIND_REJECTED'
+      });
+    }
     const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
     if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
       throw Object.assign(new Error('Coding Tools MCP did not bind the requested document workspace.'), {
@@ -2744,12 +2777,16 @@ class RuntimeOrchestrator {
         argv: admission.argv,
         workdir: admission.cwd || '.',
         timeout_ms: admission.timeout_ms,
-        yield_time_ms: Math.min(30_000, admission.timeout_ms),
+        // Return the durable Job promptly so another admitted root can run.
+        yield_time_ms: Math.min(1_000, admission.timeout_ms),
         max_output_bytes: admission.max_output_bytes,
         verbosity: 'full',
+        _windows_execution_mode: admission.execution_mode || 'native_first',
+        _windows_native_argv_prefixes: admission.native_argv_prefixes || [],
         principal_id: 'control-plane-exec-bridge'
       }, 'run')
       : await callLocalTool('command_control', {
+        task_context_id: localTaskContextId,
         action: operation === 'exec_poll' ? 'poll' : 'kill',
         command_id: admission.command_id,
         consumer_id: controlConsumerId,
@@ -2790,7 +2827,8 @@ class RuntimeOrchestrator {
       run_id: String(owner.run_id || structured.run_id || managedJob.run_id || admission.run_id || '').trim(),
       wave_id: String(owner.wave_id || structured.wave_id || managedJob.wave_id || admission.wave_id || '').trim(),
       output_refs: structured.output_refs && typeof structured.output_refs === 'object'
-        ? structured.output_refs : null
+        ? structured.output_refs : null,
+      ...executionMetadata(structured)
     };
     const candidate = {
       schema_version: 1,
@@ -4019,10 +4057,30 @@ class RuntimeOrchestrator {
     this.busy = true;
     try {
       if (options.manual !== false) this.setManualStop(true);
+      const stopIdentity = options.fullClean === true ? null
+        : await this.native.status(null, { returnIdentity: true });
+      if (stopIdentity) {
+        if (typeof this.fullCleanActivation?.prepareOwnedExecutorStop !== 'function') {
+          throw Object.assign(new Error('Stopping Coding Tools MCP requires confirmed owned executor cleanup.'), {
+            code: 'SANDBOX_CLEANUP_UNSUPPORTED'
+          });
+        }
+        // Preserve the operation after response loss: retry observes the one
+        // original cleanup instead of replacing its admission fence.
+        this.executorStopOperationId ||= `operation_stop_${crypto.randomBytes(16).toString('hex')}`;
+        this.progress('stop-executor', 10, 'Đang đóng môi trường chạy lệnh');
+        const prepared = await this.fullCleanActivation.prepareOwnedExecutorStop(this.executorStopOperationId);
+        if (prepared?.code === 'COMPONENT_STOPPED' && await this.native.status()) {
+          throw Object.assign(new Error('The live Coding Tools MCP owner did not confirm executor cleanup.'), {
+            code: 'SANDBOX_TEARDOWN_UNCONFIRMED'
+          });
+        }
+      }
       this.progress('stop-tunnel', 25, 'Đang dừng OpenAI Tunnel');
       await this.tunnel.stop();
       this.progress('stop-runtime', 65, 'Đang dừng Coding Tools MCP');
-      await this.native.stop().catch(() => false);
+      await this.native.stop(stopIdentity ? { expectedIdentity: stopIdentity } : {});
+      this.executorStopOperationId = '';
       this.progress('stopped', 100, 'Tất cả các dịch vụ do trợ lý khởi động đã dừng');
       this.invalidateSnapshot();
       return await this.snapshot({ force: true, reason: 'stopped' });

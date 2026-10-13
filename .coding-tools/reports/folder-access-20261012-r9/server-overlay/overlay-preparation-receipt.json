@@ -1,0 +1,48 @@
+{
+  "operation": "folder_activation_overlay_preparation",
+  "remote_mutations": false,
+  "baseline_service_pid": 921509,
+  "baseline_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae1044-scoped-artifacts-94b96e1b0fe2",
+  "baseline_manifest_sha256": "9aa237e128a71615c0ed83ee3869ce276c5e33a90e3387ce7641743d724011b5",
+  "baseline_package_source_sha256": "sha256:5370e6ce030e72514b664b771f400437d337e7c5eb1c39b1ac90748662c3ceb0",
+  "protected_config_hashes": {
+    "environment": {
+      "path": "/home/svhome/.config/codex-control-plane/control-plane.env",
+      "sha256": "2c956aecc54eb4a01e20fd4dca378ee47311a70d77cfcc15a920b4994cbe3eb3"
+    },
+    "drop_in": {
+      "path": "/home/svhome/.config/systemd/user/codex-control-plane.service.d/10-immutable-release.conf",
+      "sha256": "53609300c110f6e5d5ae378d4489dc63aeb8d77fa2747aaa89187055ced799b5"
+    }
+  },
+  "candidate_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\server-overlay\\codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+  "candidate_archive": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\server-overlay\\codex-control-plane-local-folder-activation-1012-r9-626768b49f4b.tar.gz",
+  "candidate_archive_sha256": "f7ea1c5eb7ee9a768a98ff32286a13bd9c0820bd5eed0943f53f63060c16bf2d",
+  "candidate_manifest_sha256": "e4ddab4e41bdf22eefa763cce746afd486ec0bc7e38e7748899088c6fcd57cd7",
+  "changed_runtime_files": [
+    "control-plane/control_plane/http_api.py",
+    "control-plane/control_plane/store.py",
+    "deploy/control-plane-authority-renewal.py"
+  ],
+  "unchanged_release_files": 35,
+  "source_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "local_reviewed_source_sha256": {
+    "control-plane/control_plane/store.py": "180c0bc0a37b34b3c94d1da69e5bf7db18c0eceeb25bbba09fc25fe8e3729d3d",
+    "control-plane/control_plane/http_api.py": "a46a461794a570bca9841d700260856bcb660cb745e337d253482a5f5c5f44eb",
+    "deploy/control-plane-authority-renewal.py": "5a8be1f85dc05795307d8850295808971b615d04e720a28a6d5ca598af3d2d81"
+  },
+  "candidate_runtime_sha256": {
+    "control-plane/control_plane/store.py": "7c992e2242d8b4135a153c1fb2fd2714159ff0ae384c205314776d1bd687a3aa",
+    "control-plane/control_plane/http_api.py": "d48a6d5418dbbf535ce420b82b59af13d26a1c18c08fd14b99cd6533eae13552",
+    "deploy/control-plane-authority-renewal.py": "5a8be1f85dc05795307d8850295808971b615d04e720a28a6d5ca598af3d2d81"
+  },
+  "original_source_revision_semantics": "Serving baseline revision retained; reviewed uncommitted method overlays bound by explicit hashes.",
+  "verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "file_count": 38
+  }
+}

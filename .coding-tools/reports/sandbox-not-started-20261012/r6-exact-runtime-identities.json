@@ -1,0 +1,15 @@
+{
+  "nativePid": 16280,
+  "nativeProcessStartToken": "134362579801951250",
+  "nativeActivationEpochId": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+  "nativeModuleRoot": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\coding-tools-mcp",
+  "process_instance_id": "gT3FDNVLRDcHAVhw",
+  "server_instance_id": "lK5WnRGPSmCvtD4w",
+  "host_pid": 25028,
+  "host_instance_id": "8b8992a71407cd61f37317ae0b438cb4",
+  "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "activation_epoch_id": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+  "pass": true,
+  "central_route_verified": true,
+  "projection_rebuild_verified": true
+}

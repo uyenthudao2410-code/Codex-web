@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "observation_started_at": "2026-10-12T11:35:10.998059+00:00",
+  "machine": "DESKTOP-63643J4",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "branch": "main",
+  "measurement_kind": "read_only_observation",
+  "vm_started_by_observer": false,
+  "cold_start_measured": false,
+  "projections": {
+    "performance.json": {
+      "present": true,
+      "sha256": "7284dc715d48939a80ec41e9f2af7d10d925a6946dcc10a6ebcf8c4adef9f656",
+      "numeric_aggregates": {
+        "version": 6,
+        "tool_calls": 7513,
+        "errors": 407,
+        "cache_hits": 5,
+        "deduplicated_calls": 2,
+        "idempotency_eligible_calls": 1076,
+        "idempotency_eligible_key_calls": 604,
+        "idempotency_key_calls": 1036,
+        "idempotency_required_calls": 162,
+        "idempotency_required_key_calls": 162,
+        "idempotency_current_policy_required_calls": 162,
+        "idempotency_current_policy_required_key_calls": 162,
+        "idempotency_optional_calls": 914,
+        "idempotency_optional_key_calls": 442,
+        "idempotency_auto_key_calls": 51,
+        "proof_cache_eligible": 119,
+        "proof_cache_hits": 0,
+        "proof_cache_misses": 119,
+        "proof_cache_saved_ms": 0,
+        "local_execution_ms": 12726123,
+        "estimated_wait_ms": 280519668,
+        "request_bytes": 2207075,
+        "response_bytes": 156129349,
+        "model_visible_bytes": 5444044,
+        "model_visible_chars": 5421644,
+        "phase_timing_samples": 123,
+        "localization_samples": 55,
+        "localization_queries": 262,
+        "lsp_available_samples": 0,
+        "lsp_attempted_queries": 262,
+        "lsp_handled_queries": 0,
+        "fallback_search_queries": 262,
+        "result_tail_samples": 14,
+        "result_tail_source_bytes": 68856,
+        "result_tail_page_bytes": 68856,
+        "result_tail_remaining_bytes": 0,
+        "result_truncated_calls": 0,
+        "result_continuation_offered": 0,
+        "result_continuation_reads": 0,
+        "result_continuation_rereads": 0,
+        "result_continuation_stale": 0
+      }
+    },
+    "task-history.json": {
+      "present": true,
+      "sha256": "893fc444510ca091e80c2621574672fa4c0f308dbaaf32e45a33c29675c1a3ee",
+      "record_count": 100
+    },
+    "task-state.json": {
+      "present": true,
+      "sha256": "e90146add8ff76c8b3d64c58761e490347d8ab8222179d8e34538538d25e6b82",
+      "status": "completed",
+      "orchestration": {
+        "run_id": "234713daf77f427ca486a7044fefd204",
+        "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d"
+      }
+    }
+  },
+  "canonical_ledger": {
+    "source": ".coding-tools/orchestration/ledger.sqlite3",
+    "run_count": 564,
+    "run_states": {
+      "aborted": 175,
+      "accepted": 275,
+      "active": 24,
+      "completed": 5,
+      "failed": 1,
+      "stale": 84
+    },
+    "wave_count": 899,
+    "wave_states": {
+      "aborted": 259,
+      "accepted": 275,
+      "active": 24,
+      "replanned": 341
+    },
+    "job_states": {
+      "closed": 8,
+      "exited": 8444,
+      "quiesced": 155,
+      "spawn_failed": 5,
+      "timeout": 40
+    }
+  },
+  "observed_runner_processes": [],
+  "memory_semantics": "OS working set at observation; not a VM memory reservation or peak",
+  "observation_finished_at": "2026-10-12T11:35:11.596193+00:00"
+}

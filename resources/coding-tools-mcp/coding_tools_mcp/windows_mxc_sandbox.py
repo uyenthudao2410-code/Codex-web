@@ -26,6 +26,7 @@ from typing import Any
 
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
+from .processes import require_windows_native_token
 from .runtime_config import is_filtered_env_var
 
 
@@ -244,6 +245,8 @@ def _known_toolchains(system_root: Path, executor_path: Path) -> tuple[list[Path
     for base in program_bases:
         add_root(base / "nodejs")
         add_path(base / "nodejs")
+        add_root(base / "dotnet")
+        add_path(base / "dotnet")
         # The official Node for Windows distribution reads this OpenSSL
         # configuration outside its installation directory at startup.
         add_root(base / "Common Files" / "SSL")
@@ -508,6 +511,7 @@ def _resolve_executable(
     scratch_directory: Path,
     roots: list[Path],
     path_entries: list[Path],
+    allow_workspace_executable: bool = True,
 ) -> tuple[list[str], list[Path]]:
     if not argv or not isinstance(argv[0], str):
         raise _failure("SANDBOX_COMMAND_INVALID", "The sandbox command executable is invalid.")
@@ -599,10 +603,10 @@ def _resolve_executable(
     elif any(separator in raw for separator in ("/", "\\")):
         candidate = workdir / raw
     else:
-        safe_search_path = os.pathsep.join(str(item) for item in path_entries)
-        resolved = shutil.which(raw, path=safe_search_path)
-        if resolved:
-            candidate = Path(resolved)
+        # shutil.which on Windows may prepend the host's current directory
+        # even with an explicit search path. Search only the approved entries.
+        names = [raw] if Path(raw).suffix else [raw + extension for extension in (".exe", ".com", ".bat", ".cmd")]
+        candidate = next((directory / name for directory in path_entries for name in names if (directory / name).is_file()), None)
     if candidate is None:
         raise _failure("SANDBOX_TOOLCHAIN_UNAVAILABLE", "The command executable is not in an approved workspace or toolchain path.", executable=base_name)
     try:
@@ -612,6 +616,8 @@ def _resolve_executable(
     if not executable.is_file():
         raise _failure("SANDBOX_TOOLCHAIN_UNAVAILABLE", "The command executable is not a regular file.", executable=base_name)
     if _under(executable, workspace_root):
+        if not allow_workspace_executable:
+            raise _failure("NATIVE_TOOLCHAIN_NOT_ALLOWLISTED", "Automatic native metadata execution cannot use a workspace executable.", executable=base_name)
         resolved_argv = [str(executable), *argv[1:]]
         if executable.name.lower() == "node.exe":
             if "--preserve-symlinks-main" not in resolved_argv[1:]:
@@ -642,11 +648,13 @@ def build_mxc_invocation(
     workdir: Path,
     timeout_ms: int,
     extra_environment: Any = None,
+    allow_workspace_executable: bool = True,
 ) -> MxcInvocation:
     """Build a no-network, exact-root ProcessContainer invocation."""
 
     if os.name != "nt":
         raise _failure("SANDBOX_UNAVAILABLE", "MXC ProcessContainer is available only on Windows.")
+    require_windows_native_token()
     if not isinstance(argv, list) or not argv or len(argv) > 32:
         raise _failure("SANDBOX_COMMAND_INVALID", "Structured sandbox argv is outside its bounds.")
     if any(not isinstance(item, str) or not item or "\x00" in item or "\r" in item or "\n" in item for item in argv):
@@ -716,6 +724,7 @@ def build_mxc_invocation(
             raise _failure("SANDBOX_WORKSPACE_INVALID", "The sandbox scratch path is a reparse point.")
         return _build_mxc_invocation_with_scratch(
             argv=argv, root=root, cwd=cwd, timeout_ms=timeout_ms, extra_env=extra_environment,
+            allow_workspace_executable=allow_workspace_executable,
             system_root=system_root, executor=executor, roots=roots, path_entries=path_entries,
             readonly_paths=readonly_paths, denied_paths=denied_paths, scratch=scratch,
             cwd_alias_root=cwd_alias_root, cwd_alias_path=cwd_alias_path,
@@ -743,11 +752,28 @@ def _build_mxc_invocation_with_scratch(
     scratch: Path,
     cwd_alias_root: Path | None,
     cwd_alias_path: Path | None,
+    allow_workspace_executable: bool = True,
 ) -> MxcInvocation:
     resolved_argv, readonly_roots = _resolve_executable(
         list(argv), workspace_root=root, workdir=cwd, scratch_directory=scratch,
         roots=roots, path_entries=path_entries,
+        allow_workspace_executable=allow_workspace_executable,
     )
+    if not allow_workspace_executable and Path(resolved_argv[0]).name.lower() == "git.exe" and "--version" not in resolved_argv[1:]:
+        # On secondary drives Git cannot chdir back through BaseContainer's
+        # CWD junction. Bind its repository and work tree to the already
+        # granted physical workspace paths; never grant an external gitdir.
+        repository = cwd
+        while _under(repository, root):
+            git_directory = repository / ".git"
+            if git_directory.exists():
+                if not git_directory.is_dir() or not _under(git_directory.resolve(strict=True), root):
+                    raise _failure("NATIVE_GIT_SCOPE_UNAVAILABLE", "Native Git metadata requires a repository directory inside the selected workspace.")
+                resolved_argv[1:1] = [f"--git-dir={git_directory.resolve(strict=True)}", f"--work-tree={repository}"]
+                break
+            if repository == root:
+                break
+            repository = repository.parent
     bootstrap_node = next((item / "node.exe" for item in roots if (item / "node.exe").is_file()), None)
     if bootstrap_node is None:
         raise _failure("SANDBOX_TOOLCHAIN_UNAVAILABLE", "The bounded Windows sandbox requires an approved Node.js bootstrap.")

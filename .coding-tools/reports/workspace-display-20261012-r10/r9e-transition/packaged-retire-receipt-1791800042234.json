@@ -1,0 +1,161 @@
+{
+  "operation": "retire",
+  "observed_at": "2026-10-12T10:14:02.234Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "retirement": {
+      "state": "terminated",
+      "identity": {
+        "pid": 3476,
+        "process_start_token": "134362696871111330"
+      },
+      "exit_state": "exited"
+    },
+    "ui_pid": 34288,
+    "ui_was_missing": false,
+    "ui_stopped": {
+      "state": "suppressed",
+      "registered": true,
+      "alive": false,
+      "pid": 34288,
+      "instance_id": "c01b767e76592b5d4f3db5930e72ead6",
+      "started_at_unix_ms": 1791796085065,
+      "runtime_mode": "packaged",
+      "recovery_host_runtime_mode": "packaged",
+      "recovery_host_installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+      "ui_runtime_mode": "packaged",
+      "ui_installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+      "suppressed": true,
+      "suppression_reason": "operator_quit",
+      "attempts_in_window": 0,
+      "last_launch_pid": null,
+      "initial_registration_grace_until_unix_ms": null,
+      "pending_registration_until_unix_ms": null,
+      "next_attempt_at_unix_ms": null,
+      "circuit_suppressed_until_unix_ms": null,
+      "last_error_code": null
+    },
+    "host_pid": 3476,
+    "before_census": {
+      "schema_version": 1,
+      "safe": true,
+      "code": "READY",
+      "reason": "canonical_ledger_quiescent",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "ca61297e2ac952378888927592c3995b3be6f1aac63b7031ce2e92e38882c3b3",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "391435a7066c0a1a6c1bbd0eac68b0ab48d761add4dacb113c315f70a3289fbc",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T10:13:54.195Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": []
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791800035.016348,
+      "census_fingerprint": "b122d48c8c316c6174f2108af55412f13572bf6e6a5ab711254b80a5e760d239"
+    },
+    "stopped_census": {
+      "schema_version": 1,
+      "safe": true,
+      "code": "READY",
+      "reason": "canonical_ledger_quiescent",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "ca61297e2ac952378888927592c3995b3be6f1aac63b7031ce2e92e38882c3b3",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "391435a7066c0a1a6c1bbd0eac68b0ab48d761add4dacb113c315f70a3289fbc",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T10:14:00.589Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": []
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791800041.386849,
+      "census_fingerprint": "b122d48c8c316c6174f2108af55412f13572bf6e6a5ab711254b80a5e760d239"
+    },
+    "preserved_historical_acceptance": true,
+    "durable_state_deleted": false,
+    "ordinary_stop_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\packaged-confirm-stopped-receipt-1791800009046.json",
+    "server_idle_receipt": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\server-work-census-1791800028312.json",
+      "observed_at_ms": 1791800028312,
+      "historical_unknown_actions_preserved": true
+    },
+    "original_stop_not_replayed": true
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\packaged-retire-receipt-1791800042234.json"
+}

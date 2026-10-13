@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "operation": "healthy_service_stop_owned_executor_cleanup_source_proof",
+  "observed_at": "2026-10-12T06:53:49.6161636Z",
+  "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "changed_files": [
+    {
+      "path": "electron/services/fullCleanActivation.js",
+      "sha256": "b417cf2bb40e80b74262f21208a65031fdec115aff8a73673106203f8068f15f"
+    },
+    {
+      "path": "electron/services/runtimeOrchestrator.js",
+      "sha256": "f646f7800164b205dc68a08a8744bd36134207a1cc510c87647db1ca73141e6c"
+    },
+    {
+      "path": "electron/services/nativeService.js",
+      "sha256": "1ca2fcdde02dfb2f5e843d2bf9e9122f565fa64320cdd37fe7410d569402ede7"
+    },
+    {
+      "path": "tests/runtime-stop-executor-cleanup.test.js",
+      "sha256": "a460aef0b7fe7b2896fc82835777ba92577bb719a2c4427c48bf336617107ce8"
+    }
+  ],
+  "reason": "Windows force termination bypasses Python Runtime.close; detached cached owned Sandbox daemon can survive service stop",
+  "behavior": [
+    "Live non-full-clean service stop first reuses authenticated existing bounded executor cleanup preparation",
+    "Full-clean stop preserves its already prepared fence and skips duplicate preparation",
+    "Unknown or failed cleanup propagates and preserves native owner; retry observes the same original operation",
+    "Native stop errors propagate instead of producing a false all-services-stopped report",
+    "Prepared exact PID/start token binds final NativeService.stop; changed replacement owner is preserved"
+  ],
+  "validation": {
+    "focused_final_stop_tests": "7/7 PASS",
+    "full_clean_executor_cleanup_tests": "12/12 PASS reused unchanged implementation",
+    "diff_check": "PASS"
+  },
+  "package_built_by_this_agent": false,
+  "runtime_operations_by_this_agent": false,
+  "commit_performed": false,
+  "push_performed": false,
+  "strongest_claim": "source and focused proof; root packages and activates r8 after peer review",
+  "remaining_action": "Peer review final source, root documentation/packaging/full-clean activation and live write/exec check"
+}

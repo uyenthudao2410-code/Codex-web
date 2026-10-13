@@ -1,0 +1,15 @@
+{
+  "operation": "multiworkspace_canary_preparation",
+  "live_dispatch": false,
+  "changes": [
+    "exact target pilot query",
+    "exact binding selection from multi-target inventory",
+    "fresh idempotency namespace"
+  ],
+  "files": {
+    "run-native-first-canary.py": "fda0fa1c33a3d5e5dbfc24adabc01ad54b1819a3cf1ff497b77ee956951df990",
+    "test-native-first-canary.py": "44e3da3ef9e715ba8424fe27db57266867e0e81f24ad88f975b997a2d8d62600",
+    "prepare-native-first-fixtures.py": "9500e53b0a8ced360c3235aa73f71af6a6b4d88497e810db90f9defb5157681b",
+    "invoke-native-first-canary.ps1": "1d201656c4788f741cdc3e89ffb71cfab9a6c1355bb714aad6fc6ff478b23b86"
+  }
+}

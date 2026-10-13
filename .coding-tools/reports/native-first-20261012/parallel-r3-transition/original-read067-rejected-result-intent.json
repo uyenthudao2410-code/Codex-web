@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operation": "original-read067-rejected-result-intent",
+  "observed_at_ms": 1791811151578,
+  "controller_gate": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\original-read067-reconciliation-gate-1791811151577-19941cf0.json",
+  "controller_gate_sha256": "ef297aa460ef23677cd8eccf87beab152371b71908e90b202c21f39a6b6d3cab",
+  "original_unknown_receipt_preserved": true,
+  "read_success_claimed": false,
+  "no_replay": true,
+  "effect_observed": false
+}

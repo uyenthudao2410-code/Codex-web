@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "operation": "local_selected_unknown_file_read_action_evidence",
+  "read_only": true,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T11:20:40.037650+00:00",
+  "capture_finished_utc": "2026-10-12T11:20:40.096658+00:00",
+  "production_identity_before": {
+    "owner_pid": 38436,
+    "owner_process_start_token": "134362736855547600",
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+    "installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a"
+  },
+  "production_identity_after": {
+    "owner_pid": 38436,
+    "owner_process_start_token": "134362736855547600",
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+    "installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a"
+  },
+  "production_identity_stable": true,
+  "journals_observed": {
+    "control-plane-node.json.approved-patch-bridge-journal.json": {
+      "sha256": "e14a519b62f165133e9c6162086b40b8e62e26518ef24d2d435c9bef286c56ed",
+      "bytes": 10213
+    },
+    "control-plane-node.json.document-write-bridge-journal.json": {
+      "sha256": "9e19a178489d9831465152ef87c3340a27361f025afb45115119d56b0dc79514",
+      "bytes": 22510
+    },
+    "control-plane-node.json.exec-journal.json": {
+      "sha256": "31e9f306c09f3c3d7b97c098d4715e6848b6dc89fad944e111fc03ff8db9ec50",
+      "bytes": 80583
+    },
+    "control-plane-node.json.file-read-bridge-journal.json": {
+      "sha256": "4de26cce3ea1f15746ae9eafd661bdc63acc06542f7297be73c5afce714e7da8",
+      "bytes": 109369
+    }
+  },
+  "journal_bytes_stable_during_observation": true,
+  "selected_actions": [
+    {
+      "journal": "control-plane-node.json.file-read-bridge-journal.json",
+      "entry": {
+        "action_id": "act_3849e259d55546639794cec40f63fea8",
+        "attempt_id": "try_0fee414fc5324c8ebff8d172aca065b6",
+        "state": "unknown"
+      },
+      "receipt": {
+        "action_id": "act_3849e259d55546639794cec40f63fea8",
+        "attempt_id": "try_0fee414fc5324c8ebff8d172aca065b6",
+        "receipt_state": "unknown",
+        "receipt_submitted": true
+      },
+      "payload": {
+        "code": "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN",
+        "diagnostic_code": "CONTROL_PLANE_FILE_READ_TARGET_MISSING",
+        "operation_kind": "control_plane_bounded_file_read",
+        "schema_version": 1
+      }
+    },
+    {
+      "journal": "control-plane-node.json.file-read-bridge-journal.json",
+      "entry": {
+        "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+        "attempt_id": "try_f0e32dc1b8ed4cfd93b277fd3d2bf098",
+        "state": "unknown"
+      },
+      "receipt": {
+        "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+        "attempt_id": "try_f0e32dc1b8ed4cfd93b277fd3d2bf098",
+        "receipt_state": "unknown",
+        "receipt_submitted": true
+      },
+      "payload": {
+        "code": "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN",
+        "diagnostic_code": "CONTROL_PLANE_FILE_READ_TARGET_MISSING",
+        "operation_kind": "control_plane_bounded_file_read",
+        "schema_version": 1
+      }
+    },
+    {
+      "journal": "control-plane-node.json.file-read-bridge-journal.json",
+      "entry": {
+        "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+        "attempt_id": "try_523f2373f3ca4931b0018abeb4bc7308",
+        "state": "unknown"
+      },
+      "receipt": {
+        "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+        "attempt_id": "try_523f2373f3ca4931b0018abeb4bc7308",
+        "receipt_state": "unknown",
+        "receipt_submitted": true
+      },
+      "payload": {
+        "code": "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN",
+        "diagnostic_code": "CONTROL_PLANE_FILE_READ_TARGET_MISSING",
+        "operation_kind": "control_plane_bounded_file_read",
+        "schema_version": 1
+      }
+    }
+  ],
+  "selected_action_ids": [
+    "act_3849e259d55546639794cec40f63fea8",
+    "act_52409c69f1b84e08bb3fdd86747f79c3",
+    "act_9db9b985a3d648b5b941f2e13a30ee47"
+  ],
+  "source_location_proof": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r9e-installed-file-read-source-proof.json",
+    "sha256": "e31bc6154560cbc6e83ca4e1e4e1f4ffd9049b506fa4ea3bf2143527b30928b1"
+  },
+  "canonical_idle_census_reference": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\production-transition-preflight-1791803582244.json",
+    "sha256": "739be146f9acb34c9648860590ee5d31979a6023cd897a003e22ef5e334b30d4",
+    "observed_at": "2026-10-12T11:13:02.244Z",
+    "local_live_work_idle": true,
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    }
+  },
+  "interpretation": "All three are preserved submitted UNKNOWN file-read receipts, diagnostic TARGET_MISSING; no command/job correlation in these receipts. Installed source proves this diagnostic is thrown before contents are read. No completion inferred or original receipt changed.",
+  "limitations": [
+    "Referenced idle census is an earlier observation and must be refreshed before lifecycle operations",
+    "Supported append-only terminal reconciliation requires independent matching server attempt/receipt/source evidence"
+  ],
+  "mutating_actions_performed": [],
+  "ok": true
+}

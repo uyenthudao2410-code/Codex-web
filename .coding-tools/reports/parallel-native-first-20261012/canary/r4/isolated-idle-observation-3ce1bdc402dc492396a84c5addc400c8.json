@@ -1,0 +1,2341 @@
+{
+  "schema_version": 1,
+  "operation": "automatic_owned_sandbox_idle_observation",
+  "ok": false,
+  "capture_started_at_ms": 1791834526951,
+  "pins_sha256": "9c3c0142457edae0fec972595c378633498f40c6047c5bda18eafc331c3e9a68",
+  "parity_sha256": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c",
+  "expected_idle_seconds": 30,
+  "deprovision_phase_bound_seconds": 210,
+  "runtime": {
+    "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "supervisor_instance_id": "e30adb5019b443cc5130c6ad",
+    "reviewed_mcp_process_instance_id": "-s21-KH6ldxHjCSO",
+    "native_process": {
+      "pid": 42596,
+      "creation_time": "134362952303421381",
+      "executable_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\resources\\resources\\native-python\\pythonw.exe"
+    }
+  },
+  "vm_started_by_observer": false,
+  "lifecycle_mutation_performed": false,
+  "nonce_saved": false,
+  "command_lines_collected": false,
+  "before": {
+    "observed_at_ms": 1791834526951,
+    "user_mode_hosts": [],
+    "kernel_memory": [
+      {
+        "pid": 16828,
+        "name": "vmmemCmZygote",
+        "working_set_bytes": 0,
+        "private_bytes": 812281856,
+        "ownership_inferred": false,
+        "sandbox_named_aggregate": false
+      }
+    ]
+  },
+  "warm": {
+    "sandbox_id": "wsb:ea12135c",
+    "observed_at_ms": 1791834560274,
+    "daemon_process": {
+      "pid": 31004,
+      "creation_time": "134363081412321689",
+      "executable_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\resources\\resources\\tools\\mxc-windows-sandbox\\wxc-windows-sandbox-daemon.exe"
+    },
+    "record_path": "E:\\Caches\\Temp\\wxc-wsb\\state-aware\\ea12135c\\record.json",
+    "record_sha256": "4e6260a756dd55d5cc321679c254f66d4d95d4964d4e8e209ed6e5cf61a8a5b0",
+    "mapped_folders_sha256": "50cacc30ce7bcc7197c5812c6f3013702459da68c868a9ff9fa5202bcc139f0d",
+    "exact_writable_workspace": "E:\\DEV\\Codex-web",
+    "owned_hosts": [
+      {
+        "pid": 3520,
+        "name": "WindowsSandboxServer.exe",
+        "working_set_bytes": 76472320,
+        "private_bytes": 19038208,
+        "creation_time": "134363081426169455",
+        "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+      },
+      {
+        "pid": 12740,
+        "name": "WindowsSandboxRemoteSession.exe",
+        "working_set_bytes": 105897984,
+        "private_bytes": 209043456,
+        "creation_time": "134363081414548243",
+        "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+      }
+    ],
+    "sample": {
+      "observed_at_ms": 1791834560274,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 76472320,
+          "private_bytes": 19038208,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 105897984,
+          "private_bytes": 209043456,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2601623552,
+          "private_bytes": 3124748288,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    "daemon_sha256": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525"
+  },
+  "error_code": "AUTOMATIC_IDLE_RETIREMENT_NOT_PROVEN",
+  "capture_finished_at_ms": 1791834852905,
+  "sample_count": 91,
+  "samples": [
+    {
+      "observed_at_ms": 1791834526951,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834530050,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834533691,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834537253,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834540736,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834544829,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834549933,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 79826944,
+          "private_bytes": 21798912,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 132411392,
+          "private_bytes": 165974016,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 1050398720,
+          "private_bytes": 1472937984,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834555650,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 78770176,
+          "private_bytes": 21417984,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 172814336,
+          "private_bytes": 211030016,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2545573888,
+          "private_bytes": 3123269632,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834560274,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 76472320,
+          "private_bytes": 19038208,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 105897984,
+          "private_bytes": 209043456,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2601623552,
+          "private_bytes": 3124748288,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834564156,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 76361728,
+          "private_bytes": 18903040,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 105750528,
+          "private_bytes": 207851520,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2586169344,
+          "private_bytes": 3125297152,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834567642,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 76099584,
+          "private_bytes": 18587648,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 108392448,
+          "private_bytes": 208080896,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2587942912,
+          "private_bytes": 3125600256,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834571018,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 22487040,
+          "private_bytes": 18964480,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 108724224,
+          "private_bytes": 208084992,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2587738112,
+          "private_bytes": 3125653504,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834574875,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 25690112,
+          "private_bytes": 18972672,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 111366144,
+          "private_bytes": 208801792,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2587598848,
+          "private_bytes": 2991943680,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834578860,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 34086912,
+          "private_bytes": 22274048,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 92737536,
+          "private_bytes": 207941632,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2587959296,
+          "private_bytes": 2992918528,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834582968,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31326208,
+          "private_bytes": 18374656,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 97386496,
+          "private_bytes": 207822848,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2619019264,
+          "private_bytes": 3023716352,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834586491,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31293440,
+          "private_bytes": 18325504,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 97583104,
+          "private_bytes": 207695872,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2615681024,
+          "private_bytes": 3023839232,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834590045,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31313920,
+          "private_bytes": 18325504,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 99094528,
+          "private_bytes": 207753216,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2615119872,
+          "private_bytes": 3023843328,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834593772,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31490048,
+          "private_bytes": 18493440,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 99332096,
+          "private_bytes": 207753216,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2616008704,
+          "private_bytes": 3023921152,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834597321,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31424512,
+          "private_bytes": 18444288,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 104013824,
+          "private_bytes": 207777792,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2628595712,
+          "private_bytes": 3032956928,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834600949,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31318016,
+          "private_bytes": 18358272,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 105361408,
+          "private_bytes": 208293888,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2629197824,
+          "private_bytes": 3033063424,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834604301,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 31952896,
+          "private_bytes": 18878464,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 106491904,
+          "private_bytes": 208236544,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2628542464,
+          "private_bytes": 3033149440,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834607723,
+      "user_mode_hosts": [
+        {
+          "pid": 3520,
+          "name": "WindowsSandboxServer.exe",
+          "working_set_bytes": 35430400,
+          "private_bytes": 21868544,
+          "creation_time": "134363081426169455",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+        },
+        {
+          "pid": 12740,
+          "name": "WindowsSandboxRemoteSession.exe",
+          "working_set_bytes": 106467328,
+          "private_bytes": 207794176,
+          "creation_time": "134363081414548243",
+          "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+        }
+      ],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2629394432,
+          "private_bytes": 3029700608,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834611505,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2611412992,
+          "private_bytes": 3032354816,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834615297,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2604363776,
+          "private_bytes": 3032489984,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834619186,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2604105728,
+          "private_bytes": 3032621056,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834622679,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2604199936,
+          "private_bytes": 3032743936,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834626177,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2609614848,
+          "private_bytes": 3032924160,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834629561,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2608427008,
+          "private_bytes": 3033423872,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834632849,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2608431104,
+          "private_bytes": 3033427968,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834636479,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2608439296,
+          "private_bytes": 3003609088,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834640025,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2608939008,
+          "private_bytes": 3003899904,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834643394,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2483326976,
+          "private_bytes": 3111563264,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834646663,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2483531776,
+          "private_bytes": 3111563264,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834650242,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2478739456,
+          "private_bytes": 3111579648,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834653682,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2489536512,
+          "private_bytes": 3111608320,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834657531,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2507321344,
+          "private_bytes": 3111673856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834661222,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2509893632,
+          "private_bytes": 3111727104,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834664766,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499391488,
+          "private_bytes": 2896617472,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834668489,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499604480,
+          "private_bytes": 2888466432,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834672428,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2500354048,
+          "private_bytes": 2890412032,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834675935,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502643712,
+          "private_bytes": 2892767232,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834679963,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2500513792,
+          "private_bytes": 2892791808,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834683512,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2500620288,
+          "private_bytes": 2892820480,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834687050,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2500616192,
+          "private_bytes": 2892976128,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834690513,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2500616192,
+          "private_bytes": 2892976128,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834693903,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499702784,
+          "private_bytes": 2894553088,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834697497,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499702784,
+          "private_bytes": 2886139904,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834701073,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499784704,
+          "private_bytes": 2886176768,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834704507,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499817472,
+          "private_bytes": 2886176768,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834708075,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499817472,
+          "private_bytes": 2886176768,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834711713,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499952640,
+          "private_bytes": 2886414336,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834715091,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2499952640,
+          "private_bytes": 2886414336,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834718567,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502483968,
+          "private_bytes": 2889265152,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834722304,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502750208,
+          "private_bytes": 2889527296,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834725801,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502115328,
+          "private_bytes": 2888138752,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834729243,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502311936,
+          "private_bytes": 2888331264,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834732782,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501898240,
+          "private_bytes": 2888396800,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834736239,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501738496,
+          "private_bytes": 2888679424,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834740058,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501828608,
+          "private_bytes": 2888679424,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834743605,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501820416,
+          "private_bytes": 2888937472,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834746969,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501828608,
+          "private_bytes": 2888941568,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834750451,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502033408,
+          "private_bytes": 2889072640,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834753728,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501853184,
+          "private_bytes": 2889117696,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834757203,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501853184,
+          "private_bytes": 2887094272,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834760800,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501853184,
+          "private_bytes": 2887094272,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834764581,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501885952,
+          "private_bytes": 2887114752,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834768138,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501885952,
+          "private_bytes": 2887114752,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834771538,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501885952,
+          "private_bytes": 2887114752,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834774873,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2501869568,
+          "private_bytes": 2887180288,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834778336,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502209536,
+          "private_bytes": 2887712768,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834782022,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502467584,
+          "private_bytes": 2887974912,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834785394,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2503630848,
+          "private_bytes": 2888642560,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834788791,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502447104,
+          "private_bytes": 2890178560,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834792422,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502451200,
+          "private_bytes": 2890178560,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834796145,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502516736,
+          "private_bytes": 2890244096,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834800088,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502287360,
+          "private_bytes": 2890244096,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834803741,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502303744,
+          "private_bytes": 2890244096,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834807093,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502406144,
+          "private_bytes": 2890297344,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834810617,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502606848,
+          "private_bytes": 2890493952,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834813866,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502606848,
+          "private_bytes": 2890493952,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834817296,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502651904,
+          "private_bytes": 2887491584,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834820783,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502656000,
+          "private_bytes": 2887491584,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834824221,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502918144,
+          "private_bytes": 2887753728,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834827702,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502647808,
+          "private_bytes": 2887753728,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834831156,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502647808,
+          "private_bytes": 2887753728,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834834725,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 2502901760,
+          "private_bytes": 2887819264,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834838236,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 1683644416,
+          "private_bytes": 2888867840,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834841966,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 1684254720,
+          "private_bytes": 2889129984,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834845627,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 1684254720,
+          "private_bytes": 2880528384,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834848985,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 1685250048,
+          "private_bytes": 2880729088,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    },
+    {
+      "observed_at_ms": 1791834852397,
+      "user_mode_hosts": [],
+      "kernel_memory": [
+        {
+          "pid": 16828,
+          "name": "vmmemCmZygote",
+          "working_set_bytes": 0,
+          "private_bytes": 812281856,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": false
+        },
+        {
+          "pid": 18668,
+          "name": "vmmemWindowsSandbox",
+          "working_set_bytes": 1689673728,
+          "private_bytes": 2881126400,
+          "ownership_inferred": false,
+          "sandbox_named_aggregate": true
+        }
+      ]
+    }
+  ],
+  "limitation": "No dedicated idle teardown receipt exists. Kernel aggregates are observations and carry no process ownership authority."
+}

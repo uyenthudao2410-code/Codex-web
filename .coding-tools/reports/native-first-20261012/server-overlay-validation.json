@@ -1,0 +1,10 @@
+{
+  "operation": "native_first_exact_server_overlay_validation",
+  "candidate": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\codex-control-plane-native-first-1012-e707cccda6fc",
+  "package_source_sha256": "sha256:940a95b83c8508510aedab7c416212dc0f80bf6de0e2389355f548467c2461be",
+  "tests_run": 19,
+  "failures": 0,
+  "errors": 0,
+  "passed": true,
+  "remote_mutations": false
+}

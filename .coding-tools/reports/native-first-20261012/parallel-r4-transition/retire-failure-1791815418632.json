@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "retire",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "observed_at": "2026-10-12T14:30:18.632Z",
+  "observed_at_ms": 1791815418632,
+  "ok": false,
+  "stage": "exact_host",
+  "code": "ORIGINAL_R3_RETIREMENT_INTENT_MISMATCH",
+  "mutating_action_started": false,
+  "retry_instruction": "Resolve the read-only gate before applying.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\retire-failure-1791815418632.json"
+}

@@ -1,0 +1,20 @@
+{
+  "observed_at_ms": 1791773352559,
+  "operation": "retired_read_proposal_live_read_only",
+  "serving_blockers": 2,
+  "proposed_blockers": 0,
+  "action_checks": [
+    {
+      "action_id": "act_048df93488874a70aa97a7ee18ccbd03",
+      "original_exception": false,
+      "proposed_retired_read_exception": true
+    },
+    {
+      "action_id": "act_744496c6bd514d38a746cf8819aae9ad",
+      "original_exception": false,
+      "proposed_retired_read_exception": true
+    }
+  ],
+  "remote_persistent_mutation": false,
+  "overlay_store_sha256": "e5b3b8e2a63e2e4144f9f782b275b4ecc056e8c1f642c91cc9647cb6b6d6667c"
+}

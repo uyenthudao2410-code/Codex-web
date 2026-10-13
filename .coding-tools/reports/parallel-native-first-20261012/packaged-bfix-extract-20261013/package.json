@@ -1,0 +1,11 @@
+{
+  "name": "coding-tools-mcp",
+  "version": "1.0.7",
+  "description": "Windows Execution Hub để vận hành Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT.",
+  "author": "3169657175",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}

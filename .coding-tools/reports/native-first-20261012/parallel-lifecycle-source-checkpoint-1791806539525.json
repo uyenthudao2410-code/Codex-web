@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "operation": "parallel_lifecycle_source_checkpoint",
+  "observed_at": "2026-10-12T12:02:19.6537542+00:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "branch": "main",
+  "source_sha256": {
+    "electron/services/controlPlaneEnrollment.js": "1f96edbfd5842849ea8fc495be959e4c034a40d7591386c398cca454684de690",
+    "electron/services/recoveryHost.js": "a9eabdb51fc5d0f8844f03fc027efedf1dd159b8887b047b0f9a8c7a4c190813",
+    "electron/main.js": "149d1b4df512011fe1902597934ae38d23bb9f0cd2447e42add2410d96ac15eb",
+    "electron/preload.js": "b589e5bf1e822a88f43867859fc15b737041a72bec80897a83286320ac5b934a",
+    "renderer/app.js": "02032455e20d089bb5fc6af9548022bf61fd50e9e883d65f648e0992df77f4e8",
+    "renderer/index.html": "3c5c279098d3c193682f05b9f9f6cc74fc008f05edcd808293465ccd1bbb67bf",
+    "tests/control-plane-standing-file-policy.test.js": "e71269983f46be0f384fa197f0f1a1c2d14b87cf60f954928ba81f3c0a5ceb7d",
+    "tests/control-plane-exec-sandbox.test.js": "96dc9097a88b5cba40145d90b19c8837e95193a3d4d36f81630e7da32bfca899",
+    "tests/folder-permission-editor.test.js": "a588b58c0a9dd8e1f754a66289bdc75cd330dfcba14b72d7f48815c18bb795fe"
+  },
+  "focused_js_tests": {
+    "first_batch": 112,
+    "passed": 142,
+    "failed": 0,
+    "runtime_batch": 30
+  },
+  "independent_ubuntu_boundary_tests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "syntax_and_scoped_diff_check": "passed",
+  "fresh_production_preflight": "production-transition-preflight-1791805803089.json",
+  "production_mutations_performed": [],
+  "final_candidate_status": "not built or activated by this lane",
+  "remaining_work": [
+    "final package parity and isolated smoke",
+    "root Ubuntu and Windows fence coordination",
+    "exact authorized Windows handoff",
+    "actual parallel target native canaries"
+  ],
+  "no_commit": true,
+  "no_push": true,
+  "no_release": true,
+  "helper_review": "independent review running"
+}

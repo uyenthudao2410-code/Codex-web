@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "operation": "operator-scoped-assistance-intent",
+  "observed_at": "2026-10-12T13:03:46.404Z",
+  "observed_at_ms": 1791810226404,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "canary_receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\shared-mcp-receipt-6bba02a734db47988da6042572f69497.ndjson",
+    "assistant_receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\operator-assist-shared-mcp-receipt-6bba02a734db47988da6042572f69497.ndjson",
+    "max_actions": 160,
+    "max_seconds": 900,
+    "ready_pins_sha256": "1d3531e7b29240b09d5b0852be38430e6fd965351c4d60ec6714cc580ee028cc",
+    "helper_sha256": "9f70c55585cb59d61f7eb331a6497bf828711bffc6318b9320ec5a6314c055a6",
+    "effect_observed": false,
+    "scope_selection": "exact_Codex_workspace_generation",
+    "action_id_filter_supported": false,
+    "no_enqueue_or_replay": true
+  },
+  "mutating": false,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\operator-scoped-assistance-intent-1791810226404-8ffd5fc3.json"
+}

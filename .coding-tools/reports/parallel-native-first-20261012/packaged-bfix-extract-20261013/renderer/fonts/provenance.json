@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "VERIFIED_EXACT_DISTRIBUTOR_ARTIFACTS",
+  "verified_at": "2026-09-05T03:40:37.368Z",
+  "original_local_acquisition_at": null,
+  "verification_method": "HTTPS fetch of Google Fonts CSS-selected versioned WOFF2 artifacts; Buffer.equals and SHA-256 against all six existing local files",
+  "binary_changes_in_this_verification": "none; existing font bytes were retained unchanged",
+  "distributor_build_parameters": null,
+  "distributor_build_parameters_missing_reason": "Google Fonts serves generated webfont subsets; this receipt pins exact distributed artifacts, not a reconstructed font-build pipeline",
+  "css_request_url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&family=Plus+Jakarta+Sans:wght@200..800&display=swap",
+  "css_request_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "license": "OFL-1.1",
+  "families": {
+    "JetBrains Mono": {
+      "embedded_version": "Version 2.211",
+      "weight_axis": { "min": 100, "default": 400, "max": 800 },
+      "distributor_path": "/s/jetbrainsmono/v24/",
+      "copyright": "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)",
+      "upstream_project": "https://github.com/JetBrains/JetBrainsMono",
+      "license_source_url": "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/19371302b95d218af43299bce79ddbddd0bc364d/OFL.txt",
+      "license_source_sha256": "a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697",
+      "license_file": "JetBrainsMono-OFL.txt",
+      "license_file_sha256": "c1ab7c666206842a02b35b30770dac0d7a10156ed401c9defc3f02a754d89e90"
+    },
+    "Plus Jakarta Sans": {
+      "embedded_version": "Version 2.071;gftools[0.9.30]",
+      "weight_axis": { "min": 200, "default": 400, "max": 800 },
+      "distributor_path": "/s/plusjakartasans/v12/",
+      "copyright": "Copyright 2020 The Plus Jakarta Sans Project Authors (https://github.com/tokotype/PlusJakartaSans)",
+      "upstream_project": "https://github.com/tokotype/PlusJakartaSans",
+      "license_source_url": "https://raw.githubusercontent.com/tokotype/PlusJakartaSans/18d1cd2f7ea10481919d2f05c1f7064b7307fc26/OFL.txt",
+      "license_source_sha256": "995c7199cab65954f545996326755daee7b63cc6b42b06c13da1f9502ab08a99",
+      "license_file": "PlusJakartaSans-OFL.txt",
+      "license_file_sha256": "f9a8e776b4b048227f2f046b8716083eb04b1539d9ad1d4b87e81c1df28f86e3"
+    }
+  },
+  "license_copy_normalization": "UTF-8 and LF; trailing horizontal whitespace removed; license wording unchanged",
+  "files": [
+    {
+      "file": "JetBrainsMono-vietnamese.woff2",
+      "family": "JetBrains Mono",
+      "subset": "vietnamese",
+      "bytes": 7504,
+      "sha256": "2288795da89dd97e648954b96e22b4501bd85dfc453264460b252f888b582ca2",
+      "source_url": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD0OwG_TA.woff2"
+    },
+    {
+      "file": "JetBrainsMono-latin-ext.woff2",
+      "family": "JetBrains Mono",
+      "subset": "latin-ext",
+      "bytes": 15196,
+      "sha256": "79bfdab9ba467e26eea4122e6f2567e188dd8a09a8c730d501fc487c4ab99c6e",
+      "source_url": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD1OwG_TA.woff2"
+    },
+    {
+      "file": "JetBrainsMono-latin.woff2",
+      "family": "JetBrains Mono",
+      "subset": "latin",
+      "bytes": 40404,
+      "sha256": "18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e",
+      "source_url": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD7OwE.woff2"
+    },
+    {
+      "file": "PlusJakartaSans-vietnamese.woff2",
+      "family": "Plus Jakarta Sans",
+      "subset": "vietnamese",
+      "bytes": 8352,
+      "sha256": "b275d1258601dda240fc6a1d4a6cad56e691d898f5cdf1b0e4fd6ca0022d8e40",
+      "source_url": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko50yyygA.woff2"
+    },
+    {
+      "file": "PlusJakartaSans-latin-ext.woff2",
+      "family": "Plus Jakarta Sans",
+      "subset": "latin-ext",
+      "bytes": 21728,
+      "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f",
+      "source_url": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2"
+    },
+    {
+      "file": "PlusJakartaSans-latin.woff2",
+      "family": "Plus Jakarta Sans",
+      "subset": "latin",
+      "bytes": 27348,
+      "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79",
+      "source_url": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2"
+    }
+  ]
+}

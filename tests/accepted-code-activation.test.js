@@ -632,6 +632,31 @@ test('workspace identity forces complete untracked discovery despite Git configu
   assert.equal(identity.worktree_fp, canonicalPythonFingerprint(workspace, identity));
 });
 
+test('activation identity excludes retained runtime evidence before the source-entry bound', async (t) => {
+  const { workspace } = await fixture(t, { concurrentUntracked: true });
+  const evidenceDirectory = path.join(workspace, '.coding-tools', 'reports');
+  for (let index = 0; index < 2001; index += 1) {
+    write(path.join(evidenceDirectory, `observation-${index}.json`), '{}\n');
+  }
+
+  const status = await gitStatus(workspace, true);
+  assert.deepEqual(status.entries.map((item) => item.path).sort(), [
+    'electron/services/nativeService.js',
+    'electron/services/recoveryHost.js'
+  ]);
+  const identity = await workspaceIdentity(workspace);
+  assert.equal(identity.worktree_fp, canonicalPythonFingerprint(workspace, identity));
+  write(path.join(evidenceDirectory, 'observation-0.json'), '{"updated":true}\n');
+  assert.equal((await workspaceIdentity(workspace)).worktree_fp, identity.worktree_fp);
+  write(path.join(workspace, 'electron', 'services', 'nativeService.js'), 'module.exports = { concurrent: false };\n');
+  assert.notEqual((await workspaceIdentity(workspace)).worktree_fp, identity.worktree_fp);
+
+  for (let index = 0; index < 2001; index += 1) {
+    write(path.join(workspace, 'source', `untracked-${index}.js`), 'module.exports = true;\n');
+  }
+  await assert.rejects(gitStatus(workspace, true), { code: 'AUTO_ACTIVATION_GIT_TOO_LARGE' });
+});
+
 test('Windows workspace identity excludes case aliases of protected runtime evidence', {
   skip: process.platform !== 'win32' ? 'Windows protected-path aliases are case-insensitive' : false
 }, async (t) => {

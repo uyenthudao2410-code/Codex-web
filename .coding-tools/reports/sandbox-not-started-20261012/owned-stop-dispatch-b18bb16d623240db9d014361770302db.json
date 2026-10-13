@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "operation": "dispatch_owned_sandbox_supported_stop",
+  "observed_at_ms": 1791785121719,
+  "producer_sha256": "5eb4615b8ef5aefbba2cec3835f087f2f537584f554c33dbe7802c10c8533fde",
+  "stop_dispatched": false,
+  "nonce_saved": false,
+  "database_mutated": false,
+  "node_journal_modified": false,
+  "phase": "stop",
+  "deprovision_performed": false,
+  "original_warm_action_replayed": false,
+  "binding": {
+    "stop_attempt_id": "b18bb16d623240db9d014361770302db",
+    "package": {
+      "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked",
+      "resources": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources",
+      "backend": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\tools\\mxc-windows-sandbox",
+      "module_root": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\coding-tools-mcp",
+      "adapter_sha256": "7eddd508dcc51ccecb5e2457ddd7bca20609eda6a03078bd7cafcb7295b422f8",
+      "daemon_sha256": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+      "package_manifest_sha256": "335b47effc6ff85ffc94cd8eed8466cbb9a4512c2327b989cd754776f8448df3",
+      "package_hashes": {
+        "resources\\app.asar": "69bac603b0dab1ad27f86fa114da140b059a93c695a4b7dfdbe24b53b3c007ae",
+        "Coding Tools MCP.exe": "a18ba16a640c30ad67758d6ba19aaf7044d947cea2f8026796b6e88f930243a8",
+        "resources\\resources\\coding-tools-mcp\\coding_tools_mcp\\windows_mxc_state_aware.py": "7eddd508dcc51ccecb5e2457ddd7bca20609eda6a03078bd7cafcb7295b422f8",
+        "resources\\resources\\tools\\mxc-windows-sandbox\\wxc-exec.exe": "0ab60f0d5ed3ae87870536173335eea9f9cb469bae737ad6656695855232c4d3",
+        "resources\\resources\\tools\\mxc-windows-sandbox\\wxc-windows-sandbox-daemon.exe": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+        "resources\\resources\\tools\\mxc-windows-sandbox\\wxc-windows-sandbox-guest.exe": "c2e9d947b1650584210d500513241850c6afe6e9e2c748e7c5abde7178523a1c",
+        "resources\\resources\\tools\\mxc-windows-sandbox\\mxc-windows-sandbox.provenance.json": "862a59e2d20e86c9dcb9732869e4c69f016bad663fda206b811d66449b3dcc06"
+      }
+    },
+    "runtime": {
+      "activation_epoch": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+      "process_instance_id": "gT3FDNVLRDcHAVhw",
+      "server_instance_id": "lK5WnRGPSmCvtD4w",
+      "native_process": {
+        "pid": 16280,
+        "creation_time": "134362579801951257",
+        "executable_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\native-python\\pythonw.exe",
+        "supported_native_process_start_token": "134362579801951250",
+        "native_token_normalization": "exact_FILETIME_minus_modulo_10"
+      },
+      "native_module_root": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\coding-tools-mcp",
+      "epoch_state": "READY",
+      "admission_state": "OPEN"
+    },
+    "warm_receipt": {
+      "path": ".coding-tools\\reports\\sandbox-not-started-20261012\\r6-warm-readonly-checkpoint.ndjson",
+      "sha256": "2d2dcd3eab9a04c0a1cf0aacf258c7342a3046aa1cd680198d4b601bc9735faa",
+      "task_id": "task_91b8033f78254a52bd83120411c7674e",
+      "action_id": "act_d016163c027342068a77a49ee1615fdd",
+      "job_id": "0bd3187c506a46179795f6f11f5a8f86",
+      "receipt_id": "rcpt_a41d679d01fb466b967c606350cdc655",
+      "attempt_id": "try_b6d6ff12f4194e47ac43427b2a67532b",
+      "exit_code": 0,
+      "writer_lease_generation": 1,
+      "stage_proofs": {
+        "cold": {
+          "receipt_id": "rcpt_8a21bf68066a4cac92448a2ba82b440b",
+          "action_id": "act_e926be4844354d66ba5480faab2497ee",
+          "attempt_id": "try_d2a7571b2fc2416c8d16ddf7e64fdc6b",
+          "attempt_number": 1,
+          "response_sha256": "b24f1ff7d682984c988ffa7820e7db061bb7617ef94658be6ba26664e0836959",
+          "runtime_identity": {
+            "activation_epoch_id": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+            "process_instance_id": "gT3FDNVLRDcHAVhw",
+            "server_instance_id": "lK5WnRGPSmCvtD4w",
+            "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+          },
+          "lane": "cold",
+          "version": "v24.19.0",
+          "exit_code": 0,
+          "job_id": "655b6516102448b4910546551d40b9c3",
+          "command_id": "iTn7hpWxRQM3ODSmqnsYv-ln",
+          "output_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb"
+        },
+        "warm": {
+          "receipt_id": "rcpt_a41d679d01fb466b967c606350cdc655",
+          "action_id": "act_d016163c027342068a77a49ee1615fdd",
+          "attempt_id": "try_b6d6ff12f4194e47ac43427b2a67532b",
+          "attempt_number": 1,
+          "response_sha256": "52f2158e23825047d4e63bdbfddece810e95fa445cc7f4f8488b5ff5b3756c9f",
+          "runtime_identity": {
+            "activation_epoch_id": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+            "process_instance_id": "gT3FDNVLRDcHAVhw",
+            "server_instance_id": "lK5WnRGPSmCvtD4w",
+            "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+          },
+          "lane": "warm",
+          "version": "v24.19.0",
+          "exit_code": 0,
+          "job_id": "0bd3187c506a46179795f6f11f5a8f86",
+          "command_id": "DB-Yi-5DfZ4pwo4Qibe61WWd",
+          "output_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb"
+        }
+      }
+    },
+    "native_warm_job": {
+      "original_stage_jobs": [
+        {
+          "lane": "cold",
+          "job_id": "655b6516102448b4910546551d40b9c3",
+          "command_id": "iTn7hpWxRQM3ODSmqnsYv-ln",
+          "lifecycle_state": "exited",
+          "finished_at": "2026-10-12T05:56:09.365Z",
+          "process_instance_id": "gT3FDNVLRDcHAVhw",
+          "runtime_instance_id": "lK5WnRGPSmCvtD4w",
+          "exit_code": 0,
+          "metadata_sha256": "3ec3138da09b1e94949db7b207bb067409f80499e779c5497ed0a15fdaa2b286"
+        },
+        {
+          "lane": "warm",
+          "job_id": "0bd3187c506a46179795f6f11f5a8f86",
+          "command_id": "DB-Yi-5DfZ4pwo4Qibe61WWd",
+          "lifecycle_state": "exited",
+          "finished_at": "2026-10-12T05:56:50.114Z",
+          "process_instance_id": "gT3FDNVLRDcHAVhw",
+          "runtime_instance_id": "lK5WnRGPSmCvtD4w",
+          "exit_code": 0,
+          "metadata_sha256": "3ec3138da09b1e94949db7b207bb067409f80499e779c5497ed0a15fdaa2b286"
+        }
+      ],
+      "active_job_count": 0
+    },
+    "central": {
+      "service_pid": 921509,
+      "action": {
+        "action_id": "act_d016163c027342068a77a49ee1615fdd",
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "delivery_state": "settled",
+        "settled_at_ms": 1791784610459
+      },
+      "intent": {
+        "task_id": "task_91b8033f78254a52bd83120411c7674e",
+        "writer_lease_generation": 1
+      },
+      "task": {
+        "task_id": "task_91b8033f78254a52bd83120411c7674e",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "closed_at_ms": null
+      },
+      "writer": {
+        "task_id": "task_91b8033f78254a52bd83120411c7674e",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "lease_generation": 1,
+        "released_at_ms": null,
+        "fresh_unexpired_observed": true
+      },
+      "task_exec_actions": [
+        {
+          "action_id": "act_d016163c027342068a77a49ee1615fdd",
+          "delivery_state": "settled",
+          "settled_at_ms": 1791784610459
+        },
+        {
+          "action_id": "act_e926be4844354d66ba5480faab2497ee",
+          "delivery_state": "settled",
+          "settled_at_ms": 1791784569770
+        }
+      ],
+      "attempts": [
+        {
+          "attempt_id": "try_b6d6ff12f4194e47ac43427b2a67532b",
+          "attempt_number": 1
+        }
+      ],
+      "receipts": [
+        {
+          "receipt_id": "rcpt_a41d679d01fb466b967c606350cdc655",
+          "receipt_state": "completed",
+          "safe_payload": {
+            "job_id": "0bd3187c506a46179795f6f11f5a8f86",
+            "command_id": "DB-Yi-5DfZ4pwo4Qibe61WWd",
+            "exit_code": 0,
+            "status": "exited",
+            "runtime_identity": {
+              "activation_epoch_id": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4",
+              "process_instance_id": "gT3FDNVLRDcHAVhw",
+              "server_instance_id": "lK5WnRGPSmCvtD4w",
+              "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+            },
+            "task_id": "task_91b8033f78254a52bd83120411c7674e"
+          }
+        }
+      ],
+      "unsettled_generation_actions": 0,
+      "other_open_generation_tasks": 0,
+      "node": {
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "readiness": "ready",
+        "runtime_instance_id": "gT3FDNVLRDcHAVhw",
+        "mcp_server_instance_id": "lK5WnRGPSmCvtD4w",
+        "activation_epoch": "activation-mv4u5k6v-cfeabc74ae10012ae61eab8d4c87e8b4"
+      }
+    },
+    "backend": {
+      "sandbox_id": "wsb:e68057a4",
+      "record_path": "E:\\Caches\\Temp\\wxc-wsb\\state-aware\\e68057a4\\record.json",
+      "record_sha256": "5833b614164a0ca62fe231d7ee92b1a0134b5249d83a54127b346761aab18631",
+      "record_state": "started",
+      "mapped_folders_sha256": "b51f69daf254c8000b88b9166dfbbbcf5201ffaf34307b2f525985cb7ed6d4a6",
+      "workspace_mapping_exact": true,
+      "daemon_process": {
+        "pid": 41824,
+        "creation_time": "134362581520920385",
+        "executable_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked\\resources\\resources\\tools\\mxc-windows-sandbox\\wxc-windows-sandbox-daemon.exe"
+      },
+      "daemon_executable_sha256": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525",
+      "authenticated_nonce_ping_verified": true,
+      "nonce_saved": false,
+      "host_processes": {
+        "user_mode_hosts": [
+          {
+            "name": "WindowsSandboxRemoteSession.exe",
+            "pid": 3492,
+            "creation_time": "134362581522952353",
+            "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxRemoteSession.exe"
+          },
+          {
+            "name": "WindowsSandboxServer.exe",
+            "pid": 42712,
+            "creation_time": "134362581528050454",
+            "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+          }
+        ],
+        "kernel_memory_observations": [
+          {
+            "name": "vmmemWindowsSandbox",
+            "pid": 28056,
+            "ownership_inferred": false
+          }
+        ]
+      },
+      "vendor_ownership_exact": true
+    }
+  },
+  "binding_sha256": "eec85b4a62f0452c3d83c9ae24a8d7867f8be275f03b8a0ba9ca6a0671b382c1",
+  "reviewed_plan_sha256": "6766eca6876315a16511bebcaf462f855207237a20ee72dc61452d3dcb53b33a",
+  "effect_state": "dispatching"
+}

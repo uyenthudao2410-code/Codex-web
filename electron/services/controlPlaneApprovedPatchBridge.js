@@ -9,6 +9,7 @@
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const { MAX_COLLECTION_BYTES, selectWorkspacePolicy } = require('./controlPlanePolicyStore');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { URL } = require('node:url');
@@ -241,7 +242,7 @@ function normalisePolicy(value, { now = Date.now() } = {}) {
   return Object.freeze(normalised);
 }
 
-function loadApprovedPatchBridgePolicy(paths, { now = Date.now() } = {}) {
+function loadApprovedPatchBridgePolicy(paths, { target = null, now = Date.now() } = {}) {
   const policyFile = typeof paths?.controlPlaneApprovedPatchPolicyFile === 'function'
     ? paths.controlPlaneApprovedPatchPolicyFile()
     : '';
@@ -251,7 +252,7 @@ function loadApprovedPatchBridgePolicy(paths, { now = Date.now() } = {}) {
   let raw;
   try {
     const stat = fs.statSync(policyFile);
-    if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_POLICY_BYTES) {
+    if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_COLLECTION_BYTES) {
       throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', 'control-plane approved-patch policy is invalid.');
     }
     raw = JSON.parse(fs.readFileSync(policyFile, 'utf8'));
@@ -259,7 +260,7 @@ function loadApprovedPatchBridgePolicy(paths, { now = Date.now() } = {}) {
     if (error?.code?.startsWith('CONTROL_PLANE_APPROVED_PATCH_')) throw error;
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', 'control-plane approved-patch policy cannot be parsed.');
   }
-  const policy = normalisePolicy(raw, { now });
+  const policy = normalisePolicy(selectWorkspacePolicy(raw, target, { code: 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', maxPolicyBytes: MAX_POLICY_BYTES }), { now });
   return Object.freeze({ ...policy, policy_sha256: digest(policy) });
 }
 

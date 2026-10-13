@@ -1,0 +1,29 @@
+{
+  "operation": "retired_read_pilot_continuity_source_proof",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "changed_files": [
+    "control-plane/control_plane/store.py",
+    "control-plane/tests/test_store.py"
+  ],
+  "scope": "Expired audited bounded file-read unknowns on a retired registration, revoked binding and closed context can remain immutable evidence without blocking a distinct current generation of the same owner/device/workspace/principal.",
+  "focused_tests": {
+    "runner": "python -m unittest",
+    "count": 8,
+    "elapsed_seconds": 36.436,
+    "result": "PASS",
+    "names": [
+      "test_scoped_pilot_replacement_preserves_expired_retired_quarantined_read_history",
+      "test_scoped_pilot_retired_read_continuity_rejects_missing_fences_and_evidence",
+      "test_scoped_pilot_retired_read_continuity_rejects_target_scope_changes",
+      "test_scoped_pilot_current_generation_other_binding_unknown_stays_blocking",
+      "test_scoped_pilot_resumes_after_exact_quarantined_file_read_without_settling_history",
+      "test_scoped_pilot_stays_blocked_for_quarantined_file_read_with_local_handle",
+      "test_scoped_pilot_stays_blocked_when_quarantined_file_read_evidence_digest_drifts",
+      "test_scoped_pilot_stays_blocked_when_quarantined_file_read_action_digest_drifts"
+    ]
+  },
+  "independent_review": "package_verify: no actionable flaw; original historical target preserved in intent/action digest reconstruction",
+  "diff_whitespace_check": "PASS",
+  "server_deployed": false,
+  "pilot_transferred": false
+}

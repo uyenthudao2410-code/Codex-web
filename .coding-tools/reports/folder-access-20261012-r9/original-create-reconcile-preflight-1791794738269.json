@@ -1,0 +1,23 @@
+{
+  "operation": "original_create_pre_effect_reconciliation",
+  "observed_at_ms": 1791794738269,
+  "mode": "local_preflight_only",
+  "action_id": "act_ed8982433bf347ef8c32aebc17b23d43",
+  "attempt_id": "try_79756ada1f5c45c389f4c133ecb55c95",
+  "payload": {
+    "schema_version": 1,
+    "operation_kind": "control_plane_document_write",
+    "code": "PRE_EFFECT_WORKSPACE_BIND_REJECTED",
+    "evidence_sha256": "71e0279ac77797ee18b5172fa43469cefc6990e909bfc9211396de62bd195d48",
+    "original_local_journal_sha256": "61a1af71b949a03aa0e77cb9eae1be2cd942fbaeebffaa57a1d47bc8dfcc3ae1",
+    "packaged_app_sha256": "a9a8c2007c12ecf7654f3eb38ae44a82df0a7c69888189090b517be361bc16fe",
+    "offline_native_refusal_code": "STALE_WORKSPACE_CONTEXT",
+    "original_native_error_retained": false,
+    "reconciliation_basis": "operator_inference_from_exact_package_scope_guard_and_absent_effect_evidence",
+    "original_unknown_receipt_preserved": true,
+    "local_effect_replayed": false,
+    "reconciliation_required": false
+  },
+  "node_journal_modified": false,
+  "action_redispatched": false
+}

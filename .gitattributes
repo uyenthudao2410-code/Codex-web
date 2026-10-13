@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Preserve the raw SHA-256 pinned by the Windows Sandbox build.
+scripts/patches/mxc-windows-sandbox-c-drive-share.patch text eol=lf

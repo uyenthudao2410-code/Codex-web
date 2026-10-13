@@ -170,3 +170,75 @@ test('bounded file-read refuses a local context bound to a different workspace b
   );
   assert.equal(calls, 1);
 });
+
+test('bounded file-read projects only the exact canonical absolute file in the bound workspace', async (t) => {
+  for (const scenario of ['exact', 'different-file', 'different-root', 'reparse-alias', 'reparse-target']) {
+    await t.test(scenario, async (t) => {
+      const item = fixture(t);
+      const content = 'authorized workspace\n';
+      const nested = path.join(item.registeredRoot, 'nested');
+      fs.mkdirSync(nested);
+      const target = path.join(nested, 'fixture.txt');
+      const otherFile = path.join(item.registeredRoot, 'other.txt');
+      const outsideFile = path.join(item.unrelatedUiRoot, 'fixture.txt');
+      fs.writeFileSync(target, content);
+      fs.writeFileSync(otherFile, content);
+      fs.writeFileSync(outsideFile, content);
+      let returnedPath = target;
+      if (scenario === 'different-file') returnedPath = otherFile;
+      if (scenario === 'different-root') returnedPath = outsideFile;
+      if (scenario === 'reparse-alias' || scenario === 'reparse-target') {
+        const alias = path.join(item.registeredRoot, 'alias');
+        // Windows directory junctions do not require the file-symlink privilege.
+        fs.symlinkSync(nested, alias, 'junction');
+        if (scenario === 'reparse-alias') returnedPath = path.join(alias, 'fixture.txt');
+        else {
+          fs.unlinkSync(alias);
+          fs.unlinkSync(target);
+          fs.rmdirSync(nested);
+          fs.symlinkSync(item.unrelatedUiRoot, nested, 'junction');
+        }
+      }
+      let calls = 0;
+      const server = http.createServer((request, response) => {
+        const chunks = [];
+        request.on('data', (chunk) => chunks.push(chunk));
+        request.on('end', () => {
+          const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          calls += 1;
+          if (body.params.name === 'workspace_context') {
+            send(response, body.id, { workspace: item.registeredRoot });
+            return;
+          }
+          assert.equal(body.params.name, 'read_file');
+          // Python uses Path.as_posix() even for Windows absolute displays.
+          send(response, body.id, {
+            path: returnedPath.split(path.sep).join('/'), content, encoding: 'utf-8',
+            start_line: 1, end_line: 1, total_lines: 1,
+            total_bytes: Buffer.byteLength(content), bytes_read: Buffer.byteLength(content),
+            truncated: false, next_start_line: null
+          });
+        });
+      });
+      await listen(server);
+      t.after(() => server.close());
+      const context = createOrchestrator({ port: server.address().port, globalWorkspace: item.unrelatedUiRoot });
+      const result = context.orchestrator.controlPlaneBoundedFileRead({
+        ...admission(item.registeredRoot), path: 'nested/fixture.txt'
+      });
+      if (scenario === 'exact') {
+        const receipt = await result;
+        assert.equal(receipt.file.path, 'nested/fixture.txt');
+        assert.equal(receipt.file.content, content);
+        assert.equal(receipt.response_sha256, digest(receipt.file));
+      } else {
+        await assert.rejects(result, {
+          code: scenario === 'reparse-target'
+            ? 'CONTROL_PLANE_FILE_READ_REPARSE_DENIED'
+            : 'CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID'
+        });
+      }
+      assert.equal(calls, 2);
+    });
+  }
+});

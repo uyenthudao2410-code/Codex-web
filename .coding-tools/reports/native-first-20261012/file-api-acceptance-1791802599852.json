@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "observation_kind": "native_first_temporary_file_acceptance",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "captured_at_utc": "2026-10-12T10:56:40.336637+00:00",
+  "completed_at_utc": "2026-10-12T10:59:02.128262+00:00",
+  "elapsed_seconds": 141.785,
+  "sample": {
+    "initial_read_files": 100,
+    "post_patch_reads": 20,
+    "exact_patch_transactions": 20,
+    "changed_files": 20,
+    "untouched_source_files": 80,
+    "writer_lease_lifecycles": 20
+  },
+  "proof_scope": "Actual Runtime.call_tool File API and agent_workflow exact writes in a temporary fixture; process and VM boundaries replaced by fail guards",
+  "process_assertions": {
+    "managed_command_spawns": 0,
+    "native_invocations": 0,
+    "isolated_invocations": 0,
+    "vm_lifecycle_phase_calls": 0,
+    "runtime_exec_calls": 0,
+    "runtime_command_sessions": 0
+  },
+  "physical_vm_census_measured": false,
+  "ram_measured": false,
+  "live_control_plane_dispatch_measured": false,
+  "model_assertions": {
+    "execution_route": "deterministic",
+    "execution_mode": "mcp_only",
+    "native_safety_label_used": false
+  },
+  "initial_content_manifest_sha256": "fa9af8007155e81b57dcdc4ff3407f78aca1586e1b68982cae3d1286b6ca152e",
+  "aggregate_diff_sha256": "0484f6ee75fa6634eaa0533e541e3fde337fb26fef73534200b62c444fd9071d",
+  "patches": [
+    {
+      "path": "source_000.txt",
+      "preimage_sha256": "edd7125f29c23e86cf0bc09167bfd02a995726e06333edb24ce3b5a46b08f4c2",
+      "postimage_sha256": "dd0581ae86ad798e8aac63e58e2359490ebac09e7e62942792cdb1abfc26635a",
+      "diff_sha256": "42fd86c5fd353201f159ad43c7cad5251d507d2c89760075a2587a807bbaadae",
+      "run_id": "622d978c3d6744ac8232d3d6b8b79f86",
+      "wave_id": "c6f655348795472eab0117fe5d806ef7",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_001.txt",
+      "preimage_sha256": "6d8cb7995bf7a230648bf7dd7e597ecf1a6991cf1f40528480d1bc7dc2198a18",
+      "postimage_sha256": "430c2f411ad7d5e1d8accd90e22ddb12e3583b5a6cb0f18457f953985ecc3ccb",
+      "diff_sha256": "86d6502cf0407c1ebf9c72637aa2137f4b51163440bb4a8c9c807f9d57007b42",
+      "run_id": "89dabbb6133742aca92563ae43884ec2",
+      "wave_id": "f015c7dda87541199544dafbf2cdcf97",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_002.txt",
+      "preimage_sha256": "57f46ec1fc3adc6487447c73369515f1cb9ab750422e9f35d1eb875ddedc2e8a",
+      "postimage_sha256": "439b5000e2f286803b73cc88557edb18105f5da17dd9a8f9c7fdee729b629bfa",
+      "diff_sha256": "d8f2f3c5fd5bb5236508be09e77cd4da0a1020afd93eaad6c3a32faf6351be27",
+      "run_id": "1f11e9b8d1e64a7f94d4b487e3e323eb",
+      "wave_id": "cba976e6662b4557a0038dde51c81a9d",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_003.txt",
+      "preimage_sha256": "6630f12545ee1a6f1a8ed8f12c072a693bc89a6fa45e94688c7e83454d1d5333",
+      "postimage_sha256": "4e1b0aa465e7b6d146e3fc57c8d095571bf573e1a00aeed5554cddc426bda556",
+      "diff_sha256": "4f81f6c3c7e3d0bf9a6179cd524f736d8a046cb92b5dacf2643e883ef52ea8e4",
+      "run_id": "b72726bff7654817bf3f24d5fc10f99a",
+      "wave_id": "711a4b4073fe4e658f33a9491bad0f09",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_004.txt",
+      "preimage_sha256": "8d7619c5f3bbbfdcf442012c83fc28501329c3b3ebe42f712b34b4457b3e4439",
+      "postimage_sha256": "0a1887455e468b00e0221a4f238c44132ed02cb53278117de428392368d8e1e8",
+      "diff_sha256": "ba6b0ea49470b6ed20c51e7a2d41920018a3f80666cd1eabb58e5b45b421d55b",
+      "run_id": "9b6c0b15a3904698ace2c3eb00020b88",
+      "wave_id": "63bd04bb864547809b77c792ae8740c1",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_005.txt",
+      "preimage_sha256": "917250982ba06765fe7c12c265d69d885e13282131cbcbd87ff3a9a8e817df2a",
+      "postimage_sha256": "1acdd959967310d4cffba8f06fb6b5b7aab4c99c313d36acac9e6c41c1c09369",
+      "diff_sha256": "9a85816c5fa9ace0e5c170fd51974ccc728be1fa964adff7570a2d1f7958efa7",
+      "run_id": "35537ab2dda1496f8ae5eb9847cb054c",
+      "wave_id": "976cb0e6d8fc40acb72902c055b937d5",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_006.txt",
+      "preimage_sha256": "676a8be7d738c5719539858bf4bb35917a08decf5aee80adb72c32e32bfd5a90",
+      "postimage_sha256": "08e17b0fe122ec188ea696af4b4b79ced21234083234493e29e04a648ccb9f05",
+      "diff_sha256": "410eea5ebf56a760d212768884c0d3cff954b1bf882d15757ec08cb860f30042",
+      "run_id": "e1bf436453f54e288f757bc326d666ce",
+      "wave_id": "2518504567844a1d8b136295c2bebe3d",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_007.txt",
+      "preimage_sha256": "e3579e58b7b41d42d8639fde255945ac0b08d91d7c45f0a2abae5dee76adc4e4",
+      "postimage_sha256": "a470a8b55bc3462fb17804ac605333f0f469d392fb6e01f8234163e7cad0400d",
+      "diff_sha256": "9a3937e057e81d7ac643591166e6cc29a65a2803f79496c91eb7651056f05bfb",
+      "run_id": "8ff2915ddcba439cb3f3d4fd7fb54d14",
+      "wave_id": "d091801a87794903965a7cfa27c8652b",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_008.txt",
+      "preimage_sha256": "13e61c612302d025c27a74fa23c589e10a23ca1949b14c5b3293122b17728ea9",
+      "postimage_sha256": "c9aa516645f85cf4707c65b18068623851c9ad7a5ac7844fb88ae12eecc06317",
+      "diff_sha256": "0181d88219607e2db0d48cb89a7ba5e79ef7fcb2ef6a4d9d713c526783287339",
+      "run_id": "912b3596983344c9aa7875d53695e1d4",
+      "wave_id": "5af86929fe374b41b79109cb9b448bc0",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_009.txt",
+      "preimage_sha256": "33b02e6bd1b3962d7d819fd5bc5a1ea7b264a2886980792cdb10984c558b3032",
+      "postimage_sha256": "59092dbcc17ac5e3c703f62b615d9e9a7a3b82d0e32684eb3ead733e351898a6",
+      "diff_sha256": "9aa98d8c6ee00c95937489f5496abaeb371bee57266ab36fc2cb66a73ec30313",
+      "run_id": "cf57db9f736446d1a51d08e74556cc45",
+      "wave_id": "e75edf3153d5448a9ad0747fff0ddb8b",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_010.txt",
+      "preimage_sha256": "287c0bc999b104d033bbae11cd8b686f3fa3dd71290af45d71f300ede2679d12",
+      "postimage_sha256": "970c8297462e3028bc0d09ad12acbde6adf6843d0db8dff220fb735f818204e1",
+      "diff_sha256": "df40cd578cfc3902fb3d29543336898fc4292f8e85dc40e59c1ec5c1df4a95fe",
+      "run_id": "45ca4d5dcf2d468699d7760fb41d327d",
+      "wave_id": "5423cc6328ab40339d5eddb801f38ba9",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_011.txt",
+      "preimage_sha256": "87b002f316694261b0ca765bf798d42779821e2e12a6790e40e4812ffb461273",
+      "postimage_sha256": "582bd60480e7ea1ce2a5bc122060fe1c0ae37ba0b248ef2a47446f9e7e7a487c",
+      "diff_sha256": "64d800346560364ee2435975ff14977928e2906ed41a5df0c05f7429ab6d0002",
+      "run_id": "4380d5e19d3049719aa6b5d866c02122",
+      "wave_id": "87bdd50553364dac896154037a4c3e94",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_012.txt",
+      "preimage_sha256": "7f213a90c83d93af537f148158057445f66a13266a52c04414a1aef9cfd85412",
+      "postimage_sha256": "8dd5d28ee3e2cb75250ac939c5b6cc9539752d3854c14d58bf8458842aac34f9",
+      "diff_sha256": "be9aa461d8d1272ea58834d2590f0f528623dd54d7db888031035f1e17203562",
+      "run_id": "b360a24583c742f6a4fc530d93b82a48",
+      "wave_id": "81dbfe0e70494e07aacc28bb6dec8087",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_013.txt",
+      "preimage_sha256": "11e29d4e8c539d7dd3061973321de3d4745504865d706bd990d111dced5f1bf0",
+      "postimage_sha256": "055454a07f1b2f6cd2068ad740caf00eb02f1aae104caaac876cc8ade057405a",
+      "diff_sha256": "f965803b6fa72390a5dafe6e6908e6841969e604a8aeae701f9ff9cf0567f659",
+      "run_id": "023a7c637ca14b219c359aab5c01b7ec",
+      "wave_id": "2de0048304354d70b63e250d50951b7f",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_014.txt",
+      "preimage_sha256": "9f968c7b5618f0174961d6feb499858a4c4cd87134db4f90ca2b5c509f1cc379",
+      "postimage_sha256": "25bd31f92757de7e8200e17eaba53f05cf36743926fe708d9b5c3afad53284e8",
+      "diff_sha256": "bb3cf28cda7bb17bf300fd1041a6e37180c46c9048d09bea136037a1217559f5",
+      "run_id": "545b1ce6d1874f169dd7e237810c545e",
+      "wave_id": "f640cc8839bf4ffeb91478affbc38c4e",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_015.txt",
+      "preimage_sha256": "c6f1fdf544895c16ff8ead51656a889a960390104c5c48be2e219657c413ddb1",
+      "postimage_sha256": "99214fa1f02ed0edf93bed2f7cc479a518731baeaea525f01c89fac47f0100ef",
+      "diff_sha256": "04562d01034a542f67b87d78c3b4c37ef962200e726eb74c842bcc4a8775c820",
+      "run_id": "ac43c8876e0d4b3dac0a7ceb7acce73c",
+      "wave_id": "f9319bb18b604f9e9e01009a3391ce4c",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_016.txt",
+      "preimage_sha256": "e12c8e7b47786b3f492da0c52ce88e1b01c733263c6c685497d986f85388403e",
+      "postimage_sha256": "375cf842e572a211bad6888d60ead3c57836f4b66dd889771f31c0e8b15295bf",
+      "diff_sha256": "06f575583346ccbc38e854bffbfd73c8842bf87fb005d221ee39ed545cd0f4f9",
+      "run_id": "f7c21ee2f4d540f5a7b8002fb7c746b0",
+      "wave_id": "73de9731e7a84c6eb9cbd4df909bab04",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_017.txt",
+      "preimage_sha256": "45a9aad251fbeb249178d6251569b00efec1370da494e6f2ebe9e2f496656cf1",
+      "postimage_sha256": "6e1490a8080ca8db76982eca1f0e125ce70387562818cf58a79a79daea63497d",
+      "diff_sha256": "de02972425753728430c6e304226e8b5e595489e5d8b25a8cdd4d615af68d220",
+      "run_id": "9474f821ba5f400296d4fec92a696403",
+      "wave_id": "b5f1c711c65e4a04ad4a6ddabdceb94c",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_018.txt",
+      "preimage_sha256": "b03e1880fd881c7bed48d19d5c3544839e65302829fe73924ebaa52a5d3355b2",
+      "postimage_sha256": "044b047b4f3cb34d7e98b5b9067102169534e4c352bc5bb9cdc6c51eaf8b09ff",
+      "diff_sha256": "f3d473d040f37d6866791ef5cd01e486faf6b2abeca252196cc68aaf50157e7d",
+      "run_id": "ce4b1b20127d4fd7b8f9486bc22bca43",
+      "wave_id": "ac689c22b5c2490ebe1c161de30ac3e3",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    },
+    {
+      "path": "source_019.txt",
+      "preimage_sha256": "006804fd7464dfaebbe8352603929ed51111758240c8026a208cb9c65734f616",
+      "postimage_sha256": "d5fe45b4600744ceb76ee2bb443405e1cf15fe2afe0e26ab9c68b2ba7e709b7e",
+      "diff_sha256": "3e756ca1b653019e864151e9e04aacb56f1052a3d96257d1f5007ce30f12c13f",
+      "run_id": "3b18cb64b6e94c8dab0443acadac8d33",
+      "wave_id": "49919f66817648d490c26aeb36f4cbe1",
+      "writer_lease_acquired_and_revoked": true,
+      "fixture_terminal_state": "ABORTED"
+    }
+  ],
+  "fixture_job_state": "No command Jobs; 20 synthetic fixture runs stopped as ABORTED after hash/diff checks; no false acceptance",
+  "fixture_operator_actions": "Synthetic task start/stop and report acknowledgment only within temporary fixture; no production task or acceptance changed",
+  "limitations": [
+    "Zero VM means guarded adapter calls were zero in this fixture, not a live OS VM census",
+    "Does not prove packaged execution, native ProcessContainer compatibility, network denial or live reconnect"
+  ],
+  "tests": [
+    "test_native_first_file_acceptance.py::NativeFirstFileAcceptanceTests::test_100_reads_and_20_exact_patch_transactions_need_no_command_or_vm"
+  ]
+}

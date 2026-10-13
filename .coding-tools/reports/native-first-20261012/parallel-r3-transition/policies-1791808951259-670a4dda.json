@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "operation": "policies",
+  "observed_at": "2026-10-12T12:42:31.259Z",
+  "observed_at_ms": 1791808951259,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": [
+    {
+      "target": {
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "workspace_path": "E:\\DEV\\Codex-web"
+      },
+      "activation": {
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "pilot_decision_id": "pilot_9c586c58bf104766a8644b5187ba4afe",
+        "expires_at_ms": 1791847531435,
+        "replayed": true,
+        "state": "active",
+        "workspace_path": "E:\\DEV\\Codex-web"
+      },
+      "files": {
+        "state": "read_and_patch",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "file_read": {
+          "kind": "file_read",
+          "authority_mode": "standing",
+          "policy_sha256": "b09b5cf34b6e09489aaf34431dfa6931755dd7c69d41d01bf1e3d825fd686c36",
+          "windows_acl_verified": false
+        },
+        "approved_patch": {
+          "kind": "approved_patch",
+          "authority_mode": "standing",
+          "policy_sha256": "7c91e5868f2b6e65b38cd3a3663f5de802a8fba4fc82224fd9d71a3e6eea02b6",
+          "windows_acl_verified": false
+        }
+      },
+      "exec": {
+        "state": "enabled",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+        "allowed_argv_prefix_count": 7,
+        "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+        "execution_mode": "native_first",
+        "native_argv_prefixes": [],
+        "sandbox": {
+          "state": "available",
+          "tier": "base-container",
+          "dacl_fallback": false,
+          "base_container_api": true,
+          "deny_paths_supported": true,
+          "reason": null,
+          "backend": "process_container",
+          "capability_verified": true,
+          "execution_verified": false,
+          "binary_sha256": "6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a",
+          "release": "microsoft-mxc-v0.8.0"
+        }
+      },
+      "observed_files": {
+        "file_read": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "b09b5cf34b6e09489aaf34431dfa6931755dd7c69d41d01bf1e3d825fd686c36",
+          "current_facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "authority_observed_at_ms": 1791808944992
+        },
+        "approved_patch": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "7c91e5868f2b6e65b38cd3a3663f5de802a8fba4fc82224fd9d71a3e6eea02b6",
+          "current_facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "authority_observed_at_ms": 1791808944992
+        }
+      },
+      "observed_exec": {
+        "policy": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+          "allowed_argv_prefix_count": 7,
+          "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+          "execution_mode": "native_first",
+          "native_argv_prefixes": [],
+          "current_facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "authority_observed_at_ms": 1791808945605
+        },
+        "sandbox": {
+          "backend": "process_container",
+          "state": "available",
+          "tier": "base-container",
+          "dacl_fallback": false,
+          "base_container_api": true,
+          "deny_paths_supported": true,
+          "reason": null,
+          "capability_verified": true,
+          "execution_verified": false,
+          "binary_sha256": "6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a",
+          "release": "microsoft-mxc-v0.8.0"
+        },
+        "execution_mode": "native_first"
+      }
+    },
+    {
+      "target": {
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "workspace_path": "E:\\DEV\\Autocad"
+      },
+      "activation": {
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+        "pilot_decision_id": "pilot_72d96fd01d7c4a0eb5af5daf619423a9",
+        "expires_at_ms": 1791847531435,
+        "replayed": true,
+        "state": "active",
+        "workspace_path": "E:\\DEV\\Autocad"
+      },
+      "files": {
+        "state": "read_and_patch",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "file_read": {
+          "kind": "file_read",
+          "authority_mode": "standing",
+          "policy_sha256": "77ab07253d412ab54c8115e37cfd002e655b04999575e77bd782c473cbb8c6f4",
+          "windows_acl_verified": false
+        },
+        "approved_patch": {
+          "kind": "approved_patch",
+          "authority_mode": "standing",
+          "policy_sha256": "b86758a26dc93540d9f13211d0f244df9fc51f6798eb8d25d0d937154c0882b6",
+          "windows_acl_verified": false
+        }
+      },
+      "exec": {
+        "state": "enabled",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+        "allowed_argv_prefix_count": 7,
+        "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+        "execution_mode": "native_first",
+        "native_argv_prefixes": [],
+        "sandbox": {
+          "state": "available",
+          "tier": "base-container",
+          "dacl_fallback": false,
+          "base_container_api": true,
+          "deny_paths_supported": true,
+          "reason": null,
+          "backend": "process_container",
+          "capability_verified": true,
+          "execution_verified": false,
+          "binary_sha256": "6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a",
+          "release": "microsoft-mxc-v0.8.0"
+        }
+      },
+      "observed_files": {
+        "file_read": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "77ab07253d412ab54c8115e37cfd002e655b04999575e77bd782c473cbb8c6f4",
+          "current_facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "authority_observed_at_ms": 1791808950574
+        },
+        "approved_patch": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "b86758a26dc93540d9f13211d0f244df9fc51f6798eb8d25d0d937154c0882b6",
+          "current_facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "authority_observed_at_ms": 1791808950574
+        }
+      },
+      "observed_exec": {
+        "policy": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+          "allowed_argv_prefix_count": 7,
+          "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+          "execution_mode": "native_first",
+          "native_argv_prefixes": [],
+          "current_facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "authority_observed_at_ms": 1791808951237
+        },
+        "sandbox": {
+          "backend": "process_container",
+          "state": "available",
+          "tier": "base-container",
+          "dacl_fallback": false,
+          "base_container_api": true,
+          "deny_paths_supported": true,
+          "reason": null,
+          "capability_verified": true,
+          "execution_verified": false,
+          "binary_sha256": "6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a",
+          "release": "microsoft-mxc-v0.8.0"
+        },
+        "execution_mode": "native_first"
+      }
+    }
+  ],
+  "mutating": true,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "7a87e6196acdfa9f45788e5e54da11dc2d77a409d04ca851d113fb1d7ff5979b",
+  "smoke_proof_sha256": "a9a448f345dfadeb6b2bd5b566e14eb5939d2cb543c6536213810f1e8654b8ff",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\policies-1791808951259-670a4dda.json"
+}

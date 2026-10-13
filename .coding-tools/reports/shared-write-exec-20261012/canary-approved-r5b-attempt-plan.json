@@ -1,0 +1,23 @@
+{
+  "prepared_at": "2026-10-12T04:32:06.0470399Z",
+  "service_pid_gate": "awaiting_root_deployed_pid",
+  "operation": "shared_write_exec_canary_approved_attempt",
+  "activation_epoch": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+  "approved_source_sha256": {
+    "shared-write-exec-check.cjs": "f531ccd803ffd4a2b5798ff3c08495547bdd896be44e979d58e0994fbcccb882",
+    "invoke-shared-write-exec-canary.ps1": "303a9d13e53aaa7bc4b803157b45e2e097a36f57051b3cbc2cf1b0b2dd8b4796",
+    "run-shared-write-exec-canary.py": "b61111ff23b06449908c6bae5e29eda2c5aa65c62cf72dca898183b7e5a39b9c"
+  },
+  "process_instance_id": "ev_bVSX46CWc8WG5",
+  "pilot_decision_id": "pilot_dfb3174078d842299c41c6638830e505",
+  "attempt_id": "3d074715-0e21-41af-a353-4c51a4a9122b",
+  "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+  "schema_version": 1,
+  "server_instance_id": "XobFwIqZETgu9SLo",
+  "effects_executed": false,
+  "local_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+  "facade_schema_version": 32,
+  "approved_by": "root_controller",
+  "facade_contract_sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-12T12:25:59.615Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "lane": "lifecycle_audit",
+  "cause": {
+    "classification": "SANITATION",
+    "error_type": "Error",
+    "error_code": null,
+    "relative_directory": "coding-tools-mcp/coding_tools_mcp/__pycache__",
+    "producer": "canonicalLedgerCensus",
+    "adapter_exact_source": true,
+    "adapter_file_count": 10
+  },
+  "fix": {
+    "python_bytecode_suppression": "explicit -B",
+    "interpreter_invocations": [
+      "canonical ledger census",
+      "exact stale-run helper",
+      "native MCP launch"
+    ],
+    "source_sha256": {
+      "electron/services/fullCleanActivation.js": "ccc5a5a5944407c9b272c0026234b673e61bf6e7bc9295ad88b7181d15e04beb",
+      "electron/services/nativeService.js": "d95eb7fedf558f082c49022b7a915d74850025b2ab0261df4f2363d0822ed460",
+      "tests/activation-ledger-census.test.js": "fcfe1c883113305699b1a7239b5b1ce1148a66ea1ba3510aa566e33fe9435cf6",
+      "tests/native-service-attestation.test.js": "0cf44db4a56b0543e2ba5d478dd41d288a1478e4e6d5872ddf44cc2d17e3ac46"
+    }
+  },
+  "validation": {
+    "focused_tests": 2,
+    "passed": 2,
+    "failed": 0,
+    "real_interpreter_resource_tree_unchanged": true,
+    "native_launch_argv_assertion": true,
+    "syntax_ok": true,
+    "scoped_whitespace_ok": true
+  },
+  "handoff": {
+    "helper_directory": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r2-transition",
+    "stop_supported": false,
+    "exact_owner_pid": 12420,
+    "source_changes_after_r2_package_proof": false,
+    "syntax_ok": true,
+    "cache_preservation": "root-owned reversible quarantine with manifest"
+  },
+  "operations_in_this_wave": {
+    "service_mutations": 0,
+    "canaries": 0,
+    "commit": false,
+    "push": false
+  }
+}

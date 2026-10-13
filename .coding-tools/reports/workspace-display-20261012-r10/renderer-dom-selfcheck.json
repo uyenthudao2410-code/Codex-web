@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "synthetic_data_only": true,
+  "actual_full_renderer_functions": true,
+  "helper_sha256": "41ec93d85307ed76f2c7e91abe386dbe3223237c85c135b98b423be9cb8e9b1c",
+  "renderer_sha256": "8dbc227e9f762c035d339d37e1f37aa4a4785c69dd48f46a50283f5b2c2e70ab",
+  "labels": {
+    "sideWorkspace": "E:\\DEV\\Autocad",
+    "deviceWorkspace": "E:\\DEV\\Autocad",
+    "executionWorkspaceLabel": "E:\\DEV\\Autocad",
+    "selectedWorkspace": "E:\\DEV\\Autocad",
+    "workspaceMeta": "E:\\DEV\\Autocad"
+  },
+  "stale_heartbeat_clears_labels": true,
+  "replaced_renderer_functions": [],
+  "live_claim": false,
+  "observed_at_utc": "2026-10-12T10:08:06.864Z"
+}

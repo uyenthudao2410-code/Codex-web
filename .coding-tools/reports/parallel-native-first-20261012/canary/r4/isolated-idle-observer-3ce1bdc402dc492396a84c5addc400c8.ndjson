@@ -1,0 +1,9 @@
+{"phase": "warm_owned_sandbox_observed", "sandbox_id": "wsb:ea12135c", "observed_at_ms": 1791834560274}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": false, "observed_at_ms": 1791834574883}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791834622684}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791834668498}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791834715096}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791834760805}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791834807098}
+{"phase": "observing_original_owned_idle", "warm_owner_observed": true, "terminal_observed": true, "observed_at_ms": 1791834852403}
+{"ok": false, "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-3ce1bdc402dc492396a84c5addc400c8.json", "error_code": "AUTOMATIC_IDLE_RETIREMENT_NOT_PROVEN"}

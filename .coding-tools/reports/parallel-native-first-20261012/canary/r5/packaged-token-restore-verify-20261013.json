@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "operation": "packaged_token_restore_verification",
+  "observed_at_ms": 1791849905139,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "ok": true,
+  "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+  "owner_instance_id": "ecae23c8a75f4b28b3bc182104f3ed49",
+  "parity_sha256": "c90434a03dc5a41accc3999709f26893cad7a428517915f05cbe23951aa1defb",
+  "codex_policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+  "codex_native_argv_prefixes": [],
+  "autocad_policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+  "autocad_native_argv_prefixes": [],
+  "production_policy_mutation_performed": false
+}

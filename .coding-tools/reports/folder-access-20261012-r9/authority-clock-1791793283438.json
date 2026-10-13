@@ -1,0 +1,9 @@
+{
+  "operation": "authority_clock_readonly",
+  "started_at_ms": 1791793283009,
+  "local_received_at_ms": 1791793283438,
+  "server_observed_at_ms": 1791793283520,
+  "age_ms": -82,
+  "request_duration_ms": 429,
+  "mutation": false
+}

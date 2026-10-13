@@ -1,0 +1,14 @@
+{
+  "exit_code": 0,
+  "rows": [
+    {
+      "ok": true,
+      "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-transition\\existing-gateway-canary-audit-1791798210962.json",
+      "report_sha256": "342ef078239817afb7db1ce616d589ba70d6b154daed5ef3e373aabb7ff06070",
+      "state": "ACCEPTING",
+      "controller_lease": null,
+      "secret_values_emitted": false
+    }
+  ],
+  "raw_output_emitted": false
+}

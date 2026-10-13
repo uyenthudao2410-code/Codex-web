@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "operation": "production_git_job_state",
+  "observed_at_ms": 1791836385741,
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "branch": "main",
+  "dirty": true,
+  "dirty_path_count": 2253,
+  "conflict_path_count": 0,
+  "tracked_modified_path_count": 72,
+  "untracked_path_count": 2181,
+  "active_job_counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "owned_codex_sidecar_residues": 0
+  },
+  "push_performed": false,
+  "commit_performed": false,
+  "release_performed": false,
+  "deployment_performed": false,
+  "source": "local_git_status_only",
+  "secret_material_read": false
+}

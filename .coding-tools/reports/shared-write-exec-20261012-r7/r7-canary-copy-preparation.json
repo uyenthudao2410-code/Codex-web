@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "operation": "prepare_additive_r7_shared_write_read_patch_read_exec_canary",
+  "observed_at_ms": 1791786299780,
+  "files": [
+    {
+      "source": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\run-shared-write-exec-canary-r2.py",
+      "source_sha256": "a0aa5b81df0c54b66c17cce0647121585ef297b7d16039f7a59ac90e555148f8",
+      "prepared": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012-r7\\run-shared-write-exec-canary-r7.py",
+      "prepared_sha256": "66b5c8a9b367f0c564080946812f2a31a3e9a730182aab9f8b51d28034ceefec",
+      "only_replacements": [
+        {
+          "old": "shared-write-exec-20261012/",
+          "new": "shared-write-exec-20261012-r7/",
+          "count": 1
+        },
+        {
+          "old": "shared-write-exec-check-r2.cjs",
+          "new": "shared-write-exec-check-r7.cjs",
+          "count": 1
+        },
+        {
+          "old": "new-machine-shared-write-proof-20261012.txt",
+          "new": "new-machine-shared-write-proof-20261012-r7.txt",
+          "count": 1
+        },
+        {
+          "old": "shared-write-exec-r2-20261012:",
+          "new": "shared-write-exec-r7-20261012:",
+          "count": 1
+        }
+      ],
+      "reverse_copy_exact_original": true
+    },
+    {
+      "source": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\invoke-shared-write-exec-canary-r2.ps1",
+      "source_sha256": "8e41c719e42b9d7bfb714777cca44906ff22b6369798d5414f05b3d310828032",
+      "prepared": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012-r7\\invoke-shared-write-exec-canary-r7.ps1",
+      "prepared_sha256": "bd41561c0381df1b133a8716947372e7c53de1d144215e8904a0fec4c1f062e4",
+      "only_replacements": [
+        {
+          "old": "shared-write-exec-20261012'",
+          "new": "shared-write-exec-20261012-r7'",
+          "count": 1
+        },
+        {
+          "old": "run-shared-write-exec-canary-r2.py",
+          "new": "run-shared-write-exec-canary-r7.py",
+          "count": 1
+        },
+        {
+          "old": "shared-write-exec-receipt-r2-",
+          "new": "shared-write-exec-receipt-r7-",
+          "count": 1
+        },
+        {
+          "old": "new-machine-shared-write-proof-20261012.txt",
+          "new": "new-machine-shared-write-proof-20261012-r7.txt",
+          "count": 1
+        }
+      ],
+      "reverse_copy_exact_original": true
+    },
+    {
+      "source": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\shared-write-exec-check-r2.cjs",
+      "source_sha256": "ba39e6aa6927711a1f85a3aa1df5fed5f72d594eea85ed7d1544c07b1bcabcc6",
+      "prepared": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012-r7\\shared-write-exec-check-r7.cjs",
+      "prepared_sha256": "e29267a0f63a10a26f539f03e142ec2f132537e55ca96dc7dcb8c7a99a3d7c2e",
+      "only_replacements": [
+        {
+          "old": "new-machine-shared-write-proof-20261012.txt",
+          "new": "new-machine-shared-write-proof-20261012-r7.txt",
+          "count": 1
+        }
+      ],
+      "reverse_copy_exact_original": true
+    }
+  ],
+  "distinct_target": "tests/fixtures/new-machine-shared-write-proof-20261012-r7.txt",
+  "distinct_idempotency_prefix": "shared-write-exec-r7-20261012:",
+  "live_execution_identities": "required CLI arguments supplied by root after r7 READY",
+  "mutation_guards": {
+    "document_overwrite": false,
+    "exact_one_attempt_per_lane": true,
+    "effect_unknown_preserves_task_writer": true,
+    "no_action_replay": true,
+    "exact_preimage_postimage_hashes": true,
+    "cleanup_verified": true
+  },
+  "canary_executed": false,
+  "runtime_jobs_started": false,
+  "remote_system_changed": false,
+  "prior_reviewed_controller_behavior_preserved_byte_for_byte_except_paths": true
+}

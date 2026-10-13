@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "operation": "original_supported_stop_lifecycle_readonly_diagnostic",
+  "observed_at_ms": 1791785925887,
+  "original_stop_attempt_id": "b18bb16d623240db9d014361770302db",
+  "original_plan_sha256": "6766eca6876315a16511bebcaf462f855207237a20ee72dc61452d3dcb53b33a",
+  "original_stop_outcome_preserved": "UNKNOWN",
+  "record": {
+    "sandbox_id": "wsb:e68057a4",
+    "state": "stopped",
+    "mapped_folders_match_original": true,
+    "record_sha256": "e9fd0f4fc1ebaae96e784e85bb6e4d19e814623985e87d2c9e304f4be6c7b9a5",
+    "daemon_record_absent": true
+  },
+  "daemon_log_content_free": {
+    "raw_log_saved": false,
+    "teardown_targets_marker_present": true,
+    "host_exit_confirmed_marker_present": true,
+    "daemon_log_sha256": "17e246004cd368dc27dc4d906d9a2678b67597f971288ba2c11ae222996576d1",
+    "log_mtime_ms": 1791785129989
+  },
+  "host_inventory": [
+    {
+      "Name": "WindowsSandboxServer.exe",
+      "ProcessId": 27568,
+      "ParentProcessId": 3724,
+      "ownership_inferred": false,
+      "live_identity": {
+        "pid": 27568,
+        "creation_time": "134362591793508117",
+        "executable_path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe"
+      }
+    }
+  ],
+  "earlier_kernel_observation": {
+    "at_utc": "2026-10-12 06:10:52",
+    "name": "vmmemWindowsSandbox",
+    "pid": 28056,
+    "parent_pid": 16828,
+    "parent_name": "vmmemCmZygote",
+    "ownership_inferred": false
+  },
+  "hcsdiag_list": "InsufficientPrivileges; no lifecycle effect requested",
+  "diagnostic_wsb_list": {
+    "invocations": 1,
+    "documented_purpose": "list running sandbox environments",
+    "reported_environment_count": 0,
+    "child_pid_captured": false,
+    "possible_effect": "WindowsSandboxServer PID27568 appeared after invocation",
+    "attribution": "temporal correlation only; exact ownership unproven",
+    "security_4688_window_utc": [
+      "06:12:30",
+      "06:13:10"
+    ],
+    "security_4688_result": "NoMatchingEventsFound",
+    "further_wsb_cli_invocations_permitted": false
+  },
+  "os_switch_deletion": {
+    "at_utc": "2026-10-12 06:12:03.993785",
+    "provider": "Microsoft-Windows-Hyper-V-VmSwitch",
+    "event_id": 71,
+    "port": "9D57A594-7A68-4F54-86C3-587B43160727",
+    "result": "Delete complete"
+  },
+  "pinned_contract": {
+    "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "reference": "https://raw.githubusercontent.com/microsoft/mxc/cbe1774364ea2ec846f56ab744e43a416f751420/docs/windows-sandbox/windows-sandbox-reference.md",
+    "implementation": "https://raw.githubusercontent.com/microsoft/mxc/cbe1774364ea2ec846f56ab744e43a416f751420/src/backends/windows_sandbox/lifecycle/src/vm.rs",
+    "ownership_probe": "WindowsSandbox process prefix only",
+    "kernel_memory_processes": "not ownership targets; do not block launch after WindowsSandbox hosts exit",
+    "cooldown_seconds": 5
+  },
+  "runtime_adapter": {
+    "cached_exact_workspace_path": "supported start of same sandbox ID before argv; no host-count precheck",
+    "cold_path_guard": "counts WindowsSandbox hosts plus vmmemWindowsSandbox"
+  },
+  "stop_replayed": false,
+  "processes_terminated": false,
+  "services_restarted": false,
+  "database_mutated": false,
+  "node_journal_modified": false,
+  "nonce_saved": false
+}

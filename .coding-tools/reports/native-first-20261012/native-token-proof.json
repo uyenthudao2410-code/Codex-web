@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T10:59:23.674402+00:00",
+  "capture_finished_utc": "2026-10-12T10:59:25.627866+00:00",
+  "scope": "source runtime native-only isolated temporary workspace, sanitized whoami child token; no VM/live service",
+  "host_token": {
+    "groups_status": 0,
+    "groups_error": null,
+    "privileges_status": 0,
+    "privileges_error": null,
+    "integrity_sids": [
+      "S-1-16-8192"
+    ],
+    "high_or_system_integrity": false,
+    "administrator_group_present": true,
+    "administrator_group_enabled": false,
+    "administrator_group_deny_only": false,
+    "sensitive_privileges": []
+  },
+  "native_token": {
+    "groups_status": 1,
+    "groups_error": null,
+    "privileges_status": 1,
+    "privileges_error": null,
+    "integrity_sids": [],
+    "high_or_system_integrity": false,
+    "administrator_group_present": false,
+    "administrator_group_enabled": false,
+    "administrator_group_deny_only": false,
+    "sensitive_privileges": []
+  },
+  "job_receipt": {
+    "command_id": "lNdr13sacgaWjSvz4B6jEvx3",
+    "job_id": null,
+    "status": "exited",
+    "exit_code": 0,
+    "execution_backend": "native",
+    "isolation_level": "process_container",
+    "policy_decision": "native_explicit_approval",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_empty": true,
+    "vm_adapter_calls": 0
+  },
+  "probe_script_sha256": "ec1e7fa9e7d4bdecd0ebf5db52f9fd433338dccff8792b2b5d76bac27e2550f2",
+  "adapter_sha256": "7c49a4ffc8af1982055372d38a3091e49637f7f42e673cc2e7a7a78be6723ed0",
+  "limitations": [
+    "whoami reports the spawned child token; no arbitrary account/group names or raw privilege descriptions retained",
+    "leastPrivilege controls LPAC and cannot be represented by the required BaseContainer/PSEC tier"
+  ]
+}

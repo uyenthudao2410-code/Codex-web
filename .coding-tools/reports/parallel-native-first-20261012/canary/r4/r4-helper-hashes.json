@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "operation": "r4_helper_hash_inventory",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "scope": "Offline additive helper/source hash inventory; no live operation",
+  "files": [
+    {
+      "path": "aggregate-production-evidence.py",
+      "sha256": "f870452ac31aa17367a2a0d1ed873349698e9a187856a3da8e805feea6832aff",
+      "size_bytes": 13962
+    },
+    {
+      "path": "canary-policy-approvals.cjs",
+      "sha256": "d8e922e55ee6fb3568e965d83a689530534bacd8e219dbe09bb6ebb6beb9110e",
+      "size_bytes": 4381
+    },
+    {
+      "path": "fixture-reuse-179181.json",
+      "sha256": "b1a19ab2eeeeea1a67573789177449c566138b566cd8ba99730a73582a6fe7af",
+      "size_bytes": 867
+    },
+    {
+      "path": "invoke-isolated-idle-canary.ps1",
+      "sha256": "d0128cf668d5494b0224ce3a40c3c442c1c4df674d39d57470b15547b1228916",
+      "size_bytes": 7757
+    },
+    {
+      "path": "invoke-native-first-canary.ps1",
+      "sha256": "aac97e65e9896b816e5976bb2cd579dc7c6087d1f643f703f496b4dbed36fd6d",
+      "size_bytes": 7390
+    },
+    {
+      "path": "invoke-parallel-overlap-canary.ps1",
+      "sha256": "5532f9aee1b27641da057f3276d515c83cac7a9f7f3b01055f568bf6de58df62",
+      "size_bytes": 6385
+    },
+    {
+      "path": "ISOLATED_IDLE_ACCEPTANCE.md",
+      "sha256": "fdc3aa8faf8677e0fe3d0c6bbb6709333dbdab367e89e53d9e59478a59c015f3",
+      "size_bytes": 5431
+    },
+    {
+      "path": "local-semantic-acceptance.cjs",
+      "sha256": "d91694fc8dc0c4a79d458917f6a235e01cc0d4ffa8c5312d806ef03c4e90101d",
+      "size_bytes": 27708
+    },
+    {
+      "path": "observe-isolated-idle.py",
+      "sha256": "ff0de6e53e5e806c003ee07273abe2214d059e99e1d69c022a0b4fe4726b8b5f",
+      "size_bytes": 14179
+    },
+    {
+      "path": "prepare-r4-fixture-reuse.py",
+      "sha256": "9e59fbefb4547b8b343f69af10a2ec933e3a0bfdc64fd9c2b31dcf033808b788",
+      "size_bytes": 4212
+    },
+    {
+      "path": "prepare-reviewed-canary-pins.py",
+      "sha256": "79c0b49c84a563e5108d46fcbfc178ff37daab86bcbe1a222a65b3c4bf1c6145",
+      "size_bytes": 8260
+    },
+    {
+      "path": "prepare-reviewed-idle-pins.py",
+      "sha256": "79c21fa5225add1ae80b819024a9ce250f32176857375a12425f677dc702a026",
+      "size_bytes": 11834
+    },
+    {
+      "path": "prepared-verify-postimages.cjs",
+      "sha256": "a92245b8502e4693cd67bd748366147bcae00464e91e1758c5b638d49cb1d848",
+      "size_bytes": 1414
+    },
+    {
+      "path": "R4_CANARY_INVOCATION_CHECKLIST.md",
+      "sha256": "18ff63767239ad3f32108726960198879255af63439e5df407724f1e4f37bd06",
+      "size_bytes": 4733
+    },
+    {
+      "path": "run-isolated-idle-canary.py",
+      "sha256": "aaa4e197bf9dafda113f3120a0255e2517de8a4071928d9be27717d9a8beef13",
+      "size_bytes": 10795
+    },
+    {
+      "path": "run-native-first-canary.py",
+      "sha256": "fda0fa1c33a3d5e5dbfc24adabc01ad54b1819a3cf1ff497b77ee956951df990",
+      "size_bytes": 30951
+    },
+    {
+      "path": "run-parallel-overlap-canary.py",
+      "sha256": "93de6ee983283b97487ca3292b35013b412aa54505776f30d28b8cc8908da4d3",
+      "size_bytes": 29908
+    },
+    {
+      "path": "sandbox-idle-policy.cjs",
+      "sha256": "0457da904a4483d92a8371d54d7176ac2bb21920e00a38d49b999e6f52dcb813",
+      "size_bytes": 12170
+    },
+    {
+      "path": "SEMANTIC_OPERATOR_COMMANDS.md",
+      "sha256": "fcaff947fb779fee243387df8bbea3d3675d3f838b3072f472f4e557a7efe327",
+      "size_bytes": 6793
+    },
+    {
+      "path": "test-isolated-idle-canary.py",
+      "sha256": "1ee7d6ca772c28b4a30784f595f1df26c367cec382352cdf3bac9902425db5e4",
+      "size_bytes": 7222
+    },
+    {
+      "path": "test-isolated-idle-runtime.py",
+      "sha256": "77e11543e47637815c49e0ce8fdcb3b297e7110574b663ba4159581f664bbce1",
+      "size_bytes": 3573
+    },
+    {
+      "path": "test-local-semantic-acceptance.cjs",
+      "sha256": "4353cc107f6fdfbf1ebb1458bb9da2e2468efb598ed045ae84653fdeaede681f",
+      "size_bytes": 3927
+    },
+    {
+      "path": "test-native-first-canary.py",
+      "sha256": "1e7ae9822102dd79277ef554ef9f769ce28b80e4da86eef1ab7eb84219f6e3db",
+      "size_bytes": 6456
+    },
+    {
+      "path": "test-parallel-overlap-canary.py",
+      "sha256": "dcbd7f666151057b9f85e049ccab3cc6e8294d161e1d2e486ad9ef48b3d395e0",
+      "size_bytes": 16815
+    },
+    {
+      "path": "test-production-evidence-aggregation.py",
+      "sha256": "ec9e79ab67cb93c021fa50dada3f114ac1ce6b55e1d698056d0c03cc095e6b61",
+      "size_bytes": 2894
+    },
+    {
+      "path": "test-r4-fixture-reuse.py",
+      "sha256": "b394e8696071c59afd2244eb1f6ab028b1473b103f2133b372932cb11c7c185c",
+      "size_bytes": 1509
+    },
+    {
+      "path": "test-reviewed-canary-pins.py",
+      "sha256": "1d95284e6af755e42d7c3015c00f2c615cd5a152be30b5788132a6fbea301d99",
+      "size_bytes": 6066
+    },
+    {
+      "path": "test-reviewed-idle-pins.py",
+      "sha256": "ad031fc648164816b4d2c5570b3c846af0011117ceea55edd2bd753e645949e0",
+      "size_bytes": 5686
+    }
+  ]
+}

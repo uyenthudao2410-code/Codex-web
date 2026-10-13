@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "operation": "isolated-idle-policy-isolate-intent",
+  "ok": true,
+  "observed_at_ms": 1791835200085,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+  "owner_instance_id": "ecae23c8a75f4b28b3bc182104f3ed49",
+  "parity_sha256": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c",
+  "smoke_sha256": "b6eda372cbf5beb3e678c3c86976acaadcbc3848851b2e05cb50d56e20e4ed42",
+  "other_scope_sha256": "945174b0a088a5dd76c7a088d81886e85f6c3eadb1c9857db484debeebbeee9b",
+  "plan_sha256": "4adf8bb030b9d7f77be794bc49e64ecea8411b5ab22e7f34c53b787c29ebd613",
+  "before": [
+    {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_first",
+      "native_argv_prefixes": []
+    },
+    {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_first",
+      "native_argv_prefixes": []
+    }
+  ],
+  "wanted_mode": "isolated",
+  "effect_observed": false,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-isolate-intent-1791835200085-6324c11d.json"
+}

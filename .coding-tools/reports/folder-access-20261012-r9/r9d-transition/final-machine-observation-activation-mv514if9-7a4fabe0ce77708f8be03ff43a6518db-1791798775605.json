@@ -1,0 +1,254 @@
+{
+  "operation": "observe_final_machine",
+  "observed_at": "2026-10-12T09:52:55.604Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked",
+  "ok": true,
+  "read_only": true,
+  "target_activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+  "package": {
+    "app_asar_sha256": "2fba385f52d679dc005b8a55d8d05a971bb0312e0bcbc9a3acabd69885ed7589",
+    "executable_sha256": "337f3669f7702156fe725c61dfc530d1938eee35f463fe3f1261ddba53b14c74"
+  },
+  "installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+  "host": {
+    "pid": 3476,
+    "instance_id": "dbf2536afedb8b4e554a29fc9e88cb50",
+    "state": "healthy",
+    "gateway": "healthy",
+    "code_revision": {
+      "running_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+      "disk_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-12T09:52:45.569Z",
+      "file_count": 40
+    },
+    "full_clean_activation": {
+      "available": true,
+      "contract_version": 1,
+      "running_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+      "disk_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+      "state": "current",
+      "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db"
+    },
+    "electron_ui_revision": {
+      "running_revision": "55ed57d39e0fa02585a393662b3875be6b14780a7048287f69466000d8c1fa73",
+      "disk_revision": "55ed57d39e0fa02585a393662b3875be6b14780a7048287f69466000d8c1fa73",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-12T09:52:45.572Z",
+      "file_count": 32
+    },
+    "electron_ui_recovery": {
+      "state": "healthy",
+      "registered": true,
+      "alive": true,
+      "pid": 34288,
+      "instance_id": "c01b767e76592b5d4f3db5930e72ead6",
+      "started_at_unix_ms": 1791796085065,
+      "runtime_mode": "packaged",
+      "recovery_host_runtime_mode": "packaged",
+      "recovery_host_installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+      "ui_runtime_mode": "packaged",
+      "ui_installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+      "suppressed": false,
+      "suppression_reason": "",
+      "attempts_in_window": 0,
+      "last_launch_pid": null,
+      "initial_registration_grace_until_unix_ms": null,
+      "pending_registration_until_unix_ms": null,
+      "next_attempt_at_unix_ms": null,
+      "circuit_suppressed_until_unix_ms": null,
+      "last_error_code": null
+    },
+    "recovery_plane_mode": "central-node-agent-v1",
+    "runtime": {
+      "mcp": true,
+      "tunnel": false,
+      "execution_role": "central_executor",
+      "central_connected": true,
+      "authority_ready": true,
+      "central_status_reason": null,
+      "fully_ready": true,
+      "update_incomplete": false,
+      "connector_ready": false,
+      "connector_ack_sha_matches": false,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+      "recovering": false,
+      "recovery_blocked": false
+    }
+  },
+  "runtime": {
+    "fullyReady": true,
+    "mcpRunning": true,
+    "nativeAlive": true,
+    "executionRole": "central_executor",
+    "authorityReady": true,
+    "centralConnected": true,
+    "centralStatusReason": null,
+    "updateIncomplete": false,
+    "toolContract": {
+      "schemaVersion": 1,
+      "profile": "smart-v3",
+      "sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+    },
+    "codeRevision": {
+      "codingMcp": {
+        "running_revision": "fff82a0216f323e80ff7c64db09325c962e5a403891fe3f4821ba0335a5939de",
+        "disk_revision": "fff82a0216f323e80ff7c64db09325c962e5a403891fe3f4821ba0335a5939de",
+        "update_pending": false,
+        "state": "current",
+        "checked_at": "2026-10-12T09:52:45.553Z",
+        "file_count": 149,
+        "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db"
+      }
+    }
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+    "operation_id": "full-clean-mv5147gb-e373b8b8f847f0ba85ab5cdd",
+    "state": "READY",
+    "admission_state": "OPEN",
+    "ready_commit_digest": "f19b4875ef90fa8204d2afe2effb66358c3088f46ce36ed48042bec6fbe3dcff",
+    "created_at": "2026-10-12T09:08:03.532Z",
+    "updated_at": "2026-10-12T09:08:40.674Z"
+  },
+  "final_census_predicates": {
+    "verified": true,
+    "pass": true,
+    "tunnel_health_verified": false,
+    "recovery_mcp_health_verified": true,
+    "recovery_tunnel_health_verified": false,
+    "workspace_matches": true,
+    "device_matches": true,
+    "revision_matches": true,
+    "recovery_host_revision_matches": true,
+    "recovery_host_epoch_matches": true,
+    "process_identity_verified": true,
+    "process_identity_changed": true,
+    "tunnel_required": false,
+    "recovery_plane_identity_changed": true,
+    "recovery_plane_epoch_matches": true,
+    "epoch_matches": true,
+    "all_components_same_epoch": true,
+    "central_connected": true,
+    "authority_ready": true,
+    "central_route_verified": true,
+    "ui_verified": true,
+    "recovery_plane_verified": true,
+    "projection_rebuild_verified": true,
+    "projection_rebuild_reused": false,
+    "projection_rebuild_refreshed_after_stale_reuse": false
+  },
+  "canonical_ledger_census": {
+    "schema_version": 1,
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "reason": "live_runtime_state_process",
+    "workspace": "E:\\DEV\\Codex-web",
+    "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "69a28f5fa2aeb95b49ae971d12a69e341e0182065ca3afb168143cc5d17189b2",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "d3cc944b1e6998af29a11cfed1d2aa6747b039f4564a48dca4b069221415800a",
+      "size_bytes": 97959936,
+      "snapshot_at": "2026-10-12T09:52:52.418Z"
+    },
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 24,
+      "awaiting_acceptance_runs": [
+        "28a5f750466048438307b96872e24f01",
+        "4967dd953ce74b5d97cbf01aad827139",
+        "4a80ae60c2e441d8896c1ace8710c384",
+        "6664f948cfb14a75958518548352896e",
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "fbaf4b0700d04794af4062671c1bcd2b"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "source_checkpoint_verified": true,
+    "content_free": true,
+    "mutated_canonical_ledger": false,
+    "observed_at_unix_seconds": 1791798773.380563,
+    "census_fingerprint": "9cc84f2569b57bf3cffa6baad027d5ea8f70afcb6822d085f5fa5248a25336c1"
+  },
+  "native_idle_counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "threshold_sensitive_stale_candidates": 18,
+    "owned_codex_sidecar_residues": 0
+  },
+  "native_os_observation": {
+    "observed_at": "2026-10-12T09:52:55.605Z",
+    "ownership_not_inferred": true,
+    "live_process_count": 2,
+    "live_processes": [
+      {
+        "pid": 10588,
+        "name": "WindowsSandboxServer"
+      },
+      {
+        "pid": 37220,
+        "name": "wxc-windows-sandbox-daemon"
+      }
+    ]
+  },
+  "actual_ui_details": {
+    "state": "healthy",
+    "registered": true,
+    "alive": true,
+    "pid": 34288,
+    "instance_id": "c01b767e76592b5d4f3db5930e72ead6",
+    "started_at_unix_ms": 1791796085065,
+    "runtime_mode": "packaged",
+    "recovery_host_runtime_mode": "packaged",
+    "recovery_host_installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+    "ui_runtime_mode": "packaged",
+    "ui_installation_id": "bdf474c17024f7686b83920b289de5422d6129db4bbf8a93659eb744ccaaadba",
+    "suppressed": false,
+    "suppression_reason": "",
+    "attempts_in_window": 0,
+    "last_launch_pid": null,
+    "initial_registration_grace_until_unix_ms": null,
+    "pending_registration_until_unix_ms": null,
+    "next_attempt_at_unix_ms": null,
+    "circuit_suppressed_until_unix_ms": null,
+    "last_error_code": null
+  },
+  "ledger_idle": true,
+  "historical_acceptance_preserved": true,
+  "descriptor_stable": true,
+  "epoch_stable": true
+}

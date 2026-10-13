@@ -1,0 +1,30 @@
+{
+  "before": {
+    "daemon_start_token": "134362630621656046",
+    "central_census": {
+      "open_tasks": 0,
+      "unreleased_writers": 0,
+      "unsettled_current_generation_actions": 0
+    },
+    "daemon_pid": 43000,
+    "daemon_record_sha256": "cfd6a6dfb8649bbb8119ce4eb5d29cd25d8b13e9a26c7247e13ac6aa88f2554a",
+    "sandbox_id": "wsb:aa28a932",
+    "sandbox_record_sha256": "b79d1bcdf9ab78607ee8e4549efbc41629b1b4d531a1338d23055c5c1d07a274"
+  },
+  "remaining_user_hosts": [],
+  "stop_process_exit": 1,
+  "ok": false,
+  "kernel_ownership_inferred": false,
+  "observed_at": "2026-10-12T14:21:25.6408545+07:00",
+  "operation": "r8_live_cached_sandbox_ordinary_stop_proof",
+  "kernel_aggregates": [
+    {
+      "Id": 37304,
+      "ProcessName": "vmmemWindowsSandbox"
+    }
+  ],
+  "daemon_record_absent": true,
+  "manual_kill": false,
+  "sandbox_record_absent": true,
+  "canonical_manual_edit": false
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T11:00:50.708902+00:00",
+  "capture_finished_utc": "2026-10-12T11:00:52.527579+00:00",
+  "scope": "source-runtime approved Python script temporary workspace, WinAPI token facts; no VM/live services",
+  "host_token": {
+    "token_query_opened": true,
+    "errors": {},
+    "elevated": false,
+    "app_container": false,
+    "integrity_rid": 8192,
+    "high_or_system_integrity": false,
+    "administrator_group_present": true,
+    "administrator_group_enabled": false,
+    "administrator_group_deny_only": true,
+    "sensitive_privileges": []
+  },
+  "native_token": null,
+  "job_receipt": {
+    "command_id": "KynX9zgRHYym7pwOO65EaiGN",
+    "job_id": null,
+    "status": "exited",
+    "exit_code": 126,
+    "execution_backend": "native",
+    "isolation_level": "process_container",
+    "policy_decision": "native_explicit_approval",
+    "vm_adapter_calls": 0,
+    "stderr_empty": false,
+    "stderr_sha256": "9eb9e8dd6e57aa5cf9426548b81de619efeb100142b52a70668662485305a470"
+  },
+  "probe_script_sha256": "e1d16c8252932690293c638b79a52f64dadbdb256f03ed443bdc5b762d363729",
+  "adapter_sha256": "7c49a4ffc8af1982055372d38a3091e49637f7f42e673cc2e7a7a78be6723ed0",
+  "limitations": [
+    "Current host is not elevated; this is not evidence for elevated-host behavior",
+    "Token facts do not replace filesystem/network escape tests"
+  ]
+}

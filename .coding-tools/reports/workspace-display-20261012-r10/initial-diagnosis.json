@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "operation": "workspace_display_initial_diagnosis",
+  "observed_at": "2026-10-12T09:57:39.970Z",
+  "basis": [
+    "User-provided screenshots",
+    "Exact installed r9d app.asar source",
+    "Fresh shared server inventory/census"
+  ],
+  "installed_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked",
+  "renderer_sha256": "fc044de5186e0728cf258781bf14ac11153c1112c5e2a4c10b6c5ecd2b1c40e9",
+  "selected_target_path": "E:\\DEV\\Autocad",
+  "native_runtime_default": "E:\\DEV\\Codex-web",
+  "defect": {
+    "sidebar_uses_native_default": true,
+    "device_uses_native_default": true,
+    "execution_header_uses_active_target": true
+  },
+  "server_receipt": "server-work-census-1791798938006.json",
+  "screenshots": [
+    {
+      "path": "E:/Caches/Temp/codex-clipboard-c264ef82-a308-4e5e-991e-93d176f28015.png",
+      "sha256": "aaf866379cc2079dca852e08f54da0d2af61dfacdc57d7f733b582c91d920298"
+    },
+    {
+      "path": "E:/Caches/Temp/codex-clipboard-4479bf91-1f79-4271-88bd-84413ffe1b00.png",
+      "sha256": "4dbcf311d3518484d6aef65e6da7652e885d45e674b4f6b0da17b531b64e96dd"
+    },
+    {
+      "path": "E:/Caches/Temp/codex-clipboard-2c3737a6-ba0c-4d91-9fbb-62b8d65584d7.png",
+      "sha256": "501f16b33c440656fa6cf9ad49ff3162af208b1e26566143103ad04b90258d12"
+    }
+  ],
+  "authorized_scope": "Display consistency repair and controlled local activation; preserve current Autocad binding, generations, credentials, native root and history"
+}

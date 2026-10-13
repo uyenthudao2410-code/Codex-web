@@ -104,6 +104,7 @@
         "to": "resources/control-plane",
         "filter": [
           "node_agent.py",
+          "workspace_policy_store.py",
           "node-agent.cmd",
           "recovery_identity_observer.cjs",
           "recovery_approved_patch_bridge.cjs",

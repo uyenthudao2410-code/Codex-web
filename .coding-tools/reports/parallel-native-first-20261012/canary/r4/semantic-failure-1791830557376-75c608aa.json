@@ -1,0 +1,12 @@
+{
+  "operation": "failure",
+  "ok": false,
+  "code": "LOCAL_BEARER_UNAVAILABLE",
+  "error_message": "",
+  "error_stack": "Error\n    at need (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:21:65)\n    at main (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:359:3)",
+  "partial_mutation_possible": false,
+  "automatic_retry_forbidden": true,
+  "next_action": "Inspect original RUN/WAVE through audit; do not repeat acceptance/transfer after uncertain response.",
+  "production_descriptor_stable": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-failure-1791830557376-75c608aa.json"
+}

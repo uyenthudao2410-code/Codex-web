@@ -1,0 +1,2 @@
+{"operation":"observe_final_machine","ok":true,"code":null,"stage":null,"report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9c-transition\\final-machine-observation-activation-mv50m446-6a132615d256208450967af03c450d00-1791795349640.json","activation":null,"target":null,"runtime":null}
+PROCESS_EXIT=0

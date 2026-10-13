@@ -1,0 +1,1 @@
+{"operation":"stop","observed_at":"2026-10-12T10:07:46.037Z","candidate":"E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked","ok":false,"code":"ORDINARY_STOP_NOT_CONFIRMED","report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\packaged-stop-failure-1791799666037.json"}

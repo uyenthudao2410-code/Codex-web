@@ -61,7 +61,7 @@ test('setup refreshes file contract evidence after a long exec probe and refuses
   const source = read('renderer/app.js');
   const workspace = { workspace_id: 'workspace-a', workspace_generation: 'generation-a', capabilities: { read: true, write: true, exec: true } };
   for (const freshAfterRefresh of [true, false]) {
-    const scope = { deadline: Date.now() + 60_000 }, calls = [];
+    const scope = { deadline: Date.now() + 60_000, activated: true }, calls = [];
     let fileEvidenceCurrent = true;
     const context = {
       state: { setupContinuation: scope, snapshot: { status: {} }, centralAuthorityStatus: { fresh: true, state: 'dispatchable' },

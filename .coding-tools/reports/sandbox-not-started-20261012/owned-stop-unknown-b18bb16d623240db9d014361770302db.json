@@ -1,0 +1,9 @@
+{
+  "operation": "owned_sandbox_supported_stop",
+  "ok": false,
+  "code": "SUPPORTED_STOP_VM_SHUTDOWN_NOT_CONFIRMED",
+  "stop_invocation_attempted": true,
+  "effect_state": "unknown_requires_original_observation",
+  "automatic_retry_permitted": false,
+  "nonce_saved": false
+}

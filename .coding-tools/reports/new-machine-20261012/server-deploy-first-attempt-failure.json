@@ -1,0 +1,51 @@
+{
+  "operation": "reviewed_retired_read_continuity_deployment_failed_postflight",
+  "tool_exit_code": 1,
+  "receipt": {
+    "operation": "reviewed_retired_read_continuity_deployment",
+    "ok": false,
+    "stage": "postflight",
+    "error_code": "RESTART_HEALTH_FINGERPRINT_NOT_PROVEN",
+    "operator_action": "Inspect current symlink, protected config, service and health before recovery; no automatic authority rollback."
+  },
+  "diagnostics": [
+    {
+      "service": {
+        "ActiveState": "activating",
+        "SubState": "auto-restart",
+        "MainPID": "0",
+        "Result": "exit-code",
+        "ExecMainCode": "1",
+        "ExecMainStatus": "1",
+        "NRestarts": "8"
+      },
+      "current_release": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e"
+    },
+    {
+      "url": "https://svhome.tail0e4032.ts.net/healthz",
+      "status": "unavailable",
+      "error_class": "HTTPError",
+      "http_status": 502
+    },
+    {
+      "url": "http://100.116.112.22:8765/healthz",
+      "status": "unavailable",
+      "error_class": "URLError",
+      "http_status": null
+    },
+    {
+      "diagnostic_marker_lines": [
+        "    raise ValueError(\"CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256 does not match the installed package source.\")",
+        "ValueError: CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256 does not match the installed package source.",
+        "Traceback (most recent call last):",
+        "    raise ValueError(\"CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256 does not match the installed package source.\")",
+        "ValueError: CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256 does not match the installed package source.",
+        "Traceback (most recent call last):",
+        "    raise ValueError(\"CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256 does not match the installed package source.\")",
+        "ValueError: CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256 does not match the installed package source."
+      ]
+    }
+  ],
+  "classification": "Artifact package fingerprint aggregation omitted trailing NUL separators; service correctly rejected identity mismatch.",
+  "pilot_transfer_performed": false
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T11:07:05.894825+00:00",
+  "capture_finished_utc": "2026-10-12T11:07:07.521365+00:00",
+  "host": "DESKTOP-63643J4",
+  "scope": "temporary explicitly trusted Node project build fixture; no external workspace or live app operation",
+  "argv": [
+    "node",
+    "trusted-build.js"
+  ],
+  "native_argv_prefixes": [
+    [
+      "node",
+      "trusted-build.js"
+    ]
+  ],
+  "script_sha256": "4e798f08a545230b4b08908e2d9141ab840ce0f46a5990c690d7646047eaf145",
+  "unapproved_attempt": {
+    "code": "NATIVE_EXECUTION_NOT_APPROVED",
+    "execution_started": false,
+    "spawn_calls": 0
+  },
+  "approved_attempt": {
+    "command_id": "CX9qDEFWOwXFb05wuC1Fur1U",
+    "job_id": "7eab3fd74b454779b67dbf2ff2981b8b",
+    "status": "exited",
+    "durable_lifecycle_state": "exited",
+    "exit_code": 0,
+    "execution_backend": "native",
+    "isolation_level": "process_container",
+    "policy_decision": "native_explicit_approval",
+    "stdout_sha256": "d68287551255eeb5bf9ec2340afc8f4f4b2aa999dada839f8d58f173e540f1bd",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifact_relative_path": "artifact.txt",
+    "artifact_sha256": "cd3235f77ed1255c3b045a565cc444c0cd8dfdb9bd89d6a87a1993b871e45fe3",
+    "artifact_content_verified": true,
+    "vm_adapter_calls": 0,
+    "active_commands_after": 0
+  },
+  "limitations": [
+    "This proves one explicitly approved Node build fixture, not AutoCAD/.NET/Python production compatibility",
+    "No external task binding/receipt or remote Control Plane canary activated"
+  ]
+}

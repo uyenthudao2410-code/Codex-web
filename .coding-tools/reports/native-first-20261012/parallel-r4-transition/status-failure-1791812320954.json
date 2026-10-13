@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "status",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "observed_at": "2026-10-12T13:38:40.954Z",
+  "observed_at_ms": 1791812320954,
+  "ok": false,
+  "stage": "exact_host",
+  "code": "SELECTED_HOST_NOT_VERIFIED",
+  "mutating_action_started": false,
+  "retry_instruction": "Resolve the read-only gate before applying.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\status-failure-1791812320954.json"
+}

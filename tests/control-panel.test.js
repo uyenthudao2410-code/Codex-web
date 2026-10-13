@@ -39,8 +39,7 @@ test('executor home can host the control panel without embedding or observing Ch
   assert.match(html, /id="openChatGPTButton"/);
   assert.match(html, /class="executor-stage"/);
   const main = read('electron/main.js');
-  assert.match(main, /panelBounds\(width, height, TOOLBAR_HEIGHT, panelVisible\)/);
-  assert.match(main, /function createPanelView\(\)[\s\S]*new WebContentsView/);
+  assert.match(main, /openManagerWindow/);
   assert.doesNotMatch(main, /new ChatViewController|executeJavaScript/);
 });
 

@@ -32,7 +32,7 @@ test('executor hub opens the official ChatGPT page in the system browser without
   assert.equal(fs.existsSync(path.join(root, 'electron/chatViewController.js')), false);
   assert.equal(fs.existsSync(path.join(root, 'electron/services/chatEvaluationJournal.js')), false);
   assert.equal(fs.existsSync(path.join(root, 'electron/services/chatConversationAccess.js')), false);
-  assert.match(main, /function createPanelView\(\)[\s\S]*?new WebContentsView/);
+  assert.match(main, /openManagerWindow/);
   assert.doesNotMatch(main, /new ChatViewController|executeJavaScript/);
   assert.doesNotMatch(preload, /chat:navigate|chat:status|chat:clear-session|chat:state|chat:download/);
   assert.doesNotMatch(`${html}\n${main}`, /chatgpt\.com\/backend-api|persist:chatgpt-session/);
@@ -77,7 +77,7 @@ test('settings window hides independently and reveals its shell before runtime i
   const app = read('renderer/app.js');
   const compact = read('renderer/settings-compact.css');
   assert.doesNotMatch(main, /parent:\s*chatWindow/);
-  assert.match(main, /managerWindow\.hide\(\)/);
+  assert.match(main, /(?:managerWindow|openingWindow|chatWindow)\.hide\(\)/);
   assert.match(main, /chatWindow\.show\(\)/);
   assert.match(app, /Show the settings shell immediately/);
   assert.match(compact, /grid-template-columns:200px/);

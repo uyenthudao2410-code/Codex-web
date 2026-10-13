@@ -157,6 +157,11 @@ function normalisedResult(descriptor, result, request, bridge) {
     run_id: normalized.run_id,
     wave_id: normalized.wave_id,
     output_refs: normalized.output_refs,
+    ...(normalized.execution_backend ? {
+      execution_backend: normalized.execution_backend,
+      isolation_level: normalized.isolation_level,
+      policy_decision: normalized.policy_decision
+    } : {}),
     response_sha256: normalized.response_sha256
   };
 }

@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "operation": "r4_run_wave_lifecycle_continuity_proof",
+  "observed_at_utc": "2026-10-12T14:52:57.245262+00:00",
+  "read_only": true,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "activation_epoch": "activation-mv5cvpnu-2ddc4f6edfe0487ec46a1594cb87218d",
+  "evidence": {
+    "ready_status": {
+      "path": ".coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\status-1791815928643-e7d3c41b.json",
+      "sha256": "b5ca40014b8c6794750ba66928eae8f0272c7a2711a5858b9a8112c57fdf0958"
+    },
+    "retired_census": {
+      "path": ".coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\retire-1791815550588-f42e2f48.json",
+      "sha256": "a87200a18a783c9c5070b2334a04460e292bba2ca99492831e817b097983be0e"
+    },
+    "ledger_path": ".coding-tools\\orchestration\\ledger.sqlite3",
+    "ledger_sha256": "62e7bff807aacafc2b7ac75e644c52b3d401a75a50d6611d5e67636cbd437f57"
+  },
+  "bounded_projection": {
+    "ready_status_runtime": {
+      "fullyReady": true,
+      "mcpRunning": true,
+      "nativeAlive": true,
+      "authorityReady": true,
+      "centralConnected": true,
+      "updateIncomplete": false
+    },
+    "ready_status_census": {
+      "unexplained_active_runs": 0,
+      "ordinary_active_runs": 24
+    },
+    "retired_census": {
+      "unexplained_active_runs": 0,
+      "ordinary_active_runs": 24
+    },
+    "ordinary_active_run_count_stable_across_handoff": true
+  },
+  "ledger_status_counts": {
+    "runs": [
+      {
+        "status": "aborted",
+        "count": 175
+      },
+      {
+        "status": "accepted",
+        "count": 275
+      },
+      {
+        "status": "active",
+        "count": 40
+      },
+      {
+        "status": "completed",
+        "count": 5
+      },
+      {
+        "status": "failed",
+        "count": 1
+      },
+      {
+        "status": "stale",
+        "count": 84
+      }
+    ],
+    "waves": [
+      {
+        "status": "aborted",
+        "count": 259
+      },
+      {
+        "status": "accepted",
+        "count": 275
+      },
+      {
+        "status": "active",
+        "count": 40
+      },
+      {
+        "status": "replanned",
+        "count": 341
+      }
+    ]
+  },
+  "metadata_acceptance_status_counts": {
+    "runs": [
+      {
+        "status": "aborted",
+        "count": 41
+      }
+    ],
+    "waves": [
+      {
+        "status": "aborted",
+        "count": 126
+      },
+      {
+        "status": "accepted",
+        "count": 164
+      },
+      {
+        "status": "active",
+        "count": 12
+      },
+      {
+        "status": "replanned",
+        "count": 204
+      }
+    ]
+  },
+  "active_run_window": {
+    "count": 40,
+    "oldest_started_at": "2026-09-15T02:39:26.683Z",
+    "newest_started_at": "2026-10-12T14:52:44.214Z"
+  },
+  "active_wave_window": {
+    "count": 40,
+    "oldest_started_at": "2026-09-15T02:39:26.887Z",
+    "newest_started_at": "2026-10-12T14:52:44.345Z"
+  },
+  "interpretation": {
+    "proven": "The r4 READY snapshot and the pre-r4 stopped census both report unexplained_active_runs=0 and ordinary_active_runs=24; the r4 runtime is fully ready with MCP/native alive.",
+    "ledger_limit": "The canonical ledger currently contains 28 active runs and 28 active waves; this broader count is retained as read-only evidence and is not silently collapsed to the 24-run compact census projection.",
+    "acceptance_limit": "Accepted/active status counts and metadata-key counts do not by themselves prove a particular task's operator acceptance latch; exact task/wave IDs must be checked by the supported task_control/status path before mutation."
+  },
+  "post_canary_restart_gate_plan": [
+    "Before any new patch canary, capture a fresh READY status and exact two-scope census; require unchanged activation epoch, owner identity, package parity and unexplained_active_runs=0.",
+    "After the canary, poll the original operation and capture a fresh status/census. Compare run_id/wave_id, lifecycle state, acceptance/rejection report ID and proof lineage through supported task_control reads; do not infer from ledger counts alone.",
+    "If a runtime restart or refresh is needed, create one guarded intent, verify the exact owner/start token and idle census, perform the supported restart once, then require a new READY epoch and repeat parity/identity/census gates before resuming.",
+    "If any RUN/WAVE is pending acceptance, pause policy restoration and require the operator report acknowledgement before replan; preserve the prior wave and SOL_REJECTED history."
+  ],
+  "runtime_mutated": false,
+  "ledger_mutated": false,
+  "source_modified": false
+}

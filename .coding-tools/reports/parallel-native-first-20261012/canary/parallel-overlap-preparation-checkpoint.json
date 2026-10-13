@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "operation": "parallel_overlap_canary_preparation_checkpoint",
+  "observed_at_utc": "2026-10-12T12:17:38.8591953Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "files_sha256": {
+    "run-native-first-canary.py": "fda0fa1c33a3d5e5dbfc24adabc01ad54b1819a3cf1ff497b77ee956951df990",
+    "run-parallel-overlap-canary.py": "19741faa87b456a3c90092825bcf7327241ca7f66bddbd41a7c18d777a5ab693",
+    "prepare-parallel-overlap-fixtures.py": "f1fc5686471f85607db16593e1a725b842e25956bcd650dfcf8ae3c62021957a",
+    "invoke-parallel-overlap-canary.ps1": "5532f9aee1b27641da057f3276d515c83cac7a9f7f3b01055f568bf6de58df62",
+    "test-parallel-overlap-canary.py": "404f5ae4bbf7431830e856bdcd3c7843845267104c69b26a454c3cde35b4ef65",
+    "PARALLEL_OVERLAP.md": "0850df49993d9b77681ccd8e5d8f2522c02275724a1304d903615db15a288dd7"
+  },
+  "offline_tests_passed": 5,
+  "powershell_parse_passed": true,
+  "independent_review": "lifecycle_audit found no concrete harness blocker before additive retained-unknown preflight; retained preflight focused offline test passed",
+  "fixture_creation_performed": false,
+  "ssh_or_live_execution_performed": false,
+  "native_job_overlap_proven": false,
+  "retained_unknown_allowance": "Only Autocad exact reviewed three IDs, expired and canonical quarantined bounded reads with no local handle; all other unsettled actions block; no historical settlement/replay/cleanup",
+  "required_reviewed_pin": "serving_store_sha256 plus exact per-root READY identity, exec policy digest and fixture source approval",
+  "next_action": "Parent prepares additive fixtures on authorized roots and runs wrapper with fresh exact pins, then verifies final original-handle cleanup."
+}

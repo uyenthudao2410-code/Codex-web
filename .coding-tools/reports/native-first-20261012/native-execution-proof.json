@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "host": "DESKTOP-63643J4",
+  "capture_started_utc": "2026-10-12T10:54:09.085322+00:00",
+  "capture_finished_utc": "2026-10-12T10:54:23.835122+00:00",
+  "timezone_for_operator": "Asia/Saigon",
+  "scope": "source checkout Windows native-only temporary workspace; no live Desktop runtime or external Control Plane activation",
+  "source_sha256": {
+    "coding_tools_mcp/windows_execution_policy.py": "64ddb0c698fd3ac2f81a38553ff525bd59dd356bb5160836e8ed81b853eef986",
+    "coding_tools_mcp/exec_tools.py": "0e241227147ff30314ed730c9b685c147b9aff973f8c6dd6018dab43d4d1448c",
+    "coding_tools_mcp/processes.py": "1eb429fab849d58958a7aa8aba3551bbe1018d3bfee6c3bb4a9e74e857db14e3",
+    "coding_tools_mcp/session_control.py": "46e79de45e879ff08dae96d801c8c7487e32ef4b29f26f8f70003c218eb9e5cb",
+    "coding_tools_mcp/server.py": "01840da72f3dc79cc67ff75e3c2dceb92c19652d982aad9c5a43fba86890b7a1",
+    "coding_tools_mcp/runtime_config.py": "ba481eb36df1e339d26233b2c3f1fdf23ad919dbec092bb28b09a7a2da6d2f77",
+    "coding_tools_mcp/windows_mxc_sandbox.py": "bf55ec4ca7d5a9c9bf988c230a8fabc71b8faa4b8382a78ea60bc075c3d36e52"
+  },
+  "probe": {
+    "pinned_executor_sha256_verified": true,
+    "required_tier": "base-container",
+    "allow_dacl_mutation": false,
+    "result": "passed"
+  },
+  "measurement": {
+    "sample_size": 10,
+    "distinct_tool_shapes": 1,
+    "tool_shape": [
+      "node",
+      "--version"
+    ],
+    "unique_command_ids": 10,
+    "unique_job_ids": 10,
+    "successful_terminal_jobs": 10,
+    "active_commands_after": 0,
+    "vm_adapter_calls": 0
+  },
+  "vm_assertion": {
+    "primary_method": "VM adapter patched to raise if called during all 10 source-runtime commands",
+    "process_census_method": "before/after snapshots of named Windows Sandbox/Vmmem process classes; not a continuous VM/RAM measurement",
+    "before": [],
+    "after": []
+  },
+  "required_job_limits": {
+    "memory_bytes": 2147483648,
+    "active_processes": 64,
+    "cpu_rate_percent": 50,
+    "cpu_time_ms": 30000,
+    "installed_before_resume": true,
+    "actual_os_query_proof": "tests/test_windows_job_object.py::WindowsJobObjectTests::test_native_limits_are_installed_on_the_windows_job passed; exact queried custom memory/process/CPU/time limits matched"
+  },
+  "security_proof": {
+    "focused_actual_os_tests": [
+      "tests/test_windows_mxc_sandbox.py::WindowsMxcSandboxIntegrationTests::test_workspace_write_sibling_deny_junction_deny_and_loopback_deny",
+      "tests/test_windows_mxc_sandbox.py::WindowsMxcSandboxIntegrationTests::test_wrapper_cancel_closes_wxc_job_and_child_process",
+      "tests/test_windows_execution_policy.py::WindowsNativeExecutionIntegrationTests::test_native_git_log_does_not_execute_repository_signature_helper"
+    ],
+    "result": "passed",
+    "scope": "workspace write allowed; sibling reads/writes denied; junction escape denied; loopback server got 0 hits; child process stopped after wrapper cancellation; hostile repository signature helper not executed"
+  },
+  "limitations": [
+    "10 repetitions of one Node version command, not compatibility proof for 10 different CLI toolchains",
+    "No production task/workspace binding/canary/deployment or Windows Sandbox lifecycle activation performed",
+    "Hard CPU/RAM/process Job limits queried directly on Windows; peak actual resource usage not benchmarked"
+  ],
+  "commands": [
+    {
+      "ordinal": 1,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "wnV1EaIKyupWyvYYiREnQWZ9",
+      "job_id": "cdf19a72660941df9b008347ded956c2",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.936112,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 2,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "aNTPrdKelxZDYLHBX7AqAwCg",
+      "job_id": "66f1f71aa964401fbb22c8c13c18c7e9",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.858916,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 3,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "w1EkhhQtNIFv_vD9tbG9YO0q",
+      "job_id": "148257fa1adf4746b61f2c194b2301e4",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.905065,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 4,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "xRC8vZNPsZAg6QlW9iX8VBOw",
+      "job_id": "12a3fb71386747b7b5654c3e4c575613",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.884024,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 5,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "KeSpnRalV8n6LvejEsACyOyH",
+      "job_id": "12d383ddc2b3422aaa903192aa5e471b",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.132453,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 6,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "OtrRn_vWRJ991mfNn0LKO7Ig",
+      "job_id": "078f255054f64558a9fa7002e30d9529",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.83973,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 7,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "I71v7tXsiwD_yso7WswEKEgK",
+      "job_id": "138847a40c364840808a03d2ab4a576c",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.116002,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 8,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "B8gA-yFZJg6yPsDoQnlxhvTt",
+      "job_id": "1617b7d1b2e64e45b008420b8ce5c4da",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.864703,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 9,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "KuOmLPojRu8zirEKVzh5tqCE",
+      "job_id": "78479460d3794251a8e698d949b007b0",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.855296,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 10,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "GFmoiLNiOrdbdstha7qkqox8",
+      "job_id": "b38982968688479f93a1cb3d6cbf5534",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.810674,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

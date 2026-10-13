@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "operation": "compact-semantic-lanes-summary",
+  "ok": true,
+  "observed_at_ms": 1791835708179,
+  "source_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-lanes-summary.json",
+  "source_sha256": "bb20d4ee378dd92d15580dfd2ec653456e3b20c516e12c0f3780cbb34899810a",
+  "source_size_bytes": 70650818,
+  "source_retained": true,
+  "rows": [
+    {
+      "lane": "patch_003",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_003\",\"proof_wave_id\":\"edf8893cec97434bbd2a775755d8150d\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_003-1791832941459.json\"}\n"
+    },
+    {
+      "lane": "patch_004",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_004\",\"proof_wave_id\":\"9c6adf4a03b742358d59204445b26f09\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_004-1791832963637.json\"}\n"
+    },
+    {
+      "lane": "patch_005",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_005\",\"proof_wave_id\":\"1cab5dc0c0844725858f875eacc0c070\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_005-1791832984812.json\"}\n"
+    },
+    {
+      "lane": "patch_006",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_006\",\"proof_wave_id\":\"d4c20a7be7fa4cec88aa2b0c453847d8\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_006-1791833006009.json\"}\n"
+    },
+    {
+      "lane": "patch_007",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_007\",\"proof_wave_id\":\"c282eb763a9040489358aad09b8e4d4f\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_007-1791833027165.json\"}\n"
+    },
+    {
+      "lane": "patch_008",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_008\",\"proof_wave_id\":\"9ccae19f21254350a82a332ed0f73709\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_008-1791833047345.json\"}\n"
+    },
+    {
+      "lane": "patch_009",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_009\",\"proof_wave_id\":\"a4cfe0cfabcb4c188451db2ab571e669\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_009-1791833068532.json\"}\n"
+    },
+    {
+      "lane": "patch_010",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_010\",\"proof_wave_id\":\"768af856edbc4b0c99682638cf9e8a42\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_010-1791833089720.json\"}\n"
+    },
+    {
+      "lane": "patch_011",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_011\",\"proof_wave_id\":\"bf8f62245a2b4240869defab75eb8ac7\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_011-1791833111973.json\"}\n"
+    },
+    {
+      "lane": "patch_012",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_012\",\"proof_wave_id\":\"f52ecd1269af49499cd742fae35b668c\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_012-1791833138071.json\"}\n"
+    },
+    {
+      "lane": "patch_013",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_013\",\"proof_wave_id\":\"6fcd6ba6a2954d959af614b7f1ecf438\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_013-1791833158252.json\"}\n"
+    },
+    {
+      "lane": "patch_014",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_014\",\"proof_wave_id\":\"21c73d2be802440384b7b9622a55e7a4\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_014-1791833179405.json\"}\n"
+    },
+    {
+      "lane": "patch_015",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_015\",\"proof_wave_id\":\"22856931936740128c31fb6182fa36dc\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_015-1791833199583.json\"}\n"
+    },
+    {
+      "lane": "patch_016",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_016\",\"proof_wave_id\":\"e3c3f5ff3d4c4b299737d356f1c76374\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_016-1791833219705.json\"}\n"
+    },
+    {
+      "lane": "patch_017",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_017\",\"proof_wave_id\":\"eac648fc62384efc9a8f952a0aca9491\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_017-1791833240870.json\"}\n"
+    },
+    {
+      "lane": "patch_018",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_018\",\"proof_wave_id\":\"54809e5948e34f2d8c13ae344b98e25a\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_018-1791833261071.json\"}\n"
+    },
+    {
+      "lane": "patch_019",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_019\",\"proof_wave_id\":\"a78af52cb19043f981d84f7c30804fd9\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_019-1791833283249.json\"}\n"
+    },
+    {
+      "lane": "patch_020",
+      "exit": 0,
+      "stdout": "\r\n{\"ok\":true,\"lane\":\"patch_020\",\"proof_wave_id\":\"e35342ea20484f8da429868a705c47bb\",\"report_path\":\"E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\reports\\\\parallel-native-first-20261012\\\\canary\\\\r4\\\\semantic-replan-one-patch_020-1791833305378.json\"}\n"
+    }
+  ],
+  "removed_only_powershell_serializer_metadata": true
+}

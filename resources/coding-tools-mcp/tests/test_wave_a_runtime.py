@@ -188,8 +188,9 @@ class CommandHandleMigrationTests(unittest.TestCase):
                 }
                 with patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False):
                     payload = runtime.exec_command({
-                        "cmd": sys.executable,
-                        "argv": [sys.executable, "-c", "print('bridge-argv-ok')"],
+                        "cmd": "node",
+                        "argv": ["node", "-e", "console.log('bridge-argv-ok')"],
+                        "_windows_native_argv_prefixes": [["node", "-e"]],
                         "yield_time_ms": 1000,
                         "max_output_bytes": 4096,
                         "verbosity": "full",
@@ -241,8 +242,8 @@ class CommandHandleMigrationTests(unittest.TestCase):
                 ):
                     with self.assertRaises(Exception) as denied:
                         runtime.exec_command({
-                            "cmd": sys.executable,
-                            "argv": [sys.executable, "--version"],
+                            "cmd": "node",
+                            "argv": ["node", "--version"],
                             "yield_time_ms": 1000,
                         })
                 self.assertEqual(getattr(denied.exception, "code", ""), "SANDBOX_UNAVAILABLE")

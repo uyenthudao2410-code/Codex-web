@@ -1,0 +1,129 @@
+{
+  "local_operations": [
+    "exact old r7 retirement",
+    "r8 recovery supervisor install",
+    "local full-clean activations",
+    "two shortcuts updated",
+    "supported exact orphan deprovision",
+    "ordinary supported Stop with live owned Sandbox",
+    "supported restart"
+  ],
+  "host_pid": 11364,
+  "shortcuts": [
+    {
+      "path": "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk",
+      "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r8\\win-unpacked\\Coding Tools MCP.exe",
+      "sha256": "982304384ba8a66df884e440c2e0f4ed27f5516ddc1377accd92d7450208c329"
+    },
+    {
+      "path": "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk",
+      "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r8\\win-unpacked\\Coding Tools MCP.exe",
+      "sha256": "84f5444f2360de1e8e01d32a3bd892784b93ca3d5b5bf3fc938ce50dba0cc0b9"
+    }
+  ],
+  "validation": {
+    "package_parity": "91 app / 298 resources / 9 adapters PASS",
+    "build_verification_tests": "12 PASS reused",
+    "diff_check": "PASS",
+    "adapter_tests": "33 PASS reused",
+    "stop_cleanup_focused_tests": "19 PASS",
+    "native_tests": "4 PASS reused",
+    "isolated_packaged_smoke": "PASS",
+    "history_secret_guard": "PASS 9080 files before final additive artifacts; final rerun recorded separately"
+  },
+  "proof": {
+    "after_stop_job": "b73b9d29c86e422da0355507cdd4eea5",
+    "write_patch_readback": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012-r8\\shared-write-exec-receipt-r8-69edb1dffa4740bfa6c56e8e3469b122.ndjson",
+    "status_only_sandbox_launch_count": 0,
+    "commands_exit_zero": true,
+    "server_observation": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-final-server-surface.json",
+    "machine_observation": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-transition\\final-machine-observation-activation-mv4xk8xx-3d9f30b9b0542ef0458f3c3b241d365a-1791790325963.json",
+    "original_actions_not_replayed": true,
+    "first_recovered_action": "act_39a0f3d1484d4b839b788c2e5a619a36",
+    "target": "E:\\DEV\\Codex-web\\tests\\fixtures\\new-machine-shared-write-proof-20261012-r8.txt",
+    "tasks_closed_writers_released": true,
+    "after_stop_action": "act_77427971b6714781898ed833dc4296fa",
+    "ordinary_stop_supplement": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-transition\\ordinary-stop-readonly-supplement-a6d737ae3e1e4cffac7fbce4dd1698a3.json",
+    "target_bytes": 63,
+    "initial_exec_failure_preserved": "ORIGINAL_EXEC_NOT_VERIFIED_SUCCESS",
+    "target_sha256": "99a756fdabac6c640b5752ae4ca6088301c1eff6318840a6377f6c262d42f8fa",
+    "first_recovered_job": "da70404853284b52bba5eab347a95d69"
+  },
+  "next_action": "Use the updated Coding Tools MCP shortcut and issue new read/write/exec requests through the existing shared connector",
+  "schema_version": 1,
+  "git": {
+    "branch": "main",
+    "commit_performed": false,
+    "preserved_dirty_work": true,
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "push_performed": false
+  },
+  "installation_id": "6169e7f206f69e2d5364248f93d965c97f58340a908844b2c8f9ef2832f17228",
+  "activation_epoch": "activation-mv4xk8xx-3d9f30b9b0542ef0458f3c3b241d365a",
+  "changed_source": [
+    "resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_state_aware.py",
+    "scripts/patches/mxc-windows-sandbox-c-drive-share.patch",
+    "electron/services/fullCleanActivation.js",
+    "electron/services/runtimeOrchestrator.js",
+    "electron/services/nativeService.js",
+    "tests/runtime-stop-executor-cleanup.test.js",
+    "docs/CURRENT_STATE.md"
+  ],
+  "observed_at": "2026-10-12T14:33:06.0506379+07:00",
+  "admission": "OPEN",
+  "ok": true,
+  "final_native_counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "threshold_sensitive_stale_candidates": 18,
+    "owned_codex_sidecar_residues": 0
+  },
+  "operation": "new_machine_write_patch_exec_repair_completion",
+  "runtime_ready": true,
+  "final_central_census": {
+    "open_tasks": 0,
+    "unreleased_writers": 0,
+    "unsettled_current_generation_actions": 0
+  },
+  "remaining_limits": [
+    "unpacked local candidate must stay in place; no published signed installer",
+    "PATCH semantic acceptance and historical awaiting-acceptance evidence preserved",
+    "shared MCP route tested; no additional observed ChatGPT model retry",
+    "initial r8 command failure and immediate Stop producer gate preserved alongside later independent confirmation"
+  ],
+  "server": {
+    "renewal": {
+      "ActiveState": "active",
+      "UnitFileState": "enabled",
+      "NextElapseUSecRealtime": ""
+    },
+    "pid": 921509,
+    "facade_contract": {
+      "schema_version": 32,
+      "profile": "control-plane-private-tunnel-service-v1",
+      "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+    },
+    "pilot": [
+      {
+        "decision_id": "pilot_dfb3174078d842299c41c6638830e505",
+        "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "expires_at_ms": 1791847531435,
+        "revoked_at_ms": null
+      }
+    ],
+    "full_latest_source_release": false,
+    "baseline_plus_scoped_overlay": true,
+    "readiness": "ready",
+    "restart_or_deploy_in_this_wave": false
+  },
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r8\\win-unpacked"
+}

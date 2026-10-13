@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "observed_at": "2026-10-12T02:18:49.467Z",
+  "scope": "isolated packaged MXC Windows Sandbox cold-start diagnosis",
+  "candidate": "dist/windows-candidate-mxc-wsb-cbe1774-verify-7999c415-1012/win-unpacked",
+  "probe_result": {
+    "state": "unavailable",
+    "backend": "windows_sandbox",
+    "child_process_spawn": false,
+    "reason": "SANDBOX_STATE_START_READY_TIMEOUT_START_START_READY_TIMEOUT"
+  },
+  "evidence": {
+    "config_written_at": "2026-10-12T09:07:04.7816726+07:00",
+    "sandbox_process": {
+      "pid": 37240,
+      "parent_pid": 16828,
+      "name": "vmmemWindowsSandbox",
+      "created_at": "2026-10-12T09:07:07.745887+07:00"
+    },
+    "guest_bootstrap_started_at": "2026-10-12T09:08:58.730+07:00",
+    "guest_rendezvous_at": "2026-10-12T09:09:02.917637+07:00",
+    "guest_ready_failure_at": "2026-10-12T09:09:04.9251647+07:00",
+    "guest_stage": "send Ready",
+    "guest_error_code": 10053,
+    "guest_exit_code": 1,
+    "vm_guid_from_system_events": "DD55131F-FC1E-479E-8300-E8979D0555EF",
+    "system_event_window": {
+      "start": "2026-10-12T09:07:44+07:00",
+      "end": "2026-10-12T09:08:06+07:00"
+    },
+    "mxccorrelation_current_trial_removed": true,
+    "wsb_current_user_session_list_empty": true,
+    "hcsdiag_list": "insufficient_privileges"
+  },
+  "causal_inference": "Guest boots near the local 120-second start deadline; host connects before Ready transmission, then backend deadline cleanup aborts the connection.",
+  "repair": {
+    "previous_start_ready_seconds": 120,
+    "start_ready_seconds": 180,
+    "previous_rendezvous_seconds": 120,
+    "rendezvous_seconds": 150,
+    "python_phase_timeout_seconds": 210,
+    "enrollment_timeout_ms": 360000,
+    "local_patch_sha256": "88b8987bbe55f8e1fead1d263cd78175b2b1ffed2385638ac082108bdc5ca1f5",
+    "rebuild_state": "passed",
+    "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "backend_binary_receipts": {
+      "wxc-exec.exe": {
+        "sha256": "19dead991dc4a544d6f66b879ffdf3d2c2a3e72208154a340cd7fa8515bc6357",
+        "size_bytes": 5959168
+      },
+      "wxc-windows-sandbox-daemon.exe": {
+        "sha256": "39692e91f86ba74ccaf41c8eb751f4daf4d607c05ec568fab9d68760efb2929e",
+        "size_bytes": 1537536
+      },
+      "wxc-windows-sandbox-guest.exe": {
+        "sha256": "31f77a5614935c6fa4595d5c27eb98383b8c193a8f26f0d9449539e60b749a57",
+        "size_bytes": 1422848
+      }
+    },
+    "tests": {
+      "node": {
+        "passed": 18,
+        "failed": 0
+      },
+      "python": {
+        "passed": 25,
+        "subtests_passed": 5,
+        "failed": 0
+      }
+    },
+    "candidate": "dist/windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r1/win-unpacked",
+    "candidate_build_state": "passed",
+    "candidate_build_verification": {
+      "app_asar_files_verified": 89,
+      "resource_files_verified": 298,
+      "recovery_adapters_verified": 9,
+      "sanitation_entries_verified": 332,
+      "executable_sha256": "436b872ff0630c381ea098fd4eca178c0b13044280345b0549aceab000a288f1",
+      "app_asar_sha256": "28cc6895299df6c1bf6b8edcf58586915380be5a36e9aa46c9ba6806deced6d5"
+    },
+    "isolated_packaged_smoke": {
+      "state": "passed",
+      "exit_code": 0,
+      "resources_verified": 18,
+      "smart_v3_tool_count": 8,
+      "recovery_mcp_supervisor_healthy": true,
+      "production_descriptor_unchanged": true,
+      "scheduled_task_unchanged": true
+    },
+    "repaired_sandbox_probe_state": "passed",
+    "repaired_sandbox_probe": {
+      "started_at": "2026-10-12T02:27:14.879Z",
+      "completed_at": "2026-10-12T02:28:14.647Z",
+      "elapsed_ms": 59768,
+      "state": "available",
+      "backend": "windows_sandbox",
+      "child_process_spawn": true,
+      "protected_profile_and_descriptor_files_unchanged": true,
+      "receipt": "repaired-sandbox-probe.json"
+    }
+  },
+  "residual_observation": {
+    "previous_vm_cleanup_receipt": {
+      "observed_at": "2026-10-12T02:19:51.2333215+00:00",
+      "state": "OWNED_PROCESS_ALREADY_EXITED",
+      "mutated": false
+    },
+    "sole_sandbox_process": {
+      "name": "WindowsSandboxServer.exe",
+      "pid": 40676,
+      "created_at": "2026-10-12T09:16:56.275423+07:00",
+      "path": "C:\\Program Files\\WindowsApps\\MicrosoftWindows.WindowsSandbox_0.8.107.0_x64__cw5n1h2txyewy\\WindowsSandboxServer.exe",
+      "windows_service_owner": false,
+      "recorded_parent_pid_reused": true
+    },
+    "vmmem_ui_client_remote_session_process_count": 0,
+    "current_user_wsb_environment_count": 0,
+    "current_user_wsb_list_exit_code": 0,
+    "elevated_hcs_census": "parent_confirmed_only_saved_template_no_active_vm",
+    "idle_server_cleanup": {
+      "receipt": "idle-sandbox-broker-cleanup-receipt.json",
+      "state": "parent_exact_identity_cleanup_passed"
+    },
+    "post_probe_observation_at": "2026-10-12T02:28:22.000Z",
+    "post_probe_server_recurrence": false,
+    "post_probe_daemon_present": false,
+    "post_probe_vmmem": {
+      "pid": 41744,
+      "created_at": "2026-10-12T09:27:17.220724+07:00",
+      "state": "naturally_exited_without_kill",
+      "observed_present_at": "2026-10-12T02:30:39.000Z",
+      "system_event_vm_guid_candidate": "B96E61FB-9F42-4A74-8361-AA02C95ED242",
+      "guid_evidence": "NIC prefix and parent elevated HCS census agree; WindowsSandbox-owned VM was still Running at 09:32:36",
+      "vm_switch_event_records": [2994, 2995],
+      "vm_switch_event_time": "2026-10-12T09:27:18.0422966+07:00",
+      "parent_reported_absent_at": "2026-10-12T02:33:45.000Z",
+      "parent_cleanup_mutated": false,
+      "teardown_upper_bound_after_probe_completed_seconds": 331,
+      "elevated_hcs_receipt": "successful-sandbox-teardown-observation.json",
+      "current_user_final_host_process_count": 0,
+      "current_user_final_observed_at": "2026-10-12T02:38:46.000Z"
+    }
+  },
+  "final_candidate": {
+    "candidate": "dist/windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3/win-unpacked",
+    "build_state": "passed",
+    "isolated_smoke_state": "passed",
+    "application_source_files_verified": 91,
+    "resource_files_verified": 298,
+    "control_plane_adapter_files_verified": 9,
+    "sanitation_entries_verified": 332,
+    "native_files_and_provenance_identical_to_repaired_sandbox_proof": true,
+    "verification_receipt": "final-candidate-verification.json",
+    "smoke_receipt": "final-candidate-smoke.json",
+    "superseded_candidate_r2": "source_changed_during_build_no_smoke_or_activation"
+  },
+  "upstream_teardown_source_observation": {
+    "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "paths": ["src/backends/windows_sandbox/lifecycle/src/vm.rs", "src/backends/windows_sandbox/guest/src/executor.rs"],
+    "finding": "Native teardown confirms only WindowsSandbox-prefix host processes gone; vmmem is excluded. Guest exits on control EOF. OS compute-system release was delayed after host processes exited.",
+    "native_patch_added": false,
+    "foreign_vm_busy_guard_preserved": true
+  },
+  "limitations": [
+    "Windows Sandbox OS teardown can remain active for several minutes after native host processes close; the host busy guard prevents another cold VM during this interval.",
+    "Unsigned experimental native backend remains development-candidate-only; no NSIS release was produced.",
+    "No feature enable, reboot, policy write, or production lifecycle operation performed by this subagent."
+  ],
+  "updated_at": "2026-10-12T02:38:46.000Z"
+}

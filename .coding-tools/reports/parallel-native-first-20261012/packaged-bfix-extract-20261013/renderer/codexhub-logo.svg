@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Vibrant High-Tech Gradients -->
+    <linearGradient id="chGradCyanBlue" x1="10" y1="10" x2="110" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f2fe"/>
+      <stop offset="45%" stop-color="#38bdf8"/>
+      <stop offset="80%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+
+    <linearGradient id="chGradPurplePink" x1="110" y1="10" x2="10" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="40%" stop-color="#a855f7"/>
+      <stop offset="75%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+
+    <linearGradient id="chGradCrystalTop" x1="60" y1="6" x2="60" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <linearGradient id="chGradCrystalBottom" x1="60" y1="86" x2="60" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#8b5cf6" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#ec4899" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <radialGradient id="chCoreGlow" cx="60" cy="60" r="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#38bdf8" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#3b82f6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Glowing Filters -->
+    <filter id="chGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="chAura" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="aura"/>
+      <feMerge>
+        <feMergeNode in="aura"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Orbital Energy Ring -->
+  <ellipse cx="60" cy="60" rx="52" ry="24" transform="rotate(-28 60 60)" stroke="url(#chGradCyanBlue)" stroke-width="1.2" stroke-dasharray="8 6 2 6" opacity="0.6" filter="url(#chGlow)"/>
+
+  <!-- Outer Isometric Quantum Hexagon Framework -->
+  <polygon points="60,8 102,32 102,88 60,112 18,88 18,32" stroke="url(#chGradCyanBlue)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" fill="none" filter="url(#chGlow)"/>
+
+  <!-- Secondary Inner Facet Lines (Neural Circuit Matrix) -->
+  <!-- Top-to-Center Spoke -->
+  <path d="M60,8 L60,60" stroke="url(#chGradCyanBlue)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- TopRight-to-Center Spoke -->
+  <path d="M102,32 L60,60" stroke="url(#chGradPurplePink)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- BottomRight-to-Center Spoke -->
+  <path d="M102,88 L60,60" stroke="url(#chGradPurplePink)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Bottom-to-Center Spoke -->
+  <path d="M60,112 L60,60" stroke="url(#chGradPurplePink)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- BottomLeft-to-Center Spoke -->
+  <path d="M18,88 L60,60" stroke="url(#chGradCyanBlue)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- TopLeft-to-Center Spoke -->
+  <path d="M18,32 L60,60" stroke="url(#chGradCyanBlue)" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Inner Hexagonal Micro-Circuits -->
+  <path d="M60,26 L86,41 L86,71 L60,86 L34,71 L34,41 Z" stroke="url(#chGradCyanBlue)" stroke-width="1.6" stroke-linejoin="round" fill="#0f172a" fill-opacity="0.25" filter="url(#chGlow)"/>
+
+  <!-- Stepped Circuit Bridges -->
+  <path d="M42,37 L48,34 L48,22" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+  <path d="M78,37 L72,34 L72,22" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+  <path d="M94,48 L90,52 L90,68" stroke="#a855f7" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+  <path d="M94,72 L90,68 L78,75" stroke="#a855f7" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+  <path d="M26,48 L30,52 L30,68" stroke="#00f2fe" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+  <path d="M26,72 L30,68 L42,75" stroke="#00f2fe" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+
+  <!-- Crystal Peak Caps on 6 Vertices -->
+  <!-- Top Vertex Crystal -->
+  <polygon points="60,4 68,14 60,22 52,14" fill="url(#chGradCrystalTop)" stroke="#e0f2fe" stroke-width="1"/>
+  <!-- Top-Right Vertex Crystal -->
+  <polygon points="106,30 106,42 96,36 96,24" fill="url(#chGradPurplePink)" fill-opacity="0.85" stroke="#fbcfe8" stroke-width="1"/>
+  <!-- Bottom-Right Vertex Crystal -->
+  <polygon points="106,90 96,96 96,84 106,78" fill="url(#chGradCrystalBottom)" stroke="#f472b6" stroke-width="1"/>
+  <!-- Bottom Vertex Crystal -->
+  <polygon points="60,116 52,106 60,98 68,106" fill="url(#chGradCrystalBottom)" stroke="#c084fc" stroke-width="1"/>
+  <!-- Bottom-Left Vertex Crystal -->
+  <polygon points="14,90 24,96 24,84 14,78" fill="url(#chGradCyanBlue)" fill-opacity="0.85" stroke="#38bdf8" stroke-width="1"/>
+  <!-- Top-Left Vertex Crystal -->
+  <polygon points="14,30 14,42 24,36 24,24" fill="url(#chGradCyanBlue)" fill-opacity="0.9" stroke="#7dd3fc" stroke-width="1"/>
+
+  <!-- Floating Quantum Photon Particles -->
+  <polygon points="60,60 67,60 60,53 53,60" fill="#ffffff" filter="url(#chAura)"/>
+  <circle cx="60" cy="60" r="14" fill="url(#chCoreGlow)" filter="url(#chGlow)"/>
+  <circle cx="60" cy="60" r="4.5" fill="#ffffff"/>
+  
+  <circle cx="12" cy="56" r="2" fill="#00f2fe" filter="url(#chGlow)"/>
+  <circle cx="108" cy="64" r="2" fill="#ec4899" filter="url(#chGlow)"/>
+  <circle cx="44" cy="14" r="1.5" fill="#38bdf8"/>
+  <circle cx="76" cy="14" r="1.5" fill="#38bdf8"/>
+  <circle cx="44" cy="106" r="1.5" fill="#a855f7"/>
+  <circle cx="76" cy="106" r="1.5" fill="#a855f7"/>
+</svg>

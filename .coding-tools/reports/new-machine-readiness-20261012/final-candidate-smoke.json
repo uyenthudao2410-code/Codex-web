@@ -1,0 +1,23 @@
+{
+  "operation": "isolated_final_candidate_packaged_recovery_smoke",
+  "observed_at": "2026-10-12T02:38:46.000Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "command": "CODEX_PACKAGED_APP_ROOT=<candidate> node scripts/packaged-recovery-smoke.js",
+  "exit_code": 0,
+  "result": {
+    "ok": true,
+    "package": {
+      "executable": true,
+      "app_asar": true,
+      "required_resources": 18,
+      "smart_tool_contract": {
+        "profile": "smart-v3",
+        "task_context_id": { "agent_workflow": true, "task_control": true, "workspace_context": true },
+        "tools": ["agent_workflow", "command_control", "document_workflow", "exec_command", "request_permissions", "task_control", "view_image", "workspace_context"]
+      }
+    },
+    "isolation": { "user_data_isolated": true, "production_descriptor_stable": true },
+    "recovery": { "host_ready": true, "device_identity_present": true, "mode": "independent_mcp_tunnel_v1", "mcp_alive": true },
+    "supervisor": { "healthy": true, "live_owner_fail_closed": true, "hash_mismatch_fail_closed": true, "scheduled_task_mutation": false }
+  }
+}

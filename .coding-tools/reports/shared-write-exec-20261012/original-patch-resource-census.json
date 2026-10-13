@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "operation": "original_patch_native_resource_census",
+  "original_run_id": "4ea601f3f7154ecda879a6986a5d7f41",
+  "observed_at_unix_seconds": 1791780139.117836,
+  "thresholds": {
+    "grace_seconds": 900.0,
+    "stale_after_seconds": 86400.0,
+    "job_start_grace_seconds": 30.0
+  },
+  "snapshot": {
+    "snapshot_at": "2026-10-12T04:42:18.179Z",
+    "backup_api_copy": true,
+    "sha256": "202fd9854a5142181385df74cd2f36b2a6830ae821c0a16b75fe1dc4ebf4fee7",
+    "logical_sha256": "ad092e092afc2c0d7c0c2143fbc8ec0d8e29e7f70f9d6f5ecf190512f2bd6dae",
+    "size_bytes": 97873920,
+    "schema_version": 12,
+    "integrity_check": [
+      "ok"
+    ],
+    "foreign_key_check_rows": 0,
+    "immutable": true,
+    "query_only": true
+  },
+  "read_contract": {
+    "ledger_facts_fact_load_statements": 8,
+    "lifecycle_facts_fact_load_statements": 14,
+    "canonical_writer_instantiated": false,
+    "runtime_instantiated": false,
+    "execution_resource_governor_instantiated": false
+  },
+  "run": {
+    "run_id": "4ea601f3f7154ecda879a6986a5d7f41",
+    "run_status": "active",
+    "classification": "GRACE_PERIOD_INACTIVE",
+    "reasons": [
+      "inactive_within_grace_period"
+    ],
+    "latest_activity_at": "2026-10-12T04:33:08.017Z",
+    "activity_age_seconds": 551.100837,
+    "latest_state_after": "REPLAN",
+    "last_event": {
+      "seq": 59894,
+      "hash": "5fed1216a78919c98bc98a8a9ba0f86e667342d77ce3d9a4813e052a6af6da3f"
+    },
+    "ownership": {
+      "active_controller_leases": 0,
+      "active_write_fences": 0,
+      "running_background_operations": 0,
+      "live_agent_lanes": 0,
+      "live_managed_jobs": 0
+    },
+    "stale_background_operations": 0,
+    "p5_epoch_lifecycle": null,
+    "managed_job_classifications": []
+  },
+  "projection_summary": {
+    "classification": "CONTEXTUAL_PROJECTIONS",
+    "context_count": 1097,
+    "relevant_run_count": 4,
+    "bound_relevant_run_count": 4,
+    "missing_run_count": 0,
+    "conflicting_run_count": 0
+  },
+  "summary": {
+    "run_classification_counts": {
+      "AWAITING_ACCEPTANCE": 3,
+      "GRACE_PERIOD_INACTIVE": 1,
+      "P5_EXPERIMENT_ANCHOR": 6,
+      "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 17
+    },
+    "managed_job_classification_counts": {},
+    "ordinary_active_runs": 21,
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "stale_background_operation_residues": 0,
+    "projection_drift": false,
+    "p5_epochs": 6
+  },
+  "content_free": true,
+  "mutated_canonical_ledger": false
+}

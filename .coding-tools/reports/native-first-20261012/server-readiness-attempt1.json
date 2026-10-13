@@ -1,0 +1,43 @@
+{
+  "operation": "native_first_ubuntu_readonly_readiness",
+  "ok": false,
+  "error_code": "SERVING_PACKAGE_NOT_FOUND",
+  "external_mutations_performed": false,
+  "local_observation": {
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "branch": "main",
+    "ssh_target": "svhome@100.116.112.22",
+    "strict_host_key_checking": true,
+    "batch_default_keys": true,
+    "observer_sha256": "6e317decf1629e931d961a161ccbec4ccec63877d542a3bdbca81782984314d4",
+    "ssh_exit_code": 1,
+    "capture_started_utc": "2026-10-12T11:09:40.878849+00:00",
+    "capture_completed_utc": "2026-10-12T11:09:42.083716+00:00",
+    "current_package_python_files_sha256": {
+      "__init__.py": "e7d59cf831e78f9ad0172617d7ff022492e25f6d8a3606a4e17c6c071a19e2d9",
+      "__main__.py": "a7ff6743394255f544f8bcb981e582e8835c6d8fc38f1f4cc90f19cd935e7073",
+      "deployment_verifier.py": "8f41b5413c6a9fed2c3725955e6d87a2430502fc317e8f6819f915b9a456c825",
+      "http_api.py": "a46a461794a570bca9841d700260856bcb660cb745e337d253482a5f5c5f44eb",
+      "maintenance.py": "98c866649a56c88da5bbebe10da84c27f1ead1ad906c062eda67d5a1b0ca59fa",
+      "mcp_facade.py": "634d1da3d6d1de9c0528fdf57f5daa14625390b5d6983d5906d81370460d14ff",
+      "mcp_oauth.py": "99d19968daaad120a9c583f26f31414bc134c4cd0ddfee687aaa5f3f307f82c6",
+      "mcp_status.py": "303d0d8114db63caf7aa544e3150b4b86ccb0f4f1f209b2bb2128fefe0e514f9",
+      "node_agent.py": "f615b822c4eb5654e63c3b32c9fefcc92d8019f2f4fde8b4ed5130d354840b75",
+      "store.py": "180c0bc0a37b34b3c94d1da69e5bf7db18c0eceeb25bbba09fc25fe8e3729d3d",
+      "web_ui.py": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b"
+    },
+    "head_package_python_files_sha256": {
+      "__init__.py": "b2281d801697f3819879b5100bf6e1c4c0dcfd67f9aae15198d4bfb93280a07a",
+      "__main__.py": "035af58fc85e40477e9d33d31f5c7d4481dad5babe8bdb3a97dbfba1879871a4",
+      "deployment_verifier.py": "02ec6c6b0e49410b0f8a6b3d43665f860087df1e242a19ec18eff449204f7401",
+      "http_api.py": "c28b93dfa968022ac8dcdeac24ee574a9b57b62ba636c51d1deeb586b3916644",
+      "maintenance.py": "795d4ee4f607bd29c9ad178b1af62e5a212d99cae4c9843adbd8e76fc748894e",
+      "mcp_facade.py": "133b6d891290fd37303f14eb2919e03903ead7b3f36510c55ebd843dd36dcac0",
+      "mcp_oauth.py": "1ecba74925783bb9f09a5d4b54dd44085851f6b8efa8ad9e7f7acb98f13e6b7f",
+      "mcp_status.py": "a6cda1ac365d611e260f974a914e48b2f55784e4fbda8e66f310a8217b791aea",
+      "node_agent.py": "7dda1d3845172e95ef940850f23ef4b5d873019f8b999aeb76a140e79be6fcc0",
+      "store.py": "f50ddce70d5821bd82a32b12640ce5609ec510409cac18a312f6ffd23d56d513",
+      "web_ui.py": "437e9f9910f615ebfe422b2a610eec90d15916be8b80ead7d2c78bf00eef68d3"
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "operation": "native_first_metadata_overlay_preparation",
+  "ok": true,
+  "candidate_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\codex-control-plane-native-first-1012-e707cccda6fc",
+  "candidate_archive": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\codex-control-plane-native-first-1012-e707cccda6fc.tar.gz",
+  "candidate_archive_sha256": "68ce2356253b5e7ebdda0673693e7c15afe4a1a8822550698432cf089a3fc27b",
+  "candidate_manifest_sha256": "bfc46c312815949f899b35c64d23cfd2475d7626b6846bfdc9de1ac4d8ef3060",
+  "verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-native-first-1012-e707cccda6fc",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:940a95b83c8508510aedab7c416212dc0f80bf6de0e2389355f548467c2461be",
+    "file_count": 38
+  },
+  "changed_runtime_files": [
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/node_agent.py"
+  ],
+  "unchanged_release_files": 36,
+  "baseline_service_pid": 946413,
+  "baseline_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+  "baseline_manifest_sha256": "e4ddab4e41bdf22eefa763cce746afd486ec0bc7e38e7748899088c6fcd57cd7",
+  "baseline_package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+  "protected_config_hashes": {
+    "environment": {
+      "path": "/home/svhome/.config/codex-control-plane/control-plane.env",
+      "sha256": "2788689851b09ec6b781b7f9bcf59ff7a1b98875df76cdc5061200752d6d3389"
+    },
+    "drop_in": {
+      "path": "/home/svhome/.config/systemd/user/codex-control-plane.service.d/10-immutable-release.conf",
+      "sha256": "fe37f9a796a100833323270397742a9d6923c9894863e704f40e5b7093eff0b4"
+    }
+  },
+  "expected_contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "expected_unknown_actions": [
+    {
+      "action_id": "act_048df93488874a70aa97a7ee18ccbd03",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1790242251218,
+      "disposition": "quarantined_unknown"
+    },
+    {
+      "action_id": "act_744496c6bd514d38a746cf8819aae9ad",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1790338344700,
+      "disposition": "quarantined_unknown"
+    },
+    {
+      "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1791800699782,
+      "disposition": null
+    },
+    {
+      "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1791800959555,
+      "disposition": null
+    },
+    {
+      "action_id": "act_3849e259d55546639794cec40f63fea8",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1791801776851,
+      "disposition": null
+    }
+  ],
+  "source_revision_is_original_base_lineage": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "overlay_is_locally_prepared_not_committed_revision": true,
+  "remote_mutations_performed": false,
+  "rollback": {
+    "source_only": true,
+    "restore_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+    "restore_package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "database_restore_allowed": false,
+    "authority_restore_allowed": false,
+    "procedure": "Guard current candidate and idle census; restore protected pre-switch env/drop-in; atomically restore current release link; daemon-reload and restart exact service; verify previous serving package and schema32 contract; preserve all task/action/history rows."
+  }
+}

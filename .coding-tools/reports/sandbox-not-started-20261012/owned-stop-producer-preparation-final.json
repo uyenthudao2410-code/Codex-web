@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "operation": "prepared_owned_sandbox_supported_stop_producer_final",
+  "observed_at_ms": 1791784564161,
+  "script": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\owned-sandbox-stop-proof.py",
+  "script_sha256": "a5d2dbf09e91939e03c5423a1f857d9b2e05194456910996f7669d778a226b51",
+  "invocation_performed": false,
+  "stop_effect_performed": false,
+  "source_edits_performed": false,
+  "supersedes_preparation_receipt": "owned-stop-producer-preparation.json",
+  "peer_review": "PASS shared_surface exact final hash",
+  "validation": {
+    "ast_parse": "PASS",
+    "offline_same_task_writer_cases_passed": 6,
+    "cases": [
+      "current exact held writer accepted with volatile expiry omitted",
+      "closed task rejected",
+      "released writer rejected",
+      "expired writer rejected",
+      "changed writer generation rejected",
+      "changed writer binding rejected"
+    ],
+    "reused_owned_backend_cases": {
+      "passed": 7,
+      "producer_sha256": "0800232e32ec042ea995b8991ad679c9846a27323cfb316877671a172cee35a7",
+      "reason": "owned_backend function unchanged by central task/writer guard edit"
+    },
+    "real_vm_or_command_effects": false
+  },
+  "supported_phase": "stop",
+  "after_expected": [
+    "tokenrecord Stopped mapping retained",
+    "daemon record absent",
+    "live VMhostcount0",
+    "same cached native Python process alive",
+    "original cold/warm lineage unchanged settled"
+  ],
+  "next_action": "Root review final producer then supply exact r6 manifest+identity and warm proof for read-only review plan; no stop until explicit reviewed plan authorization"
+}

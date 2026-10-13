@@ -1,0 +1,117 @@
+--- serving/deploy/control-plane-authority-renewal.py
++++ candidate/deploy/control-plane-authority-renewal.py
+@@ -2,9 +2,9 @@
+ """Renew bounded shared-service authority without opening admission.
+ 
+ The systemd timer invokes this script with the protected operator environment.
+-It keeps the existing service bearer and the selected live pilot alive only
++It keeps the existing service bearer and exact live workspace pilots alive only
+ within the configured pilot anchor's owner, principal and device. Local folder
+-activation replaces the immutable pilot without changing that authority. This
++activation adds immutable decisions without changing that authority. This
+ script never creates a principal, issues a new bearer, changes admission,
+ changes a binding, or prints authorization material.
+ """
+@@ -116,25 +116,31 @@
+     return value
+ 
+ 
+-def _selected_pilot(
++def _selected_pilots(
+     decisions: Any, anchor: dict[str, Any], grant: dict[str, Any], now: int,
+-) -> dict[str, Any]:
+-    """Follow one live immutable decision within the already approved node."""
++) -> list[dict[str, Any]]:
++    """Follow exact live decisions within the already approved node."""
+     if not isinstance(decisions, list) or any(not isinstance(item, dict) for item in decisions):
+         raise RenewalError("operator API response has no valid pilot list")
+     active = [item for item in decisions if item.get("revoked_at_ms") is None and _expiry(item) > now]
+-    if len(active) != 1:
+-        raise RenewalError("expected exactly one selected live scoped pilot decision")
+-    selected = active[0]
+-    for field in ("owner_id", "principal_id", "device_id", "endpoint_id"):
+-        if _identity(selected, field) != _identity(anchor, field):
+-            raise RenewalError("selected scoped pilot does not match the configured identity anchor")
+-    for field in ("owner_id", "principal_id"):
+-        if _identity(selected, field) != _identity(grant, field):
+-            raise RenewalError("selected scoped pilot does not match the configured service grant")
+-    for field in ("decision_id", "binding_id", "workspace_id", "workspace_generation"):
+-        _identity(selected, field)
+-    return selected
++    selected = [item for item in active if all(
++        _identity(item, field) == _identity(anchor, field)
++        for field in ("owner_id", "principal_id", "device_id", "endpoint_id")
++    )]
++    if not selected:
++        raise RenewalError("no live scoped pilot matches the configured identity anchor")
++    targets = set()
++    for item in selected:
++        for field in ("owner_id", "principal_id"):
++            if _identity(item, field) != _identity(grant, field):
++                raise RenewalError("selected scoped pilot does not match the configured service grant")
++        for field in ("decision_id", "binding_id", "workspace_id", "workspace_generation"):
++            _identity(item, field)
++        target = (item["binding_id"], item["workspace_id"], item["workspace_generation"])
++        if target in targets:
++            raise RenewalError("multiple live scoped pilot decisions cover the same target")
++        targets.add(target)
++    return sorted(selected, key=lambda item: item["decision_id"])
+ 
+ 
+ def _verify_renewal(renewed: dict[str, Any], original: dict[str, Any], expiry: int, fields: tuple[str, ...]) -> None:
+@@ -204,7 +210,8 @@
+     mode = admission.get("admission_mode")
+     if mode not in {"scoped_pilot", "recovery", "open"}:
+         raise RenewalError("operator API returned an invalid admission mode")
+-    decision = _selected_pilot(decisions, anchor, grant, now) if mode == "scoped_pilot" else anchor
++    selected = _selected_pilots(decisions, anchor, grant, now) if mode == "scoped_pilot" else [anchor]
++    decision = next((item for item in selected if item["decision_id"] == decision_id), selected[0])
+     selected_decision_id = _identity(decision, "decision_id")
+     result: dict[str, Any] = {
+         "enabled": True,
+@@ -215,6 +222,8 @@
+         "followed_selected_pilot": selected_decision_id != decision_id,
+         "grant": {"expires_at_ms": grant["expires_at_ms"], "renewed": False},
+         "decision": {"expires_at_ms": _expiry(decision), "renewed": False},
++        "decisions": [{"decision_id": item["decision_id"], "expires_at_ms": _expiry(item), "renewed": False}
++                      for item in selected],
+     }
+     grant_target = min(now + grant_ttl * 1000, now + MAX_GRANT_TTL_SECONDS * 1000 - 1000)
+     if _expiry(grant) - now <= grant_window * 1000 and grant_target > _expiry(grant):
+@@ -231,21 +240,21 @@
+     # Recovery is an intentional maintenance state.  Never reopen it from a
+     # timer, and never renew a pilot while its admission is not selected.
+     pilot_target = min(now + pilot_ttl * 1000, now + MAX_PILOT_TTL_SECONDS * 1000 - 1000)
+-    if (mode == "scoped_pilot" and _expiry(decision) - now <= pilot_window * 1000
+-            and pilot_target > _expiry(decision)):
+-        renewed = _json_request(
+-            base_url,
+-            operator_token,
+-            f"/v1/scoped-pilot-decisions/{selected_decision_id}/renew",
+-            method="POST",
+-            body={"expires_at_ms": pilot_target},
+-            opener=opener,
+-        )
+-        _verify_renewal(renewed, decision, pilot_target, (
+-            "decision_id", "owner_id", "principal_id", "device_id", "endpoint_id",
+-            "binding_id", "workspace_id", "workspace_generation",
+-        ))
+-        result["decision"] = {"expires_at_ms": renewed["expires_at_ms"], "renewed": True}
++    for item, observation in zip(selected, result["decisions"]):
++        if (mode == "scoped_pilot" and _expiry(item) - now <= pilot_window * 1000
++                and pilot_target > _expiry(item)):
++            renewed = _json_request(
++                base_url, operator_token,
++                f"/v1/scoped-pilot-decisions/{item['decision_id']}/renew",
++                method="POST", body={"expires_at_ms": pilot_target}, opener=opener,
++            )
++            _verify_renewal(renewed, item, pilot_target, (
++                "decision_id", "owner_id", "principal_id", "device_id", "endpoint_id",
++                "binding_id", "workspace_id", "workspace_generation",
++            ))
++            observation.update(expires_at_ms=renewed["expires_at_ms"], renewed=True)
++        if item["decision_id"] == selected_decision_id:
++            result["decision"] = {key: observation[key] for key in ("expires_at_ms", "renewed")}
+     return result
+ 
+ 

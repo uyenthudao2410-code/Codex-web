@@ -1,0 +1,149 @@
+{
+  "operation": "retire",
+  "observed_at": "2026-10-12T04:27:53.501Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r4\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "retirement": {
+      "state": "terminated",
+      "identity": {
+        "pid": 28804,
+        "process_start_token": "134362482549051770"
+      },
+      "exit_state": "exited"
+    },
+    "ui_pid": 25112,
+    "ui_was_missing": false,
+    "ui_stopped": {
+      "state": "suppressed",
+      "registered": true,
+      "alive": false,
+      "pid": 25112,
+      "instance_id": "d0e8318ee89f34b7c325c79c9b89cbec",
+      "started_at_unix_ms": 1791774670137,
+      "runtime_mode": "packaged",
+      "recovery_host_runtime_mode": "packaged",
+      "recovery_host_installation_id": "9a884c7195e233d522e3ad40e3190528a6e9b5b3b1f111095bbe69338001cf9f",
+      "ui_runtime_mode": "packaged",
+      "ui_installation_id": "9a884c7195e233d522e3ad40e3190528a6e9b5b3b1f111095bbe69338001cf9f",
+      "suppressed": true,
+      "suppression_reason": "operator_quit",
+      "attempts_in_window": 0,
+      "last_launch_pid": null,
+      "initial_registration_grace_until_unix_ms": null,
+      "pending_registration_until_unix_ms": null,
+      "next_attempt_at_unix_ms": null,
+      "circuit_suppressed_until_unix_ms": null,
+      "last_error_code": null
+    },
+    "host_pid": 28804,
+    "before_census": {
+      "schema_version": 1,
+      "safe": false,
+      "code": "RUNTIME_BUSY",
+      "reason": "live_runtime_state_process",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "9020b693480637eedce27443e88f13fecd7dafc3db5afa60110ee52caf8fe5bd",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "4380d562ef58b16a0be62d06038afc0887728c7b639d4e164f32eddae5296b39",
+        "size_bytes": 97857536,
+        "snapshot_at": "2026-10-12T04:27:28.606Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 17,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 20,
+        "awaiting_acceptance_runs": [
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": [
+          "live_runtime_state_process"
+        ]
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791779249.457578,
+      "census_fingerprint": "4266e354657da84d7820462e3ca36016701fe61accd345f115c8febafe1ca9a8"
+    },
+    "stopped_census": {
+      "schema_version": 1,
+      "safe": true,
+      "code": "READY",
+      "reason": "canonical_ledger_quiescent",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "6c67957be78ac4fd1312b416b5d76413ff8b775fd38b1a653b1ecf790c9de558",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "41f2f8915318f8e61a2305e6b8a4ff43b8c3977ed34ad25d836607334f525396",
+        "size_bytes": 97857536,
+        "snapshot_at": "2026-10-12T04:27:50.462Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 17,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 20,
+        "awaiting_acceptance_runs": [
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": []
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791779272.055293,
+      "census_fingerprint": "8b0b137399bcc82118d2b4e8b8d96f1304a1620e0bc4ecc60463efb6c41bef7a"
+    },
+    "preserved_historical_acceptance": true,
+    "durable_state_deleted": false
+  }
+}

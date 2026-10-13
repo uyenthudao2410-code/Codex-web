@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "operation": "semantic_independent_audit",
+  "ok": true,
+  "observed_at": "2026-10-12T19:33:42.618025Z",
+  "source_final_audit": "semantic-acceptance-final-audit.json",
+  "source_final_audit_accepted_count": 20,
+  "verifier": {
+    "command": "node tests/fixtures/native-first-canary/verify-postimages.cjs",
+    "sha256": "a92245b8502e4693cd67bd748366147bcae00464e91e1758c5b638d49cb1d848",
+    "command_hash": "a8c1c5acc25c3fec16a368018f6cb08703a532ef088131ef90e388fa45045f97",
+    "stage_id": "check:a8c1c5acc25c3fec"
+  },
+  "rows_checked": 20,
+  "proof_waves": {
+    "distinct_count": 20,
+    "proof_ids_distinct_count": 20,
+    "run_ids_distinct_count": 20
+  },
+  "checks": {
+    "all_accepted": true,
+    "no_patch_replay": true,
+    "no_native_execution_claimed": true,
+    "ledger_metadata_result_passed": true,
+    "paths_bound_exactly": true,
+    "cache_hit_false": true,
+    "proof_reuse_absent": true
+  },
+  "original_wave_rows": [
+    {
+      "run_id": "e85335c62e314bc88432ee8d3ceb9f11",
+      "status": "replanned"
+    },
+    {
+      "run_id": "4fc6af5a57314f5e95d712cfd37422ed",
+      "status": "replanned"
+    },
+    {
+      "run_id": "38504a452a604a368a11f3ca2facad01",
+      "status": "replanned"
+    },
+    {
+      "run_id": "97a7d061690b4b2a8ee54c8f00e6776f",
+      "status": "replanned"
+    },
+    {
+      "run_id": "72d5687bd91b411f95e310fd6c8f8f9e",
+      "status": "replanned"
+    },
+    {
+      "run_id": "b1525990972d4bf1a6ec2f68a8609e2b",
+      "status": "replanned"
+    },
+    {
+      "run_id": "8e298cb7e7db4241bda2836019ef1efe",
+      "status": "replanned"
+    },
+    {
+      "run_id": "b2f5651423ff4df1986223f1d8275205",
+      "status": "replanned"
+    },
+    {
+      "run_id": "a5c44b4205da445bab756f4ec476f23f",
+      "status": "replanned"
+    },
+    {
+      "run_id": "7b321e699c45499db1e5a3643632c67c",
+      "status": "replanned"
+    },
+    {
+      "run_id": "ed965126d3fe42f692bec027f0665ec0",
+      "status": "replanned"
+    },
+    {
+      "run_id": "150fe6f3e18f4150937e5fa5e9420e43",
+      "status": "replanned"
+    },
+    {
+      "run_id": "8ab4c233c1d049f998010f643ceaee51",
+      "status": "replanned"
+    },
+    {
+      "run_id": "b40768fd47774a25a9247ba17b8eddbf",
+      "status": "replanned"
+    },
+    {
+      "run_id": "b9ecb76f290a4de7b2eba995100e319d",
+      "status": "replanned"
+    },
+    {
+      "run_id": "acc6fee6a77c41238e0cbdc7ee732b12",
+      "status": "replanned"
+    },
+    {
+      "run_id": "9bb77434054e4c508f110fc473646a43",
+      "status": "replanned"
+    },
+    {
+      "run_id": "b8456637e7b147e2be4f242f9ba53de0",
+      "status": "replanned"
+    },
+    {
+      "run_id": "38401447bb74422b8d2930033b769fc3",
+      "status": "replanned"
+    },
+    {
+      "run_id": "de86c09d1a0b49d5894fb82ae0269812",
+      "status": "replanned"
+    }
+  ],
+  "related_active_runs": [],
+  "related_active_jobs": [],
+  "errors": [],
+  "lingering_canary_runs": [
+    {
+      "run_id": "0dfb72d0c6944d2d87ecb741dc439267",
+      "status": "active",
+      "started_at": "2026-10-12T18:22:07.700Z",
+      "finished_at": null
+    },
+    {
+      "run_id": "150fe6f3e18f4150937e5fa5e9420e43",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:04:13.330Z",
+      "finished_at": "2026-10-12T19:23:22.134Z"
+    },
+    {
+      "run_id": "372352c060a34387bf1641e355fbc775",
+      "status": "active",
+      "started_at": "2026-10-12T18:16:10.137Z",
+      "finished_at": null
+    },
+    {
+      "run_id": "38401447bb74422b8d2930033b769fc3",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:04:44.180Z",
+      "finished_at": "2026-10-12T19:23:43.409Z"
+    },
+    {
+      "run_id": "38504a452a604a368a11f3ca2facad01",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:11:54.356Z",
+      "finished_at": "2026-10-12T19:28:42.228Z"
+    },
+    {
+      "run_id": "4fc6af5a57314f5e95d712cfd37422ed",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:09:52.938Z",
+      "finished_at": "2026-10-12T19:27:16.278Z"
+    },
+    {
+      "run_id": "72d5687bd91b411f95e310fd6c8f8f9e",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:09:22.478Z",
+      "finished_at": "2026-10-12T19:26:56.598Z"
+    },
+    {
+      "run_id": "7b321e699c45499db1e5a3643632c67c",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:03:39.993Z",
+      "finished_at": "2026-10-12T19:23:00.718Z"
+    },
+    {
+      "run_id": "8ab4c233c1d049f998010f643ceaee51",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:08:22.036Z",
+      "finished_at": "2026-10-12T19:26:14.985Z"
+    },
+    {
+      "run_id": "8e298cb7e7db4241bda2836019ef1efe",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:02:02.583Z",
+      "finished_at": "2026-10-12T19:21:14.560Z"
+    },
+    {
+      "run_id": "97a7d061690b4b2a8ee54c8f00e6776f",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:05:16.453Z",
+      "finished_at": "2026-10-12T19:24:03.968Z"
+    },
+    {
+      "run_id": "9bb77434054e4c508f110fc473646a43",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:06:49.694Z",
+      "finished_at": "2026-10-12T19:25:07.402Z"
+    },
+    {
+      "run_id": "a5c44b4205da445bab756f4ec476f23f",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:08:52.530Z",
+      "finished_at": "2026-10-12T19:26:36.147Z"
+    },
+    {
+      "run_id": "acc6fee6a77c41238e0cbdc7ee732b12",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:06:18.981Z",
+      "finished_at": "2026-10-12T19:24:45.052Z"
+    },
+    {
+      "run_id": "b1525990972d4bf1a6ec2f68a8609e2b",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:07:20.546Z",
+      "finished_at": "2026-10-12T19:25:34.307Z"
+    },
+    {
+      "run_id": "b2f5651423ff4df1986223f1d8275205",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:11:23.780Z",
+      "finished_at": "2026-10-12T19:28:21.544Z"
+    },
+    {
+      "run_id": "b40768fd47774a25a9247ba17b8eddbf",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:10:53.673Z",
+      "finished_at": "2026-10-12T19:27:59.175Z"
+    },
+    {
+      "run_id": "b8456637e7b147e2be4f242f9ba53de0",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:05:47.802Z",
+      "finished_at": "2026-10-12T19:24:24.799Z"
+    },
+    {
+      "run_id": "b9ecb76f290a4de7b2eba995100e319d",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:02:34.791Z",
+      "finished_at": "2026-10-12T19:22:00.328Z"
+    },
+    {
+      "run_id": "de86c09d1a0b49d5894fb82ae0269812",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:10:23.004Z",
+      "finished_at": "2026-10-12T19:27:37.680Z"
+    },
+    {
+      "run_id": "e85335c62e314bc88432ee8d3ceb9f11",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:03:07.260Z",
+      "finished_at": "2026-10-12T19:22:39.456Z"
+    },
+    {
+      "run_id": "ed965126d3fe42f692bec027f0665ec0",
+      "status": "accepted",
+      "started_at": "2026-10-12T17:07:51.715Z",
+      "finished_at": "2026-10-12T19:25:55.274Z"
+    }
+  ],
+  "canary_jobs_observed": [
+    {
+      "job_id": "b2b2bc7c67854c98ba7d66891b3ec8fb",
+      "run_id": "",
+      "wave_id": "",
+      "command_id": "pIIrUWER5J6H1sIfeWEiuzGR",
+      "lifecycle_state": "quiesced",
+      "root_pid": 48824,
+      "started_at": "2026-10-12T18:23:29.932Z",
+      "updated_at": "2026-10-12T18:51:06.228Z"
+    }
+  ],
+  "lingering_summary": {
+    "active_run_count": 2,
+    "nonterminal_job_count": 0,
+    "canary_run_count": 22,
+    "canary_job_count": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "operation": "failure",
+  "ok": false,
+  "code": "MODE_INVALID",
+  "error_message": "",
+  "error_stack": "Error\n    at need (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:21:65)\n    at main (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:247:3)\n    at Object.<anonymous> (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:511:77)\n    at Module._compile (node:internal/modules/cjs/loader:1879:14)\n    at Object..js (node:internal/modules/cjs/loader:2012:10)\n    at Module.load (node:internal/modules/cjs/loader:1601:32)\n    at node:internal/modules/cjs/loader:1403:12\n    at Module._load (node:electron/js2c/node_init:2:18095)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)\n    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:378:15)",
+  "partial_mutation_possible": false,
+  "automatic_retry_forbidden": true,
+  "next_action": "Inspect original RUN/WAVE through audit; do not repeat acceptance/transfer after uncertain response.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-failure-1791830303417-237a2e31.json"
+}

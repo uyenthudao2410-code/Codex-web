@@ -1,0 +1,17 @@
+{
+  "validation": "7 focused stop tests and 12 existing cleanup tests reused; exact candidate parity and isolated smoke PASS",
+  "reviewer": "root",
+  "observed_at": "2026-10-12T14:11:35.1333714+07:00",
+  "unknown_cleanup_preserves_owner": true,
+  "operation": "r8_stop_source_review",
+  "delegated_review_unavailable": "selected model at capacity",
+  "live_ordinary_stop_proof": "pending",
+  "original_operation_reused_on_retry": true,
+  "source_hashes": {
+    "nativeService": "1ca2fcdde02dfb2f5e843d2bf9e9122f565fa64320cdd37fe7410d569402ede7",
+    "fullCleanActivation": "b417cf2bb40e80b74262f21208a65031fdec115aff8a73673106203f8068f15f",
+    "runtimeOrchestrator": "f646f7800164b205dc68a08a8744bd36134207a1cc510c87647db1ca73141e6c"
+  },
+  "review": "PASS",
+  "stop_is_bound_to_exact_native_pid_and_start_token": true
+}

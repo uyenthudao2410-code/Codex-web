@@ -1,0 +1,105 @@
+{
+  "operation": "status",
+  "observed_at": "2026-10-12T08:54:10.742Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9c\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "installation_id": "0f533411b2fdd0939b42db27ac9b4ad65361228f50489107338bf00e5826b740",
+    "host_pid": 35288,
+    "runtime": {
+      "fullyReady": false,
+      "mcpRunning": null,
+      "updateIncomplete": true,
+      "recoveryHost": null
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv50m446-6a132615d256208450967af03c450d00",
+      "operation_id": "full-clean-mv50lvgx-f067e1b9ebb65a1aa6deee25",
+      "state": "UPDATE_INCOMPLETE",
+      "epoch_state": "READY_COMMITTED",
+      "admission_open": false,
+      "update_incomplete": true,
+      "ready_commit_digest": "3e6d77989a55f2079a28c13a59bdc860be539e599c76b4b6532bc8da00eac9b2",
+      "expires_at_unix_ms": 1791795813970,
+      "ready_at": null,
+      "error": null
+    },
+    "workspaces": [
+      {
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "display_name": "Codex-web",
+        "capabilities": {
+          "read": true,
+          "write": true,
+          "exec": true
+        },
+        "workspace_path": "E:\\DEV\\Codex-web"
+      },
+      {
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "display_name": "Autocad",
+        "capabilities": {
+          "read": true,
+          "write": true,
+          "exec": true
+        },
+        "workspace_path": "E:\\DEV\\Autocad"
+      }
+    ],
+    "file_policies": {
+      "file_read": {
+        "state": "enabled",
+        "enabled": true,
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "policy_sha256": "77ab07253d412ab54c8115e37cfd002e655b04999575e77bd782c473cbb8c6f4",
+        "current_facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "authority_observed_at_ms": 1791795250415
+      },
+      "approved_patch": {
+        "state": "enabled",
+        "enabled": true,
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "policy_sha256": "b86758a26dc93540d9f13211d0f244df9fc51f6798eb8d25d0d937154c0882b6",
+        "current_facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "authority_observed_at_ms": 1791795250415
+      }
+    },
+    "exec_policy": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "fc97e2580296c831c2c0c87621945ff1f23090f68e5c26a66c06db9583da4097",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db"
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9c-transition\\packaged-status-receipt-1791795250742.json"
+}

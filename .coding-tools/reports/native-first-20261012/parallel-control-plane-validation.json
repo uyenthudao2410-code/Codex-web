@@ -1,0 +1,45 @@
+{
+  "operation": "parallel_workspace_control_plane_source_validation",
+  "captured_at_ms": 1791806370604,
+  "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "branch": "main",
+  "focused_tests_passed": 52,
+  "test_batches": [
+    {
+      "modules": [
+        "tests.test_node_workspace_activation",
+        "tests.test_authority_renewal"
+      ],
+      "tests_passed": 29
+    },
+    {
+      "module": "tests.test_store.ControlPlaneStoreTests",
+      "filter": "test_scoped_pilot",
+      "tests_passed": 13
+    },
+    {
+      "module": "tests.test_mcp_private_tunnel_service_facade",
+      "tests_passed": 10
+    }
+  ],
+  "contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "public_contract_changed": false,
+  "database_schema_changed": false,
+  "maintenance_enum_added": false,
+  "source_files_sha256": {
+    "control-plane/control_plane/store.py": "cd08571dfc82798e92c76c2ad7f3640d588246de5887f289398d02eba4c971c8",
+    "control-plane/control_plane/http_api.py": "40e8c2ee0f1b64b35a4b176d63ede12eedf7e3ab3cb4d206c2abdbc381279ebb",
+    "control-plane/control_plane/mcp_facade.py": "82b007a8f1d153b02e791e67b2c258ea73a6a84c2c815fc22259e5049efb3d9d",
+    "deploy/control-plane-authority-renewal.py": "419e6891bf4d89beb62841add7824411b43f3357e6fc46b5a2e7a65a2baf131b",
+    "control-plane/tests/test_node_workspace_activation.py": "d9346e08bd620a4e5b12b240323e76e707154c49bd8ebfbc6da9ba5864a88d3f",
+    "control-plane/tests/test_authority_renewal.py": "8958a88e2d54978382dd56245b0fa4efffe4f6e02300df4622f6af7663454384",
+    "control-plane/tests/test_mcp_private_tunnel_service_facade.py": "e2c8da5b4cc432b223824cb6ab025fda2d95cf15df952370ac510aa2d82dfd69",
+    ".coding-tools/reports/native-first-20261012/operator-parallel-workspaces.py": "d45f7beb29019dc501b78c2f2b4f4c4fdb6541182866c89d8f54479916aaafd1"
+  },
+  "external_mutations_performed_by_this_agent": false,
+  "active_test_sessions": 0
+}

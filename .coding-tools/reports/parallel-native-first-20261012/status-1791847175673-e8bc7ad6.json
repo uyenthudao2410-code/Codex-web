@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "operation": "status",
+  "observed_at": "2026-10-12T23:19:35.672Z",
+  "observed_at_ms": 1791847175673,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "runtime": {
+      "fullyReady": true,
+      "mcpRunning": true,
+      "nativeAlive": true,
+      "executionRole": "central_executor",
+      "authorityReady": true,
+      "centralConnected": true,
+      "centralStatusReason": null,
+      "updateIncomplete": false,
+      "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+      "operation_id": "full-clean-mv5gbrfl-df33ff07e69884911663f07d",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "b10bcb9eb9d2fd835989b3bf0fd8618eabbf2b48cfcc5c5a21f24a0718030479",
+      "expires_at_unix_ms": 1791822216033,
+      "ready_at": "2026-10-12T16:14:13.586Z",
+      "error": null
+    },
+    "census": {
+      "schema_version": 1,
+      "safe": false,
+      "code": "RUNTIME_BUSY",
+      "reason": "live_runtime_state_process",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "11c0214704f58c0c2bda50d18f5d3bf0deadbf55b7da5577c50bf0e370b7566c",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "39fd5a1cfcd95144e21f12ba6acc593b3c328d0ef5036475e71b34e81f831b75",
+        "size_bytes": 100651008,
+        "snapshot_at": "2026-10-12T23:19:33.664Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 45,
+        "awaiting_acceptance_runs": [
+          "0d4f567d1e5c4f90b174bad40d9e3efa",
+          "0dfb72d0c6944d2d87ecb741dc439267",
+          "28a5f750466048438307b96872e24f01",
+          "2cc8555d10fa4739b07ef55ec715f79c",
+          "351a78fd610d4f0baa15faa62f1aa39b",
+          "372352c060a34387bf1641e355fbc775",
+          "3d9a3ad822054c49a0ebf2ec857bad2e",
+          "435e64ffe1b041eea2cab17bb36ae994",
+          "490900eb8d37453baa8fb5bfb9eb72e6",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "598f9c7aafaa4e1aa764a8392fdf7a3e",
+          "631c9d4ebee141c49471cad7d1d69366",
+          "6664f948cfb14a75958518548352896e",
+          "69f3491b6b7c45249af33903bb3221a5",
+          "6c0b08fa765b423584a42213d7f62024",
+          "7563451dc47742b39de3e3fa40ad3810",
+          "79f51b49525c459c864e94a662682759",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "98513cec254841d4b2a2a3cabb854925",
+          "9dcd730aca3641feb460d06e9c63f21b",
+          "a8d2132df3474d85939cf0df30b4c91e",
+          "e478c0fb1ad24b428bfcab79bd3532b1",
+          "e8cef362cfe94b0ba733b73a75fbe09d",
+          "ea155e531cca4ce89f77d81bd688072b",
+          "fbaf4b0700d04794af4062671c1bcd2b",
+          "fc90e0d41d3847e2ab16961739d4df38"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": [
+          "live_runtime_state_process"
+        ]
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791847174.599971,
+      "census_fingerprint": "a68627b39d96f0e469b98c06359373200a91a4e17a62f7eef69aabd0e249d5a9"
+    },
+    "owner": {
+      "owner_pid": 44012,
+      "owner_process_start_token": "134362952285139070",
+      "instance_id": "ecae23c8a75f4b28b3bc182104f3ed49",
+      "installation_id": "b63bb979e24f73a42337786d15a4bd59618750637c9800efd849b9e97897fe6d"
+    },
+    "preserved_fingerprints": {
+      "control-plane-workspaces.json": {
+        "present": true,
+        "sha256": "ebae316a43229f62a7cccc554615a019ceddfcdc9966d300dba0a8264a6b3ce4"
+      },
+      "control-plane-node.json": {
+        "present": true,
+        "sha256": "92bcd7e892460fa323a298cb7c9016dad96bd8bc86ffff0ffe3f4df42503daac"
+      },
+      "control-plane-read-only-policy.json": {
+        "present": true,
+        "sha256": "a820ab1f2ec4e15eee9c9dacbb4bc4457f9f449c8c68ac76c1f36cac39aeb016"
+      },
+      "control-plane-file-read-policy.json": {
+        "present": true,
+        "sha256": "fad22661a51a444fedffea46d480c505276e3a728bebad861a68dd6e93d7c58b"
+      },
+      "control-plane-approved-patch-policy.json": {
+        "present": true,
+        "sha256": "de9043afdaf797f561e47191adffa03036ff168103c9352aa9e131e9c51a8ff4"
+      },
+      "control-plane-document-write-policy.json": {
+        "present": false
+      },
+      "control-plane-exec-policy.json": {
+        "present": true,
+        "sha256": "7683656212828257f37aa2faf60bbaf79d215c347d7e44ccab47cc3d0964fe9f"
+      }
+    },
+    "original_stop_not_replayed": false
+  },
+  "mutating": false,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c",
+  "smoke_proof_sha256": "b6eda372cbf5beb3e678c3c86976acaadcbc3848851b2e05cb50d56e20e4ed42",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-1791847175673-e8bc7ad6.json"
+}

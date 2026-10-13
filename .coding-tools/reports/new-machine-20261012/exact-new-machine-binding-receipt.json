@@ -1,0 +1,15 @@
+{
+  "operation": "exact_new_machine_binding",
+  "body": {
+    "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "display_name": "DESKTOP-63643J4 - Codex-web"
+  },
+  "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+  "replayed": false,
+  "historical_action_family_sha256": "724cb852c916eb91bb16e8631ef423ce2cdda0b3d0e8e58e1f1c69bdf7d83d2f",
+  "service_pid": 835411,
+  "observed_local_time": "2026-10-12T09:41+07:00",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324"
+}

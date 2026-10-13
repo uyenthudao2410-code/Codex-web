@@ -24,6 +24,7 @@ from control_plane.maintenance import main as maintenance_main
 from control_plane.node_agent import (
     READ_ONLY_JOURNAL_SCHEMA_VERSION,
     _config,
+    _connected_agent_iteration,
     _journal_path,
     _pid_is_live,
     _read_only_poll_lock_path,
@@ -2592,7 +2593,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "node_secret": "connected-agent-reconnect-secret-not-reported",
         }), encoding="utf-8")
         args = SimpleNamespace(
-            config=str(config_path), interval_seconds=15, max_backoff_seconds=60, max_iterations=3,
+            config=str(config_path), interval_seconds=15, max_backoff_seconds=60, max_iterations=6,
         )
         output = io.StringIO()
         with mock.patch(
@@ -2600,18 +2601,146 @@ class ControlPlaneStoreTests(unittest.TestCase):
             side_effect=[
                 RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
                 RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
                 [],
             ],
         ) as iterate, mock.patch("control_plane.node_agent.time.sleep") as sleep, redirect_stdout(output):
             self.assertEqual(run_connected_agent(args), 0)
-        self.assertEqual(iterate.call_count, 3)
-        self.assertEqual(sleep.call_args_list, [mock.call(15), mock.call(30)])
+        self.assertEqual(iterate.call_count, 6)
+        self.assertEqual(sleep.call_args_list, [mock.call(15), mock.call(30), mock.call(60), mock.call(60), mock.call(60)])
         self.assertFalse((Path(self.tempdir.name) / "connected-agent-reconnect-node.json.connected-agent.lock").exists())
         records = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual(
-            [(record["state"], record["next_delay_seconds"]) for record in records[1:4]],
-            [("degraded", 15), ("degraded", 30), ("completed", 15)],
+            [(record["state"], record["next_delay_seconds"]) for record in records[1:7]],
+            [("degraded", 15), ("degraded", 30), ("degraded", 60), ("degraded", 60), ("degraded", 60), ("completed", 15)],
         )
+
+    def test_connected_agent_skips_busy_polls_and_continues_other_scopes_and_lanes(self) -> None:
+        args = argparse.Namespace()
+        scopes = [
+            argparse.Namespace(workspace_id="workspace-busy-0001", workspace_generation="generation-current-0001"),
+            argparse.Namespace(workspace_id="workspace-idle-0002", workspace_generation="generation-current-0002"),
+        ]
+        busy_codes = {
+            "file_read": "CONTROL_PLANE_FILE_READ_POLL_ALREADY_RUNNING",
+            "artifact": "CONTROL_PLANE_ARTIFACT_POLL_ALREADY_RUNNING",
+            "approved_patch": "CONTROL_PLANE_APPROVED_PATCH_POLL_ALREADY_RUNNING",
+            "document_write": "CONTROL_PLANE_DOCUMENT_WRITE_POLL_ALREADY_RUNNING",
+            "exec": "CONTROL_PLANE_EXEC_POLL_ALREADY_RUNNING",
+        }
+        visited: list[tuple[str, str]] = []
+
+        def poller(lane: str):
+            def poll_scope(current: argparse.Namespace) -> int:
+                visited.append((lane, current.workspace_id))
+                if current.workspace_id == scopes[0].workspace_id:
+                    raise RuntimeError(busy_codes[lane])
+                return 0
+            return poll_scope
+
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent._lane_scope_args", return_value=scopes), \
+             mock.patch("control_plane.node_agent._connected_agent_lane_admission") as admission, \
+             mock.patch("control_plane.node_agent.poll_file_read_once", side_effect=poller("file_read")), \
+             mock.patch("control_plane.node_agent.poll_artifact_once", side_effect=poller("artifact")), \
+             mock.patch("control_plane.node_agent.poll_approved_patch_once", side_effect=poller("approved_patch")), \
+             mock.patch("control_plane.node_agent.poll_document_write_once", side_effect=poller("document_write")), \
+             mock.patch("control_plane.node_agent.poll_exec_once", side_effect=poller("exec")):
+            callback = mock.Mock()
+            lanes = _connected_agent_iteration(args, on_heartbeat_success=callback)
+
+        heartbeat_call.assert_called_once_with(args)
+        callback.assert_called_once_with()
+        self.assertEqual(admission.call_count, 10)
+        self.assertEqual(visited, [(lane, scope.workspace_id) for lane in busy_codes for scope in scopes])
+        self.assertEqual(lanes, [
+            {
+                "lane": lane,
+                "state": "busy" if index == 0 else "polled",
+                "reason": busy_codes[lane] if index == 0 else "",
+                "workspace_id": scope.workspace_id,
+                "workspace_generation": scope.workspace_generation,
+            }
+            for lane in busy_codes for index, scope in enumerate(scopes)
+        ])
+
+    def test_connected_agent_propagates_unrecognized_and_wrong_lane_busy_poll_errors(self) -> None:
+        args = argparse.Namespace()
+        scopes = [
+            argparse.Namespace(workspace_id="workspace-failing-0001", workspace_generation="generation-current-0001"),
+            argparse.Namespace(workspace_id="workspace-later-0002", workspace_generation="generation-current-0002"),
+        ]
+        for code in ("CONTROL_PLANE_TRANSPORT_UNAVAILABLE", "CONTROL_PLANE_EXEC_POLL_ALREADY_RUNNING"):
+            with self.subTest(code=code):
+                original_error = RuntimeError(code)
+                callback = mock.Mock()
+                with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+                     mock.patch("control_plane.node_agent._lane_scope_args", return_value=scopes), \
+                     mock.patch("control_plane.node_agent._connected_agent_lane_admission") as admission, \
+                     mock.patch("control_plane.node_agent.poll_file_read_once", side_effect=original_error) as file_read, \
+                     mock.patch("control_plane.node_agent.poll_artifact_once") as artifact, \
+                     mock.patch("control_plane.node_agent.poll_approved_patch_once") as patch_once, \
+                     mock.patch("control_plane.node_agent.poll_document_write_once") as document_write, \
+                     mock.patch("control_plane.node_agent.poll_exec_once") as exec_once:
+                    with self.assertRaises(RuntimeError) as raised:
+                        _connected_agent_iteration(args, on_heartbeat_success=callback)
+
+                self.assertIs(raised.exception, original_error)
+                heartbeat_call.assert_called_once_with(args)
+                callback.assert_called_once_with()
+                admission.assert_called_once_with(scopes[0], "file_read")
+                file_read.assert_called_once_with(scopes[0])
+                artifact.assert_not_called()
+                patch_once.assert_not_called()
+                document_write.assert_not_called()
+                exec_once.assert_not_called()
+
+    def test_connected_agent_capability_poll_failures_keep_heartbeat_cadence_and_reset_backoff(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-capability-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0004",
+            "endpoint_id": "endpoint-connected-agent-0004",
+            "node_secret": "connected-agent-capability-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), interval_seconds=15, max_backoff_seconds=300, max_iterations=8,
+        )
+        outcomes = iter(["heartbeat", "heartbeat", "capability", "capability", "capability", "heartbeat", "heartbeat", "success"])
+        status_records: list[dict[str, object]] = []
+
+        def iterate(_args: argparse.Namespace, *, on_heartbeat_success) -> list[dict[str, str]]:
+            outcome = next(outcomes)
+            if outcome == "heartbeat":
+                raise RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+            on_heartbeat_success()
+            if outcome == "capability":
+                raise RuntimeError("CONTROL_PLANE_FILE_READ_RUNTIME_UNREADY")
+            return []
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._connected_agent_iteration", side_effect=iterate) as iteration, \
+             mock.patch("control_plane.node_agent._write_connected_agent_status", side_effect=lambda _args, status: status_records.append(dict(status))), \
+             mock.patch("control_plane.node_agent.time.sleep") as sleep, \
+             redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+
+        self.assertEqual(iteration.call_count, 8)
+        self.assertEqual(sleep.call_args_list, [mock.call(15), mock.call(30), mock.call(15), mock.call(15), mock.call(15), mock.call(15), mock.call(30)])
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([record["next_delay_seconds"] for record in records[1:9]], [15, 30, 15, 15, 15, 15, 30, 15])
+        final_iteration_states = [record for record in status_records if record["last_iteration_state"] in {"degraded", "completed"}]
+        self.assertEqual([
+            (record["last_iteration"], record["last_heartbeat_state"], record["last_error_scope"])
+            for record in final_iteration_states
+        ], [
+            (1, "failed", "heartbeat"), (2, "failed", "heartbeat"),
+            (3, "succeeded", "capability_poll"), (4, "succeeded", "capability_poll"), (5, "succeeded", "capability_poll"),
+            (6, "failed", "heartbeat"), (7, "failed", "heartbeat"), (8, "succeeded", None),
+        ])
+        self.assertFalse(config_path.with_name(config_path.name + ".connected-agent.lock").exists())
 
     def test_read_only_agent_stops_before_heartbeat_or_poll_when_local_policy_is_disabled(self) -> None:
         config_path = Path(self.tempdir.name) / "agent-policy-node.json"
@@ -3638,6 +3767,118 @@ process.stdout.write(JSON.stringify(observation));
             expires_at_ms=self.now + 120_000,
         )
         self.assertEqual(renewed["binding_id"], binding["binding_id"])
+
+    def test_scoped_pilot_replacement_preserves_expired_retired_quarantined_read_history(self) -> None:
+        old_binding, principal, action = self._quarantine_service_file_read_unknown()
+        self.now = action["expires_at_ms"] + 1
+        self._register_workspace(device_id="device-alpha", workspace_id="workspace-alpha",
+                                 workspace_generation="generation-2", display_name="Replacement workspace")
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-2", display_name="Replacement workspace",
+        )
+        self.store.set_admission_mode(mode="recovery")
+
+        def family() -> dict:
+            with self.store._connection() as connection:
+                return {table: [dict(row) for row in connection.execute(
+                    "SELECT * FROM " + table + " WHERE action_id = ?", (action["action_id"],)
+                )] for table in ("actions", "action_reconciliations", "delivery_attempts", "receipts")}
+
+        before = family()
+        decision = self.store.create_scoped_pilot_decision(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+            reason="Continue exact workspace after retirement with preserved unknown read evidence",
+        )
+        self.assertEqual(decision["workspace_generation"], "generation-2")
+        self.store.set_admission_mode(mode="scoped_pilot")
+        self.store.renew_scoped_pilot_decision(
+            owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 120_000,
+        )
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        self.assertEqual(family(), before)
+        self.assertIsNone(before["actions"][0]["settled_at_ms"])
+        self.assertEqual(before["actions"][0]["binding_id"], old_binding["binding_id"])
+        self.assertEqual(before["receipts"][0]["receipt_state"], "unknown")
+
+    def test_scoped_pilot_retired_read_continuity_rejects_missing_fences_and_evidence(self) -> None:
+        _binding, principal, action = self._quarantine_service_file_read_unknown()
+        self.now = action["expires_at_ms"] + 1
+        self._register_workspace(device_id="device-alpha", workspace_id="workspace-alpha",
+                                 workspace_generation="generation-2", display_name="Replacement workspace")
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-2", display_name="Replacement workspace",
+        )
+        self.store.set_admission_mode(mode="recovery")
+        mutations = [
+            ("registration_current", "node_workspaces", "retired_at_ms", None,
+             "device_id = 'device-alpha' AND workspace_id = 'workspace-alpha' AND workspace_generation = 'generation-1'"),
+            ("binding_active", "bindings", "revoked_at_ms", None, "binding_id = ?"),
+            ("context_open", "contexts", "closed_at_ms", None, "context_id = ?"),
+            ("action_unexpired", "actions", "expires_at_ms", self.now + 1, "action_id = ?"),
+            ("local_handle", "receipts", "local_handle", "unknown-handle", "action_id = ?"),
+            ("action_digest", "actions", "action_digest", "0" * 64, "action_id = ?"),
+            ("quarantine_digest", "action_reconciliations", "evidence_digest", "0" * 64, "action_id = ?"),
+            ("exec_unknown", "actions", "tool_name", "exec_command", "action_id = ?"),
+            ("write_unknown", "actions", "tool_name", "agent_workflow", "action_id = ?"),
+        ]
+        for label, table, column, value, where in mutations:
+            parameters = (() if "?" not in where else
+                          (action["binding_id"] if table == "bindings" else
+                           action["context_id"] if table == "contexts" else action["action_id"],))
+            with self.subTest(label=label), self.store._connection() as connection:
+                previous = connection.execute("SELECT " + column + " FROM " + table + " WHERE " + where,
+                                              parameters).fetchone()[0]
+                connection.execute("UPDATE " + table + " SET " + column + " = ? WHERE " + where,
+                                   (value, *parameters))
+                try:
+                    with self.assertRaises(ConflictError):
+                        self.store.create_scoped_pilot_decision(
+                            owner_id="owner_default", principal_id=principal["principal_id"],
+                            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+                            reason="Incomplete retired-read evidence stays blocking",
+                        )
+                finally:
+                    connection.execute("UPDATE " + table + " SET " + column + " = ? WHERE " + where,
+                                       (previous, *parameters))
+
+    def test_scoped_pilot_retired_read_continuity_rejects_target_scope_changes(self) -> None:
+        _binding, principal, action = self._quarantine_service_file_read_unknown()
+        self.now = action["expires_at_ms"] + 1
+        self._register_workspace(device_id="device-alpha", workspace_id="workspace-alpha",
+                                 workspace_generation="generation-2", display_name="Replacement workspace")
+        kwargs = {"device_id": "device-alpha", "owner_id": "owner_default",
+                  "principal_id": principal["principal_id"], "workspace_id": "workspace-alpha",
+                  "workspace_generation": "generation-2"}
+        with self.store._connection() as connection:
+            row = connection.execute("SELECT * FROM actions WHERE action_id = ?", (action["action_id"],)).fetchone()
+            self.assertTrue(self.store._quarantined_retired_file_read_unknown_matches_pilot_workspace(
+                connection, action=row, **kwargs,
+            ))
+            for field, value in (("device_id", "device-other"), ("owner_id", "owner-other"),
+                                 ("principal_id", "principal-other"), ("workspace_id", "workspace-other"),
+                                 ("workspace_generation", "generation-1"), ("workspace_generation", "generation-missing")):
+                with self.subTest(field=field, value=value):
+                    self.assertFalse(self.store._quarantined_retired_file_read_unknown_matches_pilot_workspace(
+                        connection, action=row, **{**kwargs, field: value},
+                    ))
+
+    def test_scoped_pilot_current_generation_other_binding_unknown_stays_blocking(self) -> None:
+        _binding, principal, action = self._quarantine_service_file_read_unknown()
+        self.now = action["expires_at_ms"] + 1
+        binding = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Other current binding",
+        )
+        self.store.set_admission_mode(mode="recovery")
+        with self.assertRaises(ConflictError):
+            self.store.create_scoped_pilot_decision(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
+                reason="Current generation unknown cannot cross bindings",
+            )
 
     def test_scoped_pilot_stays_blocked_for_quarantined_file_read_with_local_handle(self) -> None:
         binding, principal, _action = self._quarantine_service_file_read_unknown(

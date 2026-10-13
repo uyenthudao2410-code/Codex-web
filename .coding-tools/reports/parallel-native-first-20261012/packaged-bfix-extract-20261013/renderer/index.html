@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:*;">
+  <title>Coding Tools MCP</title>
+  <link rel="icon" type="image/png" href="app-icon.png">
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="settings-compact.css">
+  <link rel="stylesheet" href="control-center.css">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>Execution Hub · Control Center</span><button id="closeManager" title="Đóng Control Center">×</button></div>
+  <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <img src="app-icon.png" alt="Codex Hub Icon" class="brand-logo-img" width="34" height="34" />
+        </div>
+        <div><strong>Codex Hub</strong><small>Control Center</small></div>
+      </div>
+
+      <nav class="nav-list" aria-label="Điều hướng chính">
+
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Thực thi mã</span></button>
+        <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tác vụ & kết quả</span></button>
+        <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
+        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
+      </nav>
+
+      <div class="sidebar-runtime">
+        <div class="runtime-orbit"><i id="sideRuntimeDot"></i><b id="sideRuntimeText">Đang kiểm tra</b></div>
+        <p id="sideWorkspace">Chưa chọn thư mục làm việc</p>
+        <div class="mini-stats"><span>MCP <b id="sideMcp">--</b></span><span>Tunnel <b id="sideTunnel">--</b></span></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 1.0.7</button>
+        <small>Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.</small>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div><p class="eyebrow" id="pageEyebrow">TRUNG TÂM ĐIỀU HÀNH</p><h1 id="pageTitle">Tổng quan Vận hành</h1><p id="pageSubtitle">Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.</p></div>
+        <div class="top-actions">
+          <button class="device-summary-button" id="topDeviceButton" data-nav="device" title="Mở quản lý thiết bị hiện tại"><i></i><span><b id="topDeviceName">Thiết bị hiện tại</b><small id="topDeviceMeta">Local · đang kiểm tra</small></span></button>
+          <button class="icon-button" id="themeToggle" title="Chuyển chủ đề">◐</button>
+          <button class="secondary-button" id="refreshButton">Kiểm tra lại</button>
+          <button class="primary-button" id="topStartButton">Khởi động nhanh</button>
+        </div>
+      </header>
+
+      <div class="content-viewport">
+        <section class="page active" data-page-view="overview">
+          <article class="execution-workspace-strip panel" aria-label="Dự án đang thực thi">
+            <div class="execution-workspace-copy"><span class="section-kicker">THƯ MỤC MCP HIỆN TẠI</span><h2 id="executionWorkspaceLabel">Chưa kích hoạt thư mục</h2><p id="executionAccessSummary">Đang kiểm tra kết nối, quyền và trạng thái thực thi.</p></div>
+            <div class="execution-workspace-actions"><button class="primary-button" id="executionNextAction" data-nav="system" type="button">Thiết lập máy & thư mục</button><button class="secondary-button" data-nav="task" type="button">Theo dõi thực thi</button></div>
+          </article>
+          <div class="control-hero">
+            <div class="control-hero-top">
+              <div class="control-hero-copy">
+                <span id="ccHealthBadge" class="cc-pill is-offline">Checking</span>
+                <h2 id="ccHeadline">Reading Execution Hub state…</h2>
+                <p id="ccSubline">Control Center combines runtime health, multi-client authority, live routing and deterministic proof without inventing provider activity.</p>
+              </div>
+              <div class="control-actions">
+                <span id="ccLastSync" class="cc-sync">Not synced</span>
+                <button class="secondary-button" id="ccRefreshButton">Refresh</button>
+                <button class="primary-button" id="ccRestartButton">Restart runtime</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="da-section">
+            <!-- Section Head: Định lượng Token & Hiệu quả -->
+            <div class="da-basic-token-head">
+              <div>
+                <h2>Định lượng Token &amp; Hiệu quả</h2>
+                <p>Ưu tiên số token đã đo, xu hướng sử dụng, cache, chi phí quy đổi và token trên mỗi kết quả hoàn tất. Số ước lượng luôn được đánh dấu riêng.</p>
+                <p class="da-technical-note">Phân tích Context & Chi phí: model-visible bytes giữ nguyên ở đơn vị byte. Token/chi phí model chỉ hiển thị từ UsageEvent canonical có provenance. Token trên từng card Tool call của ChatGPT/Coding-VP là metric riêng của host; MCP hiện chưa nhận receipt hậu-call chứa con số đó nên hiển thị "—"/unknown thay vì ước lượng. Không quy đổi byte→token và request/response transport bytes không được coi là token.</p>
+              </div>
+            </div>
+
+            <!-- 1. Top Filter & Action Header Toolbar -->
+            <div class="da-dashboard-filter-bar">
+              <div class="da-filter-group left">
+                <div class="da-filter-pill">
+                  <div class="filter-copy">
+                    <small>WORKSPACE</small>
+                    <b id="daProjectText">Chưa xác nhận</b>
+                  </div>
+                </div>
+
+                <div class="da-filter-pill">
+                  <div class="filter-copy">
+                    <small>MÔI TRƯỜNG</small>
+                    <b><span id="daEnvText">Chưa xác nhận</span></b>
+                  </div>
+                </div>
+
+                <div class="da-filter-pill date-pill" id="daDatePill">
+                  <div class="filter-copy">
+                    <small id="daDateHeader">CỬA SỔ DỮ LIỆU</small>
+                    <b id="daDateValue">Chưa có snapshot analytics</b>
+                  </div>
+                </div>
+              </div>
+
+              <div class="da-filter-group right">
+                <div class="da-toggle-badge" title="Chờ snapshot overview; không có dữ liệu được tự tạo">
+                  <span class="refresh-icon">🔄</span>
+                  <span>Chờ snapshot</span>
+                </div>
+
+                <button class="da-action-btn primary-purple" id="daRefreshButton" title="Làm mới dữ liệu từ MCP runtime">
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 0111.6-4M16.5 10a6.5 6.5 0 01-11.6 4M16 3.5v3h-3M4 16.5v-3h3"/></svg>
+                  <span>Làm mới dữ liệu</span>
+                </button>
+
+                <span id="daLastSync" class="cc-sync" hidden>Chưa đồng bộ</span>
+              </div>
+            </div>
+
+            <!-- Real-time Activity Ticker -->
+            <div class="da-ticker" id="daTicker" aria-label="Hoạt động gần đây" style="display: none;">
+              <div class="da-ticker-track" id="daTickerTrack"></div>
+            </div>
+
+            <!-- 2. Top 7 Metric KPI Cards (Balanced 3-Top + 4-Bottom Symmetry) -->
+            <div class="da-grid-tiles da-grid-6">
+
+              <!-- Card 1 (Hero): TOKEN CHATWEB -->
+              <article class="da-tile card-purple da-tile-hero" aria-label="Token ChatWeb">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-purple">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN CHATWEB</span>
+                </div>
+                <div class="da-tile-value" id="daChatTurnValue">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daChatTurnDelta">Chưa có snapshot</span>
+                </div>
+                <div class="da-tile-sub" id="daChatTurnMeta">Thiếu phép đo giữ unknown, không suy diễn từ 0</div>
+              </article>
+
+              <!-- Card 2: TOKEN PROVIDER -->
+              <article class="da-tile card-blue" aria-label="Token provider">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-blue">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN PROVIDER</span>
+                </div>
+                <div class="da-tile-value" id="daTokensTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daTokensDelta">Chưa có UsageEvent canonical</span>
+                  <div class="da-mini-spark-wave blue" id="daSpark" aria-hidden="true"></div>
+                </div>
+                <div class="da-tile-sub" id="daTokensSplit" hidden>—</div>
+                <div class="da-tile-sub" id="daTokensMeta" hidden>—<span id="daTokensRate"></span></div>
+              </article>
+
+              <!-- Card 3: INPUT TOKEN -->
+              <article class="da-tile card-cyan" aria-label="Input token">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-cyan">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 3v12m0 0l-4-4m4 4l4-4"/></svg>
+                  </div>
+                  <span class="da-tile-label">INPUT TOKEN</span>
+                </div>
+                <div class="da-tile-value" id="daTokensInTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daTokensInDelta">Input token unknown</span>
+                </div>
+              </article>
+
+              <!-- Card 4: OUTPUT TOKEN -->
+              <article class="da-tile card-purple" aria-label="Output token">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-purple">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8V7a2 2 0 012-2h12a2 2 0 012 2v1M12 21V9m0 0l-4 4m4-4l4 4"/></svg>
+                  </div>
+                  <span class="da-tile-label">OUTPUT TOKEN</span>
+                </div>
+                <div class="da-tile-value" id="daTokensOutTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daTokensOutDelta">Output token unknown</span>
+                </div>
+              </article>
+
+              <!-- Card 5: CHI PHÍ QUY ĐỔI -->
+              <article class="da-tile card-green is-cost" aria-label="Chi phí quy đổi">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-green">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                  </div>
+                  <span class="da-tile-label">CHI PHÍ QUY ĐỔI</span>
+                </div>
+                <div class="da-tile-value" id="daCostTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta is-cost" id="daCostVnd">Quy đổi bảng giá • không phải ChatGPT billing</span>
+                </div>
+                <div class="da-tile-sub" id="daCostSplit" hidden>—</div>
+                <div class="da-tile-sub" id="daCostMeta" hidden>—</div>
+              </article>
+
+              <!-- Card 6: CACHED TOKEN -->
+              <article class="da-tile card-amber is-health" aria-label="Cached token">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-amber">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <span class="da-tile-label">CACHED TOKEN</span>
+                </div>
+                <div class="da-tile-value" id="daEfficiencyTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daEfficiencyDelta">Cached token unknown</span>
+                </div>
+                <div class="da-tile-sub" id="daEfficiencyMeta" hidden>—</div>
+                <div class="da-tile-sub" id="daEfficiencySub" hidden>—</div>
+                <svg id="daCallsRing" width="36" height="36" style="position:absolute;right:14px;bottom:12px" aria-hidden="true" hidden></svg>
+              </article>
+
+              <!-- Card 7: TOKEN / KẾT QUẢ -->
+              <article class="da-tile card-teal is-health" aria-label="Token trên mỗi kết quả">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-emerald">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN / KẾT QUẢ</span>
+                </div>
+                <div class="da-tile-value" id="daCallsTotal">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daCallsDelta">Chưa có accepted-result evidence</span>
+                </div>
+                <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
+              </article>
+            </div>
+
+            <!-- Trust Strip / Horizontal Summary Strip -->
+            <div class="da-token-trust-strip" aria-label="Chất lượng số liệu token">
+              <span><small>AI thực thi</small><b id="daProviderTokenStatus">Chưa có snapshot</b></span>
+              <span><small>Context</small><b id="daEstimateConfidence">Chưa có ước lượng controller</b></span>
+              <span><small>Token lượt chat</small><b id="daTurnTokenStatus">Chưa đo lượt nào</b></span>
+              <span><small>Token lượt gọi tool</small><b id="daToolCallTokenStatus">Chưa đo lượt nào</b></span>
+              <span hidden><small>ChatWeb điều phối</small><b id="daControllerTokenStatus">Chưa đủ dữ liệu</b></span>
+            </div>
+
+            <!-- Chat Turn Log -->
+            <!-- Main 1-View Split Stage: Charts & Real-time Turn Stream Side-by-Side -->
+            <div class="da-split-view-row">
+              <div class="da-split-left">
+                <!-- Chart 1: Xu hướng sử dụng Token -->
+                <article class="cc-card da-chart-main-card">
+                  <div class="cc-card-head">
+                    <div class="title-with-info">
+                      <h3>Biểu Đồ Lượng Từ Sử Dụng Theo Thời Gian <i class="da-info-icon" title="Xem lượng từ ngữ tăng giảm trong ngày">ⓘ</i></h3>
+                      <div class="da-chart-legend">
+                        <span class="leg-item total"><i class="dot-blue"></i>Tổng lượng từ</span>
+                        <span class="leg-item in"><i class="dot-cyan"></i>Câu hỏi gửi vào</span>
+                        <span class="leg-item out"><i class="dot-purple"></i>Câu trả lời nhận về</span>
+                      </div>
+                    </div>
+                    <div class="da-chart-head-controls">
+                      <select class="da-time-select" id="daChartTimeMode">
+                        <option value="hour" selected>Xem theo giờ</option>
+                        <option value="day">Xem theo ngày</option>
+                      </select>
+                      <span class="more-options-dot">⋮</span>
+                    </div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-chart-wrap" id="daChartCard">
+                      <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Biểu đồ xu hướng token chưa có dữ liệu" role="img" hidden></svg>
+                      <div id="daChartEmpty" class="da-chart-empty">Chưa có dữ liệu — đang chờ snapshot.</div>
+                      <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
+                    </div>
+                  </div>
+                </article>
+
+                <!-- Sub 2-Columns: Donut & Tools Side-by-side -->
+                <div class="da-sub-charts-row">
+                  <!-- Chart 2: Phân bố theo Mô hình Donut -->
+                  <article class="cc-card da-donut-card">
+                    <div class="cc-card-head">
+                      <div>
+                        <h3>Tỷ Lệ Giữa Các Mô Hình AI <i class="da-info-icon" title="Xem mô hình nào đang gánh nhiều việc nhất">ⓘ</i></h3>
+                      </div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-donut-horizontal-wrap">
+                        <svg id="daDonut" class="da-donut" width="100" height="100" viewBox="0 0 130 130" role="img" aria-label="Phân bố token chưa có dữ liệu"><text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text><text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Chưa có dữ liệu</text></svg>
+                          <div class="da-legend-list" id="daLegend"></div>
+                          <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo UsageEvent canonical" hidden></div>
+                      </div>
+                    </div>
+                    <div class="da-donut-foot">
+                      <span id="daDonutFoot">—</span>
+                      <span id="daModelSummary" class="cc-pill">Chưa có dữ liệu</span>
+                    </div>
+                  </article>
+
+                  <!-- Chart 3: Chi phí theo Công cụ -->
+                  <article class="cc-card da-tools-card">
+                    <div class="cc-card-head">
+                      <div>
+                        <h3>Chi Phí Theo Nhóm Công Việc <i class="da-info-icon" title="Loại công việc nào tiêu tốn nhiều chi phí nhất">ⓘ</i></h3>
+                      </div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-bars" id="daToolBars"></div>
+                    </div>
+                    <div class="da-tools-foot">
+                      <span>Tổng chi phí công việc</span>
+                      <strong id="daToolCostTotal">—</strong>
+                    </div>
+                  </article>
+                </div>
+              </div>
+
+              <div class="da-split-right">
+                <!-- Chat Turn Log -->
+                <article class="cc-card" aria-labelledby="daTurnLogTitle">
+                  <div class="cc-card-head">
+                    <div>
+                      <h3 id="daTurnLogTitle">Nhật ký lượt chat <i class="da-info-icon" title="Từng lượt ChatWeb mới nhất: số exact hoặc ước lượng có khoảng. Mỗi lượt một dòng, không cộng dồn.">ⓘ</i></h3>
+                      <p>Mỗi lượt một dòng · mới nhất trước · cập nhật theo nhịp đồng bộ analytics.</p>
+                    </div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-turn-total" id="daTurnTotal">Tổng chưa xác nhận</div>
+                    <div class="da-turn-log" id="daTurnLog" role="table" aria-label="Nhật ký token từng lượt chat"><div class="da-turn-empty">Chưa có lượt chat nào được đo</div></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <!-- Collapsible Details Drawer for Deep Audit & Fleet Performance -->
+            <details class="cc-card da-drawer-card" id="daDrawerAnalytics">
+              <summary>
+                <span>📊 Bảng phân tích chi tiết &amp; Bằng chứng đo lường (Tốc độ, Heatmap, Accepted Result, Độ phủ)</span>
+                <span class="da-drawer-summary-badge">Mở rộng ▾</span>
+              </summary>
+              <div class="da-drawer-content">
+                <!-- 4. Sub-Grid: Speed & Heatmap -->
+                <div class="da-sub-grid-2">
+                  <!-- Sub Card 1: Tốc độ & Thời gian phản hồi -->
+                  <article class="cc-card da-sub-card">
+                    <div class="cc-card-head">
+                      <div><h3>Tốc Độ &amp; Thời Gian Chờ <i class="da-info-icon" title="Tốc độ tạo câu trả lời và thời gian chờ AI phản hồi">ⓘ</i></h3></div>
+                    </div>
+                    <div class="cc-card-body da-perf-split">
+                      <div class="sub-stat-block">
+                        <small>Tốc độ tạo câu trả lời</small>
+                        <strong id="daRealtimeTpm">—</strong>
+                        <span class="stat-change positive" id="daRealtimeTpmMeta">—</span>
+                      </div>
+                      <div class="sub-stat-block">
+                        <small>Thời gian bắt đầu trả lời</small>
+                        <strong id="daRealtimeLatency">—</strong>
+                        <span class="stat-change" id="daRealtimeLatencyMeta">—</span>
+                      </div>
+                    </div>
+                  </article>
+
+                  <!-- Sub Card 2: Heatmap -->
+                  <article class="cc-card da-sub-card">
+                    <div class="cc-card-head">
+                      <div><h3>Khung Giờ Hoạt Động (24 Giờ x 7 Ngày) <i class="da-info-icon" title="Khung giờ nào bạn trao đổi với AI nhiều nhất">ⓘ</i></h3></div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-heatmap-container" id="daHeatmapContainer">
+                        <div class="heatmap-day-labels">
+                          <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+                        </div>
+                        <div class="da-heatmap-grid" id="daHeatmapGrid"></div>
+                        <div class="heatmap-hour-labels">
+                          <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>23:00</span>
+                        </div>
+                        <div class="heatmap-scale">
+                          <span>Ít dùng</span>
+                          <div class="scale-bar-gradient"></div>
+                          <span>Dùng nhiều</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+
+                <!-- 5. Accepted Result Table -->
+                <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daOperationsTitle">Accepted result gần đây <i class="da-info-icon" title="Kết quả terminal trong cửa sổ 7 ngày; metric thiếu dữ liệu giữ unknown, không quy về 0">ⓘ</i></h3></div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-model-table-wrap">
+                      <table class="da-fleet-table">
+                        <thead><tr><th>KẾT QUẢ</th><th>TTAR</th><th>FIRST PASS</th><th>REPLAN</th><th>WAVES</th><th>TOOL CALLS</th><th>PROVIDER COST</th><th>SYSTEM COST</th></tr></thead>
+                        <tbody id="daOperationsTableBody"><tr class="da-fleet-row"><td colspan="8" class="cell-num">Chưa có accepted-result evidence.</td></tr></tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
+                </article>
+
+                <!-- 6. Measurement Coverage Audit Panel -->
+                <article class="cc-card" aria-labelledby="daCoverageTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daCoverageTitle">Measurement coverage</h3><p>Độ phủ bằng chứng exact/current. Thiếu phép đo giữ unknown, không quy về 0 và không suy diễn token từ byte telemetry.</p></div>
+                    <span id="daCoveragePolicy" class="cc-pill is-waiting">—</span>
+                  </div>
+                  <div class="cc-card-body cc-evidence-summary" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>ChatWeb controller usage</span><b id="daCoverageController">—</b><small id="daCoverageControllerMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Provider usage</span><b id="daCoverageProvider">—</b><small id="daCoverageProviderMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Tool invocation</span><b id="daCoverageInvocation">—</b><small id="daCoverageInvocationMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Tool-card tokens</span><b id="daCoverageToolCard">—</b><small id="daCoverageToolCardMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Cost</span><b id="daCoverageCost">—</b><small id="daCoverageCostMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Exact RUN attribution</span><b id="daCoverageRunAttribution">—</b><small id="daCoverageRunAttributionMeta" class="cc-detail">UNOBSERVED</small></div>
+                  </div>
+                </article>
+              </div>
+            </details>
+
+            <!-- 7. Collapsible Pricing & Cost Model Settings -->
+            <details class="cc-card da-cost-details-disclosure" id="daCostDetailsDisclosure">
+              <summary class="cc-card-head">
+                <div>
+                  <h3>Cài Đặt Bảng Giá &amp; Tùy Chỉnh Quy Đổi</h3>
+                  <p>Điều chỉnh đơn giá token theo USD / VNĐ để tính toán chi phí chính xác theo gói tài khoản của bạn</p>
+                </div>
+                <span class="cc-pill" style="font-size: 11px; font-weight: 750; color: var(--da-blue);">Mở cài đặt giá ›</span>
+              </summary>
+              <div class="cc-card-body">
+                <div class="da-cost-model">
+                  <div class="da-cost-form">
+                    <div class="da-field"><label>Mẫu giá định sẵn (USD / 1 triệu token)</label><select id="daPreset">
+                      <option value="gpt-4o-mini">GPT-4o mini (Giá rẻ, tiết kiệm nhất)</option>
+                      <option value="gpt-4o">GPT-4o (Thông dụng, chuẩn mực)</option>
+                      <option value="gpt-4.1">GPT-4.1 (Mới nhất, thông minh)</option>
+                      <option value="o3-mini">o3-mini (Tư duy suy luận nhanh)</option>
+                      <option value="o3">o3 (Tư duy suy luận chuyên sâu)</option>
+                      <option value="custom">Tự nhập đơn giá</option>
+                    </select></div>
+                    <div class="da-field"><label>Đơn giá gửi câu hỏi vào ($/1M token)</label><input id="daRateIn" type="number" min="0" step="0.01" inputmode="decimal" value="0.15"></div>
+                    <div class="da-field"><label>Đơn giá nhận câu trả lời ($/1M token)</label><input id="daRateOut" type="number" min="0" step="0.01" inputmode="decimal" value="0.60"></div>
+                    <div class="da-field"><label>Đơn vị tiền tệ hiển thị</label><select id="daCurrency"><option value="USD" selected>USD ($)</option><option value="VND">VNĐ (₫)</option></select></div>
+                    <div class="da-field" id="daFxField" hidden><label>Tỷ giá VNĐ / 1 USD</label><input id="daFx" type="number" min="1" step="100" inputmode="decimal" placeholder="25000"></div>
+                    <button class="da-apply" id="daApply">Lưu cài đặt</button>
+                  </div>
+                  <div class="da-lane-grid">
+                    <div class="da-lane-head"><span>Mô hình AI</span><span>Giá gửi $/1M</span><span>Giá nhận $/1M</span></div>
+                    <label class="da-lane-row"><span><i class="is-chatweb"></i>Khung Chat Web (ChatWeb)</span><input id="daLaneChatIn" type="number" min="0" step="0.01" value="0.15"><input id="daLaneChatOut" type="number" min="0" step="0.01" value="0.60"></label>
+                    <label class="da-lane-row"><span><i class="is-fast"></i>Phản Hồi Nhanh (Codex Fast)</span><input id="daLaneFastIn" type="number" min="0" step="0.01" value="0.15"><input id="daLaneFastOut" type="number" min="0" step="0.01" value="0.60"></label>
+                    <label class="da-lane-row"><span><i class="is-deepseek"></i>Lập Trình Sâu (OpenCode)</span><input id="daLaneDeepIn" type="number" min="0" step="0.01" value="0.28"><input id="daLaneDeepOut" type="number" min="0" step="0.01" value="0.42"></label>
+                    <label class="da-lane-row"><span><i class="is-terra"></i>Tác Vụ Phức Tạp (Codex Deep)</span><input id="daLaneTerraIn" type="number" min="0" step="0.01" value="2.50"><input id="daLaneTerraOut" type="number" min="0" step="0.01" value="10.00"></label>
+                    <label class="da-lane-row"><span><i class="is-sol"></i>Tối Quan Trọng (Codex Critical)</span><input id="daLaneSolIn" type="number" min="0" step="0.01" value="10.00"><input id="daLaneSolOut" type="number" min="0" step="0.01" value="40.00"></label>
+                  </div>
+                  <p class="da-cost-note"><b>Lưu ý:</b> Bảng chi phí là ước tính tham khảo quy đổi theo số từ ngữ trao đổi, không đại diện cho hóa đơn trừ tiền trực tiếp từ tài khoản dịch vụ AI của bạn.</p>
+                </div>
+              </div>
+            </details>
+            <article class="cc-card legacy-overview" id="runtimeSourceStatusCard">
+              <div class="cc-card-head"><div><h3>Loaded runtime source</h3><p>Ba component chỉ CURRENT khi running revision khớp disk; Tunnel dùng READY theo health receipt, không giả làm source revision.</p></div><span id="runtimeSourceSummary" class="cc-pill is-waiting">Đang kiểm tra</span></div>
+              <div class="cc-card-body cc-evidence-summary">
+                <div class="cc-evidence-stat"><span>Electron UI</span><b id="runtimeElectronState">UNKNOWN</b><small id="runtimeElectronMeta" class="cc-detail">Chưa có process receipt</small></div>
+                <div class="cc-evidence-stat"><span>Recovery Host</span><b id="runtimeRecoveryState">UNKNOWN</b><small id="runtimeRecoveryMeta" class="cc-detail">Chưa có revision receipt</small></div>
+                <div class="cc-evidence-stat"><span>Coding MCP</span><b id="runtimeMcpSourceState">UNKNOWN</b><small id="runtimeMcpSourceMeta" class="cc-detail">Chưa có revision receipt</small></div>
+                <div class="cc-evidence-stat"><span>Tunnel</span><b id="runtimeTunnelSourceState">UNKNOWN</b><small id="runtimeTunnelSourceMeta" class="cc-detail">Chưa có health receipt</small></div>
+                <div class="cc-evidence-stat"><span>Activation closure</span><b id="runtimeClosureState">UNAVAILABLE</b><small id="runtimeClosureMeta" class="cc-detail">Chưa có checkpoint-bound closure receipt</small></div>
+              </div>
+              <div class="notice warning" id="sourceUpdateNotice" hidden><b>Source update đang chờ activation</b><p id="sourceUpdateMessage">Một component đang chạy revision cũ. Dùng controlled activation hoặc <code>npm run dev</code>; không kết luận LIVE chỉ từ trạng thái service.</p></div>
+              <div class="notice warning" id="activationClosureNotice" hidden><b>Activation chưa LIVE/CLOSED</b><p id="activationClosureMessage">Source, postflight, connector hoặc runtime readiness chưa đủ để đóng activation.</p></div>
+            </article>
+
+            <section class="cc-goal-continuity-grid legacy-overview" aria-label="Goal, Knowledge and Continuity">
+              <article class="cc-card" id="ccGoalCard">
+                <div class="cc-card-head">
+                  <div><h3>Goal Pursuit</h3><p>Problem Revision là đơn vị hoàn thành; projection này chỉ đọc exact current RUN và không cấp authority.</p></div>
+                  <span id="ccGoalStatus" class="cc-pill is-offline">UNAVAILABLE</span>
+                </div>
+                <div class="cc-card-body">
+                  <div class="cc-goal-summary-grid">
+                    <div class="cc-evidence-stat"><span>Problem</span><b id="ccGoalProblem">UNKNOWN</b><small id="ccGoalRevision" class="cc-detail">Revision unknown</small></div>
+                    <div class="cc-evidence-stat"><span>Criteria</span><b id="ccGoalCriteria">UNKNOWN</b><small id="ccGoalCoverage" class="cc-detail">Exact coverage unavailable</small></div>
+                    <div class="cc-evidence-stat"><span>Current RUN / WAVE</span><b id="ccGoalRun">UNKNOWN</b><small id="ccGoalWave" class="cc-detail">Wave unknown</small></div>
+                    <div class="cc-evidence-stat"><span>Controller / Execution</span><b id="ccGoalController">UNKNOWN</b><small id="ccGoalExecution" class="cc-detail">Execution state unavailable</small></div>
+                  </div>
+                  <div class="cc-goal-next">
+                    <span>NEXT CRITICAL GAP</span>
+                    <b id="ccGoalGap">UNAVAILABLE</b>
+                    <small id="ccGoalAction">Next action unavailable</small>
+                  </div>
+                </div>
+              </article>
+
+              <article class="cc-card" id="ccContinuityCard">
+                <div class="cc-card-head">
+                  <div><h3>Knowledge &amp; Continuity</h3><p>Rotation safety comes from durable authority/continuity facts, never from heuristic pressure signals.</p></div>
+                  <span id="ccKnowledgeStatus" class="cc-pill is-offline">UNAVAILABLE</span>
+                </div>
+                <div class="cc-card-body cc-continuity-facts">
+                  <div class="cc-key-value"><span>Knowledge revision</span><b id="ccKnowledgeRevision">UNKNOWN</b><small id="ccKnowledgeAck" class="cc-detail">Controller ACK unknown</small></div>
+                  <div class="cc-key-value"><span>Recovery</span><b id="ccKnowledgeRecovery">UNKNOWN</b><small id="ccCapsuleStatus" class="cc-detail">Capsule unknown</small></div>
+                  <div class="cc-key-value"><span>Safe to rotate</span><b id="ccRotateStatus">UNKNOWN</b><small id="ccRotateReasons" class="cc-detail">Reason codes unavailable</small></div>
+                  <div class="cc-key-value"><span>Exact context pressure</span><b id="ccExactContext">UNKNOWN</b><small id="ccRotationSignals" class="cc-detail">HEURISTIC · signals unavailable · not authority</small></div>
+                  <div class="cc-key-value"><span>Problem economics</span><b id="ccProblemEconomics">UNAVAILABLE</b><small id="ccProblemEconomicsMeta" class="cc-detail">Manual immutable-snapshot analytics only; never polled on the heartbeat.</small></div>
+                </div>
+              </article>
+            </section>
+
+            <!-- Hidden compatibility containers required by test contracts -->
+            <div class="cc-kpi-grid" aria-label="Operational KPIs" hidden style="display: none !important;">
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Runtime</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRuntime">—</strong><small id="ccKpiRuntimeMeta">MCP — · Tunnel —</small></article>
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Frontends</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiClients">0/3</strong><small id="ccKpiClientsMeta">No frontend online</small></article>
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Active route</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRoute">Idle</strong><small id="ccKpiRouteMeta">No model lane currently active</small></article>
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Proof</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiProof">0/0</strong><small id="ccKpiProofMeta">No proof recorded for current run</small></article>
+            </div>
+
+            <div class="cc-workbench" hidden style="display: none !important;">
+              <article class="cc-card">
+                <div class="cc-card-head"><div><h3>Live execution fabric</h3><p>9-node topology. Animated paths require live client, delegation or write-lease evidence.</p></div><span id="ccRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div>
+                <div class="cc-card-body">
+                  <div id="ccRouterFabric" class="ops-router" aria-label="Command Center live routing topology">
+                    <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M50 50 C82 50 118 118 150 150"></path><path id="ccEdgeChatWeb" class="ops-router-edge is-offline" d="M50 50 C82 50 118 118 150 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 50 C150 82 150 118 150 150"></path><path id="ccEdgeDesktop" class="ops-router-edge is-offline" d="M150 50 C150 82 150 118 150 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M250 50 C218 50 182 118 150 150"></path><path id="ccEdgeOpenCode" class="ops-router-edge is-offline" d="M250 50 C218 50 182 118 150 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 150 82 150 50 150"></path><path id="ccEdgeFast" class="ops-router-edge is-offline" d="M150 150 C118 150 82 150 50 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 150 218 150 250 150"></path><path id="ccEdgeDeepSeek" class="ops-router-edge is-offline" d="M150 150 C182 150 218 150 250 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 182 82 218 50 250"></path><path id="ccEdgeTerra" class="ops-router-edge is-offline" d="M150 150 C118 182 82 218 50 250"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C150 182 150 218 150 250"></path><path id="ccEdgeWriter" class="ops-router-edge is-offline" d="M150 150 C150 182 150 218 150 250"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 182 218 218 250 250"></path><path id="ccEdgeSol" class="ops-router-edge is-offline" d="M150 150 C182 182 218 218 250 250"></path></g>
+                    </svg>
+                    <div id="ccRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterOpenCode" class="ops-router-node is-offline"><b>OpenCode</b><small>Go frontend</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterFast" class="ops-router-node is-offline"><b>Codex Fast</b><small>Mini / Luna</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterHub" class="ops-router-node is-hub is-offline"><b>Execution Hub</b><small>one runtime authority</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterDeepSeek" class="ops-router-node is-offline"><b>OpenCode Go</b><small>Flash / Pro</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterTerra" class="ops-router-node is-offline"><b>Codex Deep</b><small>Terra</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterWriter" class="ops-router-node is-offline"><b>MCP Writer</b><small>proof + fence</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterSol" class="ops-router-node is-offline"><b>Codex Critical</b><small>Sol</small><span data-router-state>idle</span></div>
+                  </div>
+                  <div class="ops-router-legend"><span><i></i>connected</span><span class="active"><i></i>active</span><span class="waiting"><i></i>waiting</span><span class="blocked"><i></i>blocked</span></div>
+                </div>
+              </article>
+
+              <div class="cc-side-stack">
+                <article class="cc-card"><div class="cc-card-head"><div><h3>Active execution</h3><p>Durable task/run state, not chat transcript.</p></div><span id="ccTaskStatus" class="cc-pill is-idle">idle</span></div><div class="cc-card-body"><div id="ccActivityIndicator" class="cc-activity is-offline" role="status" aria-live="polite" aria-busy="false" data-phase="idle"><span class="cc-activity-orb" aria-hidden="true"><i></i><i></i><i></i></span><span class="cc-activity-copy"><b id="ccActivityLabel">Đang rảnh</b><small id="ccActivityDetail">Không có bằng chứng thực thi đang hoạt động.</small></span><em id="ccMotionMode">Sẵn sàng</em></div><h4 id="ccTaskObjective" class="cc-task-title">No active task.</h4><div id="ccTaskStep" class="cc-detail">Waiting for work</div><div id="ccRunMeta" class="cc-detail cc-mono">No active orchestration run</div></div></article>
+                <article class="cc-card"><div class="cc-card-head"><div><h3>Authority</h3><p>Controller and writer are intentionally separate.</p></div><span id="ccContinuity" class="cc-pill is-waiting">Continuity hold</span></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Controller</span><b id="ccController">Unclaimed</b></div><div class="cc-key-value"><span>Writer / fence</span><b id="ccWriter">Coding Tools MCP · idle</b></div></div></article>
+              </div>
+            </div>
+
+            <div class="cc-bottom-grid legacy-overview">
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Proof & execution economics</h3><p>Fast operational evidence, without mixing billing planes.</p></div></div><div class="cc-card-body cc-evidence-summary"><div class="cc-evidence-stat"><span>Proof ledger</span><b id="ccProofCount">0 proof records</b><small id="ccProofLatest" class="cc-detail">No proof yet</small></div><div class="cc-evidence-stat"><span>Delegations</span><b id="ccDelegationCount">0 delegation records</b><small id="ccPerformance" class="cc-detail">Performance telemetry not recorded yet</small></div><div class="cc-evidence-stat"><span>Provider traffic</span><b id="ccTrafficPolicy">Limits unknown</b><small id="ccTrafficMeta" class="cc-detail">Automatic routing remains evidence-gated.</small></div><div class="cc-evidence-stat"><span>Runtime recovery</span><b id="ccRecoveryState">Stable</b><small id="ccRecoveryMeta" class="cc-detail">No local recovery evidence.</small></div><div class="cc-evidence-stat"><span>Context pressure</span><b id="ccContextPressure">Unknown</b><small id="ccContextMeta" class="cc-detail">Host does not expose conversation context pressure.</small></div></div></article>
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Operator shortcuts</h3><p>High-value destinations only. Diagnostics stay under System.</p></div></div><div class="cc-card-body cc-action-grid"><button data-nav="task">Tasks & Proof</button><button data-nav="deploy">Connections</button><button data-nav="system">System diagnostics</button></div></article>
+            </div>
+          </div>
+
+          <div class="hero-card legacy-overview">
+            <div class="hero-copy">
+              <span class="soft-badge" id="heroBadge">Đang kiểm tra trạng thái vận hành</span>
+              <h2 id="heroTitle">Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn</h2>
+              <p id="heroText">Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.</p>
+              <div class="hero-actions">
+                <button class="primary-button large" id="heroStartButton">Bắt đầu triển khai</button>
+                <button class="secondary-button large" data-nav="guide">Xem hướng dẫn kết nối</button>
+              </div>
+            </div>
+            <div class="connection-visual" aria-hidden="true">
+              <div class="node local"><span>CỤC BỘ</span><b>Thư mục làm việc</b></div>
+              <div class="flow-line"><i></i></div>
+              <div class="node bridge"><span>MCP</span><b>Cầu nối an toàn</b></div>
+              <div class="flow-line"><i></i></div>
+              <div class="node cloud"><span>WEB</span><b>ChatGPT</b></div>
+            </div>
+          </div>
+
+          <div class="status-grid legacy-overview">
+            <article class="status-card"><div class="status-head"><span class="status-symbol blue">N</span><i id="runtimeDot"></i></div><h3>Môi trường Portable</h3><strong id="runtimeStatus">Đang kiểm tra</strong><p id="runtimeMeta">Đang kiểm tra Python tích hợp</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol violet">M</span><i id="mcpDot"></i></div><h3>Coding Tools MCP</h3><strong id="mcpStatus">Chưa khởi động</strong><p id="mcpMeta">127.0.0.1:18766</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol cyan">T</span><i id="tunnelDot"></i></div><h3>OpenAI Tunnel</h3><strong id="tunnelStatus">Chưa kết nối</strong><p id="tunnelMeta">Chờ hoàn tất cấu hình</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol green">W</span><i id="workspaceDot"></i></div><h3>Thư mục làm việc hiện tại</h3><strong id="workspaceStatus">Chưa chọn</strong><p id="workspaceMeta">Chỉ thư mục được chọn mới có thể được MCP truy cập</p></article>
+          </div>
+
+          <div class="two-column overview-bottom legacy-overview">
+            <article class="panel quick-panel">
+              <div class="panel-title"><div><span class="section-kicker">THAO TÁC NHANH</span><h3>Thao tác thường dùng</h3></div></div>
+              <div class="action-list">
+                <button id="overviewRestart"><span class="action-icon">↻</span><span><b>Khởi động lại toàn bộ dịch vụ</b><small>Khởi động lại MCP và Tunnel theo đúng thứ tự</small></span><i>›</i></button>
+                <button data-nav="workspace"><span class="action-icon">▱</span><span><b>Chuyển thư mục làm việc</b><small>Tự động tạo lại môi trường vận hành sau khi chuyển</small></span><i>›</i></button>
+                <button data-nav="guide"><span class="action-icon">?</span><span><b>Tạo MCP trong ứng dụng Web</b><small>Hoàn tất cấu hình kết nối ChatGPT theo từng bước</small></span><i>›</i></button>
+                <button data-open="tunnel-ui"><span class="action-icon">↗</span><span><b>Mở Bảng điều khiển Tunnel</b><small>Xem trạng thái kết nối đường truyền và yêu cầu</small></span><i>›</i></button>
+              </div>
+            </article>
+            <article class="panel progress-panel">
+              <div class="panel-title"><div><span class="section-kicker">TRIỂN KHAI</span><h3>Nhiệm vụ hiện tại</h3></div><span class="soft-badge neutral" id="progressBadge">Chờ thao tác</span></div>
+              <div class="progress-ring-wrap"><div class="progress-ring" id="progressRing"><span id="progressPercent">0%</span></div><div><b id="progressTitle">Chưa bắt đầu triển khai</b><p id="progressMessage">Sau khi hoàn tất cấu hình triển khai, nhấp Khởi động nhanh.</p></div></div>
+              <div class="progress-track"><i id="progressBar"></i></div>
+              <div class="compact-buttons"><button class="danger-button" id="overviewStop">Dừng dịch vụ</button><button class="secondary-button" data-nav="logs">Xem nhật ký</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" data-page-view="device">
+          <div class="section-header"><div><span class="section-kicker">DEVICE CONTROL</span><h2>Thiết bị hiện tại</h2><p>Định danh thiết bị, runtime, Tunnel và Git của máy đang chạy Recovery Host này. Panel này chỉ điều khiển máy hiện tại; shared-account inventory và chọn binding được thực hiện qua Ubuntu Control Plane/MCP.</p></div><div class="inline-actions"><span id="deviceScopeBadge" class="security-chip">Local only</span><button class="secondary-button" id="deviceRefresh">Làm mới</button></div></div>
+          <div class="device-overview-grid"><article class="panel device-identity-card"><div class="panel-title"><div><span class="section-kicker">IDENTITY</span><h3 id="deviceDisplayName">Thiết bị hiện tại</h3><p>device_id bền vững theo cài đặt; device_instance_id đổi theo lifecycle Recovery Host.</p></div><span id="deviceOnline" class="soft-badge neutral">Đang kiểm tra</span></div><div class="device-kv-grid"><div><span>Device ID</span><code id="deviceId">—</code></div><div><span>Device instance</span><code id="deviceInstanceId">—</code></div><div><span>Workspace</span><code id="deviceWorkspace">—</code></div><div><span>Git ứng dụng</span><code id="deviceGitState">Không có dữ liệu</code></div></div></article><article class="panel"><div class="panel-title"><div><span class="section-kicker">OWNERSHIP</span><h3>Runtime trên thiết bị này</h3><p>Process/tunnel chỉ được điều khiển khi persistent device_id khớp.</p></div></div><div class="device-service-grid"><div class="device-service-card"><span>Coding</span><b id="deviceCodingState">Đang kiểm tra</b><small id="deviceCodingTunnelId">Tunnel: —</small></div><div class="device-service-card"><span>Recovery</span><b id="deviceRecoveryState">Đang kiểm tra</b><small id="deviceRecoveryTunnelId">Tunnel: —</small></div></div><div class="notice warning"><b>Ranh giới hiện tại</b><p>Panel này chỉ điều khiển process của device hiện tại. Client cùng tài khoản ChatGPT chọn binding_id qua Control Plane để task chạy tại node đã bind; panel không tự gửi thao tác remote và không retarget task.</p></div></article></div>
+          <article class="panel device-actions-panel"><div><span class="section-kicker">CURRENT DEVICE ACTIONS</span><h3>Điều khiển an toàn</h3><p>Dùng đúng các workflow Recovery Host đã có; không tạo destructive action xuyên thiết bị.</p></div><div class="device-actions"><button class="secondary-button" id="deviceStart">Khởi động</button><button class="secondary-button" id="deviceRestart">Khởi động lại</button><button class="danger-button" id="deviceStop">Dừng</button><button class="primary-button" id="deviceRepair">Kiểm tra & sửa chữa</button></div></article>
+        </section>
+
+        <section class="page" data-page-view="system">
+          <div class="section-header"><div><span class="section-kicker">THIẾT LẬP THỰC THI MÃ</span><h2>Kết nối, cấp quyền và kiểm tra tại đây</h2><p>Chọn máy chủ và thư mục một lần. Tiếp tục ngay từ bước còn thiếu.</p></div><button class="secondary-button" id="refreshSystemSetup" type="button">Kiểm tra thiết lập</button></div>
+
+          <article class="setup-card panel" id="setupSummary" aria-labelledby="setupSummaryTitle">
+            <div class="setup-card-head"><div><span class="section-kicker">MÁY NÀY · THƯ MỤC · THỰC THI</span><h3 id="setupSummaryTitle">Đang đọc trạng thái thiết lập…</h3><p id="setupSummaryText">Cấu hình đã lưu sẽ được giữ lại khi đóng và mở lại ứng dụng.</p></div><span id="setupSummaryBadge" class="soft-badge neutral">Đang kiểm tra</span></div>
+            <div class="setup-progress" role="list" aria-label="Tiến độ thiết lập">
+              <div class="setup-step" id="setupStepConnection" role="listitem"><i>1</i><span><b>Kết nối máy chủ</b><small>Máy này và Ubuntu</small></span></div>
+              <div class="setup-step" id="setupStepFolder" role="listitem"><i>2</i><span><b>Thư mục & quyền</b><small>Phạm vi làm việc</small></span></div>
+              <div class="setup-step" id="setupStepAccount" role="listitem"><i>3</i><span><b>Liên kết tài khoản</b><small>Máy chủ cấp quyền</small></span></div>
+              <div class="setup-step" id="setupStepVerify" role="listitem"><i>4</i><span><b>Kiểm tra</b><small>Đối chiếu kết quả thực tế</small></span></div>
+            </div>
+            <div class="setup-card-actions"><p id="setupNextDetail">Chưa có trạng thái mới.</p><button class="primary-button" id="setupPrimaryAction" type="button">Kiểm tra lại</button></div>
+          </article>
+
+          <nav class="setup-navigation" aria-label="Các phần thiết lập">
+            <button class="setup-section-link" data-nav="deploy"><b>1. Máy chủ & máy này</b><small id="settingsConnectionSummary">Đang kiểm tra</small></button>
+            <button class="setup-section-link" data-nav="workspace"><b>2. Thư mục & quyền</b><small id="settingsWorkspaceSummary">Đang kiểm tra</small></button>
+            <button class="setup-section-link" data-nav="system" data-setup-anchor="setupExecutionSection"><b>3. Kiểm tra thực thi</b><small>Đọc, sửa và chạy mã</small></button>
+          </nav>
+
+          <div class="setup-sections">
+            <section class="setup-section" id="setupConnectionSection" aria-labelledby="setupConnectionTitle" tabindex="-1">
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">1</span><div><h3 id="setupConnectionTitle">Kết nối máy chủ và máy này</h3><p>Ubuntu quản lý quyền; máy này giữ mã nguồn và chạy tác vụ.</p></div></div>
+              <article class="panel setup-connection-panel">
+                <div id="centralExecutorNotice" class="central-setup" hidden>
+                <div class="setup-mode-notice" id="setupDevelopmentNotice" role="status" hidden><b>Bạn đang dùng bản phát triển · npm start</b><p>Bản này dùng để phát triển giao diện. Các bước xác minh máy, thư mục và quyền Ubuntu cần bản cài đặt đã được xác minh. Máy chủ đang bật không đồng nghĩa máy Windows đã được cấp quyền.</p></div>
+                <label class="field" for="controlPlaneServerUrl"><span>Địa chỉ máy chủ Ubuntu</span></label>
+                <div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" aria-describedby="controlPlaneEnrollmentStatus" placeholder="https://ten-may-chu.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu kết nối</button></div>
+                <p id="controlPlaneEnrollmentStatus" class="setup-field-help" role="status" aria-live="polite">Nhập địa chỉ HTTPS của Ubuntu. Không cần API key hay Tunnel trên Windows.</p>
+                <p id="personalChatGptConnectionHelp" class="setup-field-help">ChatGPT cá nhân: dùng app Ubuntu Control Plane đã kết nối. Máy này không cần Organization ID hoặc ChatGPT Workspace ID. Quyền từng thao tác do Ubuntu quyết định.</p>
+                <button class="secondary-button" type="button" data-nav="guide">Cách dùng trong ChatGPT Plus</button>
+                <div class="setup-server-admin">
+                  <h3>Phê duyệt trên máy chủ</h3>
+                  <p>Chủ hệ thống duyệt máy và quyền thư mục trong Console. Sau khi duyệt, tiếp tục thiết lập tại đây.</p>
+                  <button class="secondary-button" id="openControlPlaneConsole" type="button" disabled>Mở Console để duyệt</button>
+                  <p id="controlPlaneConsoleHint">Nhập địa chỉ Ubuntu ở trên để mở trang quản trị. Mở trang không đăng ký máy hoặc cấp quyền.</p>
+                </div>
+                <div class="setup-next-step" aria-live="polite"><span class="section-kicker" id="connectionNextOwner">BƯỚC TIẾP THEO</span><h3 id="connectionNextTitle">Đang kiểm tra kết nối…</h3><p id="connectionNextText">Giữ nguyên cấu hình đã lưu.</p><button class="secondary-button" id="refreshControlPlaneEnrollment" type="button">Kiểm tra trạng thái máy</button></div>
+                <div id="controlPlaneAuthorityStatusCard" class="authority-status-card" hidden>
+                  <div class="panel-title"><div><h3>Tài khoản & máy được phép làm việc</h3><p>Duyệt máy xong, quản trị viên cần cấp thư mục cho tài khoản của bạn.</p></div><span id="controlPlaneAuthorityStatusBadge" class="soft-badge neutral">Chưa kiểm tra</span></div>
+                  <p id="controlPlaneAuthorityStatusText">Kiểm tra này chỉ đọc trạng thái Ubuntu; không tạo binding hoặc cấp quyền.</p>
+                  <div id="controlPlaneAuthorityTargets" class="authority-target-list" aria-live="polite"><span class="task-muted">Chưa kiểm tra target.</span></div>
+                  <button id="refreshControlPlaneAuthorityStatus" class="secondary-button" type="button">Kiểm tra liên kết</button>
+                </div>
+                <details class="setup-technical"><summary>Chi tiết kỹ thuật & khôi phục</summary>
+                  <p id="centralExecutorNoticeText">Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu.</p>
+                  <p id="centralExecutorActivationStatus"></p>
+                  <pre id="controlPlaneTechnicalStatus"></pre>
+                  <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
+                  <div id="controlPlaneCredentialRotation" class="setting-row" hidden><span><b>Credential máy</b><small id="controlPlaneCredentialRotationStatus">Chỉ đổi sau khi Ubuntu đã duyệt máy; raw credential không hiển thị trong UI.</small></span><button id="rotateControlPlaneCredential" class="secondary-button" type="button">Đổi credential</button></div>
+                  <p>Không dán <code>ctx_…</code>, Operator Token hoặc bearer vào Windows. Máy này chỉ thực thi trong quyền local được cấp; kết nối không tự tạo quyền.</p>
+                </details>
+              </div>
+              </article>
+            </section>
+
+            <section class="setup-section" id="setupFolderSection" aria-labelledby="setupFolderTitle" tabindex="-1">
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">2</span><div><h3 id="setupFolderTitle">Thêm thư mục cho MCP</h3><p>Chọn dự án và xác nhận một lần để đọc, sửa file và chạy lệnh.</p></div></div>
+              <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
+            <div class="setup-mode-notice" id="workspaceSetupDevelopmentNotice" role="status" hidden><b>Cần xác minh bản cài đặt</b><p>Chọn thư mục, đăng ký workspace và bật quyền Ubuntu cần bản cài đặt đã được xác minh.</p></div>
+            <div class="panel-title"><div><h3>Thư mục đã thêm</h3><p>Bấm dùng thư mục trong danh sách, hoặc thêm dự án mới.</p></div><button id="refreshControlPlaneWorkspaces" class="secondary-button" type="button">Làm mới</button></div>
+            <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
+            <section id="centralWorkspacePermissionEditor" class="workspace-permission-editor" tabindex="-1" aria-label="Thiết lập quyền thư mục">
+            <div class="workspace-folder-choice"><span class="input-action-meta"><b id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</b><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span><button id="chooseControlPlaneWorkspace" class="primary-button" type="button">Thêm thư mục</button></div>
+            <details class="workspace-permission-help"><summary>Tùy chỉnh quyền</summary>
+            <fieldset class="capability-picker" aria-describedby="controlPlaneCapabilitySummary">
+              <legend>Mức quyền cho thư mục này</legend>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read"><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code" checked><span><b>Làm việc với mã nguồn</b><small>Đọc, sửa file và chạy lệnh theo policy.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="custom"><span><b>Tùy chỉnh</b><small>Chọn từng quyền trong phần nâng cao.</small></span></label>
+              <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc, sửa file và chạy lệnh trong thư mục này.</small>
+              <details id="centralWorkspaceCustomCapabilities" class="capability-custom">
+                <summary>Chọn từng quyền</summary>
+                <label><input id="controlPlaneCapabilityRead" type="checkbox" checked disabled><span><b>Đọc</b><small>Bắt buộc để inventory và đọc kết quả.</small></span></label>
+                <label><input id="controlPlaneCapabilityWrite" type="checkbox"><span><b>Ghi</b><small>Cho phép runtime local sửa file theo policy máy.</small></span></label>
+                <label><input id="controlPlaneCapabilityExec" type="checkbox"><span><b>Chạy</b><small>Cho phép runtime local chạy process theo policy máy.</small></span></label>
+              </details>
+            </fieldset>
+            </details>
+            <div class="workspace-permission-submit"><button id="registerControlPlaneWorkspace" class="secondary-button" type="button">Dùng thư mục & cấp quyền</button><p id="controlPlaneWorkspaceRegistrationStatus" role="status">Thêm thư mục và xác nhận quyền một lần.</p></div>
+            </section>
+            <details class="workspace-permission-help"><summary>Cách dùng thư mục</summary><p>Thư mục được chọn là đích cho tác vụ mới. Các tác vụ đã gắn với Codex-web hoặc AutoCAD tiếp tục dùng đúng thư mục và quyền của mình. Quyền đọc, sửa và chạy được áp dụng sau lần xác nhận của bạn; kết nối MCP vẫn phải hợp lệ.</p><p>Thêm thư mục, đọc/sửa file và kiểm tra quyền không mở Windows Sandbox. Metadata Git và phiên bản CLI dùng native theo policy. Mã dự án cần quyền native riêng hoặc cách ly; kiểm tra Sandbox là thao tác riêng. Các nút quyền và thu hồi nằm trong “Quản lý nâng cao”.</p></details>
+          </article>
+            </section>
+
+            <section class="setup-section" id="setupExecutionSection" aria-labelledby="setupExecutionTitle" tabindex="-1">
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">3</span><div><h3 id="setupExecutionTitle">Kiểm tra khả năng thực thi mã</h3><p>Quyền được cấp và kết quả thao tác thực tế được kiểm tra riêng.</p></div></div>
+              <article class="panel setup-execution-panel">
+                <label class="field"><span>Môi trường thực thi</span><select id="controlPlaneExecutionMode"><option value="native_first" selected>Tự động có kiểm soát · Native trước</option><option value="native_only">Chỉ native có kiểm soát · Không mở VM</option><option value="isolated">Ưu tiên cách ly · Windows Sandbox</option></select><small>Đọc/sửa file luôn dùng File API. Chạy mã dự án cần allowlist native được cấp riêng; quyền thư mục không tự cấp quyền native cho build/test.</small></label>
+                <p id="controlPlaneRunnerState" class="setup-proof-note" role="status">Chưa kiểm tra capability native; chưa có telemetry trực tiếp về VM hoặc RAM.</p>
+                <ul id="setupExecutionChecklist" class="setup-execution-checklist" aria-label="Trạng thái từng thao tác">
+                  <li id="setupReadCheck" data-state="unknown"><b>Đọc mã nguồn</b><small>Chưa kiểm chứng thao tác đọc.</small></li>
+                  <li id="setupPatchCheck" data-state="unknown"><b>Sửa mã nguồn</b><small>Chưa kiểm chứng thao tác sửa.</small></li>
+                  <li id="setupExecCheck" data-state="unknown"><b>Chạy lệnh & test</b><small>Chưa kiểm chứng kết quả thực thi.</small></li>
+                </ul>
+                <div class="setup-continuation">
+                  <div><b>Quyền của thư mục đã chọn</b><p id="setupContinueStatus" role="status" aria-live="polite">Thêm thư mục và xác nhận một lần để MCP đọc, sửa và chạy lệnh.</p></div>
+                  <div class="inline-actions"><button class="primary-button" id="setupContinueAction" type="button">Dùng thư mục & cấp quyền</button><button class="secondary-button" id="setupPrepareExecAction" type="button" hidden>Kiểm tra Sandbox riêng</button><button class="secondary-button" id="setupCancelContinuation" type="button" hidden>Dừng chờ</button></div>
+                </div>
+                <p class="setup-proof-note">Kiểm tra quyền không tự mở Sandbox. Chế độ native dùng ProcessContainer có giới hạn quyền và chặn mạng; không tương đương cách ly VM. Lệnh cần cách ly hoặc kiểm tra Sandbox có thể mở Windows Sandbox. Kết quả thực thi được xác nhận từ Job.</p>
+                <button class="secondary-button" type="button" data-nav="task">Xem tác vụ & kết quả</button>
+              </article>
+            </section>
+          </div>
+
+          <div class="setup-preferences-link"><button class="secondary-button" data-nav="settings" type="button">Tùy chọn ứng dụng</button><small id="settingsAppSummary">Giao diện & chạy nền</small></div>
+          <details class="setup-support">
+            <summary>Hỗ trợ & cấu hình nâng cao</summary>
+            <div class="system-launch-grid settings-advanced-links">
+              <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Kiểm tra & sửa chữa</b><small>Xem chẩn đoán và chọn thao tác sửa.</small></span><i>›</i></button>
+              <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Nhật ký hỗ trợ</b><small>Nhật ký cục bộ đã che dữ liệu nhạy cảm.</small></span><i>›</i></button>
+              <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build & xác minh</b><small>Dành cho người quản trị hoặc phát triển.</small></span><i>›</i></button>
+              <button class="system-launch" data-nav="guide"><span class="system-launch-icon">GD</span><span><b>Hướng dẫn ChatGPT</b><small>Kết nối app và kiểm tra công cụ trong chat.</small></span><i>›</i></button>
+            </div>
+            <details class="setup-legacy" data-direct-only>
+              <summary>Kết nối trực tiếp cũ · Tunnel, Proxy và cổng local</summary>
+        <div class="setup-legacy-deploy">
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN TRIỂN KHAI</span><h2 id="deploySectionTitle">Cấu hình triển khai nhanh</h2><p id="deploySectionSubtitle">Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.</p></div><div class="step-pill" data-direct-only><span>1</span>Cấu hình <i></i><span>2</span>Kiểm tra <i></i><span>3</span>Triển khai</div></div>
+
+          <div class="two-column deploy-grid">
+            <article class="panel">
+              <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
+                <b>Chuyển vai trò máy này sang executor Ubuntu</b>
+                <p>Thao tác này kiểm tra công việc đang chạy, đóng quyền thực thi, dừng dịch vụ Windows cũ rồi chuyển máy sang chỉ chạy MCP/workspace cục bộ. Đây là chuyển cấu hình, không yêu cầu checkpoint nghiệm thu code. Runtime API Key và OpenAI Tunnel Windows không được gửi sang Ubuntu và sẽ không còn được dùng. Tiếp theo cần pairing và policy do Ubuntu cấp.</p>
+                <div class="inline-actions"><button class="primary-button" id="handoffCentralExecutor" type="button">Chuyển sang executor Ubuntu</button></div>
+              </div>
+              <div data-direct-only>
+              <div class="panel-title"><div><h3>Định danh OpenAI Tunnel</h3><p>Khóa mật mã được mã hóa lưu trữ trong tiến trình chính, giao diện và nhật ký không bao giờ đọc văn bản thuần.</p></div><span class="security-chip">Mã hóa Windows</span></div>
+              <label class="field"><span>Runtime API Key</span><div class="input-action"><input id="runtimeKeyInput" type="password" autocomplete="off" placeholder="Dán Runtime API Key"><button id="saveRuntimeKey">Lưu an toàn</button></div><small id="runtimeKeyHint">Chưa lưu</small></label>
+              <label class="field"><span>Tunnel ID chính</span><input id="tunnelIdInput" placeholder="Ví dụ tunnel_..."><small>Tunnel dành cho Coding Tools MCP. Tạo hoặc xem trên trang Tunnels của OpenAI Platform.</small></label>
+              <div class="recovery-tunnel-settings">
+                <div class="panel-title"><div><h3>Tunnel cứu hộ</h3><p>Đường truy cập độc lập tới Recovery MCP khi Coding Tunnel chính gặp sự cố.</p></div><span id="recoveryTunnelSettingsBadge" class="soft-badge neutral">Chưa cấu hình</span></div>
+                <label class="field"><span>Recovery Tunnel ID</span><input id="recoveryTunnelIdInput" autocomplete="off" spellcheck="false" placeholder="tunnel_..."><small>Phải là một Tunnel riêng và khác Tunnel ID chính. Sau khi lưu, Recovery Host sẽ tự kết nối trong vài giây.</small></label>
+                <div class="setting-row"><span><b>Recovery MCP cục bộ</b><small id="recoveryMcpEndpoint">http://127.0.0.1:18767/mcp</small></span><span class="security-chip">Break-glass</span></div>
+                <div class="setting-row"><span><b>Trạng thái Tunnel cứu hộ</b><small id="recoveryTunnelSettingsStatus">Đang kiểm tra trạng thái thực tế…</small></span><span id="recoveryTunnelSettingsState" class="security-chip">Đang kiểm tra</span></div>
+              </div>
+              <div class="inline-actions"><button class="secondary-button" data-open="openai-runtime-keys">Yêu cầu Runtime Key</button><button class="secondary-button" data-open="openai-tunnels">Tạo / quản lý Tunnels</button><button class="primary-button" id="saveRecoveryTunnel">Lưu Tunnel cứu hộ</button></div>
+              </div>
+            </article>
+
+            <article class="panel" data-direct-only>
+              <div class="panel-title"><div><h3>Mạng & Proxy</h3><p>Mặc định tự động chọn kết nối trực tiếp, Proxy hệ thống Windows hoặc Proxy cục bộ phổ biến, không còn cố định vào phần mềm Proxy hay cổng cụ thể nào.</p></div></div>
+              <label class="field"><span>Chế độ Proxy</span><select id="proxyModeSelect"><option value="auto">Tự động phát hiện (Khuyến nghị)</option><option value="system">Theo hệ thống Windows</option><option value="manual">Proxy thủ công</option><option value="direct">Bắt buộc kết nối trực tiếp</option></select><small>Chế độ tự động sẽ xác minh kết nối mạng thực tế tới OpenAI.</small></label>
+              <label class="field" id="manualProxyField"><span>Địa chỉ Proxy thủ công</span><input id="proxyUrlInput" placeholder="Ví dụ http://127.0.0.1:7890"><small id="proxyHint">Chỉ cần điền ở chế độ thủ công, hỗ trợ Proxy HTTP/HTTPS.</small></label>
+              <div class="environment-list">
+                <div><i id="envPythonDot"></i><span><b>Python / Môi trường Portable</b><small id="envPythonText">Chờ kiểm tra</small></span><button id="pythonInstall">Cài đặt</button></div>
+                <div><i id="envProxyDot"></i><span><b>Tuyến đường mạng hiện tại</b><small id="envProxyText">Chờ kiểm tra</small></span><button id="proxyDetect">Kiểm tra lại</button></div>
+              </div>
+            </article>
+          </div>
+
+          <article class="deploy-footer panel accent-panel" data-direct-only>
+            <div><span class="section-kicker">SẴN SÀNG TRIỂN KHAI</span><h3>Lưu cấu hình và triển khai dịch vụ</h3><p id="deploySummary">Vui lòng chọn thư mục làm việc và điền thông tin Tunnel.</p></div>
+            <div class="deploy-actions"><button class="secondary-button" id="saveDeploySettings">Chỉ lưu cấu hình</button><button class="primary-button large" id="deployNow">Lưu và bắt đầu triển khai</button></div>
+          </article>
+        </div>
+        <div class="setup-legacy-workspace">
+          <div class="section-header"><div><span class="section-kicker">RANH GIỚI KHÔNG GIAN LÀM VIỆC</span><h2>Thư mục làm việc & Quyền</h2><p>Đây là ranh giới an toàn quan trọng nhất của MCP: trang web chỉ nhìn thấy thư mục bạn cho phép.</p></div></div>
+          <article class="panel workspace-picker" data-direct-only>
+            <div class="folder-illustration">▱</div>
+            <div class="folder-copy"><span>Đang cho phép truy cập</span><h3 id="selectedWorkspace">Chưa chọn thư mục</h3><p>Sau khi chuyển thư mục, trợ lý sẽ âm thầm khởi động lại MCP cục bộ ở chế độ nền và cập nhật ranh giới truy cập.</p></div>
+            <button class="primary-button" id="chooseWorkspace">Chọn thư mục</button>
+          </article>
+
+          <article class="panel authorized-roots-panel" data-direct-only>
+            <div class="panel-title"><div><h3>Thư mục ủy quyền bổ sung</h3><p>Không cần chuyển vùng làm việc chính. Sau khi thêm, ChatGPT có thể trực tiếp đọc và sửa đổi các đường dẫn tuyệt đối trong các thư mục này; thư mục chưa ủy quyền vẫn sẽ bị từ chối.</p></div><button class="secondary-button" id="addAuthorizedRoot">Thêm thư mục ủy quyền</button></div>
+            <div class="authorized-root-list" id="authorizedRootsList"><span class="task-muted">Chưa thêm thư mục ủy quyền bổ sung</span></div>
+          </article>
+
+          <div class="two-column" data-direct-only>
+            <article class="panel">
+              <div class="panel-title"><div><h3>Chế độ quyền lệnh</h3><p>Khuyến nghị người dùng thông thường giữ Chế độ an toàn.</p></div></div>
+              <div class="choice-stack">
+                <label class="choice selected"><input type="radio" name="permission" value="safe" checked><span><b>Chế độ an toàn</b><small>Kết nối mạng, thực thi kịch bản và thao tác nguy hiểm cần có sự cho phép rõ ràng.</small></span><em>Khuyên dùng</em></label>
+                <label class="choice"><input type="radio" name="permission" value="trusted"><span><b>Chế độ tin cậy</b><small>Giảm bớt xác nhận cho các thao tác phát triển thông thường nhưng vẫn giữ các kiểm tra nguy hại.</small></span></label>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-title"><div><h3>Cổng cục bộ</h3><p>Chỉ cần thay đổi khi xảy ra xung đột cổng.</p></div></div>
+              <div class="port-grid"><label class="field"><span>Cổng dịch vụ MCP</span><input id="mcpPortInput" type="number" min="1024" max="65535" value="18766"></label><label class="field"><span>Cổng bảng điều khiển Tunnel</span><input id="healthPortInput" type="number" min="1024" max="65535" value="18082"></label></div>
+              <div class="notice blue-notice"><b>Chỉ lắng nghe trên máy cục bộ</b><p>Cả hai cổng đều gắn vào 127.0.0.1, không lộ trực tiếp ra mạng nội bộ.</p></div>
+            </article>
+          </div>
+          <div class="page-footer-actions" data-direct-only><button class="secondary-button" id="saveWorkspace">Lưu cài đặt không gian làm việc</button><button class="primary-button" id="saveWorkspaceRestart">Lưu và tái triển khai</button></div>
+        </div>
+            </details>
+          </details>
+        </section>
+
+        <section class="page" data-page-view="guide">
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN CẤU HÌNH CHATGPT</span><h2 id="guideSectionTitle">Tạo MCP trong giao diện Web</h2><p id="guideSectionSubtitle">Hoàn thành theo đúng thứ tự. Tên lối vào có thể hơi khác tùy gói tài khoản hoặc workspace.</p></div><button class="primary-button" data-direct-only data-open="chatgpt-connectors">Mở Cài đặt Trình kết nối ChatGPT</button></div>
+          <article id="centralExecutorGuide" class="panel notice blue-notice" hidden><b>Dùng kết nối Ubuntu Control Plane hiện có trong ChatGPT Plus cá nhân</b><p>Trên ChatGPT web, mở một chat, nhấn <code>+</code> → Developer mode/Apps và chọn Ubuntu Control Plane. Bắt đầu chỉ-đọc bằng <code>workspace_context</code> với operation <code>inventory</code>; xác nhận đúng node/workspace, presence online, readiness ready và policy enabled trước khi thử thao tác khác. Nếu danh sách tool cũ, mở chi tiết app trong ChatGPT Settings → Apps/Plugins và bấm Refresh. Quy trình này không cần gói Business, Organization ID, ChatGPT Workspace ID hoặc cài Codex Desktop để gọi app từ ChatGPT web; quyền đọc, ghi và chạy lệnh vẫn do capability/policy Ubuntu quyết định.</p></article>
+          <div class="guide-layout" data-direct-only>
+            <div class="guide-steps">
+              <article class="guide-step" data-guide-step="tunnel"><div class="step-number">1</div><div class="step-content"><div class="step-heading"><h3>Tạo Tunnel trên OpenAI Platform</h3><label><input type="checkbox" data-guide-check="tunnel">Đã hoàn thành</label></div><p>Mở trang quản lý Tunnels, tạo Tunnel dành riêng cho Coding Tools MCP, sau đó sao chép mã định danh <code>tunnel_...</code>.</p><div class="mock-browser"><div class="mock-bar"><i></i><i></i><i></i><span>platform.openai.com / Tunnels</span></div><div class="mock-content"><span class="mock-label">Tunnel name</span><div class="mock-row"><b>Coding Tools MCP</b><em>Active</em></div><span class="mock-label">Tunnel ID</span><code>tunnel_••••••••••••</code></div></div><button class="secondary-button" data-open="openai-tunnels">Mở trang Tunnels</button></div></article>
+              <article class="guide-step" data-guide-step="key"><div class="step-number">2</div><div class="step-content"><div class="step-heading"><h3>Tạo Runtime API Key</h3><label><input type="checkbox" data-guide-check="key">Đã hoàn thành</label></div><p>Tạo API Key riêng cho môi trường chạy. Không dùng khóa quản trị và không gửi khóa cho bất kỳ ai.</p><div class="notice"><b>Cách làm đúng</b><p>Dán vào trang "Triển khai nhanh" của trợ lý này, sau khi lưu sẽ được Windows mã hóa, nhật ký sẽ không có văn bản thuần.</p></div><button class="secondary-button" data-open="openai-runtime-keys">Mở trang Runtime Keys</button></div></article>
+              <article class="guide-step" data-guide-step="deploy"><div class="step-number">3</div><div class="step-content"><div class="step-heading"><h3>Quay lại trợ lý để hoàn tất triển khai</h3><label><input type="checkbox" data-guide-check="deploy">Đã hoàn thành</label></div><p>Chọn thư mục làm việc, điền Tunnel ID và Runtime Key, nhấp "Lưu và bắt đầu triển khai". Chờ tất cả trạng thái chuyển sang xanh lá trước khi tiếp tục.</p><div class="mini-flow"><span>Thư mục làm việc</span><i>→</i><span>MCP</span><i>→</i><span>Tunnel</span><i>→</i><span class="green-text">Đã kết nối</span></div><button class="secondary-button" data-nav="deploy">Quay lại Triển khai nhanh</button></div></article>
+              <article class="guide-step" data-guide-step="connector"><div class="step-number">4</div><div class="step-content"><div class="step-heading"><h3>Tạo Trình kết nối Tùy chỉnh trong ChatGPT</h3><label><input type="checkbox" data-guide-check="connector">Đã hoàn thành</label></div><p>Vào "Cài đặt → Trình kết nối/Apps", bật chế độ nhà phát triển và tạo MCP tùy chỉnh. Chọn Tunnel vừa tạo và hoàn tất xác nhận tài khoản.</p><div class="connector-fields"><div><span>Tên</span><b>Coding Tools MCP</b><button data-copy="Coding Tools MCP">Sao chép</button></div><div><span>Dịch vụ cục bộ</span><b id="guideLocalUrl">http://127.0.0.1:18766/mcp</b><button id="copyLocalUrl">Sao chép</button></div><div><span>Tunnel ID</span><b id="guideTunnelId">Chưa điền</b><button id="copyTunnelId">Sao chép</button></div></div><div class="notice warning" id="connectorContractNotice" hidden><b>Tool contract đã thay đổi</b><p id="connectorContractMessage">ChatGPT cần đọc lại action schema hiện tại trước khi tiếp tục.</p><button class="secondary-button" id="ackConnectorContract">Kiểm tra lại trạng thái</button></div><button class="primary-button" data-open="chatgpt-connectors">Mở Cài đặt ChatGPT</button></div></article>
+              <article class="guide-step" data-guide-step="test"><div class="step-number">5</div><div class="step-content"><div class="step-heading"><h3>Thực hiện bài kiểm tra công cụ đầu tiên</h3><label><input type="checkbox" data-guide-check="test">Đã hoàn thành</label></div><p>Trong cuộc trò chuyện trên web, chọn MCP đó và gửi câu văn dưới đây. Lần đầu tiên ghi hoặc thực thi lệnh, hãy kiểm tra cẩn thận gợi ý ủy quyền.</p><div class="prompt-box"><span>Câu kiểm tra đề xuất</span><p>Hãy liệt kê các tệp ở tầng đầu tiên của thư mục làm việc hiện tại, và cho tôi biết đây là dự án gì. Không được sửa đổi bất kỳ tệp nào.</p><button data-copy="Hãy liệt kê các tệp ở tầng đầu tiên của thư mục làm việc hiện tại, và cho tôi biết đây là dự án gì. Không được sửa đổi bất kỳ tệp nào.">Sao chép câu kiểm tra</button></div></div></article>
+            </div>
+            <aside class="guide-aside panel"><span class="section-kicker">DANH SÁCH KIỂM TRA</span><h3>Tiến độ kết nối</h3><div class="guide-progress-number"><b id="guideProgressPercent">0%</b><span>Đã hoàn thành</span></div><div class="progress-track"><i id="guideProgressBar"></i></div><ul id="guideChecklist"><li>Tạo Tunnel</li><li>Chuẩn bị Runtime Key</li><li>Triển khai dịch vụ cục bộ</li><li>Tạo ChatGPT MCP</li><li>Hoàn tất kiểm tra chỉ đọc</li></ul><div class="notice warning"><b>Chú ý</b><p>Việc tạo trình kết nối trong ChatGPT thuộc thao tác tài khoản người dùng, trợ lý sẽ không giả lập nhấp chuột hoặc đọc thông tin đăng nhập web của bạn.</p></div></aside>
+          </div>
+        </section>
+
+        <section class="page" data-page-view="task">
+          <div class="section-header"><div><span class="section-kicker">NHIỆM VỤ TIẾP TỤC</span><h2>Trạng thái thực thi nhiệm vụ</h2><p>Trạng thái được lưu trong workspace hiện tại, vẫn có thể tiếp tục sau khi làm mới trang web, chuyển đoạn chat hoặc khởi động lại MCP.</p></div><div class="inline-actions"><button class="danger-button" id="clearTaskState">Xóa trạng thái</button><button class="primary-button" id="refreshTaskState">Làm mới trạng thái</button></div></div>
+          <div id="taskStateEmpty" class="panel task-empty"><b>Hiện không có trạng thái nhiệm vụ</b><span>Sau khi mô hình AI bắt đầu nhiệm vụ lập trình và gọi task_state_update, thông tin sẽ tự động hiển thị ở đây.</span></div>
+          <div id="taskStateContent" class="task-dashboard" hidden>
+            <article class="panel task-objective"><span class="section-kicker">MỤC TIÊU HIỆN TẠI</span><div class="task-title-row"><h3 id="taskObjective">—</h3><span class="soft-badge" id="taskStatus">idle</span></div><p><b>ID Nhiệm vụ:</b><code id="taskId">—</code></p><p><b>Bước hiện tại:</b><span id="taskCurrentStep">—</span></p><p><b>Bước tiếp theo:</b><span id="taskNextStep">—</span></p><p class="task-failure" id="taskFailureRow" hidden><b>Lý do thất bại:</b><span id="taskFailure">—</span></p></article>
+            <div class="task-grid">
+              <article class="panel"><div class="panel-title"><h3>Các bước thực thi</h3><span id="taskStepCount">0 / 0</span></div><div class="inline-actions task-controls"><button class="secondary-button" id="pauseTask">Tạm dừng</button><button class="secondary-button" id="resumeTask">Tiếp tục</button><button class="danger-button" id="stopTask">Dừng</button></div><div class="task-steps" id="taskSteps"></div></article>
+              <article class="panel"><div class="panel-title"><h3>Lệnh đang thực thi</h3></div><div class="task-command" id="taskCommand">Hiện không có lệnh nào đang chạy</div><div class="panel-title task-subtitle"><h3>Kết quả kiểm tra gần đây</h3></div><div class="task-results" id="taskTests"></div></article>
+            </div>
+            <div class="task-grid">
+              <article class="panel"><div class="panel-title"><h3>Các tệp đã sửa đổi</h3><span id="taskFileCount">0</span></div><div class="task-files" id="taskFiles"></div></article>
+              <article class="panel"><div class="panel-title"><h3>Báo cáo build gần đây</h3></div><div class="task-build" id="taskBuild"></div></article>
+            </div>
+          </div>
+          <article class="panel" id="p5A0Card">
+            <div class="panel-title"><div><span class="section-kicker">P5-A0 SHADOW A/A</span><h3>Kiểm chứng đường đo rework</h3><p>Chỉ kiểm chứng assignment/funnel/integrity. Hai nhãn A/A đều nhận control; không có treatment hoặc auto-promotion.</p></div><span class="soft-badge neutral" id="p5A0Status">Chưa đồng bộ</span></div>
+            <div class="device-kv-grid"><div><span>Source</span><code id="p5A0Source">—</code></div><div><span>Environment</span><code id="p5A0Environment">—</code></div><div><span>Seed commitment</span><code id="p5A0Seed">—</code></div><div><span>Manifest / Epoch</span><code id="p5A0Manifest">—</code></div></div>
+            <div class="inline-actions task-controls"><button class="secondary-button" id="p5A0Refresh">Trạng thái</button><button class="secondary-button" id="p5A0Prepare">Prepare A0</button><button class="primary-button" id="p5A0Open">Mở A0</button><button class="secondary-button" id="p5A0Analyze">Analyze</button><button class="secondary-button" id="p5A0Pause">Pause</button><button class="secondary-button" id="p5A0Resume">Resume</button><button class="secondary-button" id="p5A0Close">Close</button><button class="danger-button" id="p5A0HardStop">Hard stop</button></div>
+            <div class="task-command" id="p5A0Detail">Chưa đọc P5-A0 live state.</div>
+          </article>
+          <article class="panel task-history-panel"><div class="panel-title"><h3>Lịch sử nhiệm vụ</h3><button class="secondary-button" id="refreshTaskHistory">Làm mới lịch sử</button></div><div class="task-history" id="taskHistory"><span class="task-muted">Chưa có lịch sử nhiệm vụ</span></div></article>
+          <article class="panel performance-panel"><div class="panel-title"><div><h3>Phân tích hiệu năng</h3><span class="task-muted">Phân biệt thời gian thực thi trên máy và thời gian chờ mô hình / Tunnel</span></div><div class="inline-actions"><button class="secondary-button" id="refreshPerformance">Làm mới</button><button class="danger-button" id="clearPerformance">Xóa sạch</button></div></div><div class="performance-metrics" id="performanceMetrics"><span class="task-muted">Chưa có bản ghi hiệu năng</span></div><div class="performance-timeline" id="performanceTimeline"></div></article>
+        </section>
+
+        <section class="page" data-page-view="build">
+          <div class="section-header"><div><span class="section-kicker">BUILD & XÁC MINH</span><h2>Xác minh & Build</h2><p>Nhận diện dự án, chạy kiểm thử và build, kiểm tra sản phẩm đầu ra và tính mã SHA256.</p></div><div class="inline-actions"><button class="secondary-button" id="inspectBuild">Nhận diện dự án</button><button class="primary-button" id="runBuild">Bắt đầu xác minh</button></div></div>
+          <div class="two-column"><article class="panel"><div class="panel-title"><h3>Dự án & Lệnh</h3><span class="soft-badge" id="buildProjectType">Chưa nhận diện</span></div><label class="field"><span>Lệnh kiểm thử</span><input id="buildTestCommand" placeholder="Tự động phát hiện"></label><label class="field"><span>Lệnh Build</span><input id="buildCommand" placeholder="Tự động phát hiện"></label><label class="field"><span>Thư mục sản phẩm (phân cách bằng dấu phẩy)</span><input id="buildArtifacts" placeholder="dist, build"></label><div class="choice-stack"><label class="choice"><input id="buildRunTests" type="checkbox" checked><span><b>Thực thi kiểm thử</b><small>Ngăn chặn build khi kiểm thử thất bại.</small></span></label><label class="choice"><input id="buildRunBuild" type="checkbox" checked><span><b>Thực thi Build</b><small>Xác minh sản phẩm sau khi build thành công.</small></span></label></div></article><article class="panel"><div class="panel-title"><h3>Tiến độ thời gian thực</h3><span id="buildStatus">Chờ bắt đầu</span></div><pre class="build-console" id="buildConsole">Chưa thực hiện xác minh build.</pre></article></div>
+          <article class="panel"><div class="panel-title"><h3>Báo cáo Build</h3><span id="buildReportStatus">—</span></div><div class="build-report-grid" id="buildReport"><span class="task-muted">Hiển thị kiểm thử, build, phiên bản, sản phẩm và SHA256 sau khi hoàn tất xác minh.</span></div></article>
+        </section>
+
+        <section class="page" data-page-view="health">
+          <div class="section-header"><div><span class="section-kicker">CHẨN ĐOÁN SỨC KHỎE HỆ THỐNG</span><h2>Kiểm tra & Sửa chữa Hệ thống</h2><p>Kiểm tra không gian làm việc, môi trường chạy, khóa mật mã, cổng dịch vụ, MCP và Tunnel.</p></div><div class="inline-actions"><button class="secondary-button" id="inspectHealth">Kiểm tra lại</button><button class="primary-button" id="repairHealth">Sửa chữa nhanh</button></div></div>
+          <article class="panel"><div class="panel-title"><h3>Kết quả kiểm tra</h3><span class="soft-badge" id="healthSummary">Chưa kiểm tra</span></div><div class="health-list" id="healthList"><span class="task-muted">Tự động kiểm tra sức khỏe khi vào trang này.</span></div></article>
+          <div class="notice warning"><b>Ranh giới an toàn</b><p>Sửa chữa nhanh chỉ điều chỉnh cấu hình của bản thân trợ lý, Token xác thực và khởi động lại dịch vụ được quản lý; sẽ không chấm dứt các tiến trình không xác định, cũng không điền thay bạn Runtime Key hoặc Tunnel ID.</p></div>
+        </section>
+
+        <section class="page" data-page-view="logs">
+          <div class="section-header"><div><span class="section-kicker">CHẨN ĐOÁN</span><h2>Nhật ký Vận hành</h2><p>Khóa bí mật và Token xác thực sẽ tự động ẩn; có thể sao chép an toàn các thông tin chẩn đoán thông thường.</p></div><div class="inline-actions"><button class="secondary-button" id="clearLogs">Xóa nhật ký</button><button class="primary-button" id="refreshLogs">Làm mới nhật ký</button></div></div>
+          <article class="panel log-panel"><div class="log-toolbar"><span><i class="dot green"></i>Nhật ký Trợ lý</span><div><button class="log-filter active" data-log-filter="all">Tất cả</button><button class="log-filter" data-log-filter="error">Lỗi</button><button class="log-filter" data-log-filter="info">Thông tin</button></div></div><div class="log-output" id="logOutput"><div class="empty-state"><b>Chưa có nhật ký</b><span>Sau khi khởi động hoặc kiểm tra dịch vụ, nhật ký sẽ hiển thị ở đây.</span></div></div></article>
+        </section>
+
+        <section class="page" data-page-view="settings">
+          <div class="section-header"><div><span class="section-kicker">TÙY CHỌN ỨNG DỤNG</span><h2>Cài đặt ứng dụng</h2><p>Điều khiển giao diện và hành vi khởi động.</p></div></div>
+          <div class="settings-page-stack">
+            <article class="panel settings-list settings-primary-list">
+              <div class="panel-title"><h3>Thường dùng</h3><span class="settings-save-hint" id="settingsPreferenceHint" role="status" aria-live="polite">Mỗi thay đổi được lưu riêng.</span></div>
+              <label class="setting-row"><span><b>Chủ đề giao diện</b><small>Chọn sáng hoặc tối. Không thay đổi quyền hay kết nối.</small></span><span class="setting-control"><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select><small class="setting-save-state" data-setting-state="theme">Đã lưu</small></span></label>
+              <label class="setting-row"><span><b>Mở cùng Windows</b><small>Chỉ áp dụng cho bản cài đặt; bản development không ghi startup.</small></span><span class="setting-control"><input id="startWithWindowsToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="startWithWindows">Đã lưu</small></span></label>
+              <label class="setting-row"><span><b>Tự khởi động dịch vụ đã cấu hình</b><small>Chỉ khởi động phần đã thiết lập; không cấp thêm quyền.</small></span><span class="setting-control"><input id="autoStartToggle" class="toggle" type="checkbox"><small class="setting-save-state" data-setting-state="autoStartServices">Đã lưu</small></span></label>
+              <label class="setting-row"><span><b>Giữ ứng dụng chạy nền khi đóng cửa sổ</b><small>Không giữ chạy khi Windows đăng xuất.</small></span><span class="setting-control"><input id="keepRunningToggle" class="toggle" type="checkbox" checked><small class="setting-save-state" data-setting-state="keepRunningOnClose">Đã lưu</small></span></label>
+            </article>
+            <details class="setup-support settings-advanced">
+              <summary>Nâng cao & hỗ trợ<small>Thông tin ứng dụng, bảo mật và tùy chọn ít dùng</small></summary>
+              <div class="settings-advanced-content">
+                <article class="panel settings-list">
+                  <div class="panel-title"><h3>Thông tin và bảo mật</h3></div>
+                  <div class="setting-row"><span><b>Chế độ công cụ</b><small>Ứng dụng luôn dùng smart-v3; không cần cấu hình.</small></span><span class="security-chip">smart-v3</span></div>
+                  <label class="setting-row"><span><b>Thời gian báo tiến độ</b><small>Chỉ đổi thời điểm báo tiến độ cho ChatGPT, không đổi quyền.</small></span><span class="setting-control"><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select><small class="setting-save-state" data-setting-state="progressReportSeconds">Đã lưu</small></span></label>
+                  <div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div>
+                  <div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div>
+                  <div class="setting-row"><span><b>Dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div>
+                </article>
+                <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
+              </div>
+            </details>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div class="toast-stack" id="toastStack"></div>
+  <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>Đang xử lý</b><span>Vui lòng không nhấp liên tục vào nút thao tác</span></div>
+  <script src="app.js"></script>
+  <script src="p5-a0.js"></script>
+  <script src="control-center.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

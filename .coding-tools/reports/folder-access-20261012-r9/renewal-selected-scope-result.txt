@@ -1,0 +1,7 @@
+Finished codex-control-plane-authority-renewal.service - Renew bounded Coding Tools shared-service authority.
+Starting codex-control-plane-authority-renewal.service - Renew bounded Coding Tools shared-service authority...
+{"ok":true,"enabled":true,"admission_mode":"scoped_pilot","grant_id":"mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd","configured_decision_id":"pilot_dfb3174078d842299c41c6638830e505","decision_id":"pilot_dfb3174078d842299c41c6638830e505","followed_selected_pilot":false,"grant":{"expires_at_ms":1792756981903,"renewed":false},"decision":{"expires_at_ms":1791847531435,"renewed":false}}
+Finished codex-control-plane-authority-renewal.service - Renew bounded Coding Tools shared-service authority.
+Starting codex-control-plane-authority-renewal.service - Renew bounded Coding Tools shared-service authority...
+{"ok":true,"enabled":true,"admission_mode":"scoped_pilot","grant_id":"mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd","configured_decision_id":"pilot_dfb3174078d842299c41c6638830e505","decision_id":"pilot_833530c73c72491ba0163037ae80e8f0","followed_selected_pilot":true,"grant":{"expires_at_ms":1792756981903,"renewed":false},"decision":{"expires_at_ms":1791847531435,"renewed":false}}
+Finished codex-control-plane-authority-renewal.service - Renew bounded Coding Tools shared-service authority.

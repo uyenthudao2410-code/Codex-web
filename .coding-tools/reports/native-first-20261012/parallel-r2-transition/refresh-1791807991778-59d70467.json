@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "operation": "refresh",
+  "observed_at": "2026-10-12T12:26:31.778Z",
+  "observed_at_ms": 1791807991778,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r2\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "runtime": {
+      "updateIncomplete": true
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv587m4p-0c2b59f01b1d25ba52938db8923db9da",
+      "operation_id": "full-clean-mv587be0-057f8d2c0cc51d5a65e066f4",
+      "state": "UPDATE_INCOMPLETE",
+      "epoch_state": "HANDOFF",
+      "admission_open": false,
+      "update_incomplete": true,
+      "ready_commit_digest": null,
+      "expires_at_unix_ms": 1791808571690,
+      "ready_at": null,
+      "error": null
+    }
+  },
+  "mutating": true,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "a0a7bd1252f1a0b2294520dc7dbbe22c284eebedb4938fb942edbe77228dec90",
+  "smoke_proof_sha256": "42b6f405502550865f7e439a666f9aa36c5f5cacad2537fd0eff206d2e73cfc6",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r2-transition\\refresh-1791807991778-59d70467.json"
+}

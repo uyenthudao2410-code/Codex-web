@@ -11,6 +11,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.windows_mxc_sandbox import (
@@ -143,6 +144,23 @@ class NpmCommandResolutionTests(unittest.TestCase):
             self.resolve(["npm", "--prefix", str(outside), "test"])
         self.assertEqual(context.exception.code, "SANDBOX_NPM_PREFIX_SCOPE_DENIED")
         self.assertFalse((self.scratch / "npm").exists())
+
+    def test_bare_executable_resolution_never_uses_host_cwd_search(self) -> None:
+        approved = self.toolchain / "git.exe"
+        approved.write_bytes(b"trusted toolchain fixture; never executed")
+        fake = self.workspace / "git.exe"
+        fake.write_bytes(b"workspace fixture; never executed")
+        with patch("coding_tools_mcp.windows_mxc_sandbox.shutil.which", return_value=str(fake)) as which:
+            argv, _ = _resolve_executable(["git", "--version"], workspace_root=self.workspace, workdir=self.workdir, scratch_directory=self.scratch, roots=[self.toolchain], path_entries=[self.toolchain], allow_workspace_executable=False)
+        self.assertEqual(argv[0], str(approved.resolve()))
+        which.assert_not_called()
+
+    def test_safe_native_lookup_rejects_workspace_toolchain_entries(self) -> None:
+        fake = self.workspace / "git.exe"
+        fake.write_bytes(b"workspace fixture; never executed")
+        with self.assertRaises(ToolFailure) as context:
+            _resolve_executable(["git", "--version"], workspace_root=self.workspace, workdir=self.workdir, scratch_directory=self.scratch, roots=[self.workspace], path_entries=[self.workspace], allow_workspace_executable=False)
+        self.assertEqual(context.exception.code, "NATIVE_TOOLCHAIN_NOT_ALLOWLISTED")
 
 
 @unittest.skipUnless(os.name == "nt", "Windows MXC ProcessContainer integration")

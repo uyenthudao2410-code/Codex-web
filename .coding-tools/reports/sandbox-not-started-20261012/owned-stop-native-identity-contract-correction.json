@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "operation": "owned_stop_native_identity_contract_correction",
+  "observed_at_ms": 1791784819217,
+  "producer_sha256": "59ec684e5cba5f1c966f5a3679cd9bcb0dfd5e818e8d9e01610cf09b5584e28f",
+  "invocation_performed_by_agent": false,
+  "stop_effect_performed_by_agent": false,
+  "correction_scope": "native runtime profile creation token only",
+  "official_source": "electron/services/processIdentity.js lines41and62",
+  "normalization": "exactFILETIME - exactFILETIME % 10",
+  "observed_exact_FILETIME": "134362579801951257",
+  "supported_profile_token": "134362579801951250",
+  "daemon_and_vendor_vm_exact_filetime_comparison_preserved": true,
+  "validation": {
+    "ast_parse": "PASS",
+    "focused_boundary_cases_passed": 6,
+    "previous_bucket_249_rejected": true,
+    "next_bucket_260_rejected": true,
+    "unrounded_expected_257_rejected": true,
+    "generic_tolerance_used": false
+  },
+  "previous_producer_sha256": "a5d2dbf09e91939e03c5423a1f857d9b2e05194456910996f7669d778a226b51"
+}

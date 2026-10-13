@@ -7,17 +7,18 @@ $SourceRepository = 'https://github.com/microsoft/mxc.git'
 $SourceCommit = 'cbe1774364ea2ec846f56ab744e43a416f751420'
 $LocalPatchPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'patches\mxc-windows-sandbox-c-drive-share.patch'))
 $LocalPatchFile = 'scripts/patches/mxc-windows-sandbox-c-drive-share.patch'
-$LocalPatchSha256 = '85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df'
+$LocalPatchSha256 = '6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579'
 $SchemaVersion = '0.10.0-alpha'
 $ExpectedBinaries = @(
     'wxc-exec.exe',
     'wxc-windows-sandbox-daemon.exe',
     'wxc-windows-sandbox-guest.exe'
 )
+$PreviousCandidatePatchSha256 = '88b8987bbe55f8e1fead1d263cd78175b2b1ffed2385638ac082108bdc5ca1f5'
 $PreviousCandidateBinaries = [ordered]@{
-    'wxc-exec.exe' = @{ sha256 = 'a186e44c5f6b00658231e99d16438576d5f6405db95aebbbd3c095be71aa0fa6'; size_bytes = 5947392 }
-    'wxc-windows-sandbox-daemon.exe' = @{ sha256 = 'a62711836156af10f1a369feb4ac28049eef05d69765c390625433e195096c1c'; size_bytes = 1538560 }
-    'wxc-windows-sandbox-guest.exe' = @{ sha256 = '47d446e833160d1fba89b3f68216612b3e139bcc8f48bf392cdfe4ed6d7212b0'; size_bytes = 1422848 }
+    'wxc-exec.exe' = @{ sha256 = '19dead991dc4a544d6f66b879ffdf3d2c2a3e72208154a340cd7fa8515bc6357'; size_bytes = 5959168 }
+    'wxc-windows-sandbox-daemon.exe' = @{ sha256 = '39692e91f86ba74ccaf41c8eb751f4daf4d607c05ec568fab9d68760efb2929e'; size_bytes = 1537536 }
+    'wxc-windows-sandbox-guest.exe' = @{ sha256 = '31f77a5614935c6fa4595d5c27eb98383b8c193a8f26f0d9449539e60b749a57'; size_bytes = 1422848 }
 }
 $ResourcesRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\resources'))
 $ToolsRoot = [IO.Path]::GetFullPath((Join-Path $ResourcesRoot 'tools'))
@@ -78,6 +79,8 @@ function Test-PreviousCandidate([string]$Directory) {
         $OldProvenance = Get-Content -LiteralPath (Join-Path $Directory 'mxc-windows-sandbox.provenance.json') -Raw | ConvertFrom-Json
         if ($OldProvenance.source_commit -ne $SourceCommit -or
             $OldProvenance.schema_version -ne $SchemaVersion -or
+            $OldProvenance.local_patch_file -ne $LocalPatchFile -or
+            $OldProvenance.local_patch_sha256 -ne $PreviousCandidatePatchSha256 -or
             $OldProvenance.authenticode -ne 'unsigned-local-source-build' -or
             $OldProvenance.distribution -ne 'development-candidate-only') { return $false }
         foreach ($Name in $PreviousCandidateBinaries.Keys) {
@@ -86,7 +89,9 @@ function Test-PreviousCandidate([string]$Directory) {
             $Metadata = Get-Item -LiteralPath $Path
             $Hash = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($Hash -ne $PreviousCandidateBinaries[$Name].sha256 -or
-                $Metadata.Length -ne $PreviousCandidateBinaries[$Name].size_bytes) { return $false }
+                $Metadata.Length -ne $PreviousCandidateBinaries[$Name].size_bytes -or
+                $OldProvenance.binaries.$Name.sha256 -ne $Hash -or
+                [int64]$OldProvenance.binaries.$Name.size_bytes -ne $Metadata.Length) { return $false }
         }
         return $true
     } catch { return $false }
@@ -99,7 +104,7 @@ if (Test-Path -LiteralPath $TargetRoot) {
         exit 0
     } catch {
         if ($VerifyOnly -or -not (Test-PreviousCandidate $TargetRoot)) {
-            throw 'Existing MXC candidate is neither the current C: mapping build nor the exact prior pinned build; refusing to replace it.'
+            throw 'Existing MXC candidate is neither the current identity-guarded build nor the exact prior pinned build; refusing to replace it.'
         }
     }
 }
@@ -144,6 +149,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Patched MXC source has whitespace errors.' }
 
     $BuildDir = Join-Path $BuildRoot 'src'
+    & rustup run 1.93 rustfmt --edition 2021 --check (Join-Path $BuildDir 'backends\windows_sandbox\lifecycle\src\state_aware.rs')
+    if ($LASTEXITCODE -ne 0) { throw 'Patched MXC lifecycle formatting failed.' }
+    $TestCommand = "`"$VsDevCmd`" -no_logo -arch=x64 && cd /d `"$BuildDir`" && cargo test --locked --release --target x86_64-pc-windows-msvc -p windows_sandbox_lifecycle start_daemon_identity -- --test-threads=1"
+    & cmd.exe /d /s /c $TestCommand
+    if ($LASTEXITCODE -ne 0) { throw 'Patched MXC sandbox ownership tests failed.' }
     $BuildCommand = "`"$VsDevCmd`" -no_logo -arch=x64 && cd /d `"$BuildDir`" && cargo build --locked --release --target x86_64-pc-windows-msvc -p wxc -p wxc_windows_sandbox_daemon -p wxc_windows_sandbox_guest"
     & cmd.exe /d /s /c $BuildCommand
     if ($LASTEXITCODE -ne 0) { throw 'Pinned MXC Windows Sandbox source build failed.' }
@@ -188,7 +198,7 @@ try {
     Assert-Candidate $StageRoot | Out-Null
     $BackupRoot = $null
     if (Test-Path -LiteralPath $TargetRoot) {
-        $BackupRoot = Join-Path ([IO.Path]::GetTempPath()) ('codex-mxc-wsb-unmapped-' + [guid]::NewGuid().ToString('N'))
+        $BackupRoot = Join-Path ([IO.Path]::GetTempPath()) ('codex-mxc-wsb-prior-' + [guid]::NewGuid().ToString('N'))
         if (Test-Path -LiteralPath $BackupRoot) { throw 'Unique previous-candidate backup path unexpectedly exists.' }
         [IO.Directory]::Move($TargetRoot, $BackupRoot)
     }
@@ -200,7 +210,7 @@ try {
         }
         throw
     }
-    if ($BackupRoot) { Write-Output ('previous_unmapped_candidate_preserved=' + $BackupRoot) }
+    if ($BackupRoot) { Write-Output ('previous_candidate_preserved=' + $BackupRoot) }
     Assert-Candidate $TargetRoot
 } finally {
     $TempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())

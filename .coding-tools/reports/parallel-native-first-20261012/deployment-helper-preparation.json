@@ -1,0 +1,8 @@
+{
+  "operation": "recovery_fenced_deployment_helper_preparation",
+  "sha256": "ab47051d71cfb1b31f3656889707189abf370c5fb1ac19a2ecaa922d94bbdc5b",
+  "execute_performed": false,
+  "fence": "existing authenticated atomic recovery API",
+  "historical_dispatch_exception": "exact immutable approved IDs only; expiry and unchanged row required",
+  "rollback": "source only; never restore SQLite; old pilots require supported reissue"
+}

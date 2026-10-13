@@ -1,0 +1,2 @@
+{"operation":"metadata","ok":true,"code":null,"stage":null,"report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9c-transition\\packaged-metadata-receipt-1791795319630.json","activation":null,"target":{"workspace_id":null,"workspace_generation":null,"binding_id":null,"pilot_decision_id":null,"workspace_path":null,"expires_at_ms":1791877411389},"runtime":null}
+PROCESS_EXIT=0

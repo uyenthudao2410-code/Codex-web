@@ -1,0 +1,18 @@
+{
+  "operation": "prepare_r9_launch_and_shortcut_scripts",
+  "runtime_effects": 0,
+  "supervisor_mutated": false,
+  "shortcuts_mutated": false,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9\\win-unpacked",
+  "source_r9_proof_sha256": "84530008fe6e898fca532c4c31692c6a44ade0cd1520ca36795fc49364abfe36",
+  "exact_prior_host": {
+    "pid": 11364,
+    "instance_id": "83634bc8f513cc453f74f94751efb819",
+    "installation_id": "6169e7f206f69e2d5364248f93d965c97f58340a908844b2c8f9ef2832f17228",
+    "process_start_token": "134362637018564480"
+  },
+  "prepared_files": {
+    "launch-r9.ps1": "7ba22950da3ec57dbcd5b1c294d33d05a3bcd8f77176436ea5c83e3f5e12172e",
+    "update-coding-tools-shortcuts-r9.ps1": "b166f72557e52f482deefa2ba343b6d54a0183797f3f0360c29d2339ba8118a9"
+  }
+}

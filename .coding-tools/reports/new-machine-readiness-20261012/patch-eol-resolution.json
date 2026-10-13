@@ -1,0 +1,12 @@
+{
+  "observed_at": "2026-10-12T03:25:42.6890456Z",
+  "operation": "patch_eol_reproducibility",
+  "ok": true,
+  "sha256": "88b8987bbe55f8e1fead1d263cd78175b2b1ffed2385638ac082108bdc5ca1f5",
+  "attributes": [
+    "scripts/patches/mxc-windows-sandbox-c-drive-share.patch: text: set",
+    "scripts/patches/mxc-windows-sandbox-c-drive-share.patch: eol: lf"
+  ],
+  "native_bytes_changed": false,
+  "runtime_source_changed": false
+}

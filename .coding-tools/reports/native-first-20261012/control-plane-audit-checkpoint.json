@@ -1,0 +1,77 @@
+{
+  "operation": "native_first_control_plane_audit_final_checkpoint",
+  "git": {
+    "branch": "main",
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "working_tree": "pre-existing dirty work preserved; scoped implementation and additive evidence remain uncommitted",
+    "diff_check_passed": true,
+    "commit_performed": false,
+    "push_performed": false
+  },
+  "completed": [
+    "Optional local Native-First policy defaults and validated routing metadata across runtime, bridge, durable node receipt and facade.",
+    "Exact public schema32 generated contract preserved.",
+    "Real temporary100read/20patch File API acceptance with exact byte and lease evidence, zero guarded command/VM calls.",
+    "Strict host-key/default-key Ubuntu source, authority, inventory and task/writer/action readiness observation.",
+    "Exact serving-r9 two-file immutable metadata overlay with manifest/archive and19 focused passing tests.",
+    "Protected inert archive/receipt/helper uploads plus read-only preflight; no live activation.",
+    "Future file-read phase classification: only explicit Recovery Host BEFORE_DISPATCH error becomes rejected; generic TARGET_MISSING remains UNKNOWN."
+  ],
+  "strongest_proof": {
+    "js_exec_bridge_runtime_subprocess_tests": 27,
+    "python_exec_node_tests": 34,
+    "python_exec_facade_tests": 9,
+    "exact_overlay_exec_and_private_service_tests": 19,
+    "python_file_read_node_tests": 13,
+    "javascript_predispatch_phase_guard_tests": 1,
+    "temporary_file_api_acceptance_tests": 1,
+    "public_contract": {
+      "schema_version": 32,
+      "profile": "control-plane-private-tunnel-service-v1",
+      "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+    }
+  },
+  "ubuntu_state": {
+    "target": "svhome@100.116.112.22",
+    "service": "codex-control-plane.service",
+    "pid": 946413,
+    "serving_release": "codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+    "serving_package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "prepared_release": "codex-control-plane-native-first-1012-e707cccda6fc",
+    "prepared_package_source_sha256": "sha256:940a95b83c8508510aedab7c416212dc0f80bf6de0e2389355f548467c2461be",
+    "prepared_deployment_helper_sha256": "5dbbd90823c5fc10111955d0f041affb3ee97231225ffc8b0b544f6e1500177b",
+    "service_operations_performed": false,
+    "authority_or_database_mutations_performed": false,
+    "pilot": "Autocad remained selected; no workspace activation occurred",
+    "expected_device_census": "0unclosed task,0unreleased writer,0queued or active dispatch,5preserved UNKNOWN actions",
+    "global_census": "0live tasks/writers;1historical expired dispatch_unconfirmed on another device"
+  },
+  "blockers": [
+    {
+      "code": "CURRENT_AUTOCAD_UNKNOWN_READ_ACTIONS_BLOCK_WORKSPACE_ACTIVATION",
+      "count": 3,
+      "classification": "historical generic TARGET_MISSING phase ambiguous; no legitimate terminal rejection/completion proof",
+      "action": "Preserve original UNKNOWN receipts/journal and current registration/pilot; await independent original execution phase evidence or an explicitly reviewed existing supported historical disposition."
+    },
+    {
+      "code": "LIVE_WORK_BLOCKS_SERVICE_TRANSITION",
+      "action_id": "act_0f0a49c6424d42d3bc7bc49ad46e4ffa",
+      "device_id": "3c7378b3-ecc4-4466-9a87-25d4d53ffdcf",
+      "state": "dispatch_unconfirmed",
+      "expired": true,
+      "classification": "global unresolved historical dispatch, not new live task or writer",
+      "action": "Preserve row; do not stop shared service while guarded prerequisite deployment is blocked."
+    }
+  ],
+  "remaining_work": [
+    "Root final report and repository integration.",
+    "Live deployment/canary deferred according to user's choice to retain Codex-web and wait for UNKNOWN handling."
+  ],
+  "next_action": "Deliver completed source/package/evidence and exact blocked operational state; perform no service, pilot, reconciliation or canary action.",
+  "active_jobs_started_by_audit": 0,
+  "material_limits": [
+    "Metadata durability/recovery focused tests do not directly prove a successful real native ProcessContainer Job across disconnect/restart.",
+    "Temporary file acceptance measured guarded command/VM calls, not a physical VM/RAM census or live Control Plane dispatch.",
+    "Prepared server overlay preserves original base source revision as lineage; current local overlay is not a committed/released revision."
+  ]
+}

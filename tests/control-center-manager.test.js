@@ -20,6 +20,7 @@ function managerHeartbeatFixture(executionRole) {
     setDot: (element, tone) => { element.tone = tone; },
     renderRecoveryTunnelSettings() {},
     renderDevice() {},
+    renderWorkspaceTarget() {},
     renderRuntimeSourceStatus() {}
   });
   for (const [start, end] of [
@@ -317,7 +318,7 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(app, /async function replaceControlPlaneWorkspace\(/);
   assert.match(app, /api\.replaceControlPlaneWorkspace\(\{/);
   assert.match(app, /confirmReplace:\s*true/);
-  assert.match(app, /generation cũ đã bị fence/);
+  assert.match(app, /Đổi mức quyền sẽ đóng liên kết và tác vụ của đăng ký cũ/);
   assert.match(app, /Do not call switchWorkspace,[\s\S]*updateAuthorizedRoots/);
   assert.match(app, /cấp target cho kết nối ChatGPT \(OAuth hoặc service principal của tunnel\) và cài policy local/);
   assert.match(preload, /registerControlPlaneWorkspace:\s*\(request\)\s*=>\s*ipcRenderer\.invoke\('control-plane:register-workspace', request\)/);
@@ -363,11 +364,12 @@ test('central workspace row installs standing file policy only for its exact loc
   const preload = read('electron/preload.js');
   const main = read('electron/main.js');
   const service = read('electron/services/controlPlaneEnrollment.js');
-  assert.match(html, /Bật quyền đã đăng ký chỉ cần một lần xác nhận/);
-  assert.match(html, /sandbox và quyền tài khoản vẫn được kiểm tra/);
+  assert.match(html, /Quyền đọc, sửa và chạy được áp dụng sau lần xác nhận/);
+  assert.match(html, /Thêm thư mục.*kiểm tra quyền không mở Windows Sandbox/);
+  assert.match(html, /setupPrepareExecAction[\s\S]*Kiểm tra Sandbox riêng/);
   assert.match(app, /filePolicy\.textContent = capabilities\.write === true \? 'Bật đọc\/sửa file' : 'Bật đọc file'/);
   assert.match(app, /api\.installControlPlaneStandingFilePolicies\(\{/);
-  assert.match(app, /api\.inspectControlPlaneStandingFilePolicies\(\)/);
+  assert.match(app, /api\.inspectControlPlaneStandingFilePolicies\(/);
   assert.match(app, /api\.inspectControlPlaneExecPolicy\(\{/);
   assert.match(app, /api\.installControlPlaneExecPolicy\(\{/);
   assert.match(app, /WINDOWS_WORKSPACE_REALPATH_EPERM/);

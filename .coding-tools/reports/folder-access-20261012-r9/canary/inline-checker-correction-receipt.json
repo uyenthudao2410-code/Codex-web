@@ -1,0 +1,9 @@
+{
+  "operation": "inline_checker_escape_review",
+  "live_dispatches": 0,
+  "original_hash": "3f6339d63faa0f4f8c8c13c5098a20da76daf69a3ec40f78b40e99255cfed4e6",
+  "corrected_hash": "cf23dc8091ae318180b11d5341865bbb106fa5e346de4f1ac9b219e114dcd49c",
+  "expected_final_sha256": "1b01d2277bbc79f2ddd2543fbcf8332d6adb575a1dadfa578d56c2b9bb4361ad",
+  "inline_expected_bytes": 62,
+  "fix": "Base64 expected bytes; path component checks avoid double escaping"
+}

@@ -1,0 +1,27 @@
+{
+  "operation": "r9c_original_read_result_reconciliation",
+  "observed_at_ms": 1791795718486,
+  "action_id": "act_5e96e41f520d44d99a2b36bf749e658b",
+  "attempt_id": "try_df0e7870613c4eee8d1e9ff90b3a4d5b",
+  "payload": {
+    "schema_version": 1,
+    "operation_kind": "control_plane_bounded_file_read",
+    "code": "FILE_READ_RESULT_REJECTED_OPERATOR_RECONCILIATION",
+    "diagnostic_code": "CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID",
+    "original_unknown_receipt_preserved": true,
+    "original_local_journal_sha256": "ddb143ad76fedf151f158213b631f3bc442807991e2b85e6512198dbbfe08d21",
+    "read_may_have_occurred": true,
+    "valid_bounded_read_receipt_retained": false,
+    "action_redispatched": false,
+    "reconciliation_required": false
+  },
+  "node_journal_modified": false,
+  "server_receipt": {
+    "receipt_id": "rcpt_ba662a45e4974b5b962162c7652740d6",
+    "action_id": "act_5e96e41f520d44d99a2b36bf749e658b",
+    "attempt_id": "try_df0e7870613c4eee8d1e9ff90b3a4d5b",
+    "receipt_state": "rejected",
+    "delivery_state": "settled",
+    "replayed": false
+  }
+}

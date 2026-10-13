@@ -1,0 +1,8 @@
+{
+  "operation": "exec",
+  "observed_at": "2026-10-12T08:20:12.685Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9\\win-unpacked",
+  "ok": false,
+  "code": "CONTROL_PLANE_POLICY_AUTHORITY_STALE",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\transition\\packaged-exec-failure-1791793212686.json"
+}

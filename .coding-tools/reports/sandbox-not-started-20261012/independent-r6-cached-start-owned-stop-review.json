@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "operation": "independent_r6_cached_start_and_owned_stop_review",
+  "observed_at": "2026-10-12T05:55:33.2833605Z",
+  "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "reviewer": "/root/shared_surface",
+  "outcome": "PASS",
+  "reviewed_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/windows_mxc_state_aware.py",
+      "sha256": "7eddd508dcc51ccecb5e2457ddd7bca20609eda6a03078bd7cafcb7295b422f8"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_windows_mxc_state_aware.py",
+      "sha256": "3ec1333b7490dc37b538c31622efc1ddb71ff6e5e782bdde766ec270255eb8d1"
+    },
+    {
+      "path": ".coding-tools/reports/sandbox-not-started-20261012/owned-sandbox-stop-proof.py",
+      "sha256": "a5d2dbf09e91939e03c5423a1f857d9b2e05194456910996f7669d778a226b51"
+    }
+  ],
+  "resolved_findings": [
+    "P2 native error envelope accepted ambiguous error plus result: now exact error-only envelope with strict mandatory and optional fields before cached already_started acceptance",
+    "Stop proof omitted open task and current valid writer: now exact open task and matching current unreleased unexpired lease generation/binding, renewal expiry checked fresh and excluded from stable equality"
+  ],
+  "reviewed_invariants": [
+    "Cached owned sandbox start reconciliation precedes next argv and never replays executed command",
+    "Exact-ID cleanup failure blocks later execution via uncertain state",
+    "Stop producer binds reviewed package, READY OPEN native runtime, exact settled cold and warm jobs, central lineage, authenticated owned daemon identity and exact VM PID creation proof",
+    "Global native quiescence includes starting running terminating orphaned",
+    "Supported exact-ID stop is invoked at most once; post-dispatch failures remain unknown without automatic retry; immutable mapping is preserved",
+    "No database or node journal mutation, no deprovision, no arbitrary process kill"
+  ],
+  "validation_performed": "Source and focused-test inspection; previous exact-source tests reused; no test commands repeated",
+  "live_effects_performed": false,
+  "source_edits_performed": false,
+  "stop_producer_invoked": false,
+  "remaining_action": "Root builds activates verified r6 and runs exact reviewed canary and owned stop if authorized"
+}

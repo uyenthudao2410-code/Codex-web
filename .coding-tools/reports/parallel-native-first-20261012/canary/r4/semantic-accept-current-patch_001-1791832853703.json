@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operation": "failure",
+  "ok": false,
+  "lane": "patch_001",
+  "code": "ACCEPT_CURRENT_FAILED",
+  "error_message": "{\"action\":\"heartbeat\",\"auto_resume\":null,\"client\":{\"capabilities\":{\"client_name\":\"\",\"client_version\":\"\"},\"client_id\":\"electron-native-first-canary-acceptance\",\"client_type\":\"electron\",\"connected_at\":\"2026-10-12T18:51:05.808Z\",\"contract_sha\":\"0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4\",\"last_seen_at\":\"2026-10-12T19:20:53.509Z\",\"metadata\":{\"execution_context_id\":\"\",\"logical_client_id\":\"electron-native-first-canary-acceptance\"},\"role\":\"supervisor\",\"runtime_instance_id\":\"-s21-KH6ldxHjCSO\",\"session_instance\":\"\",\"status\":\"online\"},\"controller\":null,\"ok\":true,\"run_id\":\"0dfb72d0c6944d2d87ecb741dc439267\"}",
+  "error_stack": "Error: {\"action\":\"heartbeat\",\"auto_resume\":null,\"client\":{\"capabilities\":{\"client_name\":\"\",\"client_version\":\"\"},\"client_id\":\"electron-native-first-canary-acceptance\",\"client_type\":\"electron\",\"connected_at\":\"2026-10-12T18:51:05.808Z\",\"contract_sha\":\"0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4\",\"last_seen_at\":\"2026-10-12T19:20:53.509Z\",\"metadata\":{\"execution_context_id\":\"\",\"logical_client_id\":\"electron-native-first-canary-acceptance\"},\"role\":\"supervisor\",\"runtime_instance_id\":\"-s21-KH6ldxHjCSO\",\"session_instance\":\"\",\"status\":\"online\"},\"controller\":null,\"ok\":true,\"run_id\":\"0dfb72d0c6944d2d87ecb741dc439267\"}\n    at IncomingMessage.<anonymous> (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-accept-current.cjs:1:1146)\n    at IncomingMessage.emit (node:events:521:24)\n    at endReadableNT (node:internal/streams/readable:1729:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)",
+  "partial_mutation_possible": true,
+  "automatic_retry_forbidden": true
+}

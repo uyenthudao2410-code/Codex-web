@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "operation": "production_transition_preflight",
+  "read_only": true,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "observed_at": "2026-10-12T11:26:00.926Z",
+  "observed_at_ms": 1791804360927,
+  "current_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "current_package_sha256": {
+    "executable": "e7bb35634d7e765c24c156fb6a12ce9e707f3b26a4596329a2fa4dbb0e7c5f05",
+    "app_asar": "0b119f1b740faa1713c9a004015c20bfee66668aa8707e1cfab67a1c07b3e901"
+  },
+  "production_identity": {
+    "owner_pid": 38436,
+    "owner_process_start_token": "134362736855547600",
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+    "installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a"
+  },
+  "runtime": {
+    "fullyReady": true,
+    "mcpRunning": true,
+    "nativeAlive": true,
+    "executionRole": "central_executor",
+    "centralConnected": true,
+    "authorityReady": true,
+    "centralStatusReason": null,
+    "updateIncomplete": false,
+    "toolContract": {
+      "schemaVersion": 1,
+      "profile": "smart-v3",
+      "sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+    },
+    "codeRevision": {
+      "codingMcp": {
+        "running_revision": "fff82a0216f323e80ff7c64db09325c962e5a403891fe3f4821ba0335a5939de",
+        "disk_revision": "fff82a0216f323e80ff7c64db09325c962e5a403891fe3f4821ba0335a5939de",
+        "update_pending": false,
+        "state": "current",
+        "checked_at": "2026-10-12T11:25:49.239Z",
+        "file_count": 149,
+        "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937"
+      }
+    }
+  },
+  "activation": {
+    "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+    "state": "READY",
+    "admission_open": true,
+    "operation_id": "full-clean-mv53hzd3-3e0396c548cce5166fb43fdd"
+  },
+  "recovery": {
+    "pid": 38436,
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+    "code_revision": {
+      "running_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+      "disk_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-12T11:25:44.214Z",
+      "file_count": 40
+    },
+    "electron_ui_revision": {
+      "running_revision": null,
+      "disk_revision": "5b07ce8104e2cf8654c2c3bc9d08c7f5ad8b4613fd6b944d5b0961f58870b439",
+      "update_pending": null,
+      "state": "unknown",
+      "checked_at": "2026-10-12T11:25:49.256Z",
+      "file_count": 32
+    },
+    "electron_ui_recovery": {
+      "state": "suppressed",
+      "registered": true,
+      "alive": false,
+      "pid": 47048,
+      "instance_id": "bf8a6c313a40ff5289286c67700574e5",
+      "started_at_unix_ms": 1791803354512,
+      "runtime_mode": "packaged",
+      "recovery_host_runtime_mode": "packaged",
+      "recovery_host_installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a",
+      "ui_runtime_mode": "packaged",
+      "ui_installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a",
+      "suppressed": true,
+      "suppression_reason": "operator_quit",
+      "attempts_in_window": 0,
+      "last_launch_pid": null,
+      "initial_registration_grace_until_unix_ms": null,
+      "pending_registration_until_unix_ms": null,
+      "next_attempt_at_unix_ms": null,
+      "circuit_suppressed_until_unix_ms": null,
+      "last_error_code": null
+    },
+    "recovery_plane_mode": "central-node-agent-v1"
+  },
+  "canonical_ledger_census": {
+    "schema_version": 1,
+    "safe": false,
+    "code": "RUNTIME_BUSY",
+    "reason": "live_runtime_state_process",
+    "workspace": "E:\\DEV\\Codex-web",
+    "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "2a4f888738d88c388e3f485635c6e9070563615a2816adfdc65e6b47445a07e1",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "ab2d076d96f0a3c2050fbb7521651e85616e91d041b33bf7de31ff5368d86b1e",
+      "size_bytes": 97959936,
+      "snapshot_at": "2026-10-12T11:25:57.840Z"
+    },
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 24,
+      "awaiting_acceptance_runs": [
+        "28a5f750466048438307b96872e24f01",
+        "4967dd953ce74b5d97cbf01aad827139",
+        "4a80ae60c2e441d8896c1ace8710c384",
+        "6664f948cfb14a75958518548352896e",
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "fbaf4b0700d04794af4062671c1bcd2b"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": [
+        "live_runtime_state_process"
+      ]
+    },
+    "source_checkpoint_verified": true,
+    "content_free": true,
+    "mutated_canonical_ledger": false,
+    "observed_at_unix_seconds": 1791804358.751948,
+    "census_fingerprint": "b388673442615334a9245cee29334a8f3365c694694700b2a94876f1008cd72b"
+  },
+  "local_live_work_idle": true,
+  "windows_sandbox_os_observation": {
+    "ownership_not_inferred": true,
+    "processes": []
+  },
+  "preserved_workspace_expectation": {
+    "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+    "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+    "workspace_path": "E:\\DEV\\Autocad"
+  },
+  "preserved_workspace_registry_entries": [
+    {
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "canonical_path": "E:\\DEV\\Autocad",
+      "capabilities": {
+        "exec": true,
+        "read": true,
+        "write": true
+      }
+    }
+  ],
+  "settings_scope": {
+    "workspace": "E:\\DEV\\Codex-web",
+    "authorizedRoots": [
+      "E:\\DEV\\Autocad"
+    ],
+    "executionRole": "central_executor"
+  },
+  "preserved_policy_fingerprints": {
+    "control-plane-workspaces.json": {
+      "present": true,
+      "sha256": "ebae316a43229f62a7cccc554615a019ceddfcdc9966d300dba0a8264a6b3ce4",
+      "bytes": 820
+    },
+    "control-plane-node.json": {
+      "present": true,
+      "sha256": "bcd3d6cc4b1fa8445709b3e0a710f32445b0995502e4085fdc77af571a10d1bc",
+      "bytes": 909
+    },
+    "control-plane-read-only-policy.json": {
+      "present": true,
+      "sha256": "a820ab1f2ec4e15eee9c9dacbb4bc4457f9f449c8c68ac76c1f36cac39aeb016",
+      "bytes": 632
+    },
+    "control-plane-file-read-policy.json": {
+      "present": true,
+      "sha256": "1bae52ac155305be0e51c148158062b3286543ed53dcc018583371c88dab28f2",
+      "bytes": 749
+    },
+    "control-plane-approved-patch-policy.json": {
+      "present": true,
+      "sha256": "f5dd13bcc2689e490bce54c7c071605d8393a1ff3daafb2c990c25748c7184e9",
+      "bytes": 800
+    },
+    "control-plane-document-write-policy.json": {
+      "present": false
+    },
+    "control-plane-exec-policy.json": {
+      "present": true,
+      "sha256": "78e3a929c929aa3792245d95ef3f80d4062f69479677dbe1a841c19575f57520",
+      "bytes": 981
+    }
+  },
+  "preserved_policy_files_stable": true,
+  "descriptor_stable": true,
+  "epoch_stable": true,
+  "central_server_census": "required freshly from authenticated read-only server before any stop; not inferred from local authorityReady",
+  "activation_eligibility": "pending final candidate exact source parity, packaged smoke and fresh authenticated device/server idle receipt with supported UNKNOWN action reconciliation",
+  "mutating_actions_performed": [],
+  "task_or_policy_changes": false,
+  "ok": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\production-transition-preflight-1791804360927.json"
+}

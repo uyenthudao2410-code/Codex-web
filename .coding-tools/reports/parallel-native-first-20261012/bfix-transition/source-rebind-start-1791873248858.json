@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "bfix_source_checkpoint_rebind",
+  "mode": "start",
+  "observed_at": "2026-10-13T06:33:36.941Z",
+  "task_context_id": "bfix-source-acceptance-20261013",
+  "mutation_started": true,
+  "ok": false,
+  "error": {
+    "code": "BOUNDED_RESPONSE_REQUIRED",
+    "details": null
+  }
+}

@@ -1,8 +1,8 @@
 """State-aware Windows Sandbox adapter for structured workspace commands.
 
 This backend is deliberately separate from the ProcessContainer adapter.  It
-uses a pinned, source-built MXC candidate and keeps one Windows Sandbox VM alive
-for the lifetime of a Python Runtime, serializing commands because MXC's guest
+uses a pinned, source-built MXC candidate and keeps at most one Windows Sandbox
+VM until its idle deadline, serializing commands because MXC's guest
 protocol is single-flight.  The only writable host share is the selected
 workspace; approved toolchain directories are mounted read-only; guest network
 access is blocked by the Windows Sandbox backend.
@@ -41,7 +41,7 @@ from .runtime_config import is_filtered_env_var
 
 MXC_WSB_SOURCE_COMMIT = "cbe1774364ea2ec846f56ab744e43a416f751420"
 MXC_WSB_SCHEMA_VERSION = "0.10.0-alpha"
-MXC_WSB_LOCAL_PATCH_SHA256 = "85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df"
+MXC_WSB_LOCAL_PATCH_SHA256 = "6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579"
 MXC_WSB_BINARY_NAMES = (
     "wxc-exec.exe",
     "wxc-windows-sandbox-daemon.exe",
@@ -447,6 +447,7 @@ class MxcWindowsSandboxInvocation:
     workspace_root: Path
     sandbox_id: str
     manager: "MxcWindowsSandboxManager"
+    lease_generation: int = 0
 
 
 class MxcWindowsSandboxManager:
@@ -456,13 +457,120 @@ class MxcWindowsSandboxManager:
     # Activation polls this bounded work; an HTTP request never waits for it.
     close_timeout_seconds = MAX_MXC_WSB_PHASE_SECONDS * 2 + 5
 
-    def __init__(self, *, executor_directory: Path | None = None) -> None:
+    def __init__(self, *, executor_directory: Path | None = None, idle_timeout_seconds: float = 30.0) -> None:
+        if not 0 < idle_timeout_seconds <= 300:
+            raise ValueError("Sandbox idle timeout must be between zero and 300 seconds.")
         self.executor_directory = Path(executor_directory or _executor_directory())
         self.executor_path = self.executor_directory / "wxc-exec.exe"
         self._lock = threading.Lock()
         self._active: _ActiveSandbox | None = None
         self._uncertain = False
         self._closed = False
+        self.idle_timeout_seconds = idle_timeout_seconds
+        self._lease_active = False
+        self._idle_timer: threading.Timer | None = None
+        self._idle_generation = 0
+        self.lease_generation = 0
+        self._pending_terminal_generation: int | None = None
+        self._deferred_arm_lock = threading.Lock()
+        self._deferred_arm_generations: set[int] = set()
+
+    def _cancel_idle_locked(self) -> None:
+        self._idle_generation += 1
+        if self._idle_timer is not None:
+            self._idle_timer.cancel()
+            self._idle_timer = None
+
+    def _schedule_idle_locked(self) -> threading.Timer | None:
+        self._cancel_idle_locked()
+        if self._active is None or self._closed or self._uncertain or self._lease_active:
+            return None
+        timer = threading.Timer(
+            self.idle_timeout_seconds,
+            self._retire_idle,
+            args=(self._idle_generation, self._active.sandbox_id),
+        )
+        timer.daemon = True
+        self._idle_timer = timer
+        return timer
+
+    def _retire_idle(self, generation: int, sandbox_id: str) -> None:
+        # Wait through brief lock contention instead of leaving a dead timer
+        # recorded. Command acquire/release invalidates this generation before
+        # unlocking, so a waiting callback cannot interrupt a later command.
+        self._lock.acquire()
+        try:
+            if (generation != self._idle_generation or self._closed or self._uncertain
+                    or self._lease_active or self._active is None
+                    or self._active.sandbox_id != sandbox_id):
+                return
+            self._idle_timer = None
+            try:
+                self._deprovision_id(sandbox_id)
+                self._active = None
+            except ToolFailure:
+                self._uncertain = True
+        finally:
+            self._lock.release()
+
+    def _arm_idle_locked(self, lease_generation: int | None) -> tuple[bool, threading.Timer | None]:
+        if self._pending_terminal_generation is not None:
+            if lease_generation != self._pending_terminal_generation:
+                return False, None
+            self._pending_terminal_generation = None
+        elif lease_generation is not None and lease_generation != self.lease_generation:
+            return False, None
+        # Re-reading a terminal receipt must not extend VM lifetime.
+        timer = None if self._idle_timer is not None else self._schedule_idle_locked()
+        return not self._uncertain, timer
+
+    def _deferred_arm(self, lease_generation: int) -> None:
+        timer = None
+        try:
+            with self._lock:
+                _, timer = self._arm_idle_locked(lease_generation)
+        finally:
+            with self._deferred_arm_lock:
+                self._deferred_arm_generations.discard(lease_generation)
+        if timer is not None:
+            timer.start()
+
+    def _defer_idle_arm(self, lease_generation: int) -> None:
+        # Receipt observation stays responsive behind a later command lease.
+        # Each exact generation has at most one waiter; it rechecks ownership
+        # after acquiring the manager lock and cannot arm a later generation.
+        with self._deferred_arm_lock:
+            if lease_generation in self._deferred_arm_generations:
+                return
+            self._deferred_arm_generations.add(lease_generation)
+        try:
+            threading.Thread(
+                target=self._deferred_arm, args=(lease_generation,), daemon=True,
+                name=f"coding-tools-sandbox-idle-arm-{lease_generation}",
+            ).start()
+        except Exception:
+            with self._deferred_arm_lock:
+                self._deferred_arm_generations.discard(lease_generation)
+            raise
+
+    def arm_idle_retirement(self, *, lease_generation: int | None = None) -> bool:
+        """Arm retirement after the caller has reconciled the terminal Job.
+
+        Runtime command cleanup releases its lease without arming a timer.
+        The durable Job completion gate calls this after outputs and process
+        state are known. No task/receipt data depends on the VM staying alive.
+        """
+        if not self._lock.acquire(blocking=False):
+            if lease_generation is not None:
+                self._defer_idle_arm(lease_generation)
+            return False
+        try:
+            admitted, timer = self._arm_idle_locked(lease_generation)
+        finally:
+            self._lock.release()
+        if timer is not None:
+            timer.start()
+        return admitted
 
     def _environment(self) -> dict[str, str]:
         system_root = _system_root()
@@ -479,14 +587,14 @@ class MxcWindowsSandboxManager:
         }
 
     def _host_process_count(self) -> int:
-        # Windows can keep vmmemWindowsSandbox alive after the UI/daemon exit.
-        # Starting another cold VM during that interval can stall before guest
-        # bootstrap. Observe the host; never terminate a foreign or unproven VM.
+        # Match MXC's WindowsSandbox host ownership boundary. SYSTEM-owned
+        # vmmem aggregates can linger after those hosts exit; they are neither
+        # ownership targets nor evidence that the single VM slot is occupied.
         script = (
             "$ErrorActionPreference='Stop';"
             "@(Get-Process | Where-Object { $_.ProcessName -in @("
             "'WindowsSandbox','WindowsSandboxClient','WindowsSandboxServer',"
-            "'WindowsSandboxRemoteSession','vmmemWindowsSandbox') }).Count"
+            "'WindowsSandboxRemoteSession') }).Count"
         )
         try:
             result = subprocess.run(
@@ -547,6 +655,15 @@ class MxcWindowsSandboxManager:
             raise _failure("SANDBOX_STATE_PHASE_OUTPUT_INVALID", "The Windows Sandbox lifecycle phase returned an invalid response.", phase=config.get("phase")) from error
         if result.returncode != 0:
             error = payload.get("error") if isinstance(payload, dict) else None
+            if (not isinstance(payload, dict) or set(payload) != {"error"}
+                    or not isinstance(error, dict) or not {"code", "message"} <= set(error)
+                    or set(error) - {"code", "message", "details", "operation", "nativeCode", "remediation"}
+                    or not isinstance(error["code"], str)
+                    or not re.fullmatch(r"[a-z_]{3,48}", error["code"])
+                    or not isinstance(error["message"], str) or not error["message"]
+                    or any(not isinstance(error[key], str) for key in ("operation", "nativeCode", "remediation") if key in error)):
+                raise _failure("SANDBOX_STATE_PHASE_OUTPUT_INVALID",
+                    "The Windows Sandbox lifecycle phase returned an invalid error envelope.", phase=config.get("phase"))
             code = error.get("code") if isinstance(error, dict) else None
             message = error.get("message") if isinstance(error, dict) else None
             # The backend's readiness deadline is different from this adapter's
@@ -600,6 +717,17 @@ class MxcWindowsSandboxManager:
             timeout_seconds=MAX_MXC_WSB_PHASE_SECONDS,
         )
 
+    def _start_id(self, sandbox_id: str, *, cached: bool = False) -> None:
+        try:
+            self._run_envelope(_phase_config("start", sandbox_id), timeout_seconds=MAX_MXC_WSB_PHASE_SECONDS)
+        except ToolFailure as error:
+            # MXC's structured already_started response is specific to this ID.
+            # It establishes ownership, not guest health: exec still checks
+            # ready/protocol before dispatch. Never retry an executed command.
+            if not (cached and error.code == "SANDBOX_STATE_PHASE_FAILED"
+                    and error.details == {"phase": "start", "backend_error_code": "already_started"}):
+                raise
+
     def _ensure_active(self, root: Path, readonly_roots: list[Path]) -> str:
         identity = tuple(_windows_path_key(item) for item in readonly_roots)
         if self._uncertain:
@@ -607,6 +735,17 @@ class MxcWindowsSandboxManager:
         if self._active is not None:
             active_identity = tuple(_windows_path_key(item) for item in self._active.readonly_roots)
             if _windows_path_key(self._active.workspace_root) == _windows_path_key(root) and active_identity == identity:
+                # The VM may have exited while this Runtime remained alive.
+                # Reconcile its lifecycle before constructing the next argv.
+                try:
+                    self._start_id(self._active.sandbox_id, cached=True)
+                except ToolFailure:
+                    try:
+                        self._deprovision_id(self._active.sandbox_id)
+                        self._active = None
+                    except ToolFailure:
+                        self._uncertain = True
+                    raise
                 return self._active.sandbox_id
             try:
                 self._deprovision_id(self._active.sandbox_id)
@@ -621,7 +760,7 @@ class MxcWindowsSandboxManager:
                 retryable=True, phase="provision", backend_error_code="host_busy")
         sandbox_id = self._provision(root, readonly_roots)
         try:
-            self._run_envelope(_phase_config("start", sandbox_id), timeout_seconds=MAX_MXC_WSB_PHASE_SECONDS)
+            self._start_id(sandbox_id)
         except ToolFailure as error:
             try:
                 self._deprovision_id(sandbox_id)
@@ -639,17 +778,26 @@ class MxcWindowsSandboxManager:
         try:
             if self._closed:
                 raise _failure("SANDBOX_MANAGER_CLOSED", "The Windows Sandbox manager is closed.")
+            self._cancel_idle_locked()
             verify_mxc_windows_sandbox_candidate()
-            return self._ensure_active(workspace_root, readonly_roots)
+            sandbox_id = self._ensure_active(workspace_root, readonly_roots)
+            self.lease_generation += 1
+            self._pending_terminal_generation = None
+            self._lease_active = True
+            return sandbox_id
         except Exception:
             self._lock.release()
             raise
 
-    def release(self, *, abort: bool = False) -> bool:
+    def release(self, *, abort: bool = False, retire_when_idle: bool = True) -> bool:
         """Release one command lease; terminate the VM after cancellation/failure."""
 
         cleanup_ok = True
+        timer = None
         try:
+            self._lease_active = False
+            self._cancel_idle_locked()
+            self._pending_terminal_generation = self.lease_generation if not retire_when_idle and not abort else None
             if abort and self._active is not None:
                 try:
                     self._deprovision_id(self._active.sandbox_id)
@@ -657,12 +805,16 @@ class MxcWindowsSandboxManager:
                 except ToolFailure:
                     self._uncertain = True
                     cleanup_ok = False
+            elif retire_when_idle:
+                timer = self._schedule_idle_locked()
         finally:
             try:
                 self._lock.release()
             except RuntimeError:
                 cleanup_ok = False
                 self._uncertain = True
+        if timer is not None and cleanup_ok:
+            timer.start()
         return cleanup_ok
 
     def close(self) -> bool:
@@ -676,6 +828,7 @@ class MxcWindowsSandboxManager:
             self._closed = True
             return False
         try:
+            self._cancel_idle_locked()
             if self._active is not None:
                 try:
                     self._deprovision_id(self._active.sandbox_id)
@@ -810,6 +963,7 @@ def build_mxc_windows_sandbox_invocation(
             workspace_root=root,
             sandbox_id=sandbox_id,
             manager=manager,
+            lease_generation=manager.lease_generation,
         )
     except Exception:
         if scratch is not None:
@@ -823,11 +977,15 @@ def cleanup_mxc_windows_sandbox_invocation(
     invocation: MxcWindowsSandboxInvocation,
     *,
     abort: bool = False,
+    retire_when_idle: bool = True,
 ) -> bool:
     """Remove only this command's scratch and release the manager's VM lease."""
 
     scratch_clean = _safe_remove_scratch(invocation.workspace_root, invocation.scratch_directory)
-    cleanup_ok = invocation.manager.release(abort=(abort or not scratch_clean))
+    release_args = {"abort": abort or not scratch_clean}
+    if not retire_when_idle:
+        release_args["retire_when_idle"] = False
+    cleanup_ok = invocation.manager.release(**release_args)
     return scratch_clean and cleanup_ok
 
 

@@ -1,0 +1,29 @@
+--- ubuntu-serving/control-plane/control_plane/node_agent.py
++++ windows-r3/control-plane/control_plane/node_agent.py
+@@ -37,10 +37,22 @@
+         write_policy as _workspace_policy_write, scope as _workspace_policy_scope,
+     )
+ else:  # The installed Windows launcher executes this file directly.
+-    from workspace_policy_store import (
+-        read_entries as _workspace_policy_entries, read_selected as _workspace_policy_selected,
+-        write_policy as _workspace_policy_write, scope as _workspace_policy_scope,
+-    )
++    # Isolated Python (-I) omits the adapter directory from sys.path and ignores
++    # PYTHONDONTWRITEBYTECODE. Load only the owned sibling without mutating the
++    # manifest-pinned adapter tree or broadening module discovery.
++    sys.dont_write_bytecode = True
++    import importlib.util
++
++    _policy_store_spec = importlib.util.spec_from_file_location(
++        "control_plane_workspace_policy_store", Path(__file__).with_name("workspace_policy_store.py"))
++    if _policy_store_spec is None or _policy_store_spec.loader is None:
++        raise RuntimeError("CONTROL_PLANE_POLICY_STORE_UNAVAILABLE")
++    _policy_store_module = importlib.util.module_from_spec(_policy_store_spec)
++    _policy_store_spec.loader.exec_module(_policy_store_module)
++    _workspace_policy_entries = _policy_store_module.read_entries
++    _workspace_policy_selected = _policy_store_module.read_selected
++    _workspace_policy_write = _policy_store_module.write_policy
++    _workspace_policy_scope = _policy_store_module.scope
+ 
+ 
+ SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")

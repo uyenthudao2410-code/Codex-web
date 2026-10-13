@@ -1,0 +1,12 @@
+{
+  "daemon_start_token": "134362630621656046",
+  "central_census": {
+    "open_tasks": 0,
+    "unreleased_writers": 0,
+    "unsettled_current_generation_actions": 0
+  },
+  "daemon_pid": 43000,
+  "daemon_record_sha256": "cfd6a6dfb8649bbb8119ce4eb5d29cd25d8b13e9a26c7247e13ac6aa88f2554a",
+  "sandbox_id": "wsb:aa28a932",
+  "sandbox_record_sha256": "b79d1bcdf9ab78607ee8e4549efbc41629b1b4d531a1338d23055c5c1d07a274"
+}

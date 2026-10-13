@@ -1,0 +1,12 @@
+{
+  "operation": "exact_parallel_server_candidate_validation",
+  "candidate": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+  "package_source_sha256": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+  "tests_run": 48,
+  "failures": 0,
+  "errors": 0,
+  "passed": true,
+  "actual_http_api_import": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\codex-control-plane-parallel-native-1012-f7acd9ec4ba1\\control-plane\\control_plane\\http_api.py",
+  "actual_store_import": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\codex-control-plane-parallel-native-1012-f7acd9ec4ba1\\control-plane\\control_plane\\store.py",
+  "remote_mutations": false
+}

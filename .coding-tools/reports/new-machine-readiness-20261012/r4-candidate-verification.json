@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "observed_at": "2026-10-12T03:08:31.803Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r4\\win-unpacked",
+  "application_source_files_verified": 91,
+  "package_metadata_verified": true,
+  "resources": {
+    "exact_source": true,
+    "file_count": 298
+  },
+  "adapters": {
+    "exact_source": true,
+    "file_count": 9
+  },
+  "sanitation": {
+    "scanned_entries": 332,
+    "sanitized": true
+  },
+  "repaired_native_sandbox_proof_reused_from_r1": true,
+  "executable_sha256": "9d8290da25a32265f08eb00a27e7ed1a5dbbff1dab45bc9adebefdbf55d7cef1",
+  "app_asar_sha256": "88b33896cf50bb1219f425dcafe094fc9cd4dcc5dbaf248a923779c8f0436175",
+  "recovery_host_launcher_sha256": "04999b097376ba69c95927db6936df21f8ada58198af9b14e803e8fcc1137fd1"
+}

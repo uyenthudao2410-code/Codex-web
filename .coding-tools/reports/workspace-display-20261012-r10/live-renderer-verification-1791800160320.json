@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "operation": "live_data_packaged_renderer_verification",
+  "ok": true,
+  "observed_at_utc": "2026-10-12T10:16:00.320Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "expected_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+  "renderer_sha256": "8dbc227e9f762c035d339d37e1f37aa4a4785c69dd48f46a50283f5b2c2e70ab",
+  "html_sha256": "0bdce1403a81b2c3a12082912520de931beb0e63dd1b53913ee0c8cf89883505",
+  "app_asar_sha256": "0b119f1b740faa1713c9a004015c20bfee66668aa8707e1cfab67a1c07b3e901",
+  "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+  "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+  "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+  "authority": {
+    "fresh": true,
+    "state": "active",
+    "observed_at_ms": 1791800157111,
+    "dispatch_state": "dispatchable",
+    "presence_state": "online",
+    "readiness": "ready"
+  },
+  "policy_observed_at_ms": {
+    "read": 1791800157161,
+    "write": 1791800157161,
+    "exec": 1791800159585
+  },
+  "rendered": {
+    "labels": {
+      "sideWorkspace": "E:\\DEV\\Autocad",
+      "deviceWorkspace": "E:\\DEV\\Autocad",
+      "executionWorkspaceLabel": "E:\\DEV\\Autocad",
+      "selectedWorkspace": "E:\\DEV\\Autocad",
+      "workspaceMeta": "E:\\DEV\\Autocad"
+    },
+    "workspace_status": "Thư mục MCP hiện tại",
+    "native_default_workspace": "E:\\DEV\\Codex-web",
+    "device_runtime_workspace": "E:\\DEV\\Codex-web",
+    "git_application_state": "main @ 7999c415 · dirty",
+    "permissions": {
+      "read": true,
+      "write": true,
+      "exec": true
+    },
+    "stale_heartbeat_clears_labels": true,
+    "actual_functions": [
+      "renderSnapshot",
+      "renderCentralExecutorMode",
+      "renderSetupState",
+      "renderDevice",
+      "renderSetupExecution",
+      "renderWorkspaceTarget",
+      "centralActiveWorkspacePath",
+      "setupWorkspaceAccess",
+      "applyHeartbeat"
+    ],
+    "replaced_renderer_functions": [],
+    "automatic_initialize_excluded": true,
+    "direct_live_screenshot_claimed": false
+  },
+  "raw_snapshots_or_secrets_written": false,
+  "sandbox_probe_requested": false,
+  "external_mutation_requested": false,
+  "existing_activation_epoch_unchanged": true
+}

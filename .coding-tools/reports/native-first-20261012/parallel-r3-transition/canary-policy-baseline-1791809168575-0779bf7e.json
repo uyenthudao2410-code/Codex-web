@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "operation": "canary-policy-baseline",
+  "observed_at": "2026-10-12T12:46:08.575Z",
+  "observed_at_ms": 1791809168575,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "activation_epoch_id": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+    "approval_set": "codex-build",
+    "fixture_manifest_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\fixture-preparation.json",
+    "fixture_manifest_sha256": "4b8bbe525036278a4840fa1f0fc18d4158b4f9b4bb88a96361bee10f60f74102",
+    "targets": [
+      {
+        "workspace_label": "Codex-web",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "policy": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+          "allowed_argv_prefix_count": 7,
+          "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+          "execution_mode": "native_first",
+          "native_argv_prefixes": []
+        }
+      },
+      {
+        "workspace_label": "Autocad",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "policy": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+          "allowed_argv_prefix_count": 7,
+          "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+          "execution_mode": "native_first",
+          "native_argv_prefixes": []
+        }
+      }
+    ]
+  },
+  "mutating": false,
+  "parity_proof_sha256": "7a87e6196acdfa9f45788e5e54da11dc2d77a409d04ca851d113fb1d7ff5979b",
+  "smoke_proof_sha256": "a9a448f345dfadeb6b2bd5b566e14eb5939d2cb543c6536213810f1e8654b8ff",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\canary-policy-baseline-1791809168575-0779bf7e.json"
+}

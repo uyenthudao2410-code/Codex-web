@@ -1,0 +1,23 @@
+{
+  "operation": "files",
+  "observed_at": "2026-10-12T02:42:14.286Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "state": "read_and_patch",
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "file_read": {
+      "kind": "file_read",
+      "authority_mode": "standing",
+      "policy_sha256": "b09b5cf34b6e09489aaf34431dfa6931755dd7c69d41d01bf1e3d825fd686c36",
+      "windows_acl_verified": false
+    },
+    "approved_patch": {
+      "kind": "approved_patch",
+      "authority_mode": "standing",
+      "policy_sha256": "7c91e5868f2b6e65b38cd3a3663f5de802a8fba4fc82224fd9d71a3e6eea02b6",
+      "windows_acl_verified": false
+    }
+  }
+}

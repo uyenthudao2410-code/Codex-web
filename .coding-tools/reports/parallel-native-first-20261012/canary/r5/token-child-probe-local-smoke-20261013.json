@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "operation": "native_child_token_probe_local_smoke",
+  "observed_at_ms": 1791847457866,
+  "scope": "local direct smoke only; no control-plane dispatch or policy mutation",
+  "ok": true,
+  "dispatch_performed": false,
+  "policy_mutated": false,
+  "launcher_sha256": "75c3e965d5525d8ebd692c4a78baba2f51c20af166292d138bc543247b50e4cf",
+  "probe_sha256": "8afec55900734a83443c56bd6a85de48936f1f35ca4c212fb13fe667fff2e75f",
+  "exit_code": 0,
+  "stderr_empty": true,
+  "child_facts": {
+    "schema_version": 1,
+    "complete": true,
+    "open_process_token": true,
+    "elevated": false,
+    "app_container": false,
+    "integrity_rid": 8192,
+    "integrity_sid_valid": true,
+    "high_or_system_integrity": false,
+    "admin_sid_query_ok": true,
+    "administrator_group_present": true,
+    "administrator_group_enabled": false,
+    "administrator_group_deny_only": true,
+    "sensitive_privileges_enabled": 0,
+    "sensitive_luid_lookup_success_count": 11,
+    "query_errors": {
+      "elevation": 0,
+      "app_container": 0,
+      "integrity": 0,
+      "groups": 0,
+      "privileges": 0
+    }
+  },
+  "production_native_claim": false
+}

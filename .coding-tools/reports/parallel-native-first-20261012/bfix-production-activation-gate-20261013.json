@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "operation": "bfix_production_activation_gate",
+  "observed_at": "2026-10-13T00:53:00.2548334Z",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "candidate_proof": {
+    "parity_recheck": true,
+    "smoke": true,
+    "executable_sha256": "94f36ad726297bb2c4451ba9931b1532569f14f9f46526223e39fe75bc08e145",
+    "app_asar_sha256": "b3607da70af1df36a0aa1eb50f5771ba110069e33d08f256da542faca5f7b922",
+    "installed_or_activated": false,
+    "service_operations": false
+  },
+  "current_production": {
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "pid": 44012,
+    "instance_id": "ecae23c8a75f4b28b3bc182104f3ed49",
+    "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "activation_state": "READY",
+    "admission_open": true,
+    "fully_ready": true,
+    "execution_role": "central_executor",
+    "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+    "closure_state": "NO_ACCEPTED_CHECKPOINT",
+    "source_accepted": false,
+    "activation_eligible": false,
+    "release_state": "NOT_RELEASED",
+    "production_state": "NOT_CLAIMED",
+    "auto_activation_last_error": "AUTO_ACTIVATION_GIT_TOO_LARGE"
+  },
+  "ubuntu": {
+    "ok": true,
+    "service_pid": 970133,
+    "service_stable": true,
+    "readiness": "ready"
+  },
+  "authority": {
+    "trusted_bootstrap": {
+      "exit_code": 1,
+      "code": "TRUSTED_BOOTSTRAP_SOURCE_UNAVAILABLE",
+      "mutation_started": false
+    },
+    "full_clean_preflight": {
+      "exit_code": 1,
+      "code": "RECOVERY_HOST_INSTALLATION_MISMATCH",
+      "mutation_started": false
+    },
+    "accepted_checkpoint_available": false,
+    "source_fix_loaded": false
+  },
+  "decision": "BLOCKED_PRESERVE_CURRENT_PRODUCTION",
+  "reason": "bfix has exact package proofs but no current-HEAD accepted recovery_host checkpoint, and the packaged Recovery Host belongs to the serving r4-timefix installation. The repository has no supported in-place unpacked-candidate swap without the release/install boundary and accepted authority.",
+  "historical_unknown_actions_unchanged": true,
+  "mutation_started": false,
+  "next_action": "Obtain accepted recovery_host checkpoint and supported packaged release/install handoff, then rerun fresh census and exact postflight."
+}

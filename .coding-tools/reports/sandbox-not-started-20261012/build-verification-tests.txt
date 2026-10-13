@@ -1,0 +1,38 @@
+✔ build verification detects Electron package scripts (5.2931ms)
+✔ artifact collection rejects paths outside workspace and hashes files (14.2297ms)
+✔ workspace is required before build verification (0.665ms)
+✔ electron packaging excludes volatile resource evidence and validates the packed tree (2.203ms)
+✖ experimental MXC Windows Sandbox candidate is pinned and dev-only (19.2625ms)
+✔ legacy MXC Authenticode verification embeds literal arguments safely (17.173ms)
+✔ packaged Electron proof requires an executable RunAsNode fuse (1.9541ms)
+✔ dist cleaner removes stale package output before Electron Builder runs (2.5637ms)
+✔ packaged resources must be byte-identical to the current allowed source projection (26.8392ms)
+✔ packaged resources reject literal Windows environment-placeholder cache trees (3.3313ms)
+✔ packaged control-plane adapter has the exact allowlisted installed file set (12.5467ms)
+✔ packaged resource sanitation rejects raw reports and Python cache metadata (17.2638ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 11
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 708.6931
+
+✖ failing tests:
+
+test at tests\build-verification.test.js:100:1
+✖ experimental MXC Windows Sandbox candidate is pinned and dev-only (19.2625ms)
+  Error: Provenance của MXC Windows Sandbox candidate không khớp source/contract đã ghim.
+      at enrollmentError (E:\DEV\Codex-web\electron\services\controlPlaneEnrollment.js:62:24)
+      at verifyMxcWindowsSandboxCandidate (E:\DEV\Codex-web\electron\services\controlPlaneEnrollment.js:600:11)
+      at TestContext.<anonymous> (E:\DEV\Codex-web\tests\build-verification.test.js:110:28)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'MXC_WSB_PROVENANCE_INVALID'
+  }

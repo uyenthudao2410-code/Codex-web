@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "operation": "r4_full_canary_review",
+  "observed_at_utc": "2026-10-12T15:10:43.399566+00:00",
+  "source_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-feab8533616c4989b16cfc0dbdf9bd7d.ndjson",
+  "source_sha256": "9f77ea276be200e808837d4cf5636d30a8905c1e55ebcdd5c90b95212e07a316",
+  "source_bytes": 302597,
+  "record_count": 413,
+  "terminal_record_present": true,
+  "terminal_success": false,
+  "terminal_status": {
+    "ok": false,
+    "error_code": "ORIGINAL_ACTION_NOT_SETTLED",
+    "attempt_id": "feab8533616c4989b16cfc0dbdf9bd7d",
+    "elapsed_seconds": 656.686,
+    "proof_counts": {
+      "reads": 100,
+      "patches": 18,
+      "readbacks": 18,
+      "node_jobs": 0,
+      "git_jobs": 0
+    },
+    "unresolved_original_actions": [
+      "patch_019"
+    ],
+    "requires_reconciliation": true,
+    "cleanup_deferred_pending_effect": true,
+    "semantic_acceptance_performed": false,
+    "task_closed_verified": null,
+    "writer_released_verified": null
+  },
+  "phase_counts": {
+    "final": 1,
+    "observing_original_action": 137,
+    "patch_verified": 18,
+    "queued_original_action": 137,
+    "read_verified": 118,
+    "task_and_writer_held": 1,
+    "wave_completed": 1
+  },
+  "proof_classes": {
+    "reads_verified": 118,
+    "patches_verified": 18,
+    "readbacks_verified": 18,
+    "native_jobs_verified": 0,
+    "builds_verified": 0,
+    "task_writer_held": 1,
+    "waves_completed": 1,
+    "final_records": 1
+  },
+  "proof_class_status": {
+    "read": true,
+    "patch": false,
+    "readback": false,
+    "native_job": false,
+    "build": false,
+    "task_and_writer_held": true,
+    "wave_completed": true,
+    "terminal_final": true,
+    "semantic_acceptance": false,
+    "task_closed": false,
+    "writer_released": false
+  },
+  "runtime_identity": {
+    "records_with_identity": 136,
+    "unique_identity_count": 1,
+    "stable": true,
+    "identity_fingerprint_sha256": "45e7dc1d0ba5d1b3fe187fd679b62594231af4f7649f0866ce25c0de2c3dd504"
+  },
+  "completion_assessment": {
+    "terminal_observed": true,
+    "successful_terminal_completion": false,
+    "all_required_proof_classes_present": false,
+    "blocking_reason": "ORIGINAL_ACTION_NOT_SETTLED",
+    "unresolved_lane": "patch_019",
+    "next_action": "Reconcile or safely settle patch_019 from the authoritative action state; do not redispatch. Then rerun a fresh canary and require native_job, build, semantic acceptance, task closure, writer release, and clean final receipt."
+  },
+  "raw_payloads_included": false
+}

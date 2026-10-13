@@ -1020,10 +1020,16 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 for principal in self.server.store.list_private_tunnel_service_principals(owner_id=owner_id)
             ):
                 raise ConflictError("selected node is not owned by the active MCP service principal.")
+            observed = self.server.store.node_authority_status(
+                device_id=device_id, node_secret=self._auth("Node"), principal_id=configured_principal,
+            )
+            candidates = observed["targets"]
+        else:
+            candidates = [target for target in self.server.store.list_account_targets(owner_id=owner_id)
+                          if target["device_id"] == device_id and target["endpoint_id"] == node["endpoint_id"]]
         targets = [
-            target for target in self.server.store.list_account_targets(owner_id=owner_id)
-            if target["device_id"] == device_id
-            and target["endpoint_id"] == node["endpoint_id"]
+            target for target in candidates
+            if target["dispatch_state"] == "dispatchable"
             and target["workspace_id"] == workspace_id
             and target["workspace_generation"] == workspace_generation
             and target["binding_state"] == "active"
@@ -1074,6 +1080,25 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         self._node(device_id)
         return self.server.store.retire_node_workspace(
             device_id=device_id,
+            workspace_id=self._field(body, "workspace_id"),
+            workspace_generation=self._field(body, "workspace_generation"),
+        )
+
+    def _activate_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Honor one local-owner folder selection on the already authorized node.
+
+        The configured service principal is never supplied by the client. No
+        filesystem path, credential, grant or longer expiry crosses this API.
+        """
+        if (set(body) != {"workspace_id", "workspace_generation", "confirm_activate"}
+                or body.get("confirm_activate") is not True):
+            raise ValidationError("node workspace activation requires explicit local confirmation.")
+        self._node(device_id)
+        configuration = self.server.mcp_private_service
+        if configuration is None:
+            raise ConflictError("local folder activation requires the configured private MCP service.")
+        return self.server.store.activate_node_workspace(
+            device_id=device_id, principal_id=configuration.principal_id,
             workspace_id=self._field(body, "workspace_id"),
             workspace_generation=self._field(body, "workspace_generation"),
         )
@@ -1878,6 +1903,8 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 result = self.server.store.node_authority_status(
                     device_id=device_id,
                     node_secret=self._auth("Node"),
+                    principal_id=(self.server.mcp_private_service.principal_id
+                                  if self.server.mcp_private_service is not None else None),
                 )
                 self._json(HTTPStatus.OK, result)
                 return
@@ -1907,6 +1934,11 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 result = self._retire_node_workspace(node_workspace_retire_match.group(1), body)
                 self._json(HTTPStatus.OK, result)
                 return
+            node_workspace_activate_match = re.fullmatch(r"/v1/nodes/([^/]+)/activate-workspace", self.path)
+            if node_workspace_activate_match:
+                result = self._activate_node_workspace(node_workspace_activate_match.group(1), body)
+                self._json(HTTPStatus.OK, result)
+                return
             node_policy_template_match = re.fullmatch(r"/v1/nodes/([^/]+)/read-only-policy-template", self.path)
             if node_policy_template_match:
                 self._json(
@@ -1932,7 +1964,7 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if node_match:
                 device_id = node_match.group(1)
                 self._node(device_id)
-                if not set(body) <= {"limit", "lane"}:
+                if not set(body) <= {"limit", "lane", "workspace_id", "workspace_generation"}:
                     raise ValidationError("node poll payload is invalid.")
                 lane = body.get("lane")
                 if lane is not None and not isinstance(lane, str):
@@ -1944,6 +1976,8 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                             device_id=device_id,
                             limit=body.get("limit", 10),
                             lane=lane,
+                            workspace_id=body.get("workspace_id"),
+                            workspace_generation=body.get("workspace_generation"),
                         )
                     },
                 )

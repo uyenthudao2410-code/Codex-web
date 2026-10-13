@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "operation": "r3_to_r4_helpers_finalized",
+  "ok": true,
+  "observed_at": "2026-10-12T13:54:27.866799+00:00",
+  "source_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "old_candidate": "E:/DEV/Codex-web/dist/windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3/win-unpacked",
+  "new_candidate": "E:/DEV/Codex-web/dist/windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4/win-unpacked",
+  "old_ready_epoch": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+  "original_r3_baseline": "E:/DEV/Codex-web/.coding-tools/reports/native-first-20261012/parallel-r3-transition/canary-policy-baseline-1791809168575-0779bf7e.json",
+  "original_r3_baseline_sha256": "126534d0440e0497932c96c4dbe6dcc097794c9780e4014f3b7cd0da461a6298",
+  "server_gate": "current-device-and-two-target-scopes-only; foreign expired blocker retained",
+  "modes": [
+    "status",
+    "stop",
+    "stopped-observation",
+    "retire",
+    "refresh",
+    "complete",
+    "canary-build",
+    "canary-overlap",
+    "final-policy",
+    "policies"
+  ],
+  "helper_sha256": {
+    "packaged-operations.cjs": "4f66790fc139beaa40168ad178c03d89ac3bcabfb8c5750ecda2517df0ada50e",
+    "install-launch.ps1": "bd7a5429f98bb4a43301d37269fc93c78e7b69a5f458690eb47217570cfa9b4a",
+    "test-r4-idle-gate.cjs": "38654c34f77b9ab61172a78e4310335e96998167ea74ac74506e045c6ac305d2",
+    "retiring-r3-resource-snapshot.json": "6b844d620737a59cc0eeaba8ec08d20b7e5e96901325a037439b9df948115234"
+  },
+  "source_modified": false,
+  "runtime_mutations_performed": false,
+  "ready_inferred": false,
+  "old_stop_failures_preserved": true
+}

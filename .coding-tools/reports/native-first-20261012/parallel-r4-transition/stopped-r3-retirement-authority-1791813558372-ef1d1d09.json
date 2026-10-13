@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "operation": "stopped-r3-retirement-authority",
+  "observed_at": "2026-10-12T13:59:18.372Z",
+  "observed_at_ms": 1791813558372,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "stopped_observation": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\stopped-observation-1791813492715-aa8843fc.json",
+    "stopped_observation_sha256": "b6f9a6f008d3975eb3ae9e4cfb6e9cffd763a6b42cf007b6ef3dfeaedea551e6",
+    "owner": {
+      "owner_pid": 12604,
+      "owner_process_start_token": "134362825905927480",
+      "instance_id": "c05d5a902dc55835b2cdc9263799dea7",
+      "installation_id": "1db86beab972872a3361551fcae3d06bf8065f37027effa20b030a8cb921a606"
+    },
+    "runtime": {
+      "fullyReady": false,
+      "mcpRunning": false,
+      "nativeAlive": false,
+      "executionRole": "central_executor",
+      "authorityReady": true,
+      "centralConnected": true,
+      "centralStatusReason": "LOCAL_EXECUTOR_NOT_READY",
+      "updateIncomplete": true,
+      "connectorContractState": "UNAVAILABLE",
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "stopped_census": {
+      "schema_version": 1,
+      "safe": true,
+      "code": "READY",
+      "reason": "canonical_ledger_quiescent",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "6a430ed50b323b2ca60af41ee0d90857809b29f4d32031e1254e92cf2647c273",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "ba29d43ecdf3990202e8fc829112485e2817112d152ac005f960eb9d7742e517",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T13:58:09.984Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": []
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791813490.844686,
+      "census_fingerprint": "341cf5fcd3a96cf76607f879d4ee6985df826a45a48c841612e1fafd13640fd1"
+    },
+    "no_stop_dispatched": true,
+    "original_stop_not_replayed": true,
+    "method": "fresh exact stopped r3 owner and quiescent canonical census before r4 handoff"
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\stopped-r3-retirement-authority-1791813558372-ef1d1d09.json"
+}

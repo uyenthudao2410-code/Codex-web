@@ -1,0 +1,45 @@
+{
+  "ok": true,
+  "observed_at": "2026-10-12T03:08:13.444Z",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "source_sha256": {
+    "recovery_host": "e12b56a5d6365704f4c31e496100471f2ac8ef7dcaa763a5ecead9d1f2db3dd8",
+    "concurrency_tests": "7add4ef8e50f66c5738a9d6bb855f192a5a30ee76c138fe993b9e7e52b13d4e4"
+  },
+  "guard_scope": [
+    "replacement startup",
+    "bootstrap restart after IPC start",
+    "explicit epoch completion through admission",
+    "public preflight",
+    "code update",
+    "non-soft operator restart",
+    "watchdog final census",
+    "supervisor ticket consumer",
+    "nested ordinary supervision ticket consumer",
+    "automatic preflight",
+    "automatic activate",
+    "automatic checkpoint lifecycle verification"
+  ],
+  "strict_receipt_equality_unchanged": true,
+  "final_validation": [
+    {
+      "command": "node --test tests/recovery-host-activation-completion.test.js",
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "command": "node --test --test-name-pattern=\"supervisor restart|supervision arms|connector-pending supervision|manual restart|Recovery Host restart resolves|projection rebuild gate|final census rebuilds|pending projection reuse|finalize (never opens|commits)|replacement-start exceptions|Recovery Host replacement hands off\" tests/full-clean-activation.test.js tests/recovery-host.test.js",
+      "passed": 21,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:recovery:e2e",
+      "passed": 3,
+      "failed": 0,
+      "duration_ms": 24400.464
+    }
+  ],
+  "resolved_test_fixture_failure": "Initial new fixture supplied a non-decimal synthetic process start token. Corrected to the existing decimal-token contract; all final tests pass.",
+  "independent_review": "local_checks: no remaining actionable finding in guard scope",
+  "production_runtime_mutated_by_this_agent": false
+}

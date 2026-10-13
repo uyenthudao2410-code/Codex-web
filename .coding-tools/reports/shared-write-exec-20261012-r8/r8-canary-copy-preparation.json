@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "source_sha256": "bd41561c0381df1b133a8716947372e7c53de1d144215e8904a0fec4c1f062e4",
+      "source": "invoke-shared-write-exec-canary-r7.ps1",
+      "sha256": "e8f6d0132349de85efba471f02a993383785bf790957421ab5b1bcad392b0a1d",
+      "target": "invoke-shared-write-exec-canary-r8.ps1"
+    },
+    {
+      "source_sha256": "66b5c8a9b367f0c564080946812f2a31a3e9a730182aab9f8b51d28034ceefec",
+      "source": "run-shared-write-exec-canary-r7.py",
+      "sha256": "8756f0981a8614735dff3ae01ae0240a171070c1690a615d87a2eaeaf66128c4",
+      "target": "run-shared-write-exec-canary-r8.py"
+    },
+    {
+      "source_sha256": "e29267a0f63a10a26f539f03e142ec2f132537e55ca96dc7dcb8c7a99a3d7c2e",
+      "source": "shared-write-exec-check-r7.cjs",
+      "sha256": "678108fa55252b611c4e898be4feffa624ce5f6811f738e89e5df9243e367bfe",
+      "target": "shared-write-exec-check-r8.cjs"
+    }
+  ],
+  "only_literal_replacements": true,
+  "operation": "r8_canary_additive_copy",
+  "observed_at": "2026-10-12T14:02:05.8158520+07:00"
+}

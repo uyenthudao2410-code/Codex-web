@@ -1,0 +1,20 @@
+{
+  "operation": "overlay_fingerprint_correction_preparation",
+  "previous_archive_sha256": "c0f51088bb1145105e96d7c8a4c1990d767e5a292c8079166d42397b34ccf42b",
+  "previous_incorrect_package_fingerprint": "sha256:41c3bdb38a0b642f650d08d89382bc07b594d330289cf7fa82a624c17147a8a3",
+  "reason": "Initial custom aggregate omitted trailing NUL separators; official builder helper now computes exact package identity.",
+  "changed_runtime_files_from_reviewed_candidate": [],
+  "new_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\new-machine-20261012\\server-pilot-continuity\\codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+  "new_archive": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\new-machine-20261012\\server-pilot-continuity\\codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2.tar.gz",
+  "new_archive_sha256": "819c917e290029c1512b88bf85f60f875a1adc42e496a24490a8aee61ea4fd4e",
+  "correct_package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+  "official_release_verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+    "file_count": 38
+  },
+  "remote_mutations": false
+}

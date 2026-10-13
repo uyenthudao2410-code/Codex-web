@@ -1,0 +1,12 @@
+[eval]:1
+process.argv=[electron,operator,prepare,--parity-proof,E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-timefix-parity.json,--smoke-proof,E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-timefix-smoke-full.json,--output,E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\packaged-token-prepare-probe-10.json];require(E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\sandbox-idle-policy-timefix.cjs);
+                                                        ^
+Expected ',', got ':'
+
+SyntaxError: Unexpected token ':'
+    at makeContextifyScript (node:internal/vm:194:14)
+    at compileScript (node:internal/process/execution:388:10)
+    at evalTypeScript (node:internal/process/execution:260:22)
+    at node:internal/main/eval_string:71:3
+
+Node.js v24.18.0

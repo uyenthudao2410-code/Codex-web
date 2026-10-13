@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "operation": "offline_connector_discovery_gate_classification",
+  "ok": true,
+  "live_endpoint_called": false,
+  "runtime_mutated": false,
+  "execution_role": "central_executor",
+  "connector_state": "CHANGED_NEEDS_DISCOVERY",
+  "connector_applicability": "not_applicable_central_executor",
+  "strict_discovery_required": false,
+  "central_runtime_ready": true,
+  "central_facts": {
+    "fully_ready": true,
+    "mcp_running": true,
+    "native_alive": true,
+    "authority_ready": true,
+    "central_connected": true,
+    "activation_ready": true,
+    "admission_open": true
+  },
+  "recommendation": "CLOSE_DIRECT_CONNECTOR_GATE_FOR_CENTRAL_RUNTIME; retain CHANGED_NEEDS_DISCOVERY as unused direct-path diagnostic.",
+  "source": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-1791836657316-76210085.json",
+    "sha256": "d9daad5c51b8c7a157cb00d6df2b5d0bbaf54f40856bb039cb802e3c0bb8809c"
+  }
+}

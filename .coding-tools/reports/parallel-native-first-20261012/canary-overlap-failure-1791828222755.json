@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "canary-overlap",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "observed_at": "2026-10-12T18:03:42.755Z",
+  "observed_at_ms": 1791828222755,
+  "ok": false,
+  "stage": "exact_host",
+  "code": "EXPLICIT_APPLY_REQUIRED",
+  "mutating_action_started": false,
+  "retry_instruction": "Resolve the read-only gate before applying.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary-overlap-failure-1791828222755.json"
+}

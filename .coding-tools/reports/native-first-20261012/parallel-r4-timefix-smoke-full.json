@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T16:00:08.474787+00:00",
+  "capture_finished_utc": "2026-10-12T16:00:18.327901+00:00",
+  "scope": "isolated temporary packaged recovery profile only; production profile and Scheduled Task untouched",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "command": "CODEX_PACKAGED_APP_ROOT=<parallel-r4-timefix candidate> node scripts/packaged-recovery-smoke.js",
+  "sha256": {
+    "executable": "f88e1f0c810031c50b07532130fe946c07047c895780387313ad008f60aa2937",
+    "app_asar": "3c86b63ff32a7c750cc0576722cc24cd377856e97b7aa5159965a5449dd750ae",
+    "source_smoke_script": "170aaeae11b191376860f30f52fda45cb3ca7afb0870d0d0d94ef3e98c1329ea",
+    "source_resource_verifier": "44c73e9f0b2a7db5643b206abbd1de55f7a72d6f0b79b8651bc0dd67e20a4bde",
+    "source_package_parity_receipt": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c"
+  },
+  "exit_code": 0,
+  "timed_out": false,
+  "result": {
+    "ok": true,
+    "package": {
+      "executable": true,
+      "app_asar": true,
+      "required_resources": 18,
+      "smart_tool_contract": {
+        "profile": "smart-v3",
+        "task_context_id": {
+          "agent_workflow": true,
+          "task_control": true,
+          "workspace_context": true
+        },
+        "tools": [
+          "agent_workflow",
+          "command_control",
+          "document_workflow",
+          "exec_command",
+          "request_permissions",
+          "task_control",
+          "view_image",
+          "workspace_context"
+        ]
+      }
+    },
+    "isolation": {
+      "user_data_isolated": true,
+      "production_descriptor_stable": true
+    },
+    "recovery": {
+      "host_ready": true,
+      "device_identity_present": true,
+      "mode": "independent_mcp_tunnel_v1",
+      "mcp_alive": true
+    },
+    "supervisor": {
+      "healthy": true,
+      "live_owner_fail_closed": true,
+      "hash_mismatch_fail_closed": true,
+      "scheduled_task_mutation": false
+    }
+  },
+  "stdout_sha256": "4cd556110f0817685d91961f792e3d07221231544b592fb44a26ab5f5bc5b24e",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_empty": true,
+  "sanitized_failure_codes": [],
+  "production_descriptor_before": {
+    "owner_pid": 28800,
+    "instance_id": "121b28e1a1d93d1d5a03775fc6c9a5e6"
+  },
+  "production_descriptor_after": {
+    "owner_pid": 28800,
+    "instance_id": "121b28e1a1d93d1d5a03775fc6c9a5e6"
+  },
+  "production_descriptor_stable": true,
+  "fixture_processes_observed": [
+    {
+      "pid": 43960,
+      "parent_pid": 30048,
+      "name": "node.exe",
+      "created_at_utc": "2026-10-12T16:00:12.406774+00:00"
+    },
+    {
+      "pid": 36244,
+      "parent_pid": 43960,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T16:00:12.442353+00:00"
+    },
+    {
+      "pid": 6564,
+      "parent_pid": 43960,
+      "name": "python.exe",
+      "created_at_utc": "2026-10-12T16:00:12.894590+00:00"
+    },
+    {
+      "pid": 22152,
+      "parent_pid": 6564,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T16:00:12.907857+00:00"
+    },
+    {
+      "pid": 52360,
+      "parent_pid": 43960,
+      "name": "Coding Tools MCP.exe",
+      "created_at_utc": "2026-10-12T16:00:13.152527+00:00"
+    },
+    {
+      "pid": 35512,
+      "parent_pid": 52360,
+      "name": "Coding Tools MCP.exe",
+      "created_at_utc": "2026-10-12T16:00:13.344607+00:00"
+    },
+    {
+      "pid": 35380,
+      "parent_pid": 52360,
+      "name": "Coding Tools MCP.exe",
+      "created_at_utc": "2026-10-12T16:00:13.371757+00:00"
+    },
+    {
+      "pid": 33468,
+      "parent_pid": 52360,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T16:00:13.405342+00:00"
+    },
+    {
+      "pid": 37932,
+      "parent_pid": 33468,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T16:00:13.440265+00:00"
+    },
+    {
+      "pid": 27620,
+      "parent_pid": 52360,
+      "name": "python.exe",
+      "created_at_utc": "2026-10-12T16:00:14.046633+00:00"
+    },
+    {
+      "pid": 37220,
+      "parent_pid": 43960,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T16:00:14.755582+00:00"
+    },
+    {
+      "pid": 28772,
+      "parent_pid": 37220,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T16:00:14.763549+00:00"
+    },
+    {
+      "pid": 51152,
+      "parent_pid": 43960,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T16:00:15.776577+00:00"
+    },
+    {
+      "pid": 28896,
+      "parent_pid": 51152,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T16:00:15.783830+00:00"
+    },
+    {
+      "pid": 29164,
+      "parent_pid": 43960,
+      "name": "powershell.exe",
+      "created_at_utc": "2026-10-12T16:00:16.667478+00:00"
+    },
+    {
+      "pid": 14740,
+      "parent_pid": 29164,
+      "name": "conhost.exe",
+      "created_at_utc": "2026-10-12T16:00:16.674402+00:00"
+    },
+    {
+      "pid": 5516,
+      "parent_pid": 43960,
+      "name": "taskkill.exe",
+      "created_at_utc": "2026-10-12T16:00:17.641170+00:00"
+    }
+  ],
+  "fixture_generations_alive_after": [],
+  "candidate_process_census_before": [],
+  "candidate_process_census_after": [],
+  "profiles_observed": [
+    "E:\\Caches\\Temp\\webmcp-packaged-recovery-DtfNaN"
+  ],
+  "profiles_remaining_after": [],
+  "cleanup_proof": "existing smoke asserts each owned Recovery Host/MCP/Tunnel PID terminal; independent sampled descendant generation and package process census after exit",
+  "sampling_limitation": "100ms descendant sampling can miss short-lived children; the smoke's cleanup assertions additionally cover owned persistent fixture processes",
+  "operations": {
+    "production_activation": false,
+    "scheduled_task_mutation": false,
+    "rebuild": false,
+    "source_edit": false,
+    "vm_launch": false
+  },
+  "ok": true
+}

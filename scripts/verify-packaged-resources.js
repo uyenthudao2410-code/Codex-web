@@ -22,6 +22,7 @@ const SANCTIONED_CODING_MCP_RUNTIME_FILES = new Set([
 ]);
 const CONTROL_PLANE_ADAPTER_FILES = Object.freeze([
   "node_agent.py",
+  "workspace_policy_store.py",
   "node-agent.cmd",
   "recovery_identity_observer.cjs",
   "recovery_approved_patch_bridge.cjs",
@@ -34,7 +35,7 @@ const CONTROL_PLANE_ADAPTER_FILES = Object.freeze([
 const MXC_EXEC_SHA256 = "6049c64723af1173c3739dc6cd6b2f33f6c021bb2832c4216233cba7f71aee9a";
 const MXC_EXEC_SIGNER = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US";
 const MXC_WSB_SOURCE_COMMIT = "cbe1774364ea2ec846f56ab744e43a416f751420";
-const MXC_WSB_LOCAL_PATCH_SHA256 = "85a0991dd4473b31574ad6c71d2c489389e6719a3e6ef9116f5f9156a7b7c8df";
+const MXC_WSB_LOCAL_PATCH_SHA256 = "6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579";
 const MXC_WSB_BINARY_NAMES = Object.freeze([
   "wxc-exec.exe",
   "wxc-windows-sandbox-daemon.exe",

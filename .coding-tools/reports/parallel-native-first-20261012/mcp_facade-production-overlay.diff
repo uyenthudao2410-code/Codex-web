@@ -1,0 +1,67 @@
+--- serving/control-plane/control_plane/mcp_facade.py
++++ candidate/control-plane/control_plane/mcp_facade.py
+@@ -16,7 +16,10 @@
+ import re
+ from typing import Any
+ 
+-from .node_agent import APPROVED_PATCH_MAX_FILE_BYTES, safe_workspace_summary, _safe_approved_patch_initial_verification
++from .node_agent import (
++    APPROVED_PATCH_MAX_FILE_BYTES, safe_workspace_summary,
++    _safe_approved_patch_initial_verification, _safe_exec_metadata,
++)
+ from .mcp_status import terminal_failure
+ from .store import (
+     MCP_APPROVED_PATCH_MAX_BYTES,
+@@ -1616,6 +1619,11 @@
+             "wave_id": payload.get("wave_id"),
+             "output_refs": payload.get("output_refs"),
+         }
++        try:
++            metadata = _safe_exec_metadata(payload)
++        except RuntimeError:
++            continue
++        safe_output.update(metadata)
+         expected = hashlib.sha256(
+             _canonical_json(safe_output).encode("utf-8")
+         ).hexdigest()
+@@ -1642,6 +1650,7 @@
+             "output_refs": payload.get("output_refs"),
+             "runtime_identity": runtime_identity,
+             "response_sha256": expected,
++            **metadata,
+         }
+     return None
+ 
+@@ -2812,7 +2821,7 @@
+             # A shared connector (personal Plus/Pro or Business/Edu/Enterprise)
+             # identifies every permitted caller as one service, so owner inventory is broader than the target
+             # they were delegated. Show only the exact currently delegated
+-            # binding; an empty result is honest before/after a pilot decision.
++            # bindings; an empty result is honest before/after pilot decisions.
+             now = self.store.clock()
+             delegated = {
+                 decision["binding_id"]
+@@ -3432,6 +3441,7 @@
+         content = "Bounded exec has no verified terminal receipt yet."
+         if relay is not None:
+             observation["exec"] = {k: relay[k] for k in ("receipt_id", "received_at_ms", "local_handle", "exit_code", "truncated", "output_bytes", "response_sha256")}
++            observation["exec"].update(_safe_exec_metadata(relay))
+             content = f"Exec finished with exit {relay['exit_code']}. Use command_control exec_output for paged output."
+         elif (failure := terminal_failure(action)) is not None:
+             state = _central_lifecycle_state(action)
+@@ -3462,6 +3472,7 @@
+                 "schema_version": self.contract["schema_version"],
+                 "observation_kind": "control_plane_exec_output",
+                 "has_output": True, "exit_code": relay["exit_code"], **page,
++                **_safe_exec_metadata(relay),
+                 "action": self._action_lifecycle_projection(action),
+             },
+             "isError": False,
+@@ -3483,6 +3494,7 @@
+                 "schema_version": self.contract["schema_version"],
+                 "observation_kind": "control_plane_exec_stop",
+                 "stop_state": state, "execution": execution,
++                **(_safe_exec_metadata(relay) if relay is not None else {}),
+                 "stop_request": stop, "action": self._action_lifecycle_projection(action),
+             },
+             "isError": False,

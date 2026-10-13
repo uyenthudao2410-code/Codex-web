@@ -24,6 +24,22 @@ const FACADE_CONTRACT = {
   sha256: 'f'.repeat(64)
 };
 
+test('workspace collection selects exact generation and never shares native script approval', (t) => {
+  const item = fixture(t);
+  const first = { ...policy(), allowed_argv_prefixes: [['node', '--version'], ['node', 'trusted.js']], native_argv_prefixes: [['node', 'trusted.js']] };
+  const second = { ...first, workspace_id: 'workspace-control-plane-0002', workspace_generation: 'generation-control-plane-0002', allowed_argv_prefixes: [['node', '--version']], native_argv_prefixes: [] };
+  fs.writeFileSync(item.policyFile, JSON.stringify({ schema_version: 1, policies: [first, second] }));
+  const loadedFirst = loadExecBridgePolicy(item.paths, { now: NOW, target: first });
+  const loadedSecond = loadExecBridgePolicy(item.paths, { now: NOW, target: second });
+  assert.deepEqual(loadedFirst.native_argv_prefixes, [['node', 'trusted.js']]);
+  assert.deepEqual(loadedSecond.native_argv_prefixes, []);
+  assert.throws(() => loadExecBridgePolicy(item.paths, { now: NOW }), { code: 'CONTROL_PLANE_EXEC_POLICY_INVALID' });
+  assert.throws(() => loadExecBridgePolicy(item.paths, { now: NOW, target: { ...second, workspace_generation: 'generation-retired-0002' } }), { code: 'CONTROL_PLANE_EXEC_POLICY_INVALID' });
+  const action = { ...request(), argv: ['node', 'trusted.js'], cwd: '' };
+  assert.deepEqual(admitExecBridgeRequest(loadedFirst, action, { now: NOW }).native_argv_prefixes, [['node', 'trusted.js']]);
+  assert.throws(() => admitExecBridgeRequest(loadedSecond, { ...action, workspace_id: second.workspace_id, workspace_generation: second.workspace_generation }, { now: NOW }), { code: 'CONTROL_PLANE_EXEC_ALLOWLIST_DENIED' });
+});
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-exec-bridge-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -208,4 +224,57 @@ test('exec result normalization preserves Job identity and rejects digest drift'
   const drift = safeResult(admitted);
   drift.stdout = 'tampered\n';
   assert.throws(() => normaliseExecResult(drift, admitted), { code: 'CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID' });
+});
+
+test('native routing is local policy authority and old policy hashes remain stable', (t) => {
+  const item = fixture(t);
+  const old = policy();
+  fs.writeFileSync(item.policyFile, JSON.stringify(old));
+  const loaded = loadExecBridgePolicy(item.paths, { now: NOW });
+  const oldProjection = { ...old };
+  delete oldProjection.enabled;
+  assert.equal(loaded.policy_sha256, digest(oldProjection));
+  const admitted = admitExecBridgeRequest(loaded, request(), { now: NOW });
+  assert.equal(admitted.execution_mode, 'native_first');
+  assert.deepEqual(admitted.native_argv_prefixes, []);
+  assert.throws(() => admitExecBridgeRequest(loaded, { ...request(), execution_mode: 'native_only' }, { now: NOW }),
+    { code: 'CONTROL_PLANE_EXEC_REQUEST_INVALID' });
+  const explicit = { ...old, execution_mode: 'native_only', native_argv_prefixes: [['npm', 'test']] };
+  fs.writeFileSync(item.policyFile, JSON.stringify(explicit));
+  const approved = loadExecBridgePolicy(item.paths, { now: NOW });
+  const approvedRequest = admitExecBridgeRequest(approved, request(), { now: NOW });
+  assert.equal(approvedRequest.execution_mode, 'native_only');
+  assert.deepEqual(approvedRequest.native_argv_prefixes, [['npm', 'test']]);
+  assert.notEqual(approved.policy_sha256, loaded.policy_sha256);
+  for (const invalid of [null, [['C:/tools/node.exe']], [['npm', 'test'], ['npm', 'test']], [['npm', 'test;whoami']]]) {
+    fs.writeFileSync(item.policyFile, JSON.stringify({ ...explicit, native_argv_prefixes: invalid }));
+    assert.throws(() => loadExecBridgePolicy(item.paths, { now: NOW }), { code: 'CONTROL_PLANE_EXEC_POLICY_INVALID' });
+  }
+});
+
+test('exec metadata is all-or-none, constrained and bound to the result digest', (t) => {
+  const item = fixture(t);
+  fs.writeFileSync(item.policyFile, JSON.stringify(policy()));
+  const admitted = admitExecBridgeRequest(loadExecBridgePolicy(item.paths, { now: NOW }), request(), { now: NOW });
+  const original = safeResult(admitted);
+  assert.equal(Object.hasOwn(normaliseExecResult(original, admitted), 'execution_backend'), false);
+  for (const metadata of [
+    { execution_backend: 'native', isolation_level: 'process_container', policy_decision: 'native_safe_command' },
+    { execution_backend: 'native', isolation_level: 'process_container', policy_decision: 'native_explicit_approval' },
+    { execution_backend: 'isolated', isolation_level: 'hypervisor', policy_decision: 'isolated_unapproved_command' },
+    { execution_backend: 'isolated', isolation_level: 'hypervisor', policy_decision: 'isolated_preferred' }
+  ]) {
+    const output = Object.fromEntries(['status', 'exit_code', 'stdout', 'stderr', 'truncated', 'timed_out',
+      'command_id', 'job_id', 'run_id', 'wave_id', 'output_refs'].map((key) => [key, original[key]]));
+    const value = { ...original, ...metadata, response_sha256: digest({ ...output, ...metadata }) };
+    assert.equal(normaliseExecResult(value, admitted).policy_decision, metadata.policy_decision);
+    assert.throws(() => normaliseExecResult({ ...value, response_sha256: original.response_sha256 }, admitted),
+      { code: 'CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID' });
+  }
+  for (const metadata of [
+    { execution_backend: 'native' },
+    { execution_backend: 'native', isolation_level: 'hypervisor', policy_decision: 'native_safe_command' },
+    { execution_backend: 'isolated', isolation_level: 'hypervisor', policy_decision: 'native_explicit_approval' }
+  ]) assert.throws(() => normaliseExecResult({ ...original, ...metadata }, admitted),
+    { code: 'CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID' });
 });

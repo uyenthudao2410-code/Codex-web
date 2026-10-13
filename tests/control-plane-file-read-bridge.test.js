@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { RecoveryHost } = require('../electron/services/recoveryHost');
 
 const {
   BRIDGE_CLIENT_ID,
@@ -97,6 +98,28 @@ function writeRegistry(paths, root) {
     }]
   }), 'utf8');
 }
+
+test('Recovery Host attests a missing target only before bounded read dispatch', async (t) => {
+  const item = fixture(t);
+  const now = Date.now();
+  fs.writeFileSync(item.policyFile, JSON.stringify(policy(now)), 'utf8');
+  writeRegistry(item.paths, item.root);
+  const host = Object.create(RecoveryHost.prototype);
+  host.paths = item.paths;
+  host.deviceIdentity = { device_id: 'device-control-plane-0001' };
+  let dispatched = false;
+  host.orchestrator = {
+    lightweightSnapshot: async () => { dispatched = true; throw new Error('runtime must not be reached'); },
+    controlPlaneBoundedFileRead: async () => { dispatched = true; throw new Error('read must not be reached'); }
+  };
+  await assert.rejects(host.controlPlaneBoundedFileRead(request(now)), {
+    code: 'CONTROL_PLANE_FILE_READ_TARGET_MISSING_BEFORE_DISPATCH'
+  });
+  assert.equal(dispatched, false);
+  assert.throws(() => resolveDirectRegisteredFile(item.root, 'fixture.txt'), {
+    code: 'CONTROL_PLANE_FILE_READ_TARGET_MISSING'
+  });
+});
 
 function safeResult(admission, content = 'line one\nline two\n') {
   const bytes = Buffer.byteLength(content, 'utf8');

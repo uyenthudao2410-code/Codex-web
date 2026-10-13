@@ -154,6 +154,20 @@ test('exec bridge normalizer rejects a changed result digest', () => {
   );
 });
 
+test('exec bridge preserves only verified backend metadata through the subprocess projection', () => {
+  const value = candidate();
+  const output = Object.fromEntries(['status', 'exit_code', 'stdout', 'stderr', 'truncated', 'timed_out',
+    'command_id', 'job_id', 'run_id', 'wave_id', 'output_refs'].map((key) => [key, value[key]]));
+  const metadata = { execution_backend: 'native', isolation_level: 'process_container', policy_decision: 'native_safe_command' };
+  Object.assign(value, metadata, { response_sha256: digest({ ...output, ...metadata }) });
+  const result = normalisedResult({ runtime_mode: 'development' }, value, request, { normaliseExecResult });
+  assert.equal(result.execution_backend, 'native');
+  assert.equal(result.isolation_level, 'process_container');
+  assert.equal(result.policy_decision, 'native_safe_command');
+  assert.throws(() => normalisedResult({}, { ...value, policy_decision: 'native_explicit_approval' }, request,
+    { normaliseExecResult }), { code: 'CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID' });
+});
+
 test('exec bridge fails closed before IPC when the Recovery installation identity changes', async () => {
   const expectedInstallation = 'i'.repeat(32);
   const calls = [];

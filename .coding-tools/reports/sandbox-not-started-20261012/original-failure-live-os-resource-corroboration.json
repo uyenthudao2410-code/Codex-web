@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "operation": "original_failure_live_os_resource_corroboration",
+  "observed_at_ms": 1791783500330,
+  "diagnostic_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\original-failure-diagnostic-1791783479887.json",
+  "diagnostic_sha256": "e6acaa6a585284ca786a2153abbdea5a110cbd8956626b8edd0cc7ca2a680bc5",
+  "read_only": true,
+  "new_command_or_vm_execution_started": false,
+  "original_failed_job_id": "41d336e59e8340078b97d35760b4a649",
+  "failed_root_pid": 48040,
+  "prior_daemon_pid": 15636,
+  "live_backend_or_owned_process_count": 0,
+  "processes": [
+    {
+      "Name": "Coding Tools MCP.exe",
+      "ProcessId": 31528,
+      "ParentProcessId": 40356,
+      "creation_date_utc": "2026-10-12T04:29:25.6735180Z"
+    },
+    {
+      "Name": "pythonw.exe",
+      "ProcessId": 30620,
+      "ParentProcessId": 31528,
+      "creation_date_utc": "2026-10-12T04:29:28.8484730Z"
+    }
+  ],
+  "central_census": {
+    "open_tasks": 0,
+    "unreleased_writers": 0,
+    "unsettled_actions": 0
+  },
+  "native_active_managed_job_count": 0
+}

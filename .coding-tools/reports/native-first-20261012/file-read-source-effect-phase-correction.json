@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "operation": "installed_file_read_source_effect_phase_correction",
+  "read_only": true,
+  "ok": true,
+  "observed_at": "2026-10-12T11:22:52.519Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "package": {
+    "executable_sha256": "e7bb35634d7e765c24c156fb6a12ce9e707f3b26a4596329a2fa4dbb0e7c5f05",
+    "app_asar_sha256": "0b119f1b740faa1713c9a004015c20bfee66668aa8707e1cfab67a1c07b3e901"
+  },
+  "source": {
+    "asar_module_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked\\resources\\app.asar\\electron\\services\\runtimeOrchestrator.js",
+    "module_sha256": "ca8dc2e3534a90a3e1b1bc1d612f52486348f1ee19fcc3ed54b3fafe96dc2a0c",
+    "method_sha256": "88203cb5f77a2825096023196857a9c80fd1b5570414d9dcd66f31e0962caa86",
+    "excerpt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r9e-installed-controlPlaneBoundedFileRead-orchestrator-excerpt.js"
+  },
+  "after_read_resolver_call_present": true,
+  "applicable_branch": "structured.path is absolute, including registered AutoCAD outside native primary Codex-web root",
+  "read_call_precedes_same_resolver": true,
+  "failure_phase_from_target_missing_code": "ambiguous: upfront Recovery Host validation or post-read absolute path projection",
+  "known_pre_effect_refusal_proven": false,
+  "selected_unknown_action_effect_outcome": "unknown; retain without replay or rejected/completed inference",
+  "corrected_prior_claims": [
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r9e-installed-file-read-source-proof.json",
+      "sha256": "e31bc6154560cbc6e83ca4e1e4e1f4ffd9049b506fa4ea3bf2143527b30928b1",
+      "correction": "Resolver performs only metadata operations, but can be invoked after File API read. Upfront call existence does not establish exclusive failure origin."
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\local-unknown-file-read-action-evidence.json",
+      "sha256": "e92376f2a0fa733a9e9165b4a39c055649698535abb397287417e932453a9da1",
+      "correction": "Remove inference that TARGET_MISSING proves no content read; exact action journals establish only UNKNOWN and diagnostic correlation."
+    }
+  ],
+  "next_action": "Require authenticated phase-specific original trace/receipt before terminal rejection; otherwise preserve UNKNOWN and use supported unknown reconciliation/quarantine workflow without completing action",
+  "production_operations_performed": []
+}

@@ -75,8 +75,9 @@ function renderServiceState(state) {
   };
   [['#mcpState', 'mcp'], ['#tunnelState', 'tunnel']].forEach(([selector, kind]) => {
     const element = $(selector);
+    if (kind === 'tunnel' && element) (element.lastChild || element).textContent = central ? 'Ubuntu' : 'Tunnel';
+    if (!element) return;
     const presentation = servicePresentation(kind);
-    if (kind === 'tunnel') element.lastChild.textContent = central ? 'Ubuntu' : 'Tunnel';
     element.classList.remove('ready', 'warn', 'error');
     element.classList.add(presentation.tone);
     element.title = presentation.title;

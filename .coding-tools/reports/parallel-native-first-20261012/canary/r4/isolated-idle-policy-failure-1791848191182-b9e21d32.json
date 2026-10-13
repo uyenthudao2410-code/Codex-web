@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operation": "isolated-idle-policy-failure",
+  "ok": false,
+  "observed_at_ms": 1791848191182,
+  "mode": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\sandbox-idle-policy-timefix.cjs",
+  "code": "POLICY_OPERATION_INVALID",
+  "mutating_action_started": false,
+  "next_action": "Resolve read-only gate.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-policy-failure-1791848191182-b9e21d32.json"
+}

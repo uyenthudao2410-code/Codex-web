@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "operation": "original-read067-reconciliation-gate",
+  "observed_at": "2026-10-12T13:18:51.395Z",
+  "observed_at_ms": 1791811131395,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a",
+    "attempt_id": "try_8d31c7cfb661441aadb9e620e47508a3",
+    "runtime_identity": {
+      "runtime_instance_id": "r2fiLBRSmrFcAi4T",
+      "mcp_server_instance_id": "3ps0AJwnJfhbwdYt",
+      "activation_epoch": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+      "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+      "operation_id": "full-clean-mv58sx36-cbc3d9246bc1a521561017b2",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "fbd0fd5195b69788d847d2cb7ea06d91e57f2cc44eb17d924cca98193331f6f4",
+      "expires_at_unix_ms": 1791809579587,
+      "ready_at": "2026-10-12T12:43:37.814Z",
+      "error": null
+    },
+    "census": {
+      "schema_version": 1,
+      "safe": false,
+      "code": "RUNTIME_BUSY",
+      "reason": "live_runtime_state_process",
+      "workspace": "E:\\DEV\\Codex-web",
+      "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+      "snapshot": {
+        "backup_api_copy": true,
+        "foreign_key_check_rows": 0,
+        "immutable": true,
+        "integrity_check": [
+          "ok"
+        ],
+        "logical_sha256": "b72d361e380bee804749aaa0ea8c92ffe0ff9696eb7e6f6e36487c7e603b798c",
+        "query_only": true,
+        "schema_version": 12,
+        "sha256": "1674c3b39f4f8c8732799c5a25860dc363199624c5e295203be8fa9445937882",
+        "size_bytes": 97959936,
+        "snapshot_at": "2026-10-12T13:18:48.792Z"
+      },
+      "counts": {
+        "active_tool_calls": 0,
+        "active_commands": 0,
+        "starting_commands": 0,
+        "active_background_operations": 0,
+        "active_managed_processes": 0,
+        "foreign_heavy_processes": 0,
+        "active_agent_lanes": 0,
+        "threshold_sensitive_stale_candidates": 18,
+        "owned_codex_sidecar_residues": 0
+      },
+      "lifecycle": {
+        "unexplained_active_runs": 0,
+        "unbound_live_resource_residues": 0,
+        "projection_drift": false,
+        "ordinary_active_runs": 24,
+        "awaiting_acceptance_runs": [
+          "28a5f750466048438307b96872e24f01",
+          "4967dd953ce74b5d97cbf01aad827139",
+          "4a80ae60c2e441d8896c1ace8710c384",
+          "6664f948cfb14a75958518548352896e",
+          "95e909f0040a448faa9f1f3257e2ee2c",
+          "fbaf4b0700d04794af4062671c1bcd2b"
+        ],
+        "live_owned_runs": [],
+        "active_p5_runs": [],
+        "blockers": [
+          "live_runtime_state_process"
+        ]
+      },
+      "source_checkpoint_verified": true,
+      "content_free": true,
+      "mutated_canonical_ledger": false,
+      "observed_at_unix_seconds": 1791811129.588649,
+      "census_fingerprint": "09816a510624d8855fe25e26d1ca7abac78e14156b21b55d7825586d442703f3"
+    },
+    "owner": {
+      "owner_pid": 12604,
+      "owner_process_start_token": "134362825905927480",
+      "instance_id": "c05d5a902dc55835b2cdc9263799dea7",
+      "installation_id": "1db86beab972872a3361551fcae3d06bf8065f37027effa20b030a8cb921a606"
+    },
+    "helper_sha256": "7186161c3e0237af0165815d95428e640bcd033fec7868508264bbe16b61db63",
+    "server_evidence_sha256": "47129ff347436be4eb0f3f24143cefa29cd61eea0d2e3414f2d60a374d9a8163",
+    "local_evidence_sha256": "fd2e6fce0576fd8a1e88e816bae8febc4084fa882cedcd86126f713358edc8a8",
+    "local_journal_sha256": "2ce8609db47b2938188325945a82ffe78ddaa5ea595d601745d9a29d3017bc32",
+    "append_authorized": false,
+    "package_sha256": {
+      "Coding Tools MCP.exe": "556984e90827a724ca6c7b9b2783b6532b6b027287cc37faa15d930a9272cef4",
+      "resources/app.asar": "3a7ad69df796379812463b19ba928c41fd8ad2f32d8fa142c656b0135d421cd6",
+      "resources/resources/control-plane/node_agent.py": "bee27651ef1fba03f6f6c52dd1a93fe671f07d7b73b0402118ead88c97f9dffe"
+    }
+  },
+  "mutating": false,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\original-read067-reconciliation-gate-1791811131395-8a8aeb50.json"
+}

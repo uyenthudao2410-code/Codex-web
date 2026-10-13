@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "safe": true,
+  "code": "READY",
+  "reason": "canonical_ledger_quiescent",
+  "workspace": "E:\\DEV\\Codex-web",
+  "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+  "snapshot": {
+    "backup_api_copy": true,
+    "foreign_key_check_rows": 0,
+    "immutable": true,
+    "integrity_check": [
+      "ok"
+    ],
+    "logical_sha256": "430e86990e6650ef92648d597da69da61680a6de96a5e6076b39987bcf97eec4",
+    "query_only": true,
+    "schema_version": 12,
+    "sha256": "aefb774a1cd624dce6bc7d9a96143819e727df1ed811eee1ff7917fb9caee83c",
+    "size_bytes": 97857536,
+    "snapshot_at": "2026-10-12T02:39:01.836Z"
+  },
+  "counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "threshold_sensitive_stale_candidates": 17,
+    "owned_codex_sidecar_residues": 0
+  },
+  "lifecycle": {
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "projection_drift": false,
+    "ordinary_active_runs": 20,
+    "awaiting_acceptance_runs": [
+      "6664f948cfb14a75958518548352896e",
+      "95e909f0040a448faa9f1f3257e2ee2c",
+      "fbaf4b0700d04794af4062671c1bcd2b"
+    ],
+    "live_owned_runs": [],
+    "active_p5_runs": [],
+    "blockers": []
+  },
+  "source_checkpoint_verified": true,
+  "content_free": true,
+  "mutated_canonical_ledger": false,
+  "observed_at_unix_seconds": 1791772742.756951,
+  "census_fingerprint": "7fe6a792210edddf75e5f3e71f94304e26de918fec2221c311ea89aa028ca0da"
+}

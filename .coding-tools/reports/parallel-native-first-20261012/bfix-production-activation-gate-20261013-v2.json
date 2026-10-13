@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "operation": "bfix_production_activation_gate",
+  "observed_at": "2026-10-13T03:42:17Z",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "candidate_proof": {
+    "parity_recheck": true,
+    "smoke": true,
+    "executable_sha256": "94f36ad726297bb2c4451ba9931b1532569f14f9f46526223e39fe75bc08e145",
+    "app_asar_sha256": "b3607da70af1df36a0aa1eb50f5771ba110069e33d08f256da542faca5f7b922",
+    "installed_or_activated": false,
+    "service_operations": false
+  },
+  "authority": {
+    "trusted_bootstrap_preflight": {
+      "exit_code": 0,
+      "code": "READY",
+      "component": "recovery_host",
+      "checkpoint_id": "4e9e9eb6bb494ca5ae04c49c7092c126",
+      "run_id": "e8cdbc78f12043559003ff65c4f6c883",
+      "wave_id": "685a7631abf64ce08b38f2073708d788",
+      "proof_fingerprint": "5ea244c9b3e9486e7f5fc4b14ea95ea62293dbba15ed79b3fa8d37c669d0c57c",
+      "receipt_count": 1,
+      "mutable_operation_started": false
+    },
+    "full_clean_preflight": {
+      "exit_code": 1,
+      "code": "RECOVERY_HOST_INSTALLATION_MISMATCH",
+      "mutable_operation_started": false
+    }
+  },
+  "current_production": {
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "runtime_mode": "packaged",
+    "production_restarted_in_wave": false,
+    "source_fix_loaded": false,
+    "state": "preserve_current_production"
+  },
+  "ubuntu": {
+    "ssh_target": "svhome@100.116.112.22",
+    "fresh_readiness": "unavailable",
+    "failure": "SSH_CONNECT_TIMEOUT",
+    "historical_service_pid": 970133,
+    "historical_readiness": "ready"
+  },
+  "historical_unknown_actions_unchanged": true,
+  "mutation_started": false,
+  "decision": "BLOCKED_PRESERVE_CURRENT_PRODUCTION",
+  "reason": "The current-HEAD recovery_host checkpoint is now accepted and trusted bootstrap preflight is READY. The authenticated serving host still belongs to the packaged r4-timefix installation, while the bfix unpacked candidate has a different installation identity. The supported lifecycle refuses a live packaged-to-packaged replacement; no signed/customer installer handoff is available in this workspace.",
+  "next_action": "Use a supported signed/customer packaged release handoff or an operator-approved installation transition, then run a fresh authenticated census and exact postflight before loading bfix."
+}

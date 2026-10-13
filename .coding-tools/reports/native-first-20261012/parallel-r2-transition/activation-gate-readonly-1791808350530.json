@@ -1,0 +1,73 @@
+{
+  "observed_at": "2026-10-12T12:32:30.525Z",
+  "activation_epoch_id": "activation-mv587m4p-0c2b59f01b1d25ba52938db8923db9da",
+  "state": "VERIFYING",
+  "admission_state": "CLOSED",
+  "ready_commit_digest": null,
+  "updated_at": "2026-10-12T12:32:30.468Z",
+  "expires_at_unix_ms": 1791808571690,
+  "verification": {
+    "verified": false,
+    "pass": false,
+    "tunnel_health_verified": false,
+    "recovery_mcp_health_verified": true,
+    "recovery_tunnel_health_verified": false,
+    "workspace_matches": true,
+    "device_matches": true,
+    "revision_matches": true,
+    "recovery_host_revision_matches": true,
+    "recovery_host_epoch_matches": true,
+    "process_identity_verified": true,
+    "process_identity_changed": true,
+    "tunnel_required": false,
+    "recovery_plane_identity_changed": true,
+    "recovery_plane_epoch_matches": true,
+    "epoch_matches": true,
+    "all_components_same_epoch": true,
+    "central_connected": false,
+    "authority_ready": false,
+    "central_route_verified": false,
+    "central_status_reason": "CENTRAL_ROUTE_EVIDENCE_STALE",
+    "ui_verified": true,
+    "recovery_plane_verified": true,
+    "projection_rebuild_verified": true,
+    "projection_rebuild_reused": false,
+    "projection_rebuild_refreshed_after_stale_reuse": false
+  },
+  "projection_validation": {
+    "code": "READY",
+    "reasons": []
+  },
+  "route": {
+    "credential_generation": 1,
+    "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "kind": "control_plane_authenticated_heartbeat",
+    "observed_at_ms": 1791806978320,
+    "policy_expires_at_ms": 1791807038210,
+    "policy_sha256": "ae9d5e0cff1f50d8329e9f8be93aada3e6025f7a9c630c41bf4125b978f9bedc",
+    "policy_state": "enabled",
+    "runtime_readiness": "degraded",
+    "schema_version": 1,
+    "server_last_seen_at_ms": 1791806978495,
+    "server_origin": "https://svhome.tail0e4032.ts.net"
+  },
+  "policies": {
+    "control-plane-read-only-policy.json": [
+      {
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "enabled": true,
+        "expires_at_ms": 1791877411389
+      }
+    ],
+    "control-plane-exec-policy.json": [
+      {
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "enabled": true,
+        "expires_at_ms": null
+      }
+    ]
+  }
+}

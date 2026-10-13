@@ -1,0 +1,339 @@
+diff --git a/src/backends/windows_sandbox/lifecycle/src/one_shot.rs b/src/backends/windows_sandbox/lifecycle/src/one_shot.rs
+index 9d4c4f3..11e13df 100644
+--- a/src/backends/windows_sandbox/lifecycle/src/one_shot.rs
++++ b/src/backends/windows_sandbox/lifecycle/src/one_shot.rs
+@@ -112,6 +112,7 @@ impl WindowsSandboxRunner {
+             &wsb_path,
+             &rendezvous_dir,
+             &run_dir,
++            &plan.mapped_folders,
+             request,
+             stdin_handle,
+         ))?;
+@@ -155,6 +156,7 @@ async fn drive(
+     wsb_path: &std::path::Path,
+     rendezvous_dir: &std::path::Path,
+     run_dir: &std::path::Path,
++    mapped_folders: &[vm::MappedFolder],
+     request: &ExecutionRequest,
+     host_stdin: std::thread::JoinHandle<Vec<u8>>,
+ ) -> Result<bridge::ExecResult, OneShotError> {
+@@ -185,11 +187,13 @@ async fn drive(
+ 
+     let exec_id = uuid::Uuid::new_v4().to_string();
+     let timeout_ms = get_timeout_milliseconds(request.script_timeout);
++    let guest_working_directory =
++        policy::guest_working_directory(mapped_folders, &request.working_directory);
+     bridge::execute_on_guest(
+         &mut conn,
+         &exec_id,
+         &request.script_code,
+-        &request.working_directory,
++        &guest_working_directory,
+         timeout_ms,
+         &host_stdin_bytes,
+     )
+diff --git a/src/backends/windows_sandbox/lifecycle/src/policy.rs b/src/backends/windows_sandbox/lifecycle/src/policy.rs
+index a4287ac..22d26a3 100644
+--- a/src/backends/windows_sandbox/lifecycle/src/policy.rs
++++ b/src/backends/windows_sandbox/lifecycle/src/policy.rs
+@@ -15,6 +15,12 @@ use wxc_common::models::{ExecutionRequest, NetworkPolicy};
+ use crate::error::OneShotError;
+ use crate::vm::MappedFolder;
+ 
++/// Windows Sandbox guests expose their system volume as C:. Host volume letters
++/// are not guaranteed to exist inside the disposable VM, so every host share is
++/// mounted below a deterministic, non-overlapping C: root.
++pub(crate) const GUEST_WORKSPACE_ROOT: &str = r"C:\CodexWorkspace";
++pub(crate) const GUEST_TOOLCHAIN_ROOT: &str = r"C:\CodexToolchains";
++
+ /// The enforceable shape of a request's policy for one disposable run.
+ #[derive(Debug, Clone, PartialEq, Eq)]
+ pub(crate) struct WsbPolicyPlan {
+@@ -88,16 +94,55 @@ fn plan_filesystem(request: &ExecutionRequest) -> Result<Vec<MappedFolder>, OneS
+ 
+     reject_denied_overlapping_shares(&policy.denied_paths, &roots)?;
+ 
++    let mut workspace_index = 0usize;
++    let mut toolchain_index = 0usize;
+     Ok(roots
+         .into_iter()
+-        .map(|root| MappedFolder {
+-            host: root.display.clone(),
+-            sandbox: root.display,
+-            read_only: root.read_only,
++        .map(|root| {
++            let sandbox = if root.read_only {
++                let sandbox = format!(r"{GUEST_TOOLCHAIN_ROOT}\share-{toolchain_index}");
++                toolchain_index += 1;
++                sandbox
++            } else {
++                let sandbox = format!(r"{GUEST_WORKSPACE_ROOT}\share-{workspace_index}");
++                workspace_index += 1;
++                sandbox
++            };
++            MappedFolder {
++                host: root.display,
++                sandbox,
++                read_only: root.read_only,
++            }
+         })
+         .collect())
+ }
+ 
++/// Translate a host working directory into the destination of the mapped
++/// folder that contains it. Unmapped paths remain unchanged for requests that
++/// intentionally use the guest's default current directory.
++pub(crate) fn guest_working_directory(
++    mapped_folders: &[MappedFolder],
++    host_working_directory: &str,
++) -> String {
++    if host_working_directory.is_empty() {
++        return String::new();
++    }
++
++    let candidate = std::fs::canonicalize(host_working_directory)
++        .map(|path| Path::new(&strip_verbatim_prefix(&path.to_string_lossy())).to_path_buf())
++        .unwrap_or_else(|_| Path::new(host_working_directory).to_path_buf());
++    for folder in mapped_folders {
++        let host_root = Path::new(&folder.host);
++        if let Ok(relative) = candidate.strip_prefix(host_root) {
++            return Path::new(&folder.sandbox)
++                .join(relative)
++                .to_string_lossy()
++                .into_owned();
++        }
++    }
++    host_working_directory.to_string()
++}
++
+ /// Canonicalize `raw`, ensure it is an existing directory, and add it to
+ /// `roots` — rejecting missing paths, files, conflicting read-only flags for
+ /// the same path, and overlapping (nested) mapped roots.
+@@ -390,11 +435,34 @@ mod tests {
+         assert_eq!(plan.mapped_folders.len(), 2);
+         let rw_folder = plan.mapped_folders.iter().find(|f| !f.read_only).unwrap();
+         let ro_folder = plan.mapped_folders.iter().find(|f| f.read_only).unwrap();
+-        // Host parity: sandbox path equals host path.
+-        assert_eq!(rw_folder.host, rw_folder.sandbox);
+-        assert_eq!(ro_folder.host, ro_folder.sandbox);
++        assert_eq!(rw_folder.sandbox, r"C:\CodexWorkspace\share-0");
++        assert_eq!(ro_folder.sandbox, r"C:\CodexToolchains\share-0");
+         // No verbatim prefix leaks into the .wsb value.
+         assert!(!rw_folder.host.starts_with(r"\\?\"));
++
++        let nested = rw.path().join("src").join("deep");
++        std::fs::create_dir_all(&nested).unwrap();
++        assert_eq!(
++            guest_working_directory(&plan.mapped_folders, &nested.to_string_lossy()),
++            Path::new(r"C:\CodexWorkspace\share-0")
++                .join("src")
++                .join("deep")
++                .to_string_lossy(),
++        );
++    }
++
++    #[test]
++    fn unmapped_working_directory_is_not_rewritten() {
++        let rw = tempfile::tempdir().unwrap();
++        let outside = tempfile::tempdir().unwrap();
++        let plan = plan_policy(&request_with(ContainerPolicy {
++            readwrite_paths: vec![rw.path().to_string_lossy().into_owned()],
++            ..Default::default()
++        }))
++        .unwrap();
++
++        let raw = outside.path().to_string_lossy().into_owned();
++        assert_eq!(guest_working_directory(&plan.mapped_folders, &raw), raw);
+     }
+ 
+     #[test]
+diff --git a/src/backends/windows_sandbox/lifecycle/src/rendezvous.rs b/src/backends/windows_sandbox/lifecycle/src/rendezvous.rs
+index 662f3cc..edce975 100644
+--- a/src/backends/windows_sandbox/lifecycle/src/rendezvous.rs
++++ b/src/backends/windows_sandbox/lifecycle/src/rendezvous.rs
+@@ -10,7 +10,7 @@ use std::time::Duration;
+ use anyhow::{Context, Result};
+ 
+ /// Maximum time to wait for the guest agent's rendezvous file.
+-pub const RENDEZVOUS_TIMEOUT: Duration = Duration::from_secs(360);
++pub const RENDEZVOUS_TIMEOUT: Duration = Duration::from_secs(150);
+ 
+ pub const RENDEZVOUS_POLL_INTERVAL: Duration = Duration::from_millis(500);
+ 
+diff --git a/src/backends/windows_sandbox/lifecycle/src/state_aware.rs b/src/backends/windows_sandbox/lifecycle/src/state_aware.rs
+index d35ff02..f439f32 100644
+--- a/src/backends/windows_sandbox/lifecycle/src/state_aware.rs
++++ b/src/backends/windows_sandbox/lifecycle/src/state_aware.rs
+@@ -34,6 +34,7 @@ use crate::control_plane::{
+ use crate::error::OneShotError;
+ use crate::ipc_exec::{self, ExecExit, ExecStart, FrameKind};
+ use crate::policy;
++use crate::vm::MappedFolder;
+ use crate::WindowsSandboxRunner;
+ 
+ /// `DETACHED_PROCESS` — the spawned daemon gets no console.
+@@ -44,7 +45,7 @@ const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+ 
+ const TRANSITION_LOCK_TIMEOUT: Duration = Duration::from_secs(600);
+ 
+-const START_READY_TIMEOUT: Duration = Duration::from_secs(420);
++const START_READY_TIMEOUT: Duration = Duration::from_secs(180);
+ 
+ const START_POLL_INTERVAL: Duration = Duration::from_millis(500);
+ 
+@@ -600,6 +601,25 @@ fn ensure_daemon_protocol(daemon: &DaemonRecord) -> Result<(), MxcError> {
+     )))
+ }
+ 
++/// A restart may reclaim only the sandbox named by the prior daemon record.
++/// The daemon uses that record's process identities for orphan teardown, so a
++/// different sandbox's stale record must be refused before spawning it.
++fn ensure_start_daemon_identity(
++    prior: Option<&DaemonRecord>,
++    sandbox_id: &str,
++) -> Result<(), MxcError> {
++    if let Some(prior) = prior {
++        if prior.active_sandbox_id != sandbox_id {
++            return Err(MxcError::backend_unavailable(format!(
++                "daemon bookkeeping belongs to Windows Sandbox {}; refusing to start \
++                 {sandbox_id}. Stop/deprovision the recorded sandbox first.",
++                prior.active_sandbox_id
++            )));
++        }
++    }
++    Ok(())
++}
++
+ impl StatefulSandboxBackend for WindowsSandboxRunner {
+     const ID_PREFIX: &'static str = "wsb";
+     const BACKEND_KEY: &'static str = "windows_sandbox";
+@@ -684,6 +704,10 @@ impl StatefulSandboxBackend for WindowsSandboxRunner {
+             )));
+         }
+ 
++        let prior = read_daemon_record()
++            .map_err(|e| MxcError::backend_error(format!("read prior daemon record: {e}")))?;
++        ensure_start_daemon_identity(prior.as_ref(), sandbox_id)?;
++
+         // Do NOT pre-delete a stale (dead) daemon record here: the daemon we are
+         // about to spawn reads it as the `prior` record to decide whether a
+         // running VM is its own reclaimable orphan. The readiness poll below
+@@ -771,7 +795,7 @@ impl StatefulSandboxBackend for WindowsSandboxRunner {
+             ));
+         }
+ 
+-        extract_token(sandbox_id)?;
++        let token = extract_token(sandbox_id)?;
+ 
+         // Locate the live daemon holding this sandbox and confirm it is ready
+         // to run (the VM booted and the guest connection is held).
+@@ -795,12 +819,38 @@ impl StatefulSandboxBackend for WindowsSandboxRunner {
+         // need to tear down.
+         ensure_daemon_protocol(&daemon)?;
+ 
++        // The durable provision record is the authoritative host↔guest path
++        // map. Host drives other than C: do not exist in Windows Sandbox; map
++        // the command's host working directory to the guest C: destination.
++        let sandbox_record = read_sandbox_record(token)
++            .map_err(|e| MxcError::backend_error(format!("{e}")))?
++            .ok_or_else(|| {
++                MxcError::not_provisioned(format!("sandbox {sandbox_id} is not provisioned"))
++            })?;
++        if sandbox_record.sandbox_id != sandbox_id {
++            return Err(MxcError::not_provisioned(format!(
++                "sandbox record identity does not match {sandbox_id}"
++            )));
++        }
++        let mapped_folders: Vec<MappedFolder> = sandbox_record
++            .mapped_folders
++            .iter()
++            .map(|folder| MappedFolder {
++                host: folder.host.clone(),
++                sandbox: folder.sandbox.clone(),
++                read_only: folder.read_only,
++            })
++            .collect();
++        let mut guest_request = request.clone();
++        guest_request.working_directory =
++            policy::guest_working_directory(&mapped_folders, &request.working_directory);
++
+         // Stream the execution synchronously, relaying stdout/stderr live to
+         // this process's stdio. Mirrors isolation_session: the relay completes
+         // inside this call, so the returned handle carries sentinel pipe
+         // handles plus a waiter that yields the captured exit code, and the
+         // dispatcher's `relay_exec_to_stdio` is a thin call-through.
+-        let exit_code = run_exec_stream(&daemon, request)?;
++        let exit_code = run_exec_stream(&daemon, &guest_request)?;
+ 
+         let null = HANDLE(std::ptr::null_mut());
+         Ok(ExecHandle {
+@@ -1125,6 +1175,38 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn start_daemon_identity_accepts_missing_prior_record() {
++        assert!(ensure_start_daemon_identity(None, "wsb:deadbeef").is_ok());
++    }
++
++    #[test]
++    fn start_daemon_identity_accepts_same_sandbox_record() {
++        let mut prior = daemon_record_with_protocol(control_plane::IPC_PROTOCOL_VERSION);
++        prior.active_sandbox_id = "wsb:deadbeef".into();
++        for ready in [false, true] {
++            prior.ready = ready;
++            assert!(ensure_start_daemon_identity(Some(&prior), "wsb:deadbeef").is_ok());
++        }
++    }
++
++    #[test]
++    fn start_daemon_identity_refuses_other_sandbox_record() {
++        let mut prior = daemon_record_with_protocol(control_plane::IPC_PROTOCOL_VERSION);
++        prior.active_sandbox_id = "wsb:0123abcd".into();
++        for proof in [
++            Vec::new(),
++            vec![control_plane::VmProcId {
++                pid: 7,
++                creation_time: 9,
++            }],
++        ] {
++            prior.vm_processes = proof;
++            let err = ensure_start_daemon_identity(Some(&prior), "wsb:deadbeef").unwrap_err();
++            assert_eq!(err.code, MxcErrorCode::BackendUnavailable);
++        }
++    }
++
+     #[test]
+     fn ensure_daemon_protocol_accepts_current_and_refuses_mismatch() {
+         let ok = daemon_record_with_protocol(control_plane::IPC_PROTOCOL_VERSION);
+@@ -1636,6 +1718,29 @@ mod tests {
+         control_plane::write_daemon_record(&record).expect("write stale daemon record");
+     }
+ 
++    #[test]
++    fn start_daemon_identity_refuses_stale_other_id_before_spawn() {
++        let _g = StateAwareRootGuard::new();
++        let token = "aaaa0001";
++        let other = "wsb:bbbb0001";
++        write_provisioned_record(token);
++        write_stale_dead_daemon_record(other);
++
++        let mut backend = WindowsSandboxRunner::new();
++        let err = backend
++            .start("wsb:aaaa0001", &ExecutionRequest::default(), None)
++            .unwrap_err();
++        assert_eq!(err.code, MxcErrorCode::BackendUnavailable);
++        assert_eq!(
++            read_daemon_record().unwrap().unwrap().active_sandbox_id,
++            other
++        );
++        assert_eq!(
++            read_sandbox_record(token).unwrap().unwrap().state,
++            SandboxState::Provisioned
++        );
++    }
++
+     #[test]
+     fn stop_of_stopped_returns_already_stopped_even_when_other_sandbox_live() {
+         // A different sandbox's live daemon must NOT turn

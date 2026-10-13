@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "operation": "independent_original_stop_contract_and_broker_package_trust_review",
+  "observed_at": "2026-10-12T06:35:31.2786586Z",
+  "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "reviewer": "/root/shared_surface",
+  "source_review": "PASS",
+  "supplier_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+  "supplier_sources": [
+    "https://raw.githubusercontent.com/microsoft/mxc/cbe1774364ea2ec846f56ab744e43a416f751420/docs/windows-sandbox/windows-sandbox-reference.md",
+    "https://raw.githubusercontent.com/microsoft/mxc/cbe1774364ea2ec846f56ab744e43a416f751420/src/backends/windows_sandbox/lifecycle/src/vm.rs"
+  ],
+  "supplier_contract": [
+    "Lingering SYSTEM vmmem is not an ownership target or launch blocker after WindowsSandbox host processes exit",
+    "Native host inventory uses WindowsSandbox prefix and five second cooldown; kernel aggregate absence is not required"
+  ],
+  "supplement_sha256": "8ab29b114c2184e1a4696647e477c502ee91b3ee6b38469a85ff615e15f07168",
+  "closure_sha256": "ac297d106baa8d982a3aab84a29812d0546313921e071746b136ce9d23315174",
+  "supplement_review": [
+    "Exact original stop dispatch plan and UNKNOWN preserved",
+    "Original historical writer gen1 retained; current gen2 authority observed separately",
+    "Full WindowsSandbox prefix absence and five second cooldown; final native Job quiescence rechecked",
+    "Kernel aggregates observed without termination or ownership inference"
+  ],
+  "closure_prepared_only": true,
+  "closure_main_invoked": false,
+  "terminate_invocations": 0,
+  "actual_readonly_trust_diagnostic": {
+    "result": "PASS",
+    "trust_kind": "Microsoft Store deployment plus installed AppX block map",
+    "individual_executable_authenticode_claimed": false,
+    "block_count": 5,
+    "code_integrity_catalog_signature": "Valid Microsoft Windows",
+    "exact_sha256_sip_membership": true,
+    "catalog_member_digest": "901EF6BB985B9F9E5446723D109990E054A2FFBE160D012DEC3BCC40FEC062BE",
+    "catalog_signature_observer": "C:UsersAdmin.cachecodex-runtimescodex-primary-runtimedependencies\nativepowershellpwsh.exe",
+    "catalog_signature_observer_sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+    "resolved_error": "WindowsPowerShell5 Security module autoload FormatXmlUpdateException; exact existing Codex pwsh7 succeeds; trust predicates preserved"
+  },
+  "remaining_action": "Root reads and prepares then performs authorized exact idle broker closure; additive read-only supplement then third cached Job"
+}

@@ -1,0 +1,134 @@
+{
+  "operation": "parallel_native_production_candidate_preparation",
+  "ok": true,
+  "candidate_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+  "candidate_archive": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\codex-control-plane-parallel-native-1012-f7acd9ec4ba1.tar.gz",
+  "candidate_archive_sha256": "d86a1daa6d3a1ddabb587cd277ed95a2ebea95d3dc8edf6d6e01c879c9da2f69",
+  "candidate_manifest_sha256": "c65439e1de52b741483debfd0600b52e7d969a8641818c554071990d4b3b1a3d",
+  "verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+    "file_count": 39
+  },
+  "changed_runtime_files": [
+    "control-plane/control_plane/http_api.py",
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/node_agent.py",
+    "control-plane/control_plane/recovery_exec_bridge.cjs",
+    "control-plane/control_plane/store.py",
+    "control-plane/control_plane/workspace_policy_store.py",
+    "deploy/control-plane-authority-renewal.py"
+  ],
+  "allowed_runtime_files": [
+    "control-plane/control_plane/http_api.py",
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/node_agent.py",
+    "control-plane/control_plane/recovery_exec_bridge.cjs",
+    "control-plane/control_plane/store.py",
+    "control-plane/control_plane/workspace_policy_store.py",
+    "deploy/control-plane-authority-renewal.py"
+  ],
+  "allowed_new_files": [
+    "control-plane/control_plane/workspace_policy_store.py"
+  ],
+  "unchanged_release_files": 32,
+  "baseline_service_pid": 946413,
+  "baseline_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+  "baseline_manifest_sha256": "e4ddab4e41bdf22eefa763cce746afd486ec0bc7e38e7748899088c6fcd57cd7",
+  "baseline_package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+  "protected_config_hashes": {
+    "environment": {
+      "path": "/home/svhome/.config/codex-control-plane/control-plane.env",
+      "sha256": "2788689851b09ec6b781b7f9bcf59ff7a1b98875df76cdc5061200752d6d3389"
+    },
+    "drop_in": {
+      "path": "/home/svhome/.config/systemd/user/codex-control-plane.service.d/10-immutable-release.conf",
+      "sha256": "fe37f9a796a100833323270397742a9d6923c9894863e704f40e5b7093eff0b4"
+    }
+  },
+  "expected_contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "expected_unknown_actions": [
+    {
+      "action_id": "act_048df93488874a70aa97a7ee18ccbd03",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1790242251218,
+      "disposition": "quarantined_unknown"
+    },
+    {
+      "action_id": "act_744496c6bd514d38a746cf8819aae9ad",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1790338344700,
+      "disposition": "quarantined_unknown"
+    },
+    {
+      "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1791800699782,
+      "disposition": "quarantined_unknown"
+    },
+    {
+      "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1791800959555,
+      "disposition": "quarantined_unknown"
+    },
+    {
+      "action_id": "act_3849e259d55546639794cec40f63fea8",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "expires_at_ms": 1791801776851,
+      "disposition": "quarantined_unknown"
+    }
+  ],
+  "source_raw_sha256": {
+    "control-plane/control_plane/http_api.py": "40e8c2ee0f1b64b35a4b176d63ede12eedf7e3ab3cb4d206c2abdbc381279ebb",
+    "control-plane/control_plane/mcp_facade.py": "82b007a8f1d153b02e791e67b2c258ea73a6a84c2c815fc22259e5049efb3d9d",
+    "control-plane/control_plane/node_agent.py": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+    "control-plane/control_plane/recovery_exec_bridge.cjs": "99a3c1492506e5a3efb903463bb7f66b07be966a32f27499756ed7818d916c5d",
+    "control-plane/control_plane/store.py": "cd08571dfc82798e92c76c2ad7f3640d588246de5887f289398d02eba4c971c8",
+    "deploy/control-plane-authority-renewal.py": "419e6891bf4d89beb62841add7824411b43f3357e6fc46b5a2e7a65a2baf131b",
+    "control-plane/control_plane/workspace_policy_store.py": "e8c12f38bccd0fa2c9d54b77c4eb5e592afce17540228cba5321dbd78033f98c"
+  },
+  "base_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "uncommitted_overlay": true,
+  "remote_mutations_performed": false,
+  "database_restore_allowed": false,
+  "expected_historical_dispatch_actions": [
+    {
+      "action_id": "act_0f0a49c6424d42d3bc7bc49ad46e4ffa",
+      "device_id": "3c7378b3-ecc4-4466-9a87-25d4d53ffdcf",
+      "workspace_id": "workspace_4b0a57021f324dfc8cc3d2aca229d7cf",
+      "workspace_generation": "generation_990bc5104fd24f3ab2c021a3257132ab",
+      "tool_name": "workspace_context",
+      "delivery_state": "dispatch_unconfirmed",
+      "expires_at_ms": 1789835463391,
+      "settled_at_ms": null
+    }
+  ],
+  "targets": [
+    {
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097"
+    },
+    {
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a"
+    }
+  ]
+}

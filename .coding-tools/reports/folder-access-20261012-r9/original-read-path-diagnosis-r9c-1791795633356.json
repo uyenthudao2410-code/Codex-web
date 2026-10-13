@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "operation": "offline_original_read_path_diagnosis",
+  "observed_at_ms": 1791795633356,
+  "action_id": "act_5e96e41f520d44d99a2b36bf749e658b",
+  "attempt_id": "try_df0e7870613c4eee8d1e9ff90b3a4d5b",
+  "original_diagnostic_code": "CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID",
+  "source_sha256": {
+    "workspace_scope": "40b8f32ff1d961735b0b6d3d04f623871b12bea0ef354d84c9407077a2dd2f1b",
+    "file_tools": "700da02303077a3267408d90a60c5f0fd20ce765c673851b1a74593e4f3eed9a",
+    "fs_utils": "4f25242db15d694424a704b1dbf5d0746fb4b83f7325306472a2275bba905c4f"
+  },
+  "expected_local_task_context_id": "cpfr_4a1da7becce81731a64a10cb4d9875e65de26731f88c049165d6f0a3",
+  "persisted_context": {
+    "canonical_root": "E:\\DEV\\Autocad",
+    "created_at": "2026-10-12T08:57:07.886Z",
+    "schema_version": 1,
+    "updated_at": "2026-10-12T08:57:07.886Z",
+    "workspace_id": "7cefbf81a5d96157b1a7b0de35cf0e45cfa9e46a8232f0c3f9d55e11ff807dbd"
+  },
+  "scope": {
+    "primary_workspace": "E:\\DEV\\Codex-web",
+    "authorized_roots": [
+      "E:\\DEV\\Codex-web",
+      "E:\\DEV\\Autocad"
+    ]
+  },
+  "projection": {
+    "native_path": "E:/DEV/Autocad/mcp-access-smoke-20261012-r9c.txt",
+    "admission_path": "mcp-access-smoke-20261012-r9c.txt",
+    "path_matches": false,
+    "content_sha256": "9e49f61b0725d9463f3cea5a04a26ae5794123a4f2bf8fa61af36bd29e439d89",
+    "bytes_read": 62,
+    "total_bytes": 62,
+    "start_line": 1,
+    "end_line": 2,
+    "total_lines": 2
+  },
+  "diagnosis": "read_file resolves against the bound Autocad root but returns display relative to the primary Codex root; bridge rejects its absolute path before relay.",
+  "limits": {
+    "offline_current_projection_not_retained_original_response": true,
+    "original_action_replayed": false,
+    "receipt_posted": false,
+    "runtime_modified": false
+  }
+}

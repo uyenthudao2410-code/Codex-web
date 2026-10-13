@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "operation": "native_child_token_source_fixture",
+  "ok": true,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "capture_started_utc": "2026-10-12T23:27:56.175633+00:00",
+  "capture_finished_utc": "2026-10-12T23:27:57.802453+00:00",
+  "scope": "source Runtime native-only temporary workspace; no production MCP/service/policy mutation",
+  "argv": [
+    "node",
+    "E:\\codex-token-native-fixture-ijyy1y_d\\token-probe\\token-child-launcher.js"
+  ],
+  "receipt": {
+    "command_id": "RIOyzMEdinjoT9a0zmChXIE3",
+    "job_id": "cdc526baca3946b5aca9624d01748623",
+    "status": "exited",
+    "durable_lifecycle_state": "exited",
+    "exit_code": 0,
+    "execution_backend": "native",
+    "isolation_level": "process_container",
+    "policy_decision": "native_explicit_approval",
+    "owner_run_id": "",
+    "owner_wave_id": "",
+    "stderr_empty": true,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vm_adapter_calls": 0
+  },
+  "durable_job": {
+    "job_id": "cdc526baca3946b5aca9624d01748623",
+    "run_id": "",
+    "wave_id": "",
+    "command_id": "RIOyzMEdinjoT9a0zmChXIE3",
+    "owner": "default",
+    "resource_class": "LIGHT",
+    "root_pid": 37492,
+    "lifecycle_state": "exited",
+    "started_at": "2026-10-12T23:27:56.856Z",
+    "updated_at": "2026-10-12T23:27:57.684Z",
+    "finished_at": "2026-10-12T23:27:57.684Z",
+    "terminal": true,
+    "exit_code": 0,
+    "result_status": "succeeded"
+  },
+  "launcher_report": {
+    "schema_version": 1,
+    "operation": "native_child_token_winapi_probe",
+    "top_level_execution": "node_native_approved",
+    "child_argv": [
+      "E:\\codex-token-native-fixture-ijyy1y_d\\token-probe\\token-child-probe.exe"
+    ],
+    "shell": false,
+    "timeout_ms": 10000,
+    "child_status": 0,
+    "child_signal": null,
+    "child_error": null,
+    "child_facts": {
+      "schema_version": 1,
+      "complete": true,
+      "open_process_token": true,
+      "elevated": false,
+      "app_container": true,
+      "integrity_rid": 4096,
+      "integrity_sid_valid": true,
+      "high_or_system_integrity": false,
+      "admin_sid_query_ok": true,
+      "administrator_group_present": true,
+      "administrator_group_enabled": false,
+      "administrator_group_deny_only": true,
+      "sensitive_privileges_enabled": 0,
+      "sensitive_luid_lookup_success_count": 11,
+      "query_errors": {
+        "elevation": 0,
+        "app_container": 0,
+        "integrity": 0,
+        "groups": 0,
+        "privileges": 0
+      }
+    },
+    "stderr_empty": true,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "child_facts": {
+    "schema_version": 1,
+    "complete": true,
+    "open_process_token": true,
+    "elevated": false,
+    "app_container": true,
+    "integrity_rid": 4096,
+    "integrity_sid_valid": true,
+    "high_or_system_integrity": false,
+    "admin_sid_query_ok": true,
+    "administrator_group_present": true,
+    "administrator_group_enabled": false,
+    "administrator_group_deny_only": true,
+    "sensitive_privileges_enabled": 0,
+    "sensitive_luid_lookup_success_count": 11,
+    "query_errors": {
+      "elevation": 0,
+      "app_container": 0,
+      "integrity": 0,
+      "groups": 0,
+      "privileges": 0
+    }
+  },
+  "production_native_claim": false
+}

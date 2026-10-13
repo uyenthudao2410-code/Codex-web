@@ -1,0 +1,563 @@
+{
+  "operation": "native_first_ubuntu_readonly_readiness",
+  "ok": true,
+  "capture_started_at_ms": 1791803490635,
+  "snapshot_at_ms": 1791803490674,
+  "capture_completed_at_ms": 1791803490790,
+  "service_pid": 946413,
+  "service": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "FragmentPath": "/home/svhome/.config/systemd/user/codex-control-plane.service",
+    "DropInPaths": "/home/svhome/.config/systemd/user/codex-control-plane.service.d/10-immutable-release.conf",
+    "MainPID": "946413"
+  },
+  "service_after": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "MainPID": "946413"
+  },
+  "service_stable": true,
+  "serving_source": {
+    "process_working_directory": "/home/svhome",
+    "package_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b/control-plane/control_plane",
+    "serving_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-folder-activation-1012-r9-626768b49f4b",
+    "python_files_sha256": {
+      "__init__.py": "b2281d801697f3819879b5100bf6e1c4c0dcfd67f9aae15198d4bfb93280a07a",
+      "__main__.py": "035af58fc85e40477e9d33d31f5c7d4481dad5babe8bdb3a97dbfba1879871a4",
+      "deployment_verifier.py": "02ec6c6b0e49410b0f8a6b3d43665f860087df1e242a19ec18eff449204f7401",
+      "http_api.py": "d48a6d5418dbbf535ce420b82b59af13d26a1c18c08fd14b99cd6533eae13552",
+      "maintenance.py": "795d4ee4f607bd29c9ad178b1af62e5a212d99cae4c9843adbd8e76fc748894e",
+      "mcp_facade.py": "133b6d891290fd37303f14eb2919e03903ead7b3f36510c55ebd843dd36dcac0",
+      "mcp_oauth.py": "1ecba74925783bb9f09a5d4b54dd44085851f6b8efa8ad9e7f7acb98f13e6b7f",
+      "mcp_status.py": "a6cda1ac365d611e260f974a914e48b2f55784e4fbda8e66f310a8217b791aea",
+      "node_agent.py": "ea79c0fb874a1449260380a3e438fc24b38d0006ab39b541870c01bb121cd412",
+      "store.py": "7c992e2242d8b4135a153c1fb2fd2714159ff0ae384c205314776d1bd687a3aa",
+      "web_ui.py": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b"
+    },
+    "package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "auxiliary_files_sha256": {
+      "recovery_exec_bridge.cjs": "44ab2e187fc1e3e5b33d776d169ab63e353162465e0a249fcf7fdd70fa3a78be"
+    },
+    "process_module": "control_plane",
+    "cmdline_sha256": "28dc62ce89f07d5e74cd595d20e42ba6d6b639f9c87d10508c538ea174971c0b",
+    "unit_files_sha256": {
+      "/home/svhome/.config/systemd/user/codex-control-plane.service": "5819fd19227920b66ace3e3a526199dbfbced6c80253e6d6f0605979a360e6b7",
+      "/home/svhome/.config/systemd/user/codex-control-plane.service.d/10-immutable-release.conf": "fe37f9a796a100833323270397742a9d6923c9894863e704f40e5b7093eff0b4"
+    }
+  },
+  "health": {
+    "ok": true,
+    "schema_version": 29,
+    "declared_source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "expected_package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "service_instance_id": "cp_f0daebdd54cb4bc097a753824950ec62"
+  },
+  "source_startup_disk_attestation_matches": true,
+  "tool_contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "expected_contract_matches": true,
+  "tool_names": [
+    "workspace_context",
+    "agent_workflow",
+    "task_control",
+    "document_workflow",
+    "exec_command",
+    "command_control",
+    "request_permissions",
+    "view_image"
+  ],
+  "tool_input_properties": {
+    "workspace_context": [
+      "operation",
+      "binding_id",
+      "task_id",
+      "label",
+      "idempotency_key",
+      "path",
+      "start_line",
+      "max_lines",
+      "max_bytes",
+      "expected_facade_contract",
+      "action_id"
+    ],
+    "agent_workflow": [
+      "operation",
+      "binding_id",
+      "task_id",
+      "path",
+      "preimage_sha256",
+      "patch_sha256",
+      "validation_profile",
+      "patch_envelope",
+      "idempotency_key",
+      "expected_facade_contract",
+      "action_id",
+      "verification"
+    ],
+    "task_control": [
+      "operation",
+      "task_id",
+      "reason"
+    ],
+    "document_workflow": [
+      "operation",
+      "binding_id",
+      "task_id",
+      "path",
+      "target",
+      "source",
+      "title",
+      "content",
+      "overwrite",
+      "idempotency_key",
+      "expected_facade_contract",
+      "action_id"
+    ],
+    "exec_command": [
+      "operation",
+      "binding_id",
+      "task_id",
+      "argv",
+      "cwd",
+      "timeout_ms",
+      "max_output_bytes",
+      "idempotency_key",
+      "expected_facade_contract",
+      "action_id"
+    ],
+    "command_control": [
+      "operation",
+      "action_id",
+      "cursor",
+      "max_bytes"
+    ],
+    "request_permissions": [],
+    "view_image": [
+      "operation",
+      "binding_id",
+      "task_id",
+      "path",
+      "target",
+      "source",
+      "title",
+      "content",
+      "overwrite",
+      "idempotency_key",
+      "expected_facade_contract",
+      "action_id"
+    ]
+  },
+  "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+  "service_grant": {
+    "grant_id": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+    "owner_id": "owner_default",
+    "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+    "created_at_ms": 1790324079666,
+    "expires_at_ms": 1792756981903,
+    "revoked_at_ms": null,
+    "scopes": [
+      "control-plane.inventory",
+      "control-plane.patch",
+      "control-plane.read"
+    ],
+    "live": true
+  },
+  "admission": {
+    "admission_mode": "scoped_pilot",
+    "changed_at_ms": 1791774735104
+  },
+  "node": {
+    "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "owner_id": "owner_default",
+    "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "readiness": "ready",
+    "runtime_instance_id": "YW2moFxJx3-vSjuM",
+    "mcp_server_instance_id": "mtRg82iawVS_4mM1",
+    "activation_epoch": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+    "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+    "last_seen_at_ms": 1791803480941,
+    "revoked_at_ms": null,
+    "policy_state": "enabled",
+    "policy_expires_at_ms": 1791803540587,
+    "policy_sha256": "ae9d5e0cff1f50d8329e9f8be93aada3e6025f7a9c630c41bf4125b978f9bedc",
+    "policy_observed_at_ms": 1791803480941,
+    "heartbeat_age_ms": 9733,
+    "heartbeat_fresh_60000_ms": true
+  },
+  "owner_bindings": [
+    {
+      "binding_id": "bind_cc575277039249fa9142873a58e11242",
+      "owner_id": "owner_default",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a91d1829c5bf4c7093a30cec14105c76",
+      "created_at_ms": 1790079415277,
+      "revoked_at_ms": 1790236392490
+    },
+    {
+      "binding_id": "bind_5a2b112661cf421aaf68f42b1828b172",
+      "owner_id": "owner_default",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "created_at_ms": 1790236609051,
+      "revoked_at_ms": 1791772866375
+    },
+    {
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "owner_id": "owner_default",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "created_at_ms": 1791772900597,
+      "revoked_at_ms": null
+    },
+    {
+      "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+      "owner_id": "owner_default",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "created_at_ms": 1791791011230,
+      "revoked_at_ms": null
+    }
+  ],
+  "node_workspace_registrations": [
+    {
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a91d1829c5bf4c7093a30cec14105c76",
+      "registered_at_ms": 1790073758128,
+      "retired_at_ms": 1790236392490
+    },
+    {
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "registered_at_ms": 1790236393155,
+      "retired_at_ms": 1791772866375
+    },
+    {
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "registered_at_ms": 1791772866762,
+      "retired_at_ms": null
+    },
+    {
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "registered_at_ms": 1791790578705,
+      "retired_at_ms": null
+    }
+  ],
+  "live_pilots": [
+    {
+      "decision_id": "pilot_833530c73c72491ba0163037ae80e8f0",
+      "owner_id": "owner_default",
+      "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+      "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "created_at_ms": 1791793189328,
+      "expires_at_ms": 1791847531435,
+      "revoked_at_ms": null
+    }
+  ],
+  "delegated_inventory_targets": [
+    {
+      "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "binding_state": "active",
+      "workspace_state": "active",
+      "node_state": "active",
+      "readiness": "ready",
+      "presence_state": "online",
+      "dispatch_state": "dispatchable"
+    }
+  ],
+  "expected_current_scopes": {
+    "Codex-web": {
+      "expected_workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "expected_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "active_bindings": [
+        {
+          "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+          "owner_id": "owner_default",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "created_at_ms": 1791772900597,
+          "revoked_at_ms": null
+        }
+      ],
+      "active_registrations": [
+        {
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "registered_at_ms": 1791772866762,
+          "retired_at_ms": null
+        }
+      ],
+      "delegated_inventory_targets": [],
+      "census": {
+        "unclosed_tasks": 0,
+        "live_open_tasks": 0,
+        "expired_unclosed_tasks": 0,
+        "unreleased_writers": 0,
+        "live_writers": 0,
+        "expired_unreleased_writers": 0,
+        "unsettled_actions": 0,
+        "unsettled_by_delivery_state": {},
+        "queued_actions": 0,
+        "active_dispatch_actions": 0,
+        "reconciliation_required_actions": 0
+      },
+      "exact_scope_idle": true
+    },
+    "Autocad": {
+      "expected_workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "expected_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "active_bindings": [
+        {
+          "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+          "owner_id": "owner_default",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "created_at_ms": 1791791011230,
+          "revoked_at_ms": null
+        }
+      ],
+      "active_registrations": [
+        {
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "registered_at_ms": 1791790578705,
+          "retired_at_ms": null
+        }
+      ],
+      "delegated_inventory_targets": [
+        {
+          "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "binding_state": "active",
+          "workspace_state": "active",
+          "node_state": "active",
+          "readiness": "ready",
+          "presence_state": "online",
+          "dispatch_state": "dispatchable"
+        }
+      ],
+      "census": {
+        "unclosed_tasks": 0,
+        "live_open_tasks": 0,
+        "expired_unclosed_tasks": 0,
+        "unreleased_writers": 0,
+        "live_writers": 0,
+        "expired_unreleased_writers": 0,
+        "unsettled_actions": 3,
+        "unsettled_by_delivery_state": {
+          "reconcile_required": 3
+        },
+        "queued_actions": 0,
+        "active_dispatch_actions": 0,
+        "reconciliation_required_actions": 3
+      },
+      "exact_scope_idle": false
+    }
+  },
+  "whole_device_census": {
+    "unclosed_tasks": 0,
+    "live_open_tasks": 0,
+    "expired_unclosed_tasks": 0,
+    "unreleased_writers": 0,
+    "live_writers": 0,
+    "expired_unreleased_writers": 0,
+    "unsettled_actions": 5,
+    "unsettled_by_delivery_state": {
+      "reconcile_required": 5
+    },
+    "queued_actions": 0,
+    "active_dispatch_actions": 0,
+    "reconciliation_required_actions": 5
+  },
+  "historical_unknown_actions_preserved": [
+    {
+      "action_id": "act_048df93488874a70aa97a7ee18ccbd03",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "delivery_state": "reconcile_required",
+      "created_at_ms": 1790241951218,
+      "expires_at_ms": 1790242251218,
+      "settled_at_ms": null,
+      "disposition": "quarantined_unknown",
+      "reconciled_at_ms": 1790323192956,
+      "expected_current_scope": null,
+      "expired": true
+    },
+    {
+      "action_id": "act_744496c6bd514d38a746cf8819aae9ad",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+      "delivery_state": "reconcile_required",
+      "created_at_ms": 1790338044700,
+      "expires_at_ms": 1790338344700,
+      "settled_at_ms": null,
+      "disposition": "quarantined_unknown",
+      "reconciled_at_ms": 1790339030843,
+      "expected_current_scope": null,
+      "expired": true
+    },
+    {
+      "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "created_at_ms": 1791800399782,
+      "expires_at_ms": 1791800699782,
+      "settled_at_ms": null,
+      "disposition": null,
+      "reconciled_at_ms": null,
+      "expected_current_scope": "Autocad",
+      "expired": true
+    },
+    {
+      "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "created_at_ms": 1791800659555,
+      "expires_at_ms": 1791800959555,
+      "settled_at_ms": null,
+      "disposition": null,
+      "reconciled_at_ms": null,
+      "expected_current_scope": "Autocad",
+      "expired": true
+    },
+    {
+      "action_id": "act_3849e259d55546639794cec40f63fea8",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "delivery_state": "reconcile_required",
+      "created_at_ms": 1791801476851,
+      "expires_at_ms": 1791801776851,
+      "settled_at_ms": null,
+      "disposition": null,
+      "reconciled_at_ms": null,
+      "expected_current_scope": "Autocad",
+      "expired": true
+    }
+  ],
+  "unknown_projection_limit": 100,
+  "unknown_projection_truncated": false,
+  "history_note": "UNKNOWN actions remain unresolved evidence; no cleanup, settlement or replay was performed.",
+  "renewal": {
+    "service": {
+      "ActiveState": "inactive",
+      "SubState": "dead",
+      "InvocationID": "a8e800743c3949a8bc5f95c85f3c4da8",
+      "Result": "success",
+      "ExecMainStatus": "0"
+    },
+    "timer": {
+      "ActiveState": "active",
+      "SubState": "waiting",
+      "UnitFileState": "enabled",
+      "NextElapseUSecRealtime": "",
+      "LastTriggerUSec": "Mon 2026-10-12 18:04:29 +07"
+    }
+  },
+  "tunnel_ready": {
+    "ready": true,
+    "status": 200
+  },
+  "sqlite_integrity_ok": true,
+  "codex_web_canary_blockers": [
+    "CODEX_WEB_NOT_DELEGATED_TO_CURRENT_SERVICE_PRINCIPAL"
+  ],
+  "codex_web_canary_eligible_under_current_authority": false,
+  "external_mutations_performed": false,
+  "database_mutations_performed": false,
+  "read_only_mcp_methods": [
+    "tools/list",
+    "workspace_context inventory"
+  ],
+  "local_observation": {
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "branch": "main",
+    "ssh_target": "svhome@100.116.112.22",
+    "strict_host_key_checking": true,
+    "batch_default_keys": true,
+    "observer_sha256": "11ae0cdd1a7d9817697eaefea08a94bbff890f8c095e66e94858fed86125e3cb",
+    "ssh_exit_code": 0,
+    "capture_started_utc": "2026-10-12T11:11:30.090786+00:00",
+    "capture_completed_utc": "2026-10-12T11:11:31.264039+00:00",
+    "current_package_python_files_sha256": {
+      "__init__.py": "e7d59cf831e78f9ad0172617d7ff022492e25f6d8a3606a4e17c6c071a19e2d9",
+      "__main__.py": "a7ff6743394255f544f8bcb981e582e8835c6d8fc38f1f4cc90f19cd935e7073",
+      "deployment_verifier.py": "8f41b5413c6a9fed2c3725955e6d87a2430502fc317e8f6819f915b9a456c825",
+      "http_api.py": "a46a461794a570bca9841d700260856bcb660cb745e337d253482a5f5c5f44eb",
+      "maintenance.py": "98c866649a56c88da5bbebe10da84c27f1ead1ad906c062eda67d5a1b0ca59fa",
+      "mcp_facade.py": "634d1da3d6d1de9c0528fdf57f5daa14625390b5d6983d5906d81370460d14ff",
+      "mcp_oauth.py": "99d19968daaad120a9c583f26f31414bc134c4cd0ddfee687aaa5f3f307f82c6",
+      "mcp_status.py": "303d0d8114db63caf7aa544e3150b4b86ccb0f4f1f209b2bb2128fefe0e514f9",
+      "node_agent.py": "f615b822c4eb5654e63c3b32c9fefcc92d8019f2f4fde8b4ed5130d354840b75",
+      "store.py": "180c0bc0a37b34b3c94d1da69e5bf7db18c0eceeb25bbba09fc25fe8e3729d3d",
+      "web_ui.py": "03e5279c89bf4b1c04ef0139724e77eb960a3efdca32aa59ec2445e3b35fc64b"
+    },
+    "head_package_python_files_sha256": {
+      "__init__.py": "b2281d801697f3819879b5100bf6e1c4c0dcfd67f9aae15198d4bfb93280a07a",
+      "__main__.py": "035af58fc85e40477e9d33d31f5c7d4481dad5babe8bdb3a97dbfba1879871a4",
+      "deployment_verifier.py": "02ec6c6b0e49410b0f8a6b3d43665f860087df1e242a19ec18eff449204f7401",
+      "http_api.py": "c28b93dfa968022ac8dcdeac24ee574a9b57b62ba636c51d1deeb586b3916644",
+      "maintenance.py": "795d4ee4f607bd29c9ad178b1af62e5a212d99cae4c9843adbd8e76fc748894e",
+      "mcp_facade.py": "133b6d891290fd37303f14eb2919e03903ead7b3f36510c55ebd843dd36dcac0",
+      "mcp_oauth.py": "1ecba74925783bb9f09a5d4b54dd44085851f6b8efa8ad9e7f7acb98f13e6b7f",
+      "mcp_status.py": "a6cda1ac365d611e260f974a914e48b2f55784e4fbda8e66f310a8217b791aea",
+      "node_agent.py": "7dda1d3845172e95ef940850f23ef4b5d873019f8b999aeb76a140e79be6fcc0",
+      "store.py": "f50ddce70d5821bd82a32b12640ce5609ec510409cac18a312f6ffd23d56d513",
+      "web_ui.py": "437e9f9910f615ebfe422b2a610eec90d15916be8b80ead7d2c78bf00eef68d3"
+    }
+  },
+  "serving_vs_local_current_changed_files": [
+    "__init__.py",
+    "__main__.py",
+    "deployment_verifier.py",
+    "http_api.py",
+    "maintenance.py",
+    "mcp_facade.py",
+    "mcp_oauth.py",
+    "mcp_status.py",
+    "node_agent.py",
+    "store.py"
+  ],
+  "serving_vs_local_head_changed_files": [
+    "http_api.py",
+    "node_agent.py",
+    "store.py",
+    "web_ui.py"
+  ]
+}

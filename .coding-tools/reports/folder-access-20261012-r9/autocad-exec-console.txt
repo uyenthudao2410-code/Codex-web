@@ -1,0 +1,2 @@
+{"operation":"exec","ok":false,"code":"CONTROL_PLANE_POLICY_AUTHORITY_STALE","stage":null,"report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\transition\\packaged-exec-failure-1791793212686.json","activation":null,"target":null,"runtime":null}
+PROCESS_EXIT=1

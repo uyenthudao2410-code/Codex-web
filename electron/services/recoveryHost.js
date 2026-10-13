@@ -632,6 +632,7 @@ class RecoveryHost {
     this.ipcServer = null;
     this.supervisionTimer = null;
     this.supervisionInFlight = null;
+    this.activationCompletionInFlight = null;
     this.lastSupervisionStatus = null;
     this.lastSupervisionObservedAtUnixMs = 0;
     // The supervisor owns the potentially expensive runtime observation path.
@@ -714,7 +715,18 @@ class RecoveryHost {
       this.uiRecoveryInitialGraceUntil = Date.now() + UI_RECOVERY_REGISTRATION_TIMEOUT_MS;
       this.uiRecoveryLastState = 'awaiting_initial_registration';
     }
-    this.autoActivation = autoActivationController || new AcceptedCodeActivationController({ paths, settings, revisions: this.revisions, activation: this.activation, log });
+    this.autoActivation = autoActivationController || new AcceptedCodeActivationController({
+      paths, settings, revisions: this.revisions, log,
+      activation: {
+        orchestrator: this.orchestrator,
+        status: (operationId) => this.activation.status(operationId),
+        recoveryRevisionStatus: () => this.activation.recoveryRevisionStatus(),
+        uiRevisionStatus: () => this.activation.uiRevisionStatus(),
+        verifyCheckpointLifecycle: (request) => this.runActivationCompletion(() => this.activation.verifyCheckpointLifecycle(request)),
+        preflight: (request) => this.runActivationCompletion(() => this.activation.preflight(request)),
+        activate: (request) => this.runActivationCompletion(() => this.activation.activate(request))
+      }
+    });
     this.recoveryPlane = recoveryPlaneService || new RecoveryPlaneService({
       paths,
       log,
@@ -2031,7 +2043,7 @@ class RecoveryHost {
   }
 
   async controlPlaneReadOnlyWorkspaceContext(request = {}) {
-    const policy = loadReadOnlyBridgePolicy(this.paths);
+    const policy = loadReadOnlyBridgePolicy(this.paths, { target: request });
     const admission = admitReadOnlyBridgeRequest(policy, request);
     if (admission.device_id !== this.deviceIdentity.device_id) {
       throw controlPlaneBridgeError(
@@ -2109,7 +2121,7 @@ class RecoveryHost {
     // File content has a distinct policy and cannot inherit the compact
     // metadata bridge's admission merely because both originate at the same
     // central node/workspace binding.
-    const policy = loadFileReadBridgePolicy(this.paths);
+    const policy = loadFileReadBridgePolicy(this.paths, { target: request });
     const admitted = admitFileReadBridgeRequest(policy, request);
     if (admitted.device_id !== this.deviceIdentity.device_id) {
       throw controlPlaneBridgeError(
@@ -2118,7 +2130,17 @@ class RecoveryHost {
       );
     }
     const workspaceRoot = resolveRegisteredWorkspaceRoot(this.paths, policy);
-    resolveDirectRegisteredFile(workspaceRoot, admitted.path);
+    try {
+      resolveDirectRegisteredFile(workspaceRoot, admitted.path);
+    } catch (error) {
+      if (error?.code === 'CONTROL_PLANE_FILE_READ_TARGET_MISSING') {
+        throw controlPlaneBridgeError(
+          'CONTROL_PLANE_FILE_READ_TARGET_MISSING_BEFORE_DISPATCH',
+          'file-read target is unavailable before local read dispatch.'
+        );
+      }
+      throw error;
+    }
     const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
 
     const runtime = await this.orchestrator.lightweightSnapshot();
@@ -2178,7 +2200,7 @@ class RecoveryHost {
     // A mutation has an independently installed local policy.  In particular,
     // neither a central approval nor the bounded-file-read policy can admit a
     // write at this Recovery Host boundary.
-    const policy = loadApprovedPatchBridgePolicy(this.paths);
+    const policy = loadApprovedPatchBridgePolicy(this.paths, { target: request });
     const admitted = admitApprovedPatchBridgeRequest(policy, request);
     if (admitted.device_id !== this.deviceIdentity.device_id) {
       throw controlPlaneBridgeError(
@@ -2189,7 +2211,7 @@ class RecoveryHost {
     const workspaceRoot = resolveApprovedPatchWorkspaceRoot(this.paths, policy);
     let execPolicySha256;
     if (admitted.verification) {
-      const execPolicy = loadExecBridgePolicy(this.paths);
+      const execPolicy = loadExecBridgePolicy(this.paths, { target: request });
       const execRoot = resolveExecWorkspaceRoot(this.paths, execPolicy);
       if (workspaceKey(execRoot) !== workspaceKey(workspaceRoot)) {
         throw controlPlaneBridgeError('CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH', 'verification workspace differs from patch workspace.');
@@ -2255,7 +2277,7 @@ class RecoveryHost {
     // Process execution has an independent local policy. Enrollment and
     // workspace registration alone never grant a command allowlist.
     const allowExpiredForControl = request && request.operation !== 'exec_run';
-    const policy = loadExecBridgePolicy(this.paths, { allowExpired: allowExpiredForControl });
+    const policy = loadExecBridgePolicy(this.paths, { target: request, allowExpired: allowExpiredForControl });
     const admitted = admitExecBridgeRequest(policy, request);
     if (admitted.device_id !== this.deviceIdentity.device_id) {
       throw controlPlaneBridgeError(
@@ -2322,7 +2344,7 @@ class RecoveryHost {
     // Document create/convert has its own structured admission and receipt
     // shape. It may reuse the installed writable-root policy, but it must not
     // inherit a patch or exec handler accidentally.
-    const policy = loadDocumentWriteBridgePolicy(this.paths);
+    const policy = loadDocumentWriteBridgePolicy(this.paths, { target: request });
     const admitted = admitDocumentWriteBridgeRequest(policy, request);
     if (admitted.device_id !== this.deviceIdentity.device_id) {
       throw controlPlaneBridgeError(
@@ -2387,6 +2409,28 @@ class RecoveryHost {
     return normalized;
   }
 
+  assertActivationCompletionIdle() {
+    if (this.activationCompletionInFlight) {
+      throw Object.assign(new Error('An activation observation already owns the preflight and admission sequence.'), {
+        code: 'RUNTIME_BUSY', retryable: true
+      });
+    }
+  }
+
+  async runActivationCompletion(operation) {
+    this.assertActivationCompletionIdle();
+    // Reserve synchronously, before any preflight can yield. MCP exposes one
+    // process-local rebuild receipt, so its producer and consumer must stay
+    // inside the same startup/watchdog/operator completion sequence. Public
+    // preflight also reserves this guard so an earlier producer cannot overlap.
+    const pending = Promise.resolve().then(operation);
+    this.activationCompletionInFlight = pending;
+    try { return await pending; }
+    finally {
+      if (this.activationCompletionInFlight === pending) this.activationCompletionInFlight = null;
+    }
+  }
+
   handlers() {
     return {
       // Liveness must stay responsive while an unrelated authenticated read is
@@ -2401,7 +2445,9 @@ class RecoveryHost {
       'recovery.status': async (options = {}) => options?.fresh === true
         ? this.freshHostStatus()
         : this.cachedHostStatus(),
-      'code.activation_preflight': async (request) => this.activation.preflight(request),
+      'code.activation_preflight': async (request) => {
+        return this.runActivationCompletion(() => this.activation.preflight(request));
+      },
       'code.activate_update': async (request) => {
         this.assertBootstrapMutationAllowed();
         // The production path intentionally delegates to FullCleanActivation
@@ -2418,7 +2464,7 @@ class RecoveryHost {
           && typeof this.orchestrator?.completeActivationEpoch === 'function')) {
           this.assertReadyAdoptionMutationAllowed();
         }
-        return this.activation.activate(request);
+        return this.runActivationCompletion(() => this.activation.activate(request));
       },
       'code.activation_status': async (operationId) => this.activation.status(operationId),
       'client.register_ui_revision': async (registration) => {
@@ -2475,7 +2521,9 @@ class RecoveryHost {
           throw Object.assign(new Error('Full clean activation is unavailable for this runtime owner.'), { code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE' });
         }
         const id = String(activationEpochId || '');
-        return this.decorate(await this.fullCleanActivation.finalize(id, await this.fullCleanActivation.finalCensus(id)));
+        return this.decorate(await this.runActivationCompletion(async () => (
+          this.fullCleanActivation.finalize(id, await this.fullCleanActivation.finalCensus(id))
+        )));
       },
       'runtime.start': async (options = {}) => {
         this.assertBootstrapMutationAllowed();
@@ -2504,7 +2552,7 @@ class RecoveryHost {
         const result = soft
           ? await this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' })
           : (this.fullCleanActivation?.restart && typeof this.orchestrator?.completeActivationEpoch === 'function'
-            ? await this.fullCleanActivation.restart({
+            ? await this.runActivationCompletion(() => this.fullCleanActivation.restart({
               ...options,
               // Code/revision activation is bound to the live accepted
               // closure. Process refresh and explicit operator role migration
@@ -2521,7 +2569,7 @@ class RecoveryHost {
               reason: options.reason || (executionRoleHandoff
                 ? 'operator_central_executor_handoff'
                 : refresh ? 'npm_start_refresh' : 'operator_restart')
-            })
+            }))
             : (() => {
               throw Object.assign(new Error('Operator restart requires the Recovery Host full-clean activation coordinator.'), {
                 code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE'
@@ -2620,8 +2668,9 @@ class RecoveryHost {
         // Never consume a ticket while a non-READY epoch already owns the
         // activation transaction.
         const supervisorRequest = !epochBlocked
+          && !this.activationCompletionInFlight
           && typeof this.orchestrator.serviceSupervisorRestartRequest === 'function'
-          ? await this.orchestrator.serviceSupervisorRestartRequest()
+          ? await this.runActivationCompletion(() => this.orchestrator.serviceSupervisorRestartRequest())
           : null;
         // A supervisor restart owns this watchdog tick once it either enters
         // HANDOFF or explicitly defers with its durable journal retained.  In
@@ -2650,9 +2699,9 @@ class RecoveryHost {
           this.recordSupervisionStatus(runtime, { activationConnectorPending: false });
           return runtime;
         }
-        runtime = admissionBlocked
+        runtime = admissionBlocked || this.activationCompletionInFlight
           ? (pendingObservation?.runtime || await this.orchestrator.lightweightSnapshot())
-          : await this.orchestrator.supervise();
+          : await this.runActivationCompletion(() => this.orchestrator.supervise());
         if (supervisorRequest) runtime = { ...runtime, supervisorRequest };
         this.recordSupervisionStatus(runtime, {
           activationConnectorPending: connectorPending
@@ -2669,55 +2718,58 @@ class RecoveryHost {
       // Pre-handoff and teardown states remain coordinator-owned and immutable here.
       if (shouldRunFinalCensus
         && epoch
+        && !this.activationCompletionInFlight
         && ['STARTING', 'VERIFYING'].includes(epoch.state)) {
         try {
-          const census = await this.fullCleanActivation.finalCensus(epoch.activation_epoch_id, {
-            expectedOldInstanceId: this.replacement?.expectedOldInstanceId || '',
-            // Admission is still CLOSED, so no ordinary tool can mutate the
-            // canonical ledger between a verified pending census and this
-            // watchdog recheck. The coordinator still revalidates every live
-            // process/component/connector identity; it only reuses the exact
-            // durable projection receipt to avoid a second multi-minute ledger
-            // rebuild inside the same bounded activation epoch.
-            reusePendingProjection: connectorPending === true
-          });
-          if (census.pass) {
-            // finalize() deliberately performs its own independent live census
-            // and may reuse only the exact durable admission-closed projection
-            // receipt. Persist this passing candidate before crossing that
-            // boundary; otherwise finalize() can read the previous connector-
-            // pending receipt and terminalize an otherwise healthy epoch as
-            // stale/incomplete. recordPendingCensus never opens admission.
-            this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
-            const completed = await this.fullCleanActivation.finalize(epoch.activation_epoch_id, census);
-            this.recordSupervisionStatus({ ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed }, {
-              activationConnectorPending: connectorPending
+          await this.runActivationCompletion(async () => {
+            const census = await this.fullCleanActivation.finalCensus(epoch.activation_epoch_id, {
+              expectedOldInstanceId: this.replacement?.expectedOldInstanceId || '',
+              // Admission is still CLOSED, so no ordinary tool can mutate the
+              // canonical ledger between a verified pending census and this
+              // watchdog recheck. The coordinator still revalidates every live
+              // process/component/connector identity; it only reuses the exact
+              // durable projection receipt to avoid a second multi-minute ledger
+              // rebuild inside the same bounded activation epoch.
+              reusePendingProjection: connectorPending === true
             });
-            const finalizedEpoch = this.activationEpochStore.current();
-            this.recordBootstrapEpoch(finalizedEpoch, {
-              replacement_host_instance_id: this.instanceId,
-              replacement_host_pid: process.pid
-            });
-            epoch = finalizedEpoch;
-          } else if (typeof this.fullCleanActivation.recordPendingCensus === 'function') {
-            // A transient cold-start probe can be negative even though the
-            // exact Tunnel/Recovery processes become healthy a few seconds
-            // later.  Persist the refreshed evidence so subsequent watchdog
-            // ticks and status readers no longer inherit the first stale
-            // census. Admission remains closed until the full census passes.
-            this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
-            if (census.runtime && typeof census.runtime === 'object') {
-              this.recordSupervisionStatus({
-                ...census.runtime,
-                tunnelRunning: census.tunnel_health_verified === true
-              }, { activationConnectorPending: connectorPending });
+            if (census.pass) {
+              // finalize() deliberately performs its own independent live census
+              // and may reuse only the exact durable admission-closed projection
+              // receipt. Persist this passing candidate before crossing that
+              // boundary; otherwise finalize() can read the previous connector-
+              // pending receipt and terminalize an otherwise healthy epoch as
+              // stale/incomplete. recordPendingCensus never opens admission.
+              this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
+              const completed = await this.fullCleanActivation.finalize(epoch.activation_epoch_id, census);
+              this.recordSupervisionStatus({ ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed }, {
+                activationConnectorPending: connectorPending
+              });
+              const finalizedEpoch = this.activationEpochStore.current();
+              this.recordBootstrapEpoch(finalizedEpoch, {
+                replacement_host_instance_id: this.instanceId,
+                replacement_host_pid: process.pid
+              });
+              epoch = finalizedEpoch;
+            } else if (typeof this.fullCleanActivation.recordPendingCensus === 'function') {
+              // A transient cold-start probe can be negative even though the
+              // exact Tunnel/Recovery processes become healthy a few seconds
+              // later.  Persist the refreshed evidence so subsequent watchdog
+              // ticks and status readers no longer inherit the first stale
+              // census. Admission remains closed until the full census passes.
+              this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
+              if (census.runtime && typeof census.runtime === 'object') {
+                this.recordSupervisionStatus({
+                  ...census.runtime,
+                  tunnelRunning: census.tunnel_health_verified === true
+                }, { activationConnectorPending: connectorPending });
+              }
+              this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
+              this.recordBootstrapEpoch(this.activationEpochStore.current(), {
+                replacement_host_instance_id: this.instanceId,
+                replacement_host_pid: process.pid
+              });
             }
-            this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
-            this.recordBootstrapEpoch(this.activationEpochStore.current(), {
-              replacement_host_instance_id: this.instanceId,
-              replacement_host_pid: process.pid
-            });
-          }
+          });
         } catch (error) {
           this.log.warn(error.message, { stage: 'full-clean-activation-census', code: error?.code || '' });
           this.recordBootstrapEpoch(this.activationEpochStore.current(), {
@@ -3098,7 +3150,7 @@ class RecoveryHost {
         });
         let activationResult;
         try {
-          activationResult = await this.fullCleanActivation.restart({
+          activationResult = await this.runActivationCompletion(() => this.fullCleanActivation.restart({
             operationId: bootstrapPlan.operationId,
             component: 'recovery_host',
             expectedDiskRevision: bootstrapPlan.expectedRevision,
@@ -3110,7 +3162,7 @@ class RecoveryHost {
             reason: this.bootstrap.refresh === true
               ? 'npm_start_refresh_bootstrap'
               : 'recovery_host_bootstrap'
-          });
+          }));
         } catch (error) {
           this.recordBootstrapFailure(error, this.activationEpochStore.current());
           throw error;
@@ -3132,11 +3184,11 @@ class RecoveryHost {
         return this.hostStatus();
       }
       if (fullCleanReplacement) {
-        const continued = await this.fullCleanActivation.continueReplacement({
+        const continued = await this.runActivationCompletion(() => this.fullCleanActivation.continueReplacement({
           activationEpochId: this.replacement.activationEpochId,
           expectedOldInstanceId: this.replacement.expectedOldInstanceId,
           expiresAtUnixMs: this.replacement.expiresAtUnixMs
-        });
+        }));
         if (continued?.census?.runtime) {
           this.recordSupervisionStatus({
             ...continued.census.runtime,

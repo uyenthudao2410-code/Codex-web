@@ -1,0 +1,2 @@
+
+{"ok":false,"code":"ACCEPT_CURRENT_FAILED","error":"{\"code\":-32602,\"data\":{\"task_context_id\":\"cpap_2f91f26918d7bad14639b92e23265418683ea4100362db624248be7b\"},\"message\":\"Invalid params: MCP 2026-07-28 requests require params._meta clientCapabilities\"}"}

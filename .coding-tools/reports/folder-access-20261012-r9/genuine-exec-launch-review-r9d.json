@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "operation": "genuine_exec_launch_path_readonly_review",
+  "observed_at": "2026-10-12T09:07:03.3418849Z",
+  "windows_sandbox_installed": true,
+  "sandbox_host_process_count": 0,
+  "installed_exec_policy": {
+    "enabled": true,
+    "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+    "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+    "argv_prefix_count": 7
+  },
+  "supported_next_action": "After r9d activation, dispatch the prepared fresh structured exec canary via the shared MCP. The state-aware manager provisions and starts its owned VM on the actual command. No explicit probe is required to warm the VM.",
+  "lifecycle_source": [
+    "exec_tools.py: windows_sandbox_feature_enabled -> build_mxc_windows_sandbox_invocation",
+    "windows_mxc_state_aware.py: manager.acquire -> _ensure_active -> host_process_count -> provision -> start -> exec",
+    "reuse: cached exact ID start; uncertain teardown and foreign host remain fail closed"
+  ],
+  "explicit_probe_note": "The separate probe creates its own manager and closes it at the end; it is a capability check, not a persistent warm-up for the native runtime.",
+  "prior_genuine_exec": [
+    {
+      "path": ".coding-tools/reports/shared-write-exec-20261012-r8/shared-exec-after-stop-receipt-r8-2a1f853f95c649ac991c7de88100420d.ndjson",
+      "ok": true,
+      "action_id": "act_39a0f3d1484d4b839b788c2e5a619a36",
+      "process_state": "completed",
+      "exit_code": 0,
+      "task_closed": true,
+      "writer_released": true
+    },
+    {
+      "path": ".coding-tools/reports/shared-write-exec-20261012-r8/shared-exec-after-stop-receipt-r8-ce8fb9898c814735acdd59008411b470.ndjson",
+      "ok": true,
+      "action_id": "act_77427971b6714781898ed833dc4296fa",
+      "process_state": "completed",
+      "exit_code": 0,
+      "task_closed": true,
+      "writer_released": true
+    }
+  ],
+  "r9c_original_read_reconciliation": {
+    "receipt_id": "rcpt_ba662a45e4974b5b962162c7652740d6",
+    "receipt_state": "rejected",
+    "delivery_state": "settled",
+    "original_unknown_receipt_preserved": true,
+    "read_may_have_occurred": true,
+    "valid_bounded_read_receipt_retained": false,
+    "action_redispatched": false
+  },
+  "reviewer_launched_vm": false,
+  "reviewer_dispatched_action": false,
+  "reviewer_modified_runtime": false
+}

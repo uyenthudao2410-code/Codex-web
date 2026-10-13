@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "operation": "connected_agent_heartbeat_policy_lock_fix_preparation",
+  "observed_at_utc": "2026-10-12T13:35:20.5972217Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "git_branch": "main",
+  "worktree_state": "shared dirty changes preserved",
+  "source_sha256_before_fix": "bee27651ef1fba03f6f6c52dd1a93fe671f07d7b73b0402118ead88c97f9dffe",
+  "files_sha256": {
+    "control-plane/control_plane/node_agent.py": "fca440c9fc9faa32e4beea9085b2828a85b1c27247a17217aef7230698ce2537",
+    "control-plane/tests/test_store.py": "c503dda3e9b26388e4b68ae53c5d3a06b651d9a124e5eabf4bf6cc47247f5d27",
+    "docs/NATIVE_FIRST_EXECUTION.md": "d4ff0a13087ed135339c95c51fe0928d6e794c999c32f4e3bd837e78f17a3f89",
+    ".coding-tools/reports/parallel-native-first-20261012/inspect-attempt2-heartbeat-evidence.py": "3eb56d31ebc555e300c107594ef16a2cdb89954187e529958cbcf0eadecc2447",
+    ".coding-tools/reports/parallel-native-first-20261012/attempt2-heartbeat-policy-audit.json": "1bbe8f5ed397152e09937a9dc6589198a247ceb231540a660140ba3dbd3de948"
+  },
+  "distinct_focused_tests_passed": 6,
+  "focused_validation_batches": [
+    {
+      "count": 5,
+      "duration_seconds": 4.3,
+      "purpose": "existing heartbeat and lane behavior plus busy multi-scope and successful-heartbeat cadence regression"
+    },
+    {
+      "count": 2,
+      "duration_seconds": 1.277,
+      "purpose": "negative busy classification and repeat positive busy continuation after negative test addition"
+    }
+  ],
+  "exact_busy_code_by_lane_only": true,
+  "busy_lock_owner_untouched": true,
+  "healthy_heartbeat_keeps_interval": true,
+  "heartbeat_transport_backoff_preserved": true,
+  "current_canary_new_unknown_actions": [],
+  "changed_source_functions": [
+    "_connected_agent_iteration",
+    "run_connected_agent"
+  ],
+  "read_timeout_deadline_changed": false,
+  "production_mutation_performed_by_this_lane": false,
+  "commit_or_push_performed_by_this_lane": false,
+  "strongest_proof": "source and focused offline tests",
+  "proof_limit": "Prior per-iteration busy reason not retained; actual long-running serial capabilities may still delay heartbeat",
+  "next_action": "Root pins exact corrected source hash and builds r4, runs parity and isolated smoke, then performs authorized controlled activation and a new UUID canary"
+}

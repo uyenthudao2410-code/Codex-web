@@ -1,0 +1,93 @@
+{
+  "operation": "status",
+  "observed_at": "2026-10-12T07:17:11.425Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r8\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "installation_id": "6169e7f206f69e2d5364248f93d965c97f58340a908844b2c8f9ef2832f17228",
+    "host_pid": 18712,
+    "runtime": {
+      "fullyReady": false,
+      "mcpRunning": null,
+      "updateIncomplete": true,
+      "recoveryHost": null
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv4x4jxp-dd8732140bad1eb3e646f4a631853c0b",
+      "operation_id": "full-clean-mv4x4by7-298849b275533d74247000b3",
+      "state": "UPDATE_INCOMPLETE",
+      "epoch_state": "READY_COMMITTED",
+      "admission_open": false,
+      "update_incomplete": true,
+      "ready_commit_digest": "725cc918622c4eec2729fe152033d41521329c3874c0b6e31e6e56d2513ff519",
+      "expires_at_unix_ms": 1791789956673,
+      "ready_at": null,
+      "error": null
+    },
+    "workspaces": [
+      {
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "display_name": "Codex-web",
+        "capabilities": {
+          "read": true,
+          "write": true,
+          "exec": true
+        }
+      }
+    ],
+    "file_policies": {
+      "file_read": {
+        "state": "enabled",
+        "enabled": true,
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "policy_sha256": "b09b5cf34b6e09489aaf34431dfa6931755dd7c69d41d01bf1e3d825fd686c36",
+        "current_facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "authority_observed_at_ms": 1791789431150
+      },
+      "approved_patch": {
+        "state": "enabled",
+        "enabled": true,
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "policy_sha256": "7c91e5868f2b6e65b38cd3a3663f5de802a8fba4fc82224fd9d71a3e6eea02b6",
+        "current_facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "authority_observed_at_ms": 1791789431150
+      }
+    },
+    "exec_policy": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "bfb5b1a4fe463649c032ff71ab0dbe8613185ddd7cce99460e3f09525f4e5e10",
+      "allowed_argv_prefix_count": 6,
+      "allowed_argv_prefixes_sha256": "6c67e3aa54d9dae49c41feff2d2b5c56100760b60cdef6a2a4eca392d9063597"
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\r8-transition\\packaged-status-receipt-1791789431425.json"
+}

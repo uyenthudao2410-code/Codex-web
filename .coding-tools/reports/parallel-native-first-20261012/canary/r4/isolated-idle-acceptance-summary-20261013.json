@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "operation": "isolated_idle_acceptance_summary",
+  "ok": false,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "first_attempt": {"attempt_id": "9705978a47394551ac1f707c8f440cc7", "remote_ok": false, "failure_code": "ORIGINAL_JOB_IDENTITY_NOT_EXACT", "action_settled": true, "task_cleanup_verified": true},
+  "corrected_attempt": {"attempt_id": "3ce1bdc402dc492396a84c5addc400c8", "remote_ok": true, "action_id": "act_459e01e1d82945b29f1489f3777fc80f", "job_id": "e6046fb58f7348779e9c94cad8f58d56", "terminal_exit_code": 0, "task_cleanup_verified": true, "writer_released_verified": true, "lineage_ids_empty": true},
+  "idle_observation": {"ok": false, "error_code": "AUTOMATIC_IDLE_RETIREMENT_NOT_PROVEN", "warm_sandbox_id": "wsb:ea12135c", "sandbox_memory_aggregate": "vmmemWindowsSandbox", "sandbox_named_memory_absent": false, "vm_started_by_observer": false, "lifecycle_mutation_performed": false},
+  "policy_restoration": {"ok": true, "operation": "isolated-idle-policy-restore", "codex_execution_mode": "native_first", "autocad_scope_unchanged": true, "vm_probe_started": false},
+  "production_acceptance_blocked_by": "persistent_sandbox_named_memory_aggregate",
+  "live_mutation_summary": "policy isolate/restore only; no generic process kill or VM stop",
+  "evidence": [
+    {"path": "isolated-idle-remote-9705978a47394551ac1f707c8f440cc7.ndjson", "sha256": "76ceda419b218c7f9bc011cbedde77586cff82d7975ad407d4c08554166b9491"},
+    {"path": "isolated-idle-remote-3ce1bdc402dc492396a84c5addc400c8.ndjson", "sha256": "4d1c135f73a4dd409ec9c6b4e40f4ecee9c81b9139bc7d72586b809faf8cf838"},
+    {"path": "isolated-idle-observation-3ce1bdc402dc492396a84c5addc400c8.json", "sha256": "c51733c4e977a6fef94f4c894091cc020690c6d9860729b465f0936ee7014963"},
+    {"path": "isolated-idle-wrapper-3ce1bdc402dc492396a84c5addc400c8.json", "sha256": "f553043f4297651d8b085278d8ee0c2d55eabd51e4e55b2d055c3745949d481d"},
+    {"path": "isolated-idle-policy-restore-1791834971534-9dfc3be4.json", "sha256": "3fcef5e4c4d4bbf6ccc78491bfbdd68d1acde8efd90cc9c786a016839c676c"}
+  ]
+}
+

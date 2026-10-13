@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data:;">
+  <title>Codex Hub · Bảng điều khiển Vận hành</title>
+  <link rel="icon" type="image/png" href="app-icon.png">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body class="panel-layout-body">
+  <!-- Main Panel Wrapper (Sidebar removed per user request) -->
+  <div class="panel-main-content">
+    <header class="panel-header premium-header">
+      <div class="panel-title">
+        <span class="panel-brand-mark" aria-hidden="true" title="Codex Hub">
+          <img src="app-icon.png" alt="Codex Hub Icon" style="width:28px;height:28px;border-radius:8px;object-fit:cover;" />
+        </span>
+        <span class="panel-title-copy">
+          <b>Bảng điều khiển Vận hành</b>
+          <small>Operator Control Panel · Codex Hub</small>
+        </span>
+        <span class="live-mark"><i></i>Trực tiếp</span>
+      </div>
+      <span id="serviceDots" class="service-dots">
+        <span id="mcpDot" title="Chưa đồng bộ Coding Tools MCP"><i></i>MCP</span>
+        <span id="tunnelDot" title="Chưa đồng bộ OpenAI Tunnel"><i></i>Tunnel</span>
+      </span>
+      <button id="closeButton" class="close-button" title="Đóng bảng điều khiển" aria-label="Đóng bảng điều khiển">✕</button>
+    </header>
+
+    <main class="panel-scroll operator-dashboard">
+      <!-- 1. Executive Summary -->
+      <section class="dashboard-card executive-card hero-summary" aria-labelledby="executiveSummaryTitle">
+        <div class="section-heading hero-heading">
+          <div>
+            <span class="eyebrow">TỔNG QUAN VẬN HÀNH · EXECUTIVE SUMMARY</span>
+            <h2 id="executiveSummaryTitle">Tổng quan Vận hành</h2>
+            <p>Thông tin vận hành thực tế từ mặt phẳng thực thi bền vững.</p>
+          </div>
+          <span class="updated-at"><i></i>Bằng chứng trực tiếp</span>
+        </div>
+        <div class="hero-kpi-grid" aria-label="Live operational summary">
+          <!-- KPI 1: TASK PROGRESS -->
+          <article class="summary-kpi-card kpi-progress">
+            <div class="kpi-top-row">
+              <span class="kpi-symbol symbol-blue" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="10" cy="10" r="8.5"></circle>
+                  <path d="M10 5.5v4.5l3 2"></path>
+                </svg>
+              </span>
+              <b id="taskStatus" class="badge kpi-mini-badge status-waiting">Chưa đồng bộ</b>
+            </div>
+            <div class="kpi-copy">
+              <small>TIẾN ĐỘ NHIỆM VỤ</small>
+              <div class="kpi-bar-wrap"><span class="kpi-bar" id="taskPercent">—</span></div>
+              <span>Tiến độ công việc đã duyệt</span>
+            </div>
+          </article>
+
+          <!-- KPI 2: EVENTS -->
+          <article class="summary-kpi-card kpi-events">
+            <div class="kpi-top-row">
+              <span class="kpi-symbol symbol-green" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 2L4 11h6l-1 7 7-9h-6l1-7z"></path>
+                </svg>
+              </span>
+              <b id="runStatus" class="badge kpi-mini-badge status-waiting">Chưa đồng bộ</b>
+            </div>
+            <div class="kpi-copy">
+              <small>SỰ KIỆN ĐIỀU PHỐI</small>
+              <strong id="eventCount">—</strong>
+              <span>Trạng thái điều phối hiện tại</span>
+            </div>
+          </article>
+
+          <!-- KPI 3: ROUTING EVIDENCE -->
+          <article class="summary-kpi-evidence kpi-routing">
+            <div class="kpi-top-row">
+              <span class="kpi-symbol symbol-purple" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="6" cy="10" r="3"></circle>
+                  <circle cx="14" cy="6" r="3"></circle>
+                  <circle cx="14" cy="14" r="3"></circle>
+                  <path d="M8.5 8.5l3-1.5m-3 4.5l3 1.5"></path>
+                </svg>
+              </span>
+              <span class="kpi-dot purple-dot"></span>
+            </div>
+            <div class="kpi-copy">
+              <small>BẰNG CHỨNG ĐIỀU TUYẾN</small>
+              <strong class="text-orange kpi-value-evidence" id="routingEvidenceKpi">Chưa đồng bộ</strong>
+              <span>Chỉ tính tuyến có bằng chứng</span>
+            </div>
+          </article>
+
+          <!-- KPI 4: CONNECTIVITY -->
+          <article class="summary-kpi-card kpi-connectivity">
+            <div class="kpi-top-row">
+              <span class="kpi-symbol symbol-orange" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="10" cy="10" r="3"></circle>
+                  <path d="M4.5 4.5a8 8 0 0111 0M2 2a11.5 11.5 0 0116 0M4.5 15.5a8 8 0 0011 0M2 18a11.5 11.5 0 0016 0"></path>
+                </svg>
+              </span>
+              <b id="continuityStatus" class="badge kpi-mini-badge status-hold">Chưa đồng bộ</b>
+            </div>
+            <div class="kpi-copy">
+              <small>TÍN HIỆU CLIENT</small>
+              <strong id="hubStatus" class="text-gray">Chưa đồng bộ</strong>
+              <span>Bằng chứng hoạt động gần đây</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Deep technical truth section removed per operator request: keep panel focused on
+           token/routing + coordination. Deep source/runtime/evidence
+           projection stays in backend truth_snapshot, hidden from this UI. -->
+
+      <!-- 2. Execution Fabric / Live Routing (80% Prominent Expanded Module) -->
+      <section class="dashboard-card hero-routing" aria-labelledby="liveRoutingTitle">
+        <div class="section-heading hero-heading">
+          <div>
+            <span class="eyebrow">LƯỚI THỰC THI · EXECUTION FABRIC</span>
+            <div class="title-with-pill">
+              <h2 id="liveRoutingTitle">Điều tuyến Trực tiếp</h2>
+              <span class="mini-label-pill">Live Routing</span>
+            </div>
+            <p>Bằng chứng runtime, quyền hạn và ủy quyền thực tế — không suy diễn hoạt động provider.</p>
+          </div>
+          <span class="live-pill">✦ Thời gian thực</span>
+        </div>
+
+        <div class="routing-stage router-fabric" id="routerFabric">
+          <!-- Background SVG Connector Lines (540x336 expanded coordinate grid) -->
+          <svg class="router-links" viewBox="0 0 540 336" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="edgeChatWebGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#10b981"/>
+                <stop offset="100%" stop-color="#3b82f6"/>
+              </linearGradient>
+              <linearGradient id="edgeDesktopGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#94a3b8"/>
+                <stop offset="100%" stop-color="#3b82f6"/>
+              </linearGradient>
+              <linearGradient id="edgeOpenCodeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#10b981"/>
+                <stop offset="100%" stop-color="#3b82f6"/>
+              </linearGradient>
+            </defs>
+            <!-- Left Frontends to Center Hub -->
+            <path id="routerEdgeChatWeb" class="router-edge waiting" d="M 145,54 C 175,54 175,95 205,95" stroke="url(#edgeChatWebGrad)"></path>
+            <path id="routerEdgeDesktop" class="router-edge waiting" d="M 145,174 C 175,174 175,95 205,95"></path>
+            <path id="routerEdgeOpenCode" class="router-edge waiting" d="M 145,294 C 175,294 175,95 205,95" stroke="url(#edgeOpenCodeGrad)"></path>
+
+            <!-- Center Hub to Right Compute Lanes -->
+            <path id="routerEdgeFast" class="router-edge waiting" d="M 335,95 C 365,95 365,49 395,49"></path>
+            <path id="routerEdgeDeepSeek" class="router-edge waiting" d="M 335,95 C 365,95 365,132 395,132"></path>
+            <path id="routerEdgeTerra" class="router-edge waiting" d="M 335,95 C 365,95 365,215 395,215"></path>
+            <path id="routerEdgeSol" class="router-edge waiting" d="M 335,95 C 365,95 365,299 395,299"></path>
+
+            <!-- Center Hub to Bottom MCP Writer -->
+            <path id="routerEdgeWriter" class="router-edge writer-edge waiting" d="M 270,160 L 270,264" stroke-dasharray="4 4"></path>
+
+            <!-- Connection Anchor Pins -->
+            <circle cx="145" cy="54" r="3.5" fill="#10b981"/>
+            <circle cx="145" cy="174" r="3.5" fill="#94a3b8"/>
+            <circle cx="145" cy="294" r="3.5" fill="#10b981"/>
+            <circle cx="205" cy="95" r="3.5" fill="#3b82f6"/>
+            <circle cx="335" cy="95" r="3.5" fill="#3b82f6"/>
+            <circle cx="270" cy="160" r="3.5" fill="#3b82f6"/>
+            <circle cx="270" cy="264" r="3.5" fill="#10b981"/>
+            <circle cx="395" cy="49" r="3.5" fill="#3b82f6"/>
+            <circle cx="395" cy="132" r="3.5" fill="#0891b2"/>
+            <circle cx="395" cy="215" r="3.5" fill="#6366f1"/>
+            <circle cx="395" cy="299" r="3.5" fill="#f59e0b"/>
+          </svg>
+
+          <!-- Column 1: FRONTENDS -->
+          <div class="routing-column frontends-column">
+            <div class="routing-section-label">
+              <span>FRONTENDS</span>
+              <small>Client kết nối giao diện</small>
+            </div>
+            <div class="routing-stack">
+              <div id="routerChatWeb" class="router-node waiting">
+                <span class="node-icon icon-chatweb">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2"><path d="M3 10a7 7 0 0112.5-4.5A7 7 0 0117 10c0 4-3.5 7-8 7-1.5 0-3-.4-4.2-1.2L2 16l1.2-2.8C2.4 12 2 11 2 10z"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>ChatWeb</b>
+                  <small>semantic controller</small>
+                  <span class="router-state text-gray">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+
+              <div id="routerDesktop" class="router-node waiting">
+                <span class="node-icon icon-desktop">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="3" y="4" width="14" height="10" rx="1.5"/><path d="M7 17h6M10 14v3"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>Codex Desktop</b>
+                  <small>deep frontend</small>
+                  <span class="router-state text-gray">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+
+              <div id="routerOpenCode" class="router-node waiting">
+                <span class="node-icon icon-opencode">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M7 6L3 10l4 4M13 6l4 4-4 4M11 4l-2 12"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>OpenCode</b>
+                  <small>Go frontend</small>
+                  <span class="router-state text-gray">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: EXECUTION HUB -->
+          <div class="routing-column routing-hub-column">
+            <div class="routing-section-label center-label">
+              <span>EXECUTION HUB</span>
+              <small>Quyền hạn Runtime</small>
+            </div>
+
+            <!-- Giant Hub Orb -->
+            <div id="routerHub" class="router-node hub waiting">
+              <div class="hub-orb-glow"></div>
+              <span class="hub-glyph">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2L3 6v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V6l-9-4z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </span>
+              <span class="hub-role">QUYỀN HẠN RUNTIME</span>
+              <b>Execution Hub</b>
+              <small>một cơ quan điều phối duy nhất</small>
+              <span class="router-state text-gray">● CHƯA ĐỒNG BỘ</span>
+            </div>
+
+            <div class="hub-caption">
+              <small>Điều phối yêu cầu</small>
+              <span class="authority-divider">GHI &amp; XÁC MINH</span>
+            </div>
+
+            <!-- MCP Writer & Proof Node -->
+            <div id="routerWriter" class="router-node writer-authority waiting" title="Cơ chế Ghi & Xác minh Bằng chứng Độc quyền">
+              <span class="node-icon icon-writer">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </span>
+              <div class="node-info">
+                <b>MCP Write &amp; Proof</b>
+                <small>single writer • fence</small>
+                <span class="router-state text-gray">● CHƯA ĐỒNG BỘ</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: COMPUTE LANES -->
+          <div class="routing-column lanes-column">
+            <div class="routing-section-label">
+              <span>COMPUTE LANES</span>
+              <small>Luồng tính toán Model</small>
+            </div>
+            <div class="routing-stack lane-stack">
+              <div id="routerFast" class="router-node waiting">
+                <span class="node-icon icon-fast">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M11 2L4 11h6l-1 7 7-9h-6l1-7z"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>Codex Fast</b>
+                  <small>Mini / Luna</small>
+                  <span class="router-state">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+
+              <div id="routerDeepSeek" class="router-node waiting">
+                <span class="node-icon icon-deepseek">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#0891b2" stroke-width="2"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 9h2v2H9zM9 1v3M15 1v3M9 16v3M15 16v3M1 9h3M1 13h3M16 9h3M16 13h3"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>OpenCode Go</b>
+                  <small>DeepSeek Flash / Pro</small>
+                  <span class="router-state">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+
+              <div id="routerTerra" class="router-node waiting">
+                <span class="node-icon icon-terra">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M10 2l8 4.5v7L10 18l-8-4.5v-7L10 2zM2 6.5l8 4.5 8-4.5M10 11v7"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>Codex Deep</b>
+                  <small>Terra</small>
+                  <span class="router-state">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+
+              <div id="routerSol" class="router-node waiting">
+                <span class="node-icon icon-sol">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#e11d48" stroke-width="2"><polygon points="10,2 12.5,7.5 18,8.5 14,12.5 15,18 10,15 5,18 6,12.5 2,8.5 7.5,7.5"/></svg>
+                </span>
+                <div class="node-info">
+                  <b>Codex Critical</b>
+                  <small>Sol</small>
+                  <span class="router-state">● CHƯA ĐỒNG BỘ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legend at bottom -->
+        <div class="router-legend" aria-hidden="true">
+          <span class="legend-item"><i class="dot-offline"></i>NGOẠI TUYẾN</span>
+          <span class="legend-item"><i class="dot-connected"></i>ĐÃ KẾT NỐI</span>
+          <span class="legend-item"><i class="dot-active"></i>ĐANG HOẠT ĐỘNG</span>
+          <span class="legend-item"><i class="dot-waiting"></i>ĐANG CHỜ</span>
+          <span class="legend-item"><i class="dot-blocked"></i>BỊ CHẶN</span>
+        </div>
+      </section>
+
+      <!-- 3. Quick Controls -->
+      <section class="dashboard-card quick-card secondary-card">
+        <div class="section-heading compact">
+          <h2>Điều khiển Nhanh <small style="font-size:11px;color:#64748b;font-weight:600;text-transform:none">/ Quick Controls</small></h2>
+          <span class="truth-note"><span class="eocl-shield">🛡️</span> Bảo vệ bởi EOCL</span>
+        </div>
+        <div class="quick-control-grid">
+          <button id="pauseTask" class="quick-control" title="Tạm dừng nhiệm vụ" disabled>
+            <span class="ctrl-icon icon-blue">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+                <rect x="5" y="4" width="3.5" height="12" rx="1"></rect>
+                <rect x="11.5" y="4" width="3.5" height="12" rx="1"></rect>
+              </svg>
+            </span>
+            <b>Tạm dừng</b>
+          </button>
+          <button id="resumeTask" class="quick-control" title="Tiếp tục nhiệm vụ" disabled>
+            <span class="ctrl-icon icon-green">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+                <polygon points="6,4 16,10 6,16"></polygon>
+              </svg>
+            </span>
+            <b>Tiếp tục</b>
+          </button>
+          <button id="handoffButton" class="quick-control" title="Ghi capsule trạng thái ≤8KB để mở chat mới và tiếp tục từ capsule" disabled>
+            <span class="ctrl-icon icon-purple">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 7h11M12 4l3 3-3 3M16 13H5M8 10l-3 3 3 3"></path>
+              </svg>
+            </span>
+            <b>Chuyển giao</b>
+          </button>
+          <button id="refreshButton" class="quick-control" title="Làm mới trạng thái">
+            <span class="ctrl-icon icon-blue">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3.5 10a6.5 6.5 0 0111.6-4M16.5 10a6.5 6.5 0 01-11.6 4"></path>
+                <path d="M16 3.5v3h-3M4 16.5v-3h3"></path>
+              </svg>
+            </span>
+            <b>Làm mới</b>
+          </button>
+          <button id="stopTask" class="quick-control danger" title="Dừng nhiệm vụ" disabled>
+            <span class="ctrl-icon icon-red">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+                <rect x="5" y="5" width="10" height="10" rx="1.5"></rect>
+              </svg>
+            </span>
+            <b>Dừng</b>
+          </button>
+        </div>
+      </section>
+
+      <!-- Secondary Disclosures (Hidden via CSS to keep focus on the 3 main control surfaces) -->
+      <details class="dashboard-card recent-card panel-section secondary-disclosure" id="eventsSection">
+        <summary class="section-heading compact">
+          <span><h2>Nhật ký Hành động</h2><small>Sổ cái sự kiện điều phối bền vững / Recent Actions</small></span>
+          <span class="summary-chevron" aria-hidden="true">›</span>
+        </summary>
+        <ol id="eventList" class="event-list recent-events"></ol>
+      </details>
+
+      <details id="advancedOperations" class="advanced-ops secondary-card">
+        <summary>
+          <span><b>Vận hành Nâng cao</b><small>Chi tiết nhiệm vụ, run, bằng chứng &amp; chuyển giao quyền</small></span>
+          <span class="summary-chevron">›</span>
+        </summary>
+        <div class="advanced-content">
+          <section class="panel-section" id="taskSection">
+            <h2>Chi tiết Nhiệm vụ (Task details)</h2>
+            <p id="taskObjective" class="objective">—</p>
+            <div class="progress-row"><span class="progress"><span id="taskBar"></span></span></div>
+            <p id="taskStep" class="detail">—</p>
+            <p id="taskCommand" class="detail command"></p>
+          </section>
+          <section class="panel-section" id="orchSection">
+            <h2>Điều phối (Orchestration)</h2>
+            <p id="runObjective" class="objective">—</p>
+            <div id="waveLine" class="detail">—</div>
+            <div id="orchCounts" class="detail counts"></div>
+            <div id="capsuleLine" class="detail"></div>
+          </section>
+          <section class="panel-section" id="runtimeActivitySection">
+            <h2>Runtime Activity</h2>
+            <p id="runtimeActivitySummary" class="detail">Chưa đồng bộ</p>
+            <ol id="runtimeActivityList" class="event-list"></ol>
+          </section>
+          <section class="panel-section authority-actions">
+            <h2>Kiểm soát Ủy quyền (Authority controls)</h2>
+            <div class="controls authority-controls">
+              <button id="toChatWebButton" disabled>Chuyển quyền → ChatWeb</button>
+              <button id="toDesktopButton" disabled>Chuyển quyền → Codex</button>
+              <button id="copyCodexConfigButton" disabled>Sao chép cấu hình MCP</button>
+            </div>
+          </section>
+          <section class="panel-section" id="proofsSection">
+            <h2>Sổ cái Bằng chứng (Proofs Ledger)</h2>
+            <ol id="proofList" class="proof-list"></ol>
+          </section>
+          <section class="panel-section" id="delegationsSection" hidden>
+            <h2>Ủy quyền model (Delegations)</h2>
+            <ol id="delegationList" class="delegation-list"></ol>
+          </section>
+        </div>
+      </details>
+    </main>
+
+    <footer class="panel-footer">
+      <span id="syncState">Chưa đồng bộ với control plane</span>
+      <span id="gatewayLatency" class="gateway-latency" title="Độ trễ vòng MCP từ Execution Hub proxy gateway (p50/p90/p99)"></span>
+      <span id="clock"></span>
+    </footer>
+  </div>
+  <script src="panel.js"></script>
+</body>
+</html>

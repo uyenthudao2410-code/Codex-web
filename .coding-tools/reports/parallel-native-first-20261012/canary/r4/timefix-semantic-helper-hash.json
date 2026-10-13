@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operation": "timefix_semantic_helper_review",
+  "helper": "local-semantic-acceptance-timefix.cjs",
+  "helper_sha256": "1eb3a3811200015785af08802c120040f65cda68f768bcfe473aae8a622e3dca",
+  "source_helper": "local-semantic-acceptance.cjs",
+  "source_helper_sha256": "d91694fc8dc0c4a79d458917f6a235e01cc0d4ffa8c5312d806ef03c4e90101d",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "original_actions_replayed": false,
+  "semantic_api_invoked": false,
+  "offline_test": "test-local-semantic-acceptance-timefix.cjs",
+  "offline_test_sha256": "a92be87c689df3be22d267fc3aeabd308ddae8981e8cde5a3b61b0feea7cd4bd",
+  "offline_test_passed": true,
+  "readback_finalizer_sha256": "6e29a90b6ee29f0b516f8ab0065b2c063d4ea9ff3f327f8bd56be74e9d531b04",
+  "observer_operation": "native_exec_continuation_final",
+  "observer_requires_new_readback_action": true
+}

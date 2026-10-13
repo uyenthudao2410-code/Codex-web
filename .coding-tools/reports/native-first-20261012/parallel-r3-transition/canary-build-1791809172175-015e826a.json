@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "operation": "canary-build",
+  "observed_at": "2026-10-12T12:46:12.175Z",
+  "observed_at_ms": 1791809172175,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "observed_at_ms": 1791809172174,
+    "activation_epoch_id": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+    "approval_set": "codex-build",
+    "targets": [
+      {
+        "workspace_label": "Codex-web",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "native_source_sha256": "f9e65f66adb6fc7937333ce4b04937f995d060dee9ed1d49973bf001430c9533",
+        "added_native_argv": [
+          "node",
+          "trusted-build.js"
+        ],
+        "added_native_cwd": "tests/fixtures/native-first-canary",
+        "policy": {
+          "state": "enabled",
+          "enabled": true,
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "facade_contract": {
+            "schema_version": 32,
+            "profile": "control-plane-private-tunnel-service-v1",
+            "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+          },
+          "policy_sha256": "4ca0707dd6380a4c592fe24547c7b5d40affdb074c5c2b1639d497fcf6d5da57",
+          "allowed_argv_prefix_count": 7,
+          "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+          "execution_mode": "native_only",
+          "native_argv_prefixes": [
+            [
+              "node",
+              "trusted-build.js"
+            ]
+          ]
+        }
+      }
+    ],
+    "existing_native_prefixes_preserved": true,
+    "no_vm_probe_performed": true,
+    "baseline_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\canary-policy-baseline-1791809168575-0779bf7e.json",
+    "baseline_sha256": "126534d0440e0497932c96c4dbe6dcc097794c9780e4014f3b7cd0da461a6298"
+  },
+  "mutating": true,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "7a87e6196acdfa9f45788e5e54da11dc2d77a409d04ca851d113fb1d7ff5979b",
+  "smoke_proof_sha256": "a9a448f345dfadeb6b2bd5b566e14eb5939d2cb543c6536213810f1e8654b8ff",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\canary-build-1791809172175-015e826a.json"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "status",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "observed_at": "2026-10-13T04:39:11.840Z",
+  "observed_at_ms": 1791866351860,
+  "ok": false,
+  "stage": "package_proof",
+  "code": "BYTECODE_WRITES_MUST_BE_DISABLED",
+  "mutating_action_started": false,
+  "retry_instruction": "Resolve the read-only gate before applying.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-failure-1791866351860.json"
+}

@@ -1,0 +1,14 @@
+{
+  "operation": "exact_new_machine_pilot_transfer",
+  "preflight": "pass",
+  "service_pid": 912047,
+  "old_pilot": "pilot_7177a7cd197c4944ae77ebc1c4d433a3",
+  "new_binding": "bind_71661b1046884174b01c99af5f8546aa",
+  "new_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+  "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+  "grant_id": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+  "preserved_expires_at_ms": 1791776571067,
+  "historical_family_sha256": "724cb852c916eb91bb16e8631ef423ce2cdda0b3d0e8e58e1f1c69bdf7d83d2f",
+  "grant_is_target_bound": false,
+  "authority_mutations": false
+}

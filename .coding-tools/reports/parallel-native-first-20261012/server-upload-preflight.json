@@ -1,0 +1,80 @@
+{
+  "operation": "parallel_native_inert_upload_preflight",
+  "ok": true,
+  "deployment_helper_sha256": "2983a315bdc3752dcc225f64c77862ce5219f8ec2ca5cb3743f360de46c223e4",
+  "uploads": [
+    {
+      "ok": true,
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-parallel-native-1012-f7acd9ec4ba1.tar.gz",
+      "sha256": "d86a1daa6d3a1ddabb587cd277ed95a2ebea95d3dc8edf6d6e01c879c9da2f69"
+    },
+    {
+      "ok": true,
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.parallel-native-f7acd9ec4ba1-2983a315bdc3.json",
+      "sha256": "82eaa2d8df6bc2964138cb9dde255610eb603e784036f7326d54aae691f9abe6"
+    },
+    {
+      "ok": true,
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.parallel-native-f7acd9ec4ba1-2983a315bdc3.py",
+      "sha256": "2983a315bdc3752dcc225f64c77862ce5219f8ec2ca5cb3743f360de46c223e4"
+    }
+  ],
+  "preflight": {
+    "operation": "native_first_overlay_readonly_preflight",
+    "ok": true,
+    "stage": "read_only_preflight",
+    "baseline_service_pid": 946413,
+    "candidate_release": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+    "changed_files": [
+      "control-plane/control_plane/http_api.py",
+      "control-plane/control_plane/mcp_facade.py",
+      "control-plane/control_plane/node_agent.py",
+      "control-plane/control_plane/recovery_exec_bridge.cjs",
+      "control-plane/control_plane/store.py",
+      "control-plane/control_plane/workspace_policy_store.py",
+      "deploy/control-plane-authority-renewal.py"
+    ],
+    "census": {
+      "observed_at_ms": 1791806645539,
+      "database_schema_version": 29,
+      "live_tasks": 0,
+      "live_writers": 0,
+      "active_actions": 0,
+      "historical_unknown_count": 5,
+      "poststart_new_work_present": false,
+      "immutable_row_hashes": {
+        "actions": "a83c8b1c247eee8a1043a410684018a69ce661f788fde2b66a5165be7660984c",
+        "action_reconciliations": "abda102f63f262fa1b37a977455a36a3ec37f09cb15eceec20dcbcede159faa4",
+        "action_dispatch_dispositions": "5ae5a498f7231bb00788d653a6ab3b08f9a8c0eafa7fe4ffe94ead5ecd646bb5",
+        "delivery_attempts": "e8c73ee3435e6d44bc17abd5e6d6f12ff4278ff8d1a803b7af5e121f69ce9a7f",
+        "receipts": "03ba9020a2b321012836fc30a1ec89bd0155d6b5ea27bf2e3b245d3bb95afba3",
+        "mcp_task_sessions": "7c1ffd59610104df506eaac6de7c208add653d40186ed4251bb2e10ba2bbb96d",
+        "mcp_task_writer_leases": "6e57b5768336a87f08cb617007f8c814fc93638a09726e8ee9acc7503a65ec55",
+        "bindings": "3f12cc2a4704d4a5485d75035705fd1f728cca5e1364696aebe7f51691a96556",
+        "node_workspaces": "115dd4c08532f84b252e343de8ae20b67b5feded1ddfd944176eb45f04c9e839",
+        "scoped_pilot_decisions": "c8a4497b479d89069705d2ab96a3ab20acf962f523140775bca6a4e352bb7c4a",
+        "mcp_service_grants": "568e6d51a273c3ebd1b192255b995f90916039a8468af50bb8d08f84e83a9c7e",
+        "oauth_principals": "3e71a36f9c5c152169654e47dde12f636bdb15329c906d192423e644b2aaf907",
+        "control_plane_state": "a869384be2aa0d0dc3e1c887566315dada4f62c6e3fd43b4b3cd98fde314c820"
+      }
+    },
+    "health": {
+      "ok": true,
+      "service_pid": 946413,
+      "schema_version": 29,
+      "package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "inventory_binding_ids": [
+        "bind_8cd903180f3146099fea128bf55c0b4b"
+      ],
+      "service_instance_id": "cp_f0daebdd54cb4bc097a753824950ec62"
+    },
+    "external_mutations_performed": false
+  },
+  "root_execute_command": "python3 -B /home/svhome/.local/lib/codex-control-plane/releases/.parallel-native-f7acd9ec4ba1-2983a315bdc3.py --receipt /home/svhome/.local/lib/codex-control-plane/releases/.parallel-native-f7acd9ec4ba1-2983a315bdc3.json --execute",
+  "runtime_mutations": false
+}

@@ -49,8 +49,23 @@ ECOSYSTEM_CACHE_ENV_NAMES = {
 WINDOWS_JOB_OBJECT_ENV = "CODING_TOOLS_MCP_WINDOWS_JOB_OBJECT"
 
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
+_JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 0x00000008
+_JOB_OBJECT_LIMIT_JOB_MEMORY = 0x00000200
+_JOB_OBJECT_LIMIT_JOB_TIME = 0x00000004
 _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
+_JOB_OBJECT_CPU_RATE_CONTROL_INFORMATION_CLASS = 15
 _WINDOWS_CREATE_SUSPENDED = 0x00000004
+
+
+@dataclass(frozen=True)
+class WindowsJobLimits:
+    """Required native process-tree limits, applied before any child resumes."""
+
+    memory_bytes: int = 2 * 1024 * 1024 * 1024
+    active_processes: int = 64
+    cpu_rate_percent: int = 50
+    cpu_time_ms: int = 300_000
+
 
 _kernel32: Any = None
 _ntdll: Any = None
@@ -109,6 +124,9 @@ if os.name == "nt":
                 ("PeakProcessMemoryUsed", ctypes.c_size_t),
                 ("PeakJobMemoryUsed", ctypes.c_size_t),
             ]
+
+        class _JOBOBJECT_CPU_RATE_CONTROL_INFORMATION(ctypes.Structure):
+            _fields_ = [("ControlFlags", ctypes.c_uint32), ("CpuRate", ctypes.c_uint32)]
     except Exception:  # noqa: BLE001 - job objects are an optimization, never a requirement
         _kernel32 = None
         _ntdll = None
@@ -123,7 +141,53 @@ def windows_job_object_enabled() -> bool:
     return True
 
 
-def _attach_windows_job(process: subprocess.Popen[Any]) -> bool:
+def windows_host_token_posture() -> dict[str, Any]:
+    """Read only elevation/integrity; do not expose account identity or groups."""
+    if os.name != "nt" or _kernel32 is None:
+        raise ToolFailure("NATIVE_TOKEN_POSTURE_UNAVAILABLE", "Windows native token posture could not be verified.", category="security")
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    open_token = advapi32.OpenProcessToken
+    open_token.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
+    open_token.restype = wintypes.BOOL
+    get_information = advapi32.GetTokenInformation
+    get_information.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+    get_information.restype = wintypes.BOOL
+    current_process = _kernel32.GetCurrentProcess
+    current_process.restype = wintypes.HANDLE
+    token = wintypes.HANDLE()
+    if not open_token(current_process(), 0x8, ctypes.byref(token)):  # TOKEN_QUERY
+        raise ToolFailure("NATIVE_TOKEN_POSTURE_UNAVAILABLE", "The native host token could not be queried.", category="security")
+    try:
+        elevation = wintypes.DWORD()
+        returned = wintypes.DWORD()
+        if not get_information(token, 20, ctypes.byref(elevation), ctypes.sizeof(elevation), ctypes.byref(returned)):
+            raise ToolFailure("NATIVE_TOKEN_POSTURE_UNAVAILABLE", "The native host elevation could not be verified.", category="security")
+        get_information(token, 25, None, 0, ctypes.byref(returned))
+        if not 1 <= returned.value <= 65536:
+            raise ToolFailure("NATIVE_TOKEN_POSTURE_UNAVAILABLE", "The native host integrity could not be verified.", category="security")
+        buffer = ctypes.create_string_buffer(returned.value)
+        if not get_information(token, 25, buffer, len(buffer), ctypes.byref(returned)):
+            raise ToolFailure("NATIVE_TOKEN_POSTURE_UNAVAILABLE", "The native host integrity could not be verified.", category="security")
+        sid = ctypes.cast(buffer, ctypes.POINTER(ctypes.c_void_p)).contents.value
+        count = advapi32.GetSidSubAuthorityCount
+        count.argtypes = [wintypes.LPVOID]
+        count.restype = ctypes.POINTER(ctypes.c_ubyte)
+        subauthority = advapi32.GetSidSubAuthority
+        subauthority.argtypes = [wintypes.LPVOID, wintypes.DWORD]
+        subauthority.restype = ctypes.POINTER(wintypes.DWORD)
+        rid = int(subauthority(sid, int(count(sid).contents.value) - 1).contents.value)
+        return {"elevated": bool(elevation.value), "integrity_rid": rid}
+    finally:
+        _kernel32.CloseHandle(token)
+
+
+def require_windows_native_token() -> None:
+    posture = windows_host_token_posture()
+    if posture["elevated"] or posture["integrity_rid"] > 0x2000:  # medium integrity
+        raise ToolFailure("NATIVE_ELEVATED_HOST_DENIED", "Native execution requires a non-elevated Windows host process.", category="security", details={"execution_started": False})
+
+
+def _attach_windows_job(process: subprocess.Popen[Any], limits: WindowsJobLimits | None = None) -> bool:
     """Attach the spawned process to a kill-on-close Job Object.
 
     Closing the job handle later becomes a deterministic whole-tree kill:
@@ -133,18 +197,36 @@ def _attach_windows_job(process: subprocess.Popen[Any]) -> bool:
 
     if _kernel32 is None:
         return False
+    handle = None
     try:
         handle = _kernel32.CreateJobObjectW(None, None)
         if not handle:
             return False
         info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
         info.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        if limits is not None:
+            info.BasicLimitInformation.LimitFlags |= (
+                _JOB_OBJECT_LIMIT_ACTIVE_PROCESS | _JOB_OBJECT_LIMIT_JOB_MEMORY | _JOB_OBJECT_LIMIT_JOB_TIME
+            )
+            info.BasicLimitInformation.ActiveProcessLimit = limits.active_processes
+            info.BasicLimitInformation.PerJobUserTimeLimit = limits.cpu_time_ms * 10_000
+            info.JobMemoryLimit = limits.memory_bytes
         size = ctypes.sizeof(info)
         if not _kernel32.SetInformationJobObject(
             handle, _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS, ctypes.byref(info), size
         ):
             _kernel32.CloseHandle(handle)
             return False
+        if limits is not None:
+            cpu_info = _JOBOBJECT_CPU_RATE_CONTROL_INFORMATION()
+            cpu_info.ControlFlags = 0x1 | 0x4  # ENABLE | HARD_CAP
+            cpu_info.CpuRate = limits.cpu_rate_percent * 100
+            if not _kernel32.SetInformationJobObject(
+                handle, _JOB_OBJECT_CPU_RATE_CONTROL_INFORMATION_CLASS,
+                ctypes.byref(cpu_info), ctypes.sizeof(cpu_info),
+            ):
+                _kernel32.CloseHandle(handle)
+                return False
         process_handle = getattr(process, "_handle", None)
         if process_handle is None or not _kernel32.AssignProcessToJobObject(handle, process_handle):
             _kernel32.CloseHandle(handle)
@@ -152,6 +234,11 @@ def _attach_windows_job(process: subprocess.Popen[Any]) -> bool:
         setattr(process, "_coding_tools_job_handle", handle)
         return True
     except Exception:  # noqa: BLE001 - fall back to taskkill tree termination
+        if handle:
+            try:
+                _kernel32.CloseHandle(handle)
+            except Exception:
+                pass
         return False
 
 
@@ -176,14 +263,25 @@ def managed_process_creationflags(creationflags: int = 0) -> int:
     return flags
 
 
-def attach_managed_process(process: subprocess.Popen[Any]) -> bool:
+def attach_managed_process(process: subprocess.Popen[Any], *, limits: WindowsJobLimits | None = None) -> bool:
     """Attach and resume a Windows process; return whether Job ownership exists."""
 
     if not windows_job_object_enabled():
+        if limits is not None:
+            process.kill()
+            process.wait(timeout=3)
+            raise ToolFailure("NATIVE_RESOURCE_LIMITS_UNAVAILABLE", "Native execution requires Windows Job Object limits.", category="security")
         return False
     attached = bool(getattr(process, "_coding_tools_job_handle", None))
     if not attached:
-        attached = _attach_windows_job(process)
+        attached = _attach_windows_job(process, limits)
+    if not attached and limits is not None:
+        # The process was created suspended. Never resume a native executor
+        # after failing to install its complete resource/lifecycle boundary.
+        setattr(process, "_coding_tools_created_suspended", False)
+        process.kill()
+        process.wait(timeout=3)
+        raise ToolFailure("NATIVE_RESOURCE_LIMITS_UNAVAILABLE", "The native process-tree limits could not be installed.", category="security")
     if bool(getattr(process, "_coding_tools_created_suspended", False)):
         resumed = False
         try:
@@ -278,10 +376,13 @@ def spawn_process(
     env: dict[str, str],
     tty: bool,
     popen_kwargs: dict[str, Any],
+    windows_job_limits: WindowsJobLimits | None = None,
 ) -> tuple[subprocess.Popen[bytes], int | None]:
     """Spawn a pipe-backed or true POSIX PTY-backed process."""
 
     use_job_object = os.name == "nt" and windows_job_object_enabled()
+    if windows_job_limits is not None and not use_job_object:
+        raise ToolFailure("NATIVE_RESOURCE_LIMITS_UNAVAILABLE", "Native execution requires Windows Job Object limits.", category="security")
     if use_job_object:
         popen_kwargs = {
             **popen_kwargs,
@@ -303,7 +404,7 @@ def spawn_process(
         )
         if use_job_object:
             setattr(process, "_coding_tools_created_suspended", True)
-            attach_managed_process(process)
+            attach_managed_process(process, limits=windows_job_limits)
         return process, None
     if os.name == "nt":
         raise ToolFailure(
@@ -349,6 +450,7 @@ class ExecSession:
     owner_run_id: str = ""
     owner_wave_id: str = ""
     resource_class: str = "LIGHT"
+    execution_metadata: dict[str, str] = field(default_factory=dict)
     resource_terminal_recorded: bool = False
     timeout_at: float | None = None
     warnings: list[str] = field(default_factory=list)
@@ -383,6 +485,7 @@ class ExecSession:
     timed_out: bool = False
     terminating: bool = False
     sandbox_abort_on_cleanup: bool = False
+    sandbox_idle_generation: int | None = None
     pty_master_fd: int | None = None
     _stdin_closed: bool = False
 

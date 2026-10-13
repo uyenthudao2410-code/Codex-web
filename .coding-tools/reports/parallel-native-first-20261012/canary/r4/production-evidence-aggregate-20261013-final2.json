@@ -1,0 +1,601 @@
+{
+  "schema_version": 1,
+  "operation": "production_evidence_aggregation",
+  "observed_at_ms": 1791836685149,
+  "scope": "Offline receipt aggregation; no live acceptance or external mutation",
+  "sources": {
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-e343984bfcee4e8fb5f9de04038596a7.ndjson": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-e343984bfcee4e8fb5f9de04038596a7.ndjson",
+      "sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+      "size_bytes": 311754
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\parallel-overlap-receipt-90307d8ef64b429aab250c9797538717.ndjson": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\parallel-overlap-receipt-90307d8ef64b429aab250c9797538717.ndjson",
+      "sha256": "045bdfd9e4cf9a197d50fbefd17734bb342854a1b235f05d63fed9a121c2f1a7",
+      "size_bytes": 23332
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json",
+      "sha256": "825be034aadf91cf807795bbdcd0d93121832983eece18027dad964daa34fab9",
+      "size_bytes": 94698
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\final-policy-1791835447951-2c32b007.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\final-policy-1791835447951-2c32b007.json",
+      "sha256": "0d6f0a8d0d80ca3b6eff68bbb716f93cc91af5b3f06994f02307a3c93d6f4736",
+      "size_bytes": 3481
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-1791836657316-76210085.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-1791836657316-76210085.json",
+      "sha256": "d9daad5c51b8c7a157cb00d6df2b5d0bbaf54f40856bb039cb802e3c0bb8809c",
+      "size_bytes": 5943
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-final-restore-20261013-003.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-final-restore-20261013-003.json",
+      "sha256": "052df96c8f5d67e9cbc49d5bd059f21783d6aa356ef98921124ad6b7755f9372",
+      "size_bytes": 35989
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-r4-timefix-parity-final.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-r4-timefix-parity-final.json",
+      "sha256": "c90434a03dc5a41accc3999709f26893cad7a428517915f05cbe23951aa1defb",
+      "size_bytes": 10563
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-acceptance-final-audit.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-acceptance-final-audit.json",
+      "sha256": "435f568baad3322e471cf9cf475e442eb8bcb11df367e9bc39ca044a6c92f35f",
+      "size_bytes": 5908
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-before-r4.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-before-r4.json",
+      "sha256": "149114f81baeee4fc3d18f2ae7437d38418f03b9a2099e8cda587085da7e0f7b",
+      "size_bytes": 37125
+    },
+    "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\production-git-job-state-20261013.json": {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\production-git-job-state-20261013.json",
+      "sha256": "ae2cc04f2436284c5839f2b6334d386c080d2e472a937d5f6431707e94a9655b",
+      "size_bytes": 800
+    }
+  },
+  "canaries": [
+    {
+      "ok": false,
+      "attempt_id": "e343984bfcee4e8fb5f9de04038596a7",
+      "observed_at_ms": 1791825171861,
+      "task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "requires_reconciliation": false,
+      "unresolved_original_actions": [],
+      "task_closed_verified": true,
+      "writer_released_verified": true,
+      "elapsed_seconds": 2784.749,
+      "error_code": "ORIGINAL_JOB_IDENTITY_NOT_VERIFIED",
+      "proof_counts": {
+        "reads": 100,
+        "patches": 20,
+        "readbacks": 20,
+        "node_jobs": 0,
+        "git_jobs": 0
+      },
+      "receipt_proof_counts": {
+        "reads": 100,
+        "patches": 20,
+        "readbacks": 20,
+        "node_jobs": 0,
+        "git_jobs": 0
+      },
+      "counts_agree": true,
+      "native_jobs": [],
+      "distinct_native_job_count": 0,
+      "build_proof": null,
+      "build_readback": null,
+      "semantic_acceptance_performed": false
+    }
+  ],
+  "overlap": {
+    "ok": true,
+    "attempt_id": "90307d8ef64b429aab250c9797538717",
+    "observed_at_ms": 1791829436677,
+    "error_code": null,
+    "elapsed_seconds": 153.704,
+    "observation_client_recreated": true,
+    "reconnect_scope": "client_transport_only",
+    "no_second_exec_verified": true,
+    "reported_overlap": {
+      "overlap_started_at_ms": 1791829410583,
+      "overlap_finished_at_ms": 1791829412661,
+      "overlap_duration_ms": 2078,
+      "clock_source": "same_windows_node_Date_now_correlated_with_hrtime_duration"
+    },
+    "derived_overlap_duration_ms": 2078,
+    "positive_interval_overlap": true,
+    "distinct_native_job_count": 2,
+    "targets": [
+      {
+        "ok": true,
+        "attempt_id": null,
+        "observed_at_ms": null,
+        "task_id": "task_bc397a50dd074d668437a4898c30fa8d",
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "requires_reconciliation": false,
+        "unresolved_original_actions": [],
+        "task_closed_verified": true,
+        "writer_released_verified": true,
+        "elapsed_seconds": null,
+        "error_code": null,
+        "workspace_label": "Codex-web",
+        "retained_historical_unknown_actions": [],
+        "native_job": {
+          "action_id": "act_0df0cc25fab64a58abd1eb00f4b9be9a",
+          "attempt_id": "try_a2dca31c0055409081ab323bc3bb87f8",
+          "receipt_id": "rcpt_920d1c2677b34cb1a5dab0c944d7ee5e",
+          "job_id": "b2b2bc7c67854c98ba7d66891b3ec8fb",
+          "command_id": "pIIrUWER5J6H1sIfeWEiuzGR",
+          "run_id": "",
+          "wave_id": "",
+          "execution_backend": "native",
+          "isolation_level": "process_container",
+          "policy_decision": "native_explicit_approval",
+          "stdout_sha256": "fc3ba9f21da701d86800786d57a910a177596d0e84d9a789c4fc72c78dea5fca",
+          "output_bytes": null,
+          "started_at_ms": 1791829410583,
+          "finished_at_ms": 1791829415587,
+          "duration_ms": 5003.8666,
+          "pid": 28368,
+          "exit_code": null
+        }
+      },
+      {
+        "ok": true,
+        "attempt_id": null,
+        "observed_at_ms": null,
+        "task_id": "task_5d549af492b04505b3c035a8115ba67e",
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+        "requires_reconciliation": false,
+        "unresolved_original_actions": [],
+        "task_closed_verified": true,
+        "writer_released_verified": true,
+        "elapsed_seconds": null,
+        "error_code": null,
+        "workspace_label": "Autocad",
+        "retained_historical_unknown_actions": [
+          "act_9db9b985a3d648b5b941f2e13a30ee47",
+          "act_52409c69f1b84e08bb3fdd86747f79c3",
+          "act_3849e259d55546639794cec40f63fea8"
+        ],
+        "native_job": {
+          "action_id": "act_7583c934035247a5a4fbd6721b4c71b3",
+          "attempt_id": "try_64bbf5fac613418282c78f7fdd72534a",
+          "receipt_id": "rcpt_f5e022ed5e42402ba3ad9d5a2d3727db",
+          "job_id": "2683bd5f56644e7d9d16915ef4e2b259",
+          "command_id": "qum-Pz1WqVKLO2lAIUnwSf4B",
+          "run_id": "",
+          "wave_id": "",
+          "execution_backend": "native",
+          "isolation_level": "process_container",
+          "policy_decision": "native_explicit_approval",
+          "stdout_sha256": "7ba540ffa3470975e7753b48edba412ec7677fb346ece779fffd20beb25e03ef",
+          "output_bytes": null,
+          "started_at_ms": 1791829407657,
+          "finished_at_ms": 1791829412661,
+          "duration_ms": 5003.5999,
+          "pid": 49012,
+          "exit_code": null
+        }
+      }
+    ]
+  },
+  "idle": {
+    "ok": true,
+    "capture_started_at_ms": 1791835524755,
+    "capture_finished_at_ms": 1791835984378,
+    "sample_count": 125,
+    "error_code": null,
+    "proof_kind": "isolated terminal Job plus automatic owned record/process disappearance with unchanged MCP",
+    "expected_idle_seconds": 30,
+    "terminal_to_teardown_ms": 390240,
+    "owned_record_absent": true,
+    "owned_daemon_absent": true,
+    "original_owned_hosts_absent": true,
+    "sandbox_named_memory_aggregate_absent": true,
+    "peak_observed_sandbox_working_set_bytes": 2860322816,
+    "final_sandbox_working_set_bytes": 0,
+    "vm_started_by_observer": false,
+    "lifecycle_mutation_performed": false,
+    "limitation": "No dedicated idle teardown receipt exists. Kernel aggregates are observations and carry no process ownership authority.",
+    "runtime": {
+      "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+      "supervisor_instance_id": "e30adb5019b443cc5130c6ad",
+      "reviewed_mcp_process_instance_id": "-s21-KH6ldxHjCSO",
+      "native_process": {
+        "pid": 42596,
+        "creation_time": "134362952303421381",
+        "executable_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\resources\\resources\\native-python\\pythonw.exe"
+      }
+    },
+    "terminal": {
+      "action_id": "act_061809fef0d54260b8f2c1d2c592c990",
+      "attempt_id": "try_a8a2e121885b4c68b018fa6fabf2c40f",
+      "receipt_id": "rcpt_ddd63365ceea4ded8fe5a9714bfb91d8",
+      "job_id": "2e1f6b867ecc4989a1fdbf42077503fa",
+      "command_id": "7uBEIepqeQ_cy4g5qDDDfkEU",
+      "run_id": "",
+      "wave_id": "",
+      "execution_backend": "isolated",
+      "isolation_level": "hypervisor",
+      "policy_decision": "isolated_preferred",
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "output_bytes": null,
+      "started_at_ms": null,
+      "finished_at_ms": null,
+      "duration_ms": null,
+      "pid": null,
+      "exit_code": 0
+    },
+    "warm": {
+      "sandbox_id": "wsb:a461c231",
+      "observed_at_ms": 1791835566741,
+      "record_sha256": "c242ec3971c34082c417f560610f93a273e4b147da1770d2a3ad7a4330fe498c",
+      "daemon_sha256": "6ee99143e609f65a6eaf378738f49c44e97855b9d5ca918289e26c6ff7408525"
+    },
+    "task_cleanup": {
+      "ok": true,
+      "attempt_id": "a00b2f59ccb14bc68cb09dc4159f2237",
+      "observed_at_ms": 1791835594164,
+      "task_id": "task_0bf6ad11c43c4519bb89b926fd97b9a1",
+      "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+      "requires_reconciliation": false,
+      "unresolved_original_actions": null,
+      "task_closed_verified": true,
+      "writer_released_verified": true,
+      "elapsed_seconds": 68.395,
+      "error_code": null
+    }
+  },
+  "policy": {
+    "operation": "final-policy",
+    "ok": true,
+    "observed_at_ms": 1791835447951,
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "activation_epoch_id": null,
+    "other_scope_unchanged": null,
+    "plan_sha256": null,
+    "restored_policy": null,
+    "targets": [
+      {
+        "workspace_label": "Codex-web",
+        "policy": {
+          "state": "enabled",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "policy_sha256": "f10114ea42142a48134e6432089b2af4c60be425e027848551b3e22ed4de2d58",
+          "execution_mode": "native_first"
+        }
+      },
+      {
+        "workspace_label": "Autocad",
+        "policy": {
+          "state": "enabled",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+          "execution_mode": "native_first"
+        }
+      }
+    ]
+  },
+  "ready": {
+    "operation": "status",
+    "ok": true,
+    "observed_at": "2026-10-12T20:24:17.316Z",
+    "observed_at_ms": 1791836657316,
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "runtime": {
+      "fullyReady": true,
+      "mcpRunning": true,
+      "nativeAlive": true,
+      "centralConnected": true,
+      "authorityReady": true,
+      "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+      "workspace": "E:\\DEV\\Codex-web",
+      "updateIncomplete": false
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+      "state": "READY",
+      "admission_open": true,
+      "ready_commit_digest": "b10bcb9eb9d2fd835989b3bf0fd8618eabbf2b48cfcc5c5a21f24a0718030479"
+    },
+    "active_job_counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "awaiting_acceptance_runs": [
+        "0d4f567d1e5c4f90b174bad40d9e3efa",
+        "0dfb72d0c6944d2d87ecb741dc439267",
+        "28a5f750466048438307b96872e24f01",
+        "2cc8555d10fa4739b07ef55ec715f79c",
+        "351a78fd610d4f0baa15faa62f1aa39b",
+        "372352c060a34387bf1641e355fbc775",
+        "3d9a3ad822054c49a0ebf2ec857bad2e",
+        "435e64ffe1b041eea2cab17bb36ae994",
+        "490900eb8d37453baa8fb5bfb9eb72e6",
+        "4967dd953ce74b5d97cbf01aad827139",
+        "4a80ae60c2e441d8896c1ace8710c384",
+        "598f9c7aafaa4e1aa764a8392fdf7a3e",
+        "631c9d4ebee141c49471cad7d1d69366",
+        "6664f948cfb14a75958518548352896e",
+        "69f3491b6b7c45249af33903bb3221a5",
+        "6c0b08fa765b423584a42213d7f62024",
+        "7563451dc47742b39de3e3fa40ad3810",
+        "79f51b49525c459c864e94a662682759",
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "98513cec254841d4b2a2a3cabb854925",
+        "9dcd730aca3641feb460d06e9c63f21b",
+        "a8d2132df3474d85939cf0df30b4c91e",
+        "e478c0fb1ad24b428bfcab79bd3532b1",
+        "e8cef362cfe94b0ba733b73a75fbe09d",
+        "ea155e531cca4ce89f77d81bd688072b",
+        "fbaf4b0700d04794af4062671c1bcd2b",
+        "fc90e0d41d3847e2ab16961739d4df38"
+      ],
+      "live_owned_runs": []
+    }
+  },
+  "server": {
+    "ok": true,
+    "capture_completed_at_ms": 1791836630340,
+    "service_pid": 970133,
+    "service_stable": true,
+    "sqlite_integrity_ok": true,
+    "source_startup_disk_attestation_matches": true,
+    "tool_contract": {
+      "schema_version": 32,
+      "profile": "control-plane-private-tunnel-service-v1",
+      "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+    },
+    "whole_device_census": {
+      "unclosed_tasks": 0,
+      "live_open_tasks": 0,
+      "expired_unclosed_tasks": 0,
+      "unreleased_writers": 0,
+      "live_writers": 0,
+      "expired_unreleased_writers": 0,
+      "unsettled_actions": 5,
+      "unsettled_by_delivery_state": {
+        "reconcile_required": 5
+      },
+      "queued_actions": 0,
+      "active_dispatch_actions": 0,
+      "reconciliation_required_actions": 5
+    },
+    "unknown_projection_truncated": false,
+    "node": {
+      "readiness": "ready",
+      "last_seen_at_ms": 1791836627337,
+      "activation_epoch": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+      "runtime_instance_id": "-s21-KH6ldxHjCSO",
+      "mcp_server_instance_id": "7GYqt3ZdkU47_HIr"
+    },
+    "serving_source": {
+      "serving_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+      "package_source_sha256": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+      "release_file_integrity_verified": true
+    },
+    "scopes": {
+      "Codex-web": {
+        "expected_workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "expected_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "active_bindings": [
+          {
+            "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+            "owner_id": "owner_default",
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+            "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+            "created_at_ms": 1791772900597,
+            "revoked_at_ms": null
+          }
+        ],
+        "active_registrations": [
+          {
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+            "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+            "registered_at_ms": 1791772866762,
+            "retired_at_ms": null
+          }
+        ],
+        "delegated_inventory_targets": [
+          {
+            "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+            "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+            "binding_state": "active",
+            "workspace_state": "active",
+            "node_state": "active",
+            "readiness": "ready",
+            "presence_state": "online",
+            "dispatch_state": "dispatchable"
+          }
+        ],
+        "census": {
+          "unclosed_tasks": 0,
+          "live_open_tasks": 0,
+          "expired_unclosed_tasks": 0,
+          "unreleased_writers": 0,
+          "live_writers": 0,
+          "expired_unreleased_writers": 0,
+          "unsettled_actions": 0,
+          "unsettled_by_delivery_state": {},
+          "queued_actions": 0,
+          "active_dispatch_actions": 0,
+          "reconciliation_required_actions": 0
+        },
+        "exact_scope_idle": true
+      },
+      "Autocad": {
+        "expected_workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "expected_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "active_bindings": [
+          {
+            "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+            "owner_id": "owner_default",
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+            "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+            "created_at_ms": 1791791011230,
+            "revoked_at_ms": null
+          }
+        ],
+        "active_registrations": [
+          {
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+            "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+            "registered_at_ms": 1791790578705,
+            "retired_at_ms": null
+          }
+        ],
+        "delegated_inventory_targets": [
+          {
+            "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+            "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+            "binding_state": "active",
+            "workspace_state": "active",
+            "node_state": "active",
+            "readiness": "ready",
+            "presence_state": "online",
+            "dispatch_state": "dispatchable"
+          }
+        ],
+        "census": {
+          "unclosed_tasks": 0,
+          "live_open_tasks": 0,
+          "expired_unclosed_tasks": 0,
+          "unreleased_writers": 0,
+          "live_writers": 0,
+          "expired_unreleased_writers": 0,
+          "unsettled_actions": 3,
+          "unsettled_by_delivery_state": {
+            "reconcile_required": 3
+          },
+          "queued_actions": 0,
+          "active_dispatch_actions": 0,
+          "reconciliation_required_actions": 3
+        },
+        "exact_scope_idle": false
+      }
+    }
+  },
+  "package": {
+    "ok": true,
+    "proof_kind": "exact_source_package_parity",
+    "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "executable_sha256": "f88e1f0c810031c50b07532130fe946c07047c895780387313ad008f60aa2937",
+    "app_asar_sha256": "3c86b63ff32a7c750cc0576722cc24cd377856e97b7aa5159965a5449dd750ae",
+    "application_code_files": 90,
+    "resource_proof": {
+      "exact_source": true,
+      "file_count": 299
+    },
+    "adapter_proof": {
+      "exact_source": true,
+      "file_count": 10
+    }
+  },
+  "semantic": {
+    "ok": true,
+    "operation": "semantic_acceptance_final_audit",
+    "observed_at": "2026-10-12T19:29:47.0232012Z",
+    "accepted_count": 20,
+    "acceptance_performed": null,
+    "original_actions_replayed": false,
+    "production_descriptor_stable": null,
+    "blockers": null,
+    "code": null
+  },
+  "unknown_history": {
+    "preserved_prior_history": true,
+    "prior_sample_count": 5,
+    "comparisons": [
+      {
+        "action_id": "act_048df93488874a70aa97a7ee18ccbd03",
+        "before_sha256": "2e6c7272021fc215545d5b2dd0af99450aa6b6315a2af46283ad354a59ef0e15",
+        "after_sha256": "2e6c7272021fc215545d5b2dd0af99450aa6b6315a2af46283ad354a59ef0e15",
+        "preserved": true
+      },
+      {
+        "action_id": "act_744496c6bd514d38a746cf8819aae9ad",
+        "before_sha256": "d88b497918b271d7f54f4d89478d63bb708e2a8ffbc88cd05e76f33abab2741d",
+        "after_sha256": "d88b497918b271d7f54f4d89478d63bb708e2a8ffbc88cd05e76f33abab2741d",
+        "preserved": true
+      },
+      {
+        "action_id": "act_9db9b985a3d648b5b941f2e13a30ee47",
+        "before_sha256": "844e32b87571f40938c7f863a5d4a6c0516687d090fd1f17a6a5a35ba0094f2e",
+        "after_sha256": "844e32b87571f40938c7f863a5d4a6c0516687d090fd1f17a6a5a35ba0094f2e",
+        "preserved": true
+      },
+      {
+        "action_id": "act_52409c69f1b84e08bb3fdd86747f79c3",
+        "before_sha256": "a42225882f1579bd0ff1adc1de570b76b8195a9a71818e35bf8fdb8726264dca",
+        "after_sha256": "a42225882f1579bd0ff1adc1de570b76b8195a9a71818e35bf8fdb8726264dca",
+        "preserved": true
+      },
+      {
+        "action_id": "act_3849e259d55546639794cec40f63fea8",
+        "before_sha256": "83b48e66148e3bfa3b13a4a96751b78b0fa1f8eae502292cf601fe5c3303f6f2",
+        "after_sha256": "83b48e66148e3bfa3b13a4a96751b78b0fa1f8eae502292cf601fe5c3303f6f2",
+        "preserved": true
+      }
+    ],
+    "additional_current_unknown_action_ids": []
+  },
+  "git_job_state": {
+    "observed_at": null,
+    "observed_at_ms": 1791836385741,
+    "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "branch": "main",
+    "dirty": true,
+    "dirty_path_count": 2253,
+    "conflict_path_count": 0,
+    "active_job_counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "owned_codex_sidecar_residues": 0
+    },
+    "push_performed": false,
+    "commit_performed": false
+  },
+  "missing_inputs": []
+}

@@ -1,0 +1,336 @@
+{
+  "operation": "status",
+  "observed_at": "2026-10-12T10:48:27.443Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9e\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a",
+    "host_pid": 38436,
+    "runtime": {
+      "fullyReady": true,
+      "mcpRunning": true,
+      "nativeAlive": true,
+      "executionRole": "central_executor",
+      "authorityReady": true,
+      "centralConnected": true,
+      "centralStatusReason": null,
+      "updateIncomplete": false,
+      "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+      "workspace": "E:\\DEV\\Codex-web",
+      "recoveryHost": {
+        "state": "healthy",
+        "pid": 38436,
+        "process_start_token": "134362736855547600",
+        "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+        "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+        "device_instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+        "device_display_name": "DESKTOP-63643J4",
+        "started_at": "2026-10-12T10:14:45.753Z",
+        "watchdog_interval_ms": 5000,
+        "gateway": "healthy",
+        "gateway_metrics": {
+          "measurement": "resident_gateway_upstream_round_trip",
+          "scope": "electron_loopback_proxy_to_local_mcp",
+          "sample_cap": 256,
+          "excludes": [
+            "client_upload_time",
+            "provider_model_latency_attribution"
+          ],
+          "by_kind": {
+            "mcp": {
+              "n": 0,
+              "p50_ms": null,
+              "p90_ms": null,
+              "p99_ms": null,
+              "max_ms": null,
+              "failures": 0,
+              "status_classes": {}
+            },
+            "heartbeat": {
+              "n": 0,
+              "p50_ms": null,
+              "p90_ms": null,
+              "p99_ms": null,
+              "max_ms": null,
+              "failures": 0,
+              "status_classes": {}
+            },
+            "telemetry": {
+              "n": 0,
+              "p50_ms": null,
+              "p90_ms": null,
+              "p99_ms": null,
+              "max_ms": null,
+              "failures": 0,
+              "status_classes": {}
+            }
+          }
+        },
+        "code_revision": {
+          "running_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+          "disk_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+          "update_pending": false,
+          "state": "current",
+          "checked_at": "2026-10-12T10:47:54.719Z",
+          "file_count": 40
+        },
+        "full_clean_activation": {
+          "available": true,
+          "contract_version": 1,
+          "running_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+          "disk_revision": "12eb50cb16d47ab2a067802d2db998e9f3606eb895df056f1a43ace7706591cf",
+          "state": "current",
+          "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937"
+        },
+        "recovery_bootstrap": null,
+        "capabilities": {
+          "full_clean_activation": true,
+          "activation_epoch": true
+        },
+        "electron_ui_revision": {
+          "running_revision": "5b07ce8104e2cf8654c2c3bc9d08c7f5ad8b4613fd6b944d5b0961f58870b439",
+          "disk_revision": "5b07ce8104e2cf8654c2c3bc9d08c7f5ad8b4613fd6b944d5b0961f58870b439",
+          "update_pending": false,
+          "state": "current",
+          "checked_at": "2026-10-12T10:47:54.722Z",
+          "file_count": 32
+        },
+        "electron_ui_recovery": {
+          "state": "healthy",
+          "registered": true,
+          "alive": true,
+          "pid": 41412,
+          "instance_id": "7fb9b2aa81b3c4f979b6b24d4029ab36",
+          "started_at_unix_ms": 1791800097102,
+          "runtime_mode": "packaged",
+          "recovery_host_runtime_mode": "packaged",
+          "recovery_host_installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a",
+          "ui_runtime_mode": "packaged",
+          "ui_installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a",
+          "suppressed": false,
+          "suppression_reason": "",
+          "attempts_in_window": 0,
+          "last_launch_pid": null,
+          "initial_registration_grace_until_unix_ms": null,
+          "pending_registration_until_unix_ms": null,
+          "next_attempt_at_unix_ms": null,
+          "circuit_suppressed_until_unix_ms": null,
+          "last_error_code": null
+        },
+        "auto_activation": {
+          "trust_model": "running_baseline_accepted_receipts_v2",
+          "continuity_mode": "detached_runtime_children_v1",
+          "running": true,
+          "processing": false,
+          "pending": 0,
+          "deferred": 0,
+          "awaiting": 0,
+          "blocked": 0,
+          "failed": 0,
+          "completed": 0,
+          "baseline_head": "7f26754657c5a1e933dea000fb75a0624e72f152",
+          "processed_checkpoints": 0,
+          "closure_input": null,
+          "last_error": null
+        },
+        "activation_closure": {
+          "schema_version": 1,
+          "source_checkpoint_id": "",
+          "run_id": "",
+          "wave_id": "",
+          "proof_fingerprint": "",
+          "accepted_head": "",
+          "valid": false,
+          "checkpoint_identity_valid": false,
+          "closure_input_schema_supported": false,
+          "source_accepted": false,
+          "accepted_receipts_complete": false,
+          "activation_eligible": false,
+          "eligibility_code": null,
+          "affected_components": [],
+          "affected_components_valid": true,
+          "component_receipts": {},
+          "component_receipts_valid": false,
+          "postflight_receipts": {},
+          "postflight_receipts_valid": false,
+          "component_current": {},
+          "components_current": false,
+          "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+          "connector_continuity_only": false,
+          "connector_refresh_required": true,
+          "connector_acknowledgement_pending": false,
+          "connector_rediscovered_at": null,
+          "connector_compatibility_acknowledged_at": null,
+          "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+          "connector_acknowledged_sha256": null,
+          "connector_contract_current": false,
+          "lifecycle_decision": null,
+          "lifecycle_clean": false,
+          "lifecycle_code": null,
+          "runtime_running": true,
+          "tunnel_running": false,
+          "runtime_fully_ready": false,
+          "observed_at": "2026-10-12T10:48:19.809Z",
+          "release_state": "NOT_RELEASED",
+          "production_state": "NOT_CLAIMED",
+          "closure_state": "NO_ACCEPTED_CHECKPOINT",
+          "live_closure": "NO_ACCEPTED_CHECKPOINT"
+        },
+        "activation_epoch": {
+          "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+          "operation_id": "full-clean-mv53hzd3-3e0396c548cce5166fb43fdd",
+          "state": "READY",
+          "epoch_state": "READY",
+          "admission_open": true,
+          "update_incomplete": false,
+          "ready_commit_digest": "72125227cfd0026b9e8b07d8cb1d2df4492d6e034767b00b163cd623409c3f33",
+          "expires_at_unix_ms": 1791800671240,
+          "ready_at": "2026-10-12T10:15:16.247Z",
+          "error": null
+        },
+        "ready_adoption": {
+          "state": "adopted"
+        },
+        "recovery_plane_mode": "central-node-agent-v1",
+        "recovery_plane": {
+          "mode": "independent_mcp_tunnel_v1",
+          "state": "healthy",
+          "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "device_instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+          "mcp": {
+            "state": "healthy",
+            "pid": 15044,
+            "process_start_token": "134362736965364130",
+            "instance_id": "b912127a232f14599ba3c36700c9ba91",
+            "port": 18767,
+            "revision": "6f4a0eaf7af2a911ee11faf2cbad61b816fc62cf5e5a229e0c1c5d316203e9dd",
+            "replaced": false,
+            "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+            "device_instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+            "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937"
+          },
+          "tunnel": {
+            "state": "not_configured",
+            "configured": false,
+            "pid": null,
+            "instance_id": null
+          },
+          "checked_at": "2026-10-12T10:48:14.860Z"
+        },
+        "last_progress": {
+          "step": "local-executor-ready",
+          "percent": 100,
+          "message": "Coding Tools MCP cục bộ đã sẵn sàng; chờ ghép nối và quyền action từ Ubuntu.",
+          "time": "2026-10-12T10:14:55.316Z"
+        },
+        "runtime": {
+          "mcp": true,
+          "tunnel": false,
+          "execution_role": "central_executor",
+          "central_connected": true,
+          "authority_ready": true,
+          "central_status_reason": null,
+          "fully_ready": true,
+          "update_incomplete": false,
+          "connector_ready": false,
+          "connector_ack_sha_matches": false,
+          "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+          "connector_acknowledged_sha256": null,
+          "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+          "recovering": false,
+          "recovery_blocked": false
+        }
+      }
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+      "operation_id": "full-clean-mv53hzd3-3e0396c548cce5166fb43fdd",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "72125227cfd0026b9e8b07d8cb1d2df4492d6e034767b00b163cd623409c3f33",
+      "expires_at_unix_ms": 1791800671240,
+      "ready_at": "2026-10-12T10:15:16.247Z",
+      "error": null
+    },
+    "workspaces": [
+      {
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "display_name": "Codex-web",
+        "capabilities": {
+          "read": true,
+          "write": true,
+          "exec": true
+        },
+        "workspace_path": "E:\\DEV\\Codex-web"
+      },
+      {
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "display_name": "Autocad",
+        "capabilities": {
+          "read": true,
+          "write": true,
+          "exec": true
+        },
+        "workspace_path": "E:\\DEV\\Autocad"
+      }
+    ],
+    "file_policies": {
+      "file_read": {
+        "state": "enabled",
+        "enabled": true,
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "policy_sha256": "77ab07253d412ab54c8115e37cfd002e655b04999575e77bd782c473cbb8c6f4",
+        "current_facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "authority_observed_at_ms": 1791802107088
+      },
+      "approved_patch": {
+        "state": "enabled",
+        "enabled": true,
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "policy_sha256": "b86758a26dc93540d9f13211d0f244df9fc51f6798eb8d25d0d937154c0882b6",
+        "current_facade_contract": {
+          "schema_version": 32,
+          "profile": "control-plane-private-tunnel-service-v1",
+          "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+        },
+        "authority_observed_at_ms": 1791802107088
+      }
+    },
+    "exec_policy": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "fc97e2580296c831c2c0c87621945ff1f23090f68e5c26a66c06db9583da4097",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db"
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\workspace-display-20261012-r10\\r9e-transition\\packaged-status-receipt-1791802107444.json"
+}

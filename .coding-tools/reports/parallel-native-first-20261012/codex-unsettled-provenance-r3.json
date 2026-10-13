@@ -1,0 +1,12 @@
+{
+  "operation": "codex_unsettled_readonly_provenance",
+  "ok": true,
+  "observed_at_ms": 1791809371930,
+  "service_pid": 970133,
+  "serving_principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+  "actions": [],
+  "read_only_database": true,
+  "all_exact_current_principal_read_only": false,
+  "observer_sha256": "3d8623fcb8df60f6d136292a808987c599f8ba75071bb860b37e7cf22b2a6502",
+  "ssh_exit_code": 0
+}

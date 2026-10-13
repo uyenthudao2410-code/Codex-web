@@ -1,0 +1,28 @@
+[
+  {
+    "path": "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk",
+    "sha256": "a905c973c381d921fd003e003e3e63d4f4aeae0788cc6304bc407d2f5825bcd2",
+    "target": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe",
+    "working_directory": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Coding Tools MCP",
+    "arguments": "",
+    "description": "Windows Execution Hub d? v?n hành Coding Tools MCP, OpenAI Tunnel và k?t n?i ChatGPT.",
+    "icon_location": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe,0",
+    "window_style": 1,
+    "hotkey": "",
+    "app_user_model_id": "com.gptwebcodex.assistant",
+    "target_exists": true
+  },
+  {
+    "path": "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk",
+    "sha256": "a128c864524a8323c1cadfa9c7c1c4f66df438970d4a6aee9a21253ba0838b28",
+    "target": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe",
+    "working_directory": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Coding Tools MCP",
+    "arguments": "",
+    "description": "Windows Execution Hub d? v?n hành Coding Tools MCP, OpenAI Tunnel và k?t n?i ChatGPT.",
+    "icon_location": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe,0",
+    "window_style": 1,
+    "hotkey": "",
+    "app_user_model_id": "com.gptwebcodex.assistant",
+    "target_exists": true
+  }
+]

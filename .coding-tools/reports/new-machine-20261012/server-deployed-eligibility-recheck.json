@@ -1,0 +1,10 @@
+{
+  "operation": "deployed_overlay_readonly_recheck",
+  "observed_at_ms": 1791774268142,
+  "service_pid": 912047,
+  "package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+  "expected_package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+  "exact_new_target_pilot_blockers": 0,
+  "admission": "scoped_pilot",
+  "authority_mutations": false
+}

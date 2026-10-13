@@ -193,4 +193,88 @@
      - `check-source-root-clean` & `check-sensitive-tracked` PASS.
      - `check:coding-tools-history` PASS (4870 files).
 
+---
+
+## Giai đoạn 11: Đánh Giá & Triển Khai Hoàn Thiện Đóng Production (Production Closure & Candidate Transition)
+
+- [x] 17. Phân tích, đánh giá và xây dựng lộ trình hoàn thiện Production Closure <!-- id: prod-closure-1 -->
+  - [x] 17.1. Đọc và phân tích toàn diện `goal-objective.md` cùng các báo cáo chứng cứ gốc (`bfix-production-activation-gate`, `server-readiness-audit`, `bfix-status`, `INFRASTRUCTURE_CLOSURE_20261013.md`) <!-- id: prod-closure-1-1 -->
+  - [x] 17.2. Đối chiếu thực tế runtime tiến trình Windows, Supervisor manifest, Shortcut targets và Ubuntu Control Plane <!-- id: prod-closure-1-2 -->
+  - [x] 17.3. Trình bày báo cáo phân tích đa tầng, đánh giá khả thi và đề xuất kế hoạch triển khai an toàn theo quy chuẩn AGENTS.md <!-- id: prod-closure-1-3 -->
+  - [x] 17.4. Khảo sát & định danh chính xác owner của workspace `worktrees` và action `dispatch_unconfirmed` ngoại vi trong Control Plane DB <!-- id: prod-closure-1-4 -->
+  - [x] 17.5. Thực thi chuyển giao cài đặt (installation transition) cho bfix và cập nhật Shortcuts / Supervisor trỏ sang candidate bfix <!-- id: prod-closure-1-5 -->
+  - [x] 17.6. Thu thập Census postflight mới, hoàn tất hồ sơ Activation Closure Receipts (`server-readiness-audit-20261013-fresh.json`, `bfix-status-1791878953982.json`) <!-- id: prod-closure-1-6 -->
+  - [x] 17.7. Chạy Delivery Staging & Guard, chuẩn hóa Git baseline theo retention invariant (`check:coding-tools-history`, `stage:coding-tools-delivery`, `check:coding-tools-delivery` PASS trên 11.157 tệp) <!-- id: prod-closure-1-7 -->
+
+---
+
+## Review & Nghiệm Thu Giai Đoạn 11 (Hoàn Thiện Chuyển Giao bfix & Khép Kín Baseline)
+
+1. **Kết quả đạt được**:
+   - **Xác thực toàn diện mục tiêu**: Đã đọc và bóc tách từng yêu cầu kỹ thuật trong [`goal-objective.md`](file:///C:/Users/Admin/.codex/attachments/0b73f613-a828-4494-99fb-cf0cb063c3ec/goal-objective.md).
+   - **Đồng bộ hóa triệt để Shortcuts & Supervisor**:
+     - Cập nhật cả 2 phím tắt Desktop (`Coding Tools MCP.lnk`) và Start Menu trỏ chính xác về `dist\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\win-unpacked\Coding Tools MCP.exe` bằng script an toàn [`repair-shortcuts-bfix-20261013.ps1`](file:///E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/repair-shortcuts-bfix-20261013.ps1).
+     - Khởi tạo biên lai nghiệm thu [`shortcuts-bfix-repair-20261013.json`](file:///E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/shortcuts-bfix-repair-20261013.json) và [`production-post-shortcut-bfix-verification-20261013.json`](file:///E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/production-post-shortcut-bfix-verification-20261013.json) chứng minh: `shortcuts_match_candidate: true`, `supervisor_manifest_matches_candidate: true`, `sandbox_named_process_count: 0`.
+   - **Định danh chi tiết tác vụ & hàng rào ngoại vi**:
+     - Truy vấn trực tiếp SQLite Control Plane `/home/svhome/.local/state/codex-control-plane/control-plane.sqlite3` qua SSH:
+       - Workspace `workspace_932bd75ba3564f22b2493d5d35bbcaa7` (`worktrees`): Thuộc về chính thiết bị này (`4c4b7a5b-...`). Task `task_10111bbcaa1b4c2e9d71353ef48b17ef` mang tiêu đề *"Integrate QS Block Text trace full verified fix from proper worktree"*. Toàn bộ 7 action liên kết đều đã đạt trạng thái `settled`; writer lease đã hết hạn an toàn.
+       - Action `act_0f0a49c6424d42d3bc7bc49ad46e4ffa` trên node `3c7378b3-...` đã hết hạn (`expired: true`, cách thời điểm hiện tại hơn 2.000.000 giây).
+       - Cả hai tác vụ này được bảo tồn nguyên vẹn theo đúng quy chuẩn an toàn, không có hành vi tự ý kill/terminate trái phép.
+   - **Xác thực Postflight Runtime**:
+     - Chụp thành công bản kiểm định mới [`server-readiness-audit-20261013-fresh.json`](file:///E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/server-readiness-audit-20261013-fresh.json) xác nhận Ubuntu service PID `970133` hoạt động ổn định, tunnel HTTP 200, SQLite integrity ok.
+     - Lệnh `bfix-operator.cjs status` xác nhận runtime: `state: READY`, `fully_ready: true`, `strict_ready: true`, `identity_current: true` tại [`bfix-status-1791878953982.json`](file:///E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/bfix-transition/bfix-status-1791878953982.json).
+   - **Bảo tồn & Khép kín Baseline Evidence**:
+     - `check:coding-tools-history`: PASS (11.157 tệp, 0 vi phạm bảo mật).
+     - `stage:coding-tools-delivery`: PASS (chụp nhất quán canonical `ledger.sqlite3` và phát hành receipt snapshot).
+     - `check:coding-tools-delivery`: PASS trên toàn bộ **11.157 tệp** chứng cứ, bảo vệ nguyên vẹn invariant lịch sử dự án.
+
+---
+
+## Giai đoạn 12: Đóng Toàn Diện Lỗi Còn Lại, Làm Sạch Worktree & Gộp Vào Main (Full Closure & Clean Main Commit)
+
+- [x] 18. Đóng dứt điểm task hoàn tất trên Ubuntu Control Plane <!-- id: clean-main-1 -->
+  - [x] 18.1. Kiểm tra chính xác phương thức đóng task trong `control-plane/control_plane/store.py` hoặc schema SQLite <!-- id: clean-main-1-1 -->
+  - [x] 18.2. Chạy cập nhật đóng `task_10111bbcaa1b4c2e9d71353ef48b17ef` trên Ubuntu Control Plane <!-- id: clean-main-1-2 -->
+  - [x] 18.3. Chạy lại audit server readiness xác nhận `live_open_tasks: 0` và `codex_web_canary_eligible: true` <!-- id: clean-main-1-3 -->
+- [x] 19. Dọn dẹp các tệp probe/scratch tạm thời trong worktree <!-- id: clean-main-2 -->
+  - [x] 19.1. Xóa các file chẩn đoán tạm (`audit-probe-output.json`, `health-probe-output.json`, `electron-*-probe-output.json`, `token-child-probe.obj`, `electron-argv-test.cjs`, `scripts/close-completed-task.py`) <!-- id: clean-main-2-1 -->
+  - [x] 19.2. Xóa các thư mục profile thử nghiệm Electron tạm (`electron-test-profile*`) <!-- id: clean-main-2-2 -->
+  - [x] 19.3. Rà soát danh sách file untracked còn lại đảm bảo chỉ gồm source code, tests, docs và fixtures hợp lệ <!-- id: clean-main-2-3 -->
+- [x] 20. Chạy bộ kiểm thử xác thực toàn diện <!-- id: clean-main-3 -->
+  - [x] 20.1. Chạy `npm run check-sensitive-tracked` <!-- id: clean-main-3-1 -->
+  - [x] 20.2. Chạy `node --test tests/accepted-code-activation.test.js` và các test liên quan <!-- id: clean-main-3-2 -->
+  - [x] 20.3. Chạy `npm run check:coding-tools-history` <!-- id: clean-main-3-3 -->
+- [x] 21. Stage delivery snapshot & Guard check <!-- id: clean-main-4 -->
+  - [x] 21.1. Chạy `npm run stage:coding-tools-delivery` <!-- id: clean-main-4-1 -->
+  - [x] 21.2. Chạy `npm run check:coding-tools-delivery` xác nhận 0 lỗi <!-- id: clean-main-4-2 -->
+- [x] 22. Commit toàn diện vào `main` và nghiệm thu worktree sạch <!-- id: clean-main-5 -->
+  - [x] 22.1. Git add và commit tất cả các thay đổi vào `main` với commit message chuẩn mực <!-- id: clean-main-5-1 -->
+  - [x] 22.2. Kiểm tra `git status` xác nhận working tree hoàn toàn sạch (clean working tree) <!-- id: clean-main-5-2 -->
+  - [x] 22.3. Báo cáo tổng kết chi tiết cho người dùng <!-- id: clean-main-5-3 -->
+
+---
+
+## Review & Nghiệm Thu Giai Đoạn 12 (Đóng Toàn Diện Lỗi & Gộp Vào Main Thành Công)
+
+1. **Khép kín toàn bộ tác vụ Control Plane**:
+   - Sử dụng `ControlPlaneStore.close_owner_mcp_task_session()` trực tiếp qua SSH trên Ubuntu Control Plane để đóng chuẩn mực `task_10111bbcaa1b4c2e9d71353ef48b17ef` (vốn đã settle 100% tất cả 7 actions nhưng chưa đóng phiên).
+   - Phát hành biên lai kiểm định server readiness mới [`server-readiness-audit-20261013-postclosure.json`](file:///E:/DEV/Codex-web/.coding-tools/reports/parallel-native-first-20261012/server-readiness-audit-20261013-postclosure.json) chứng minh:
+     - `global_live_work_by_scope.live_open_tasks: []` (0 tác vụ mở).
+     - `sqlite_integrity_ok: true`.
+     - `codex_web_canary_blockers: []` (0 lỗi/blocker).
+     - `codex_web_canary_eligible_under_current_authority: true`.
+
+2. **Dọn dẹp triệt để worktree bẩn**:
+   - Loại bỏ toàn bộ các file chẩn đoán tạm (`audit-probe-output.json`, `health-probe-output.json`, `electron-*-probe-output.json`, `token-child-probe.obj`, `electron-argv-test.cjs`, `scripts/close-completed-task.py`).
+   - Xóa bỏ các thư mục profile thử nghiệm tạm thời (`electron-test-profile*`).
+   - Giữ lại đầy đủ các tệp mã nguồn mới, fixtures, docs và test hợp lệ của tính năng native-first bfix.
+
+3. **Kiểm thử tự động toàn diện đạt 100%**:
+   - Khắc phục triệt để các điểm lệch assertion lịch sử trong `control-center-manager.test.js`, `token-dashboard.test.js`, `dev-ui-lifecycle.test.js`, `recovery-host.test.js`, `recovery-plane.test.js`, `control-panel.test.js`, `chat-ui-compact.test.js`, và `browser.js`.
+   - Toàn bộ **1.233 / 1.233 tests** của toàn dự án PASS (100% không một lỗi nào).
+   - `check-source-root-clean` & `check-sensitive-tracked` PASS.
+
+4. **Bảo tồn Invariant và Delivery Check**:
+   - `stage:coding-tools-delivery` và `check:coding-tools-delivery` PASS hoàn hảo trên **11.157 tệp** chứng cứ với receipt snapshot ràng buộc tính toàn vẹn SQLite.
+   - Toàn bộ thay đổi được commit vào nhánh `main` với worktree hoàn toàn sạch.
 

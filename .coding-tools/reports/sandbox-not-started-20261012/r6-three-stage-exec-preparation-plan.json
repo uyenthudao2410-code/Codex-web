@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "operation": "prepared_r6_three_stage_exec_plan",
+  "prepared_at_ms": 1791783864753,
+  "dispatch_performed": false,
+  "source_mutation_performed": false,
+  "helper_files_sha256": {
+    "run-r6-three-stage-exec-canary.py": "aea254f66261ac514db91a74918c2ab63372d982fd9d7381065f60b9dc9bced9",
+    "invoke-r6-three-stage-exec-canary.ps1": "b8102cf94288cd25a2e3b8175ff6f5d30464896fa9b4acc22fb2ece74cb418c8",
+    "test-r6-three-stage-exec-canary.py": "4cdeaad3a1b79474138f0682670717456a056f63004008a681d26848dbb089ba"
+  },
+  "fresh_identity_required": [
+    "r6_activation_epoch",
+    "r6_process_instance_id",
+    "r6_mcp_server_instance_id",
+    "r6_local_tool_contract_sha256"
+  ],
+  "constant_authority": {
+    "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "pilot_decision_id": "pilot_dfb3174078d842299c41c6638830e505",
+    "facade_schema_version": 32,
+    "facade_contract_sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "stages": [
+    {
+      "stage": "cold",
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "task": "new durable task under a fresh canary id",
+      "postcondition": "exact one-attempt completed exit0/version receipt; invoke warm within 60s lease"
+    },
+    {
+      "stage": "warm",
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "task": "same task and writer lease generation",
+      "postcondition": "same version and one-attempt exit0; checkpoint with no unsettled actions while exact writer renews every20s",
+      "holder_seconds_default_wrapper": 600
+    },
+    {
+      "external_checkpoint": "root performs supported stop of exact owned VM and verifies local no-jobs/quiescence; keep warm holder alive"
+    },
+    {
+      "stage": "after_stop",
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "task": "same task and writer lease generation",
+      "required_evidence": [
+        "root-confirmed supported owned stop",
+        "exact stopped wsb:id",
+        "SHA256 of actual supported stop receipt"
+      ],
+      "postcondition": "same version and one-attempt exit0, release writer, close task, verify census0/0/0"
+    }
+  ],
+  "uncertainty_policy": "Never enqueue a replacement. Recover original task/action ids from exact central idempotency rows. observe-only performs exec_status without writer renewal or action dispatch. Timeout/unknown keeps original handles and requires observation/stop of that original action.",
+  "validation": {
+    "python_compile": "PASS",
+    "powershell_parse": "PASS",
+    "focused_offline_tests": {
+      "passed": 8,
+      "duration_seconds": 0.008,
+      "scope": [
+        "exact native identity and action/attempt proof",
+        "duplicate attempts and changed argv rejected",
+        "failed receipts and non-version stdout rejected",
+        "readonly observation cannot renew/dispatch",
+        "unknown observation preserves original"
+      ]
+    }
+  }
+}

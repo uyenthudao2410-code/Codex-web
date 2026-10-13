@@ -1,0 +1,28 @@
+{
+  "operation": "file_read_missing_target_phase_classification_validation",
+  "passed": true,
+  "future_pre_dispatch_code": "CONTROL_PLANE_FILE_READ_TARGET_MISSING_BEFORE_DISPATCH",
+  "future_pre_dispatch_state": "rejected",
+  "generic_missing_code": "CONTROL_PLANE_FILE_READ_TARGET_MISSING",
+  "generic_missing_state": "unknown",
+  "result_validation_state": "unknown",
+  "javascript_tests": {
+    "command": "node --test --test-name-pattern 'Recovery Host attests' tests/control-plane-file-read-bridge.test.js",
+    "tests_run": 1,
+    "passed": true,
+    "evidence": "Recovery Host never reaches runtime observation or bounded read dispatch for the new attested pre-dispatch refusal; the reusable resolver retains the generic error code."
+  },
+  "python_tests": {
+    "command": "python -W error -B -m unittest discover -s tests -p test_file_read_node_agent.py -v",
+    "tests_run": 13,
+    "passed": true,
+    "evidence": "Durable submitted rejected receipt only for the new phase-attested code; generic TARGET_MISSING and result validation remain UNKNOWN."
+  },
+  "resolved_test_fixture_failure": "Initial new test did not reach the bridge because its action expiry exceeded the installed fixture policy. The action expiry was bounded to the policy before the successful run.",
+  "historical_reconciliation": {
+    "performed": false,
+    "existing_three_autocad_unknown_actions_preserved": true,
+    "reason": "Installed r9e uses the generic TARGET_MISSING code both before dispatch and during post-read absolute-path normalization. Retained receipts lack original phase evidence; neither rejection nor completion is proven."
+  },
+  "external_mutations_performed": false
+}

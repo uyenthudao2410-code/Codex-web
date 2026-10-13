@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "observed_at": "2026-10-12T04:26:20.911Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-write-exec-1012-r5b\\win-unpacked",
+  "application_source_files_verified": 91,
+  "package_metadata_verified": true,
+  "resources": {
+    "exact_source": true,
+    "file_count": 298
+  },
+  "adapters": {
+    "exact_source": true,
+    "file_count": 9
+  },
+  "sanitation": {
+    "scanned_entries": 332,
+    "sanitized": true
+  },
+  "repaired_native_sandbox_proof_reused_from_r1": true,
+  "executable_sha256": "960adeec5aebad36374f556718d738ca50482540f427bf62cbc3178fe4078f5f",
+  "app_asar_sha256": "3e5b87823089d08058620fdda56e3c410e92387c258add1ec2beeae6e4c771ba",
+  "recovery_host_launcher_sha256": "04999b097376ba69c95927db6936df21f8ada58198af9b14e803e8fcc1137fd1"
+}

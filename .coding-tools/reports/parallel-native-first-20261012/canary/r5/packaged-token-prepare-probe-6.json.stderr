@@ -1,0 +1,12 @@
+[eval]:1
+process.argv=['electron','operator','prepare','--parity-proof','E:\DEV\Codex-web\.coding-tools\reports\parallel-r4-timefix-parity-final.json'','--smoke-proof','E:\DEV\Codex-web\.coding-tools\reports\native-first-20261012\parallel-r4-timefix-smoke-full.json'','--output','E:\DEV\Codex-web\.coding-tools\reports\parallel-native-first-20261012\canary\r5\packaged-token-prepare-probe-6.json''];
+                                                                                                                                             ^^^
+Expected ',', got 'string literal'
+
+SyntaxError: Unexpected string
+    at makeContextifyScript (node:internal/vm:194:14)
+    at compileScript (node:internal/process/execution:388:10)
+    at evalTypeScript (node:internal/process/execution:260:22)
+    at node:internal/main/eval_string:71:3
+
+Node.js v24.18.0

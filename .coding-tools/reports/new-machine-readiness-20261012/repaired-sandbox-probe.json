@@ -1,0 +1,18 @@
+{
+  "operation": "repaired_packaged_sandbox_probe",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-coldstart-1012-r1\\win-unpacked",
+  "started_at": "2026-10-12T02:27:14.879Z",
+  "completed_at": "2026-10-12T02:28:14.647Z",
+  "elapsed_ms": 59768,
+  "observation": {
+    "state": "available",
+    "backend": "windows_sandbox",
+    "child_process_spawn": true,
+    "reason": null,
+    "binary_sha256": "19dead991dc4a544d6f66b879ffdf3d2c2a3e72208154a340cd7fa8515bc6357",
+    "source_commit": "cbe1774364ea2ec846f56ab744e43a416f751420",
+    "release": "microsoft-mxc-source-cbe1774-0.10.0-alpha-experimental"
+  },
+  "protected_profile_and_descriptor_files_unchanged": true,
+  "ok": true
+}

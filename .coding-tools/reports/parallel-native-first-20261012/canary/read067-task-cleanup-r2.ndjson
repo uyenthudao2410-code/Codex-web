@@ -1,0 +1,1 @@
+{"operation": "close_exact_read067_task", "ok": true, "task_id": "task_cd3ea31140794fbcb5c598eb29cb9c90", "action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a", "task_closed_verified": true, "writer_released_verified": true, "unknown_receipt_preserved": true, "action_redispatched": false, "read_success_claimed": false}

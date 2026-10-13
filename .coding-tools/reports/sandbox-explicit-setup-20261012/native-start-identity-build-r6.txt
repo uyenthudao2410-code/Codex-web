@@ -1,0 +1,161 @@
+Cloning into 'E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a'...
+From https://github.com/microsoft/mxc
+ * branch            cbe1774364ea2ec846f56ab744e43a416f751420 -> FETCH_HEAD
+HEAD is now at cbe1774 0.9: Honor inheritDefaultEnv on LXC, Bubblewrap, and Seatbelt (#1195)
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling unicode-ident v1.0.24
+   Compiling windows-link v0.2.1
+   Compiling stable_deref_trait v1.2.1
+   Compiling getrandom v0.4.2
+   Compiling cfg-if v1.0.4
+   Compiling zmij v1.0.21
+   Compiling litemap v0.8.2
+   Compiling writeable v0.6.3
+   Compiling version_check v0.9.5
+   Compiling serde v1.0.228
+   Compiling smallvec v1.15.2
+   Compiling serde_json v1.0.150
+   Compiling icu_properties_data v2.2.0
+   Compiling serde_core v1.0.228
+   Compiling icu_normalizer_data v2.2.0
+   Compiling utf8_iter v1.0.4
+   Compiling windows-strings v0.5.1
+   Compiling generic-array v0.14.7
+   Compiling windows-result v0.4.1
+   Compiling typenum v1.20.1
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling windows-sys v0.61.2
+   Compiling memchr v2.8.2
+   Compiling uuid v1.23.3
+   Compiling itoa v1.0.18
+   Compiling parking_lot_core v0.9.12
+   Compiling thiserror v2.0.18
+   Compiling windows-targets v0.52.6
+   Compiling windows-threading v0.2.1
+   Compiling percent-encoding v2.3.2
+   Compiling tracelogging_macros v1.2.3
+   Compiling mxc_telemetry v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\mxc_telemetry)
+   Compiling scopeguard v1.2.0
+   Compiling unicode-general-category v1.1.0
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling lock_api v0.4.14
+   Compiling digest v0.10.7
+   Compiling form_urlencoded v1.2.2
+   Compiling syn v2.0.118
+   Compiling windows-sys v0.59.0
+   Compiling cpufeatures v0.2.17
+   Compiling parking_lot v0.12.5
+   Compiling sha2 v0.10.9
+   Compiling serde_path_to_error v0.1.20
+   Compiling mio v1.2.1
+   Compiling socket2 v0.6.4
+   Compiling tracelogging v1.2.4
+   Compiling getrandom v0.2.17
+   Compiling bytes v1.11.1
+   Compiling anyhow v1.0.102
+   Compiling base64 v0.22.1
+   Compiling pin-project-lite v0.2.17
+   Compiling cidr v0.3.2
+   Compiling widestring v1.2.1
+   Compiling fastrand v2.4.1
+   Compiling once_cell v1.21.4
+   Compiling tempfile v3.27.0
+   Compiling winreg v0.55.0
+   Compiling synstructure v0.13.2
+   Compiling zerofrom-derive v0.1.7
+   Compiling yoke-derive v0.8.2
+   Compiling zerovec-derive v0.11.3
+   Compiling displaydoc v0.2.6
+   Compiling windows-interface v0.59.3
+   Compiling windows-implement v0.60.2
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling tokio-macros v2.7.0
+   Compiling tokio v1.52.3
+   Compiling windows-core v0.62.2
+   Compiling windows-collections v0.3.2
+   Compiling windows-future v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.3
+   Compiling zerovec v0.11.6
+   Compiling zerotrie v0.2.4
+   Compiling windows v0.62.2
+   Compiling tinystr v0.8.3
+   Compiling potential_utf v0.1.5
+   Compiling icu_collections v2.2.0
+   Compiling icu_locale_core v2.2.0
+   Compiling mxc_config_contract v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\mxc_config_contract)
+   Compiling wxc_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\wxc_common)
+   Compiling icu_provider v2.2.0
+   Compiling icu_properties v2.2.0
+   Compiling icu_normalizer v2.2.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling windows_sandbox_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\windows_sandbox\common)
+   Compiling windows_sandbox_lifecycle v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\windows_sandbox\lifecycle)
+    Finished `release` profile [optimized + debuginfo] target(s) in 2m 03s
+     Running unittests src\lib.rs (target\x86_64-pc-windows-msvc\release\deps\windows_sandbox_lifecycle-23cc921da0858746.exe)
+
+running 4 tests
+test state_aware::tests::start_daemon_identity_accepts_missing_prior_record ... ok
+test state_aware::tests::start_daemon_identity_accepts_same_sandbox_record ... ok
+test state_aware::tests::start_daemon_identity_refuses_other_sandbox_record ... ok
+test state_aware::tests::start_daemon_identity_refuses_stale_other_id_before_spawn ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 184 filtered out; finished in 0.00s
+
+   Compiling windows-sys v0.61.2
+   Compiling winresource v0.1.31
+   Compiling windows v0.62.2
+   Compiling semver v1.0.28
+   Compiling utf8parse v0.2.2
+   Compiling anstyle v1.0.14
+   Compiling autocfg v1.5.1
+   Compiling once_cell_polyfill v1.70.2
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling clap_lex v1.1.0
+   Compiling heck v0.5.0
+   Compiling anstyle-parse v1.0.0
+   Compiling mxc_build_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\mxc_build_common)
+   Compiling bitflags v2.13.0
+   Compiling strsim v0.11.1
+   Compiling rustc_version v0.4.1
+   Compiling clap_derive v4.6.1
+   Compiling nanvix_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\nanvix\common)
+   Compiling plm v0.1.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\host\plm)
+   Compiling nanvix_build_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\nanvix\build_common)
+   Compiling wxc_windows_sandbox_daemon v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\windows_sandbox\daemon)
+   Compiling num-traits v0.2.19
+   Compiling wxc_windows_sandbox_guest v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\windows_sandbox\guest)
+   Compiling flatbuffers v25.12.19
+   Compiling wxc v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\wxc)
+   Compiling process_security_environment_spec v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\generated\process_security_environment_specification)
+   Compiling chrono v0.4.45
+warning: wxc@0.8.0: PowerShell 7 not found at C:\Program Files\PowerShell\7\pwsh.exe. pwsh sandbox tests will fail.
+warning: wxc@0.8.0: Fix: Run scripts\setup-test-prereqs.ps1 (elevated) or install PowerShell 7
+   Compiling socket2 v0.6.4
+   Compiling mio v1.2.1
+   Compiling winapi-util v0.1.11
+   Compiling anstyle-query v1.1.5
+   Compiling tempfile v3.27.0
+   Compiling anstyle-wincon v3.0.11
+   Compiling same-file v1.0.6
+   Compiling anstream v1.0.0
+   Compiling learning_mode_core v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\learning_mode_core)
+   Compiling tokio v1.52.3
+   Compiling clap_builder v4.6.0
+   Compiling clap v4.6.1
+   Compiling wxc_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\wxc_common)
+   Compiling windows_sandbox_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\windows_sandbox\common)
+   Compiling learning_mode_windows v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\learning_mode_platforms\windows)
+   Compiling windows_sandbox_lifecycle v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\windows_sandbox\lifecycle)
+   Compiling process_container_common v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\backends\process_container\common)
+   Compiling mxc_engine v0.8.0 (E:\Caches\Temp\codex-mxc-source-efeae9be41fa4a49948675248a61d34a\src\core\mxc_engine)
+    Finished `release` profile [optimized + debuginfo] target(s) in 2m 07s
+previous_candidate_preserved=E:\Caches\Temp\codex-mxc-wsb-prior-8c0a6e0be02e404281efb1fa14d9bf7b
+{"operation":"mxc_windows_sandbox_candidate_verification","source_commit":"cbe1774364ea2ec846f56ab744e43a416f751420","local_patch_sha256":"6b460ad92fbe61923e54fc307b7f4bc05cfc34bf8643e33a49b581735733c579","schema_version":"0.10.0-alpha","development_candidate_only":true,"files":["wxc-exec.exe","wxc-windows-sandbox-daemon.exe","wxc-windows-sandbox-guest.exe"]}

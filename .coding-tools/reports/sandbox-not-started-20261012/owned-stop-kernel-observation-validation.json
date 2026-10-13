@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "operation": "owned_stop_kernel_observation_offline_validation",
+  "producer_sha256": "5eb4615b8ef5aefbba2cec3835f087f2f537584f554c33dbe7802c10c8533fde",
+  "ast_parse": "PASS",
+  "cases_passed": 10,
+  "cases": [
+    "Exact user-mode identities opened; opaque vmmem observed without handle or ownership",
+    "Post-stop inventory opens zero handles, including exiting user-mode hosts",
+    "Empty complete inventory confirms both host and kernel absence",
+    "Owned exact user-mode set plus opaque kernel observation accepted",
+    "Foreign user-mode PID rejected",
+    "Reused user-mode PID with changed exact FILETIME rejected",
+    "Kernel presence cannot substitute for owned user-mode set",
+    "Different daemon exact FILETIME rejected",
+    "Foreign writable workspace rejected",
+    "Actual shutdown-loop success condition requires both inventories empty in all four cases"
+  ],
+  "stop_effect_performed": false,
+  "native_handles_opened": false,
+  "network_requests_performed": false,
+  "processes_terminated": false
+}

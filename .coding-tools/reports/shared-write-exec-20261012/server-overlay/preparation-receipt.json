@@ -1,0 +1,30 @@
+{
+  "operation": "scoped_artifact_overlay_preparation",
+  "remote_mutations": false,
+  "baseline_service_pid": 912047,
+  "baseline_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+  "baseline_source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+  "baseline_release_name": "codex-control-plane-9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c-retired-read-e5b3b8e2a63e-fp2",
+  "baseline_package_source_sha256": "sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712",
+  "baseline_store_sha256": "e5b3b8e2a63e2e4144f9f782b275b4ecc056e8c1f642c91cc9647cb6b6d6667c",
+  "protected_config_sha256": "3b1d3c8015e7b494f2c0289be270888fd2da2beb64c344e84a7f9fca8858df1e",
+  "service_dropin_sha256": "5aacc340840f94b39956abf243b19e264211e618d53556fdd5cf83c775f12702",
+  "overlay_store_sha256": "94b96e1b0fe2aa82410a9cba556761a9ea525b835d689d1dc88bd1d02f1f3472",
+  "changed_runtime_files": [
+    "control-plane/control_plane/store.py"
+  ],
+  "unchanged_release_files": 37,
+  "source_revision_semantics": "Original baseline retained; reviewed uncommitted store overlay is separately hash-bound.",
+  "candidate_release": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\server-overlay\\codex-control-plane-9cae1044-scoped-artifacts-94b96e1b0fe2",
+  "candidate_archive": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\server-overlay\\codex-control-plane-9cae1044-scoped-artifacts-94b96e1b0fe2.tar.gz",
+  "candidate_archive_sha256": "daf92ba88eaa01cc0be209077bc827ef0e91e81c306fcf514c981896e3bff206",
+  "verification": {
+    "operation": "control_plane_release_verification",
+    "release_name": "codex-control-plane-9cae1044-scoped-artifacts-94b96e1b0fe2",
+    "source_revision": "9cae104420e091811b94f76736a95e94ff333010be344eed7d1274f08601386c",
+    "control_plane_schema_version": 29,
+    "package_source_sha256": "sha256:5370e6ce030e72514b664b771f400437d337e7c5eb1c39b1ac90748662c3ceb0",
+    "file_count": 38
+  },
+  "focused_tests": "8 new scoped artifact/document tests + 4 existing pilot + 10 private service facade passed"
+}

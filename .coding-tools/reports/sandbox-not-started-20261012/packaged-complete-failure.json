@@ -1,0 +1,7 @@
+{
+  "operation": "complete",
+  "observed_at": "2026-10-12T05:54:03.402Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-exec-lifecycle-1012-r6\\win-unpacked",
+  "ok": false,
+  "code": "ACTIVATION_EPOCH_TERMINAL"
+}

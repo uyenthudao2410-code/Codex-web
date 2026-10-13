@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "operation": "packaged-token-install",
+  "observed_at_ms": 1791849722240,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "ok": true,
+  "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+  "owner_instance_id": "ecae23c8a75f4b28b3bc182104f3ed49",
+  "parity_sha256": "fe0ee44b7ac39c158e43275e8d1a06ba1af5709ad7985035a861c268ab0c485c",
+  "smoke_sha256": "b6eda372cbf5beb3e678c3c86976acaadcbc3848851b2e05cb50d56e20e4ed42",
+  "baseline_policy_sha256": "4534d68583ac97b9344950e0a559462479490e73b47cad9bd7680d1a9f8ff75e",
+  "baseline_native_argv_prefixes": [
+    [
+      "node",
+      ".coding-tools/reports/parallel-native-first-20261012/canary/r5/token-child-launcher.js"
+    ]
+  ],
+  "other_scope_sha256": "945174b0a088a5dd76c7a088d81886e85f6c3eadb1c9857db484debeebbeee9b",
+  "token_prefix": [
+    "node",
+    ".coding-tools/reports/parallel-native-first-20261012/canary/r5/token-child-launcher.js"
+  ],
+  "intent_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\packaged-token-packaged-token-install-intent-1791849720327-5e0eec94.json",
+  "after": {
+    "state": "enabled",
+    "enabled": true,
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "facade_contract": {
+      "schema_version": 32,
+      "profile": "control-plane-private-tunnel-service-v1",
+      "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+    },
+    "policy_sha256": "4534d68583ac97b9344950e0a559462479490e73b47cad9bd7680d1a9f8ff75e",
+    "allowed_argv_prefix_count": 7,
+    "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+    "execution_mode": "native_first",
+    "native_argv_prefixes": [
+      [
+        "node",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r5/token-child-launcher.js"
+      ]
+    ]
+  },
+  "other_scope_unchanged": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\packaged-token-packaged-token-install-1791849722240-ddc94201.json"
+}

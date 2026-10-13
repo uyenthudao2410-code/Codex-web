@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule verified Coding Tools control-plane backups
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5min
+Unit=codex-control-plane-backup.service
+
+[Install]
+WantedBy=timers.target

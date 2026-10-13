@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "operation": "isolated_idle_helper_preparation",
+  "observed_at": "2026-10-12T12:53:09.219Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "source_sha256": {
+    "run-isolated-idle-canary.py": "3f81a2c347d1d1dbe92451eb0f451ce6a307294767e5961f1b78c787f5354141",
+    "observe-isolated-idle.py": "fd21b58ca9cdde15b254eaa7ce798b320dd9904c8b55d6ffd6bc406488317250",
+    "sandbox-idle-policy.cjs": "5b804c3531d036421b0c261709067deed7979ff1df29efb7b096c0323e60c7c0",
+    "invoke-isolated-idle-canary.ps1": "72990ec3dab60b728b312d8493d0baeccce230560e19ce27219f564aa252d07b",
+    "test-isolated-idle-canary.py": "cff8e6a80232010a206d612f1a09be2dcb7de0f7d0102c5d97090b91c2be1148",
+    "ISOLATED_IDLE_ACCEPTANCE.md": "36f48ed40c63ee49f574831bebc6bc54d7e3a811b285c5cdf4611d845ef52810"
+  },
+  "validation": {
+    "offline_boundaries": 4,
+    "passed": 4,
+    "failed": 0,
+    "python_ast_ok": true,
+    "javascript_syntax_ok": true,
+    "powershell_parse_ok": true
+  },
+  "proof_stage": "source-independent helper prepared; live acceptance pending",
+  "runtime_mutations": 0,
+  "policy_installs": 0,
+  "exec_dispatches": 0,
+  "vm_start_stop_calls": 0,
+  "commit": false,
+  "push": false,
+  "next_action": "Root reviews helpers and runs after native proof plus final-policy restoration on current READY epoch."
+}

@@ -97,6 +97,7 @@ class SessionControlMixin:
         warnings: list[str] | None = None,
         pty_master_fd: int | None = None,
         cleanup_callback: Any = None,
+        execution_metadata: dict[str, str] | None = None,
     ) -> ExecSession:
         return ExecSession(
             session_id=session_id or secrets.token_urlsafe(18),
@@ -109,6 +110,7 @@ class SessionControlMixin:
             warnings=warnings or [],
             pty_master_fd=pty_master_fd,
             cleanup_callback=cleanup_callback,
+            execution_metadata=execution_metadata or {},
         )
 
     def _remember_output_session(self, session: ExecSession) -> None:
@@ -187,6 +189,11 @@ class SessionControlMixin:
                 process_tree_cleaned=True,
             )
             session.resource_terminal_recorded = True
+        if session.execution_metadata.get("execution_backend") == "isolated" and session.resource_terminal_recorded:
+            manager = getattr(self, "_windows_mxc_sandbox_manager", None)
+            generation = session.sandbox_idle_generation
+            if manager is not None and generation is not None:
+                manager.arm_idle_retirement(lease_generation=generation)
         with self.sessions_lock:
             self.sessions.pop(session.session_id, None)
             principal = self.session_principals.get(session.session_id)
@@ -233,6 +240,7 @@ class SessionControlMixin:
             "wave_id": session.owner_wave_id,
             "resource_class": session.resource_class,
         }
+        payload.update(session.execution_metadata)
         if payload.get("status") == "running":
             payload["next_action"] = {
                 "tool": "command_control",

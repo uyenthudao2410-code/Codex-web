@@ -1,0 +1,35 @@
+﻿{
+    "operation":  "observe_successful_sandbox_teardown",
+    "observed_at":  "2026-10-12T02:32:36.3538229+00:00",
+    "mutated":  false,
+    "compute_systems":  {
+                            "value":  [
+                                          {
+                                              "Id":  "b96e61fb-9f42-4a74-8361-aa02c95ed242",
+                                              "SystemType":  "VirtualMachine",
+                                              "RuntimeOsType":  "Windows",
+                                              "Owner":  "WindowsSandbox",
+                                              "RuntimeId":  "b96e61fb-9f42-4a74-8361-aa02c95ed242",
+                                              "RuntimeTemplateId":  "e3f88531-2a66-4891-8a74-c09d33357948",
+                                              "State":  "Running"
+                                          },
+                                          {
+                                              "Id":  "e3f88531-2a66-4891-8a74-c09d33357948",
+                                              "SystemType":  "VirtualMachine",
+                                              "RuntimeOsType":  "Windows",
+                                              "Owner":  "CmService",
+                                              "RuntimeId":  "e3f88531-2a66-4891-8a74-c09d33357948",
+                                              "State":  "SavedAsTemplate"
+                                          }
+                                      ],
+                            "Count":  2
+                        },
+    "process":  {
+                    "pid":  41744,
+                    "name":  "vmmemWindowsSandbox",
+                    "creation_date":  "\/Date(1791772037220)\/",
+                    "command_line":  null,
+                    "parent_pid":  16828
+                },
+    "ok":  true
+}

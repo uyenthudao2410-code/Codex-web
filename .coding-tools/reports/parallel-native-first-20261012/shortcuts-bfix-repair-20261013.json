@@ -1,0 +1,59 @@
+﻿{
+    "schema_version":  1,
+    "operation":  "repair_shortcuts_to_bfix_candidate",
+    "observed_at":  "2026-10-13T07:54:49.3517089+00:00",
+    "candidate":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked\\Coding Tools MCP.exe",
+    "old_target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+    "external_mutation":  true,
+    "guarded_precondition":  "both shortcuts exactly targeted the stale r4-timefix candidate and its working directory",
+    "before":  [
+                   {
+                       "path":  "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk",
+                       "target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+                       "working_directory":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+                       "arguments":  "",
+                       "description":  "Windows Execution Hub d? v?n hành Coding Tools MCP, OpenAI Tunnel và k?t n?i ChatGPT.",
+                       "hotkey":  "",
+                       "window_style":  1,
+                       "icon_location":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked\\Coding Tools MCP.exe,0",
+                       "sha256":  "ad7716fed32966a0c5a43dfd113df610438e0d2648dd3485887de857bbb1e035"
+                   },
+                   {
+                       "path":  "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk",
+                       "target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+                       "working_directory":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+                       "arguments":  "",
+                       "description":  "Windows Execution Hub d? v?n hành Coding Tools MCP, OpenAI Tunnel và k?t n?i ChatGPT.",
+                       "hotkey":  "",
+                       "window_style":  1,
+                       "icon_location":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked\\Coding Tools MCP.exe,0",
+                       "sha256":  "2aa1751765a05a7fae03f58beb05dcb2dbe174ddfba70b62275da3b0a4bc36cd"
+                   }
+               ],
+    "changed":  [
+                    {
+                        "path":  "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk",
+                        "target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked\\Coding Tools MCP.exe",
+                        "working_directory":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+                        "arguments_preserved":  true,
+                        "description_preserved":  true,
+                        "hotkey_preserved":  true,
+                        "window_style_preserved":  true,
+                        "sha256":  "db148c4214cf9820c4cc2e8a5eac67a17d92448cb99fd3aaa42be4e48a72d80c"
+                    },
+                    {
+                        "path":  "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk",
+                        "target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked\\Coding Tools MCP.exe",
+                        "working_directory":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+                        "arguments_preserved":  true,
+                        "description_preserved":  true,
+                        "hotkey_preserved":  true,
+                        "window_style_preserved":  true,
+                        "sha256":  "f22fa6b4fe64afb3dde7d96b0136960529c36e89dfdd98fa4957a26335aa5707"
+                    }
+                ],
+    "verification":  {
+                         "all_match_candidate":  true,
+                         "all_non_target_fields_preserved":  true
+                     }
+}

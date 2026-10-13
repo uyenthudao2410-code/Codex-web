@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "stop",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "observed_at": "2026-10-12T16:01:46.607Z",
+  "observed_at_ms": 1791820906607,
+  "ok": false,
+  "stage": "ordinary_stop",
+  "code": "ORDINARY_STOP_NOT_CONFIRMED_OBSERVE_WITHOUT_REPLAY",
+  "mutating_action_started": true,
+  "stop_intent_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\timefix-old-stop-intent.json",
+  "retry_instruction": "Observe exact current state and original operation receipt; do not replay uncertain mutations.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\stop-failure-1791820906607.json"
+}

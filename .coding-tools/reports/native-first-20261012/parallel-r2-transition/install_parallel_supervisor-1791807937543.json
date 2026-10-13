@@ -1,0 +1,11 @@
+{
+  "operation": "install_parallel_supervisor",
+  "ok": true,
+  "observed_at": "2026-10-12T12:25:37.5303918+00:00",
+  "observed_at_ms": 1791807937535,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r2\\win-unpacked",
+  "installed": true,
+  "manifest_sha256": "0bc155c90f05590341d15fe4a8721fa1dc6038545090e96a82475c93f7d0eaa2",
+  "retirement_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r2-transition\\retire-1791807902953-0b6eff0a.json",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r2-transition\\install_parallel_supervisor-1791807937543.json"
+}

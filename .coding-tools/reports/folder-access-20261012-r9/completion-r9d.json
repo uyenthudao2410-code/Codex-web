@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "operation": "r9d_autocad_operational_completion_projection",
+  "observed_at": "2026-10-12T09:37:31.772Z",
+  "operational_access_pass": true,
+  "semantic_acceptance_complete": false,
+  "read_only_projection": true,
+  "repository": {
+    "root": "E:\\DEV\\Codex-web",
+    "branch": "main",
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "worktree": "dirty_preserved",
+    "commit": false,
+    "push": false,
+    "published_release": false
+  },
+  "workflow": "Thêm thư mục → chọn đúng thư mục → xác nhận một lần quyền đọc/sửa/chạy; chuyển binding và chính sách theo đúng path/generation.",
+  "target_workspace": "E:\\DEV\\Autocad",
+  "target_source_modified": false,
+  "runtime": {
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-machine-folder-access-1012-r9d\\win-unpacked",
+    "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+    "state": "READY",
+    "admission_state": "OPEN",
+    "host_pid": 3476,
+    "package": {
+      "app_asar_sha256": "2fba385f52d679dc005b8a55d8d05a971bb0312e0bcbc9a3acabd69885ed7589",
+      "executable_sha256": "337f3669f7702156fe725c61dfc530d1938eee35f463fe3f1261ddba53b14c74"
+    },
+    "shortcuts_updated": 2
+  },
+  "server": {
+    "destination": "svhome@100.116.112.22",
+    "deployed_and_restarted": true,
+    "service_pid": 946413,
+    "package_source_sha256": "sha256:fa489c8134b11434fdc1f2f0b4473839830f302bef2563560a27f2e932f65228",
+    "selected_target": {
+      "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "readiness": "ready",
+      "presence_state": "online",
+      "dispatch_state": "dispatchable",
+      "capabilities": {
+        "exec": true,
+        "read": true,
+        "write": true
+      }
+    },
+    "census": {
+      "unclosed_tasks": 0,
+      "live_open_tasks": 0,
+      "expired_unclosed_tasks": 0,
+      "unreleased_writers": 0,
+      "live_writers": 0,
+      "expired_unreleased_writers": 0,
+      "unsettled_actions": 0,
+      "unsettled_by_delivery_state": {},
+      "queued_actions": 0,
+      "active_dispatch_actions": 0,
+      "reconciliation_required_actions": 0
+    },
+    "tunnel_status": 200,
+    "selected_pilot_renewal_confirmed": true
+  },
+  "file": {
+    "path": "E:\\DEV\\Autocad\\mcp-access-smoke-20261012-r9d.txt",
+    "bytes": 63,
+    "sha256": "3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023",
+    "proofs": [
+      {
+        "operation": "autocad_folder_access_canary",
+        "phase": "create_verified",
+        "observed_at_ms": 1791796249890,
+        "receipt_id": "rcpt_ec5fa07b82db458e8691d30b1c366e0b",
+        "action_id": "act_1f6edb413e5849a2a4f08bbfb00d414c",
+        "attempt_id": "try_52571826a1e740f7aff31c59de2a12ab",
+        "attempt_number": 1,
+        "response_sha256": "3d8019f849deda73e434c5c39d21978c28f7d3ab7257938156bfab2fb87d6b01",
+        "runtime_identity": {
+          "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+          "process_instance_id": "_H5DKjZjiw52F4s2",
+          "server_instance_id": "mynei0XQyArSjjoB",
+          "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+        }
+      },
+      {
+        "operation": "autocad_folder_access_canary",
+        "phase": "readback_verified",
+        "observed_at_ms": 1791796264972,
+        "lane": "read_initial",
+        "content_sha256": "47fb546d4ccf73e25123f063962251a2a2e5552faebe79c6589256ea7facb225",
+        "receipt_id": "rcpt_975bac6a327a4a92beae7316ea04107b",
+        "action_id": "act_c2b737950bd44f7290fed6accf16d1ef",
+        "attempt_id": "try_94667283e0214d9a87b7d06a484a8ea2",
+        "attempt_number": 1,
+        "response_sha256": "964b483df56bc141fd89fe2b3a10c65a445fd8e026aacdb99ee1a8ddcc1f9e33",
+        "runtime_identity": {
+          "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+          "process_instance_id": "_H5DKjZjiw52F4s2",
+          "server_instance_id": "mynei0XQyArSjjoB",
+          "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+        }
+      },
+      {
+        "operation": "autocad_folder_access_canary",
+        "phase": "patch_verified",
+        "observed_at_ms": 1791796290086,
+        "preimage_sha256": "47fb546d4ccf73e25123f063962251a2a2e5552faebe79c6589256ea7facb225",
+        "postimage_sha256": "3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023",
+        "receipt_id": "rcpt_870b4cc99cf949a68f2a42edde735e8f",
+        "action_id": "act_79c3beb929774c63aa9f41ecd522d171",
+        "attempt_id": "try_e9802be991874bd4bf45c6b2f76608f4",
+        "attempt_number": 1,
+        "response_sha256": "ddf298dd46cb4f554c05fefe91ef8e6068d6d79f1d5d7b36215b6e3471f63d32",
+        "runtime_identity": {
+          "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+          "process_instance_id": "_H5DKjZjiw52F4s2",
+          "server_instance_id": "mynei0XQyArSjjoB",
+          "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+        },
+        "run_id": "a123ac6f4c484f15a21033e0059d63d9",
+        "wave_id": "8aaccbc6dea74f9c96ffe6deb4844d82",
+        "local_semantic_acceptance": "pending"
+      },
+      {
+        "operation": "autocad_folder_access_canary",
+        "phase": "readback_verified",
+        "observed_at_ms": 1791796310195,
+        "lane": "read_final",
+        "content_sha256": "3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023",
+        "receipt_id": "rcpt_3664d218c2f94cf5854598aacaa547e1",
+        "action_id": "act_3a5e6aac13fd41de8a8a435b2fc4fc0f",
+        "attempt_id": "try_40ec569ef6a24c4883cb43d398464a1f",
+        "attempt_number": 1,
+        "response_sha256": "dbf4a85ac86adfc6bedd01800773fdb06c80a8b42599c7fe21b957f0200156e3",
+        "runtime_identity": {
+          "activation_epoch_id": "activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db",
+          "process_instance_id": "_H5DKjZjiw52F4s2",
+          "server_instance_id": "mynei0XQyArSjjoB",
+          "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4"
+        }
+      }
+    ],
+    "task_closed": true,
+    "writer_released": true
+  },
+  "commands": {
+    "node_version": {
+      "action_id": "act_c4b96e42976c47b9a69d1275dd2487e4",
+      "receipt_id": "rcpt_4025a9740b6440ceaef41ead0d9bc444",
+      "exit_code": 0,
+      "stdout": "v24.19.0",
+      "reused_original_job": true
+    },
+    "node_cwd": {
+      "action_id": "act_9d570eeea2d24a0685bffd2bb95b8f20",
+      "receipt_id": "rcpt_b2a16a2f6faf47619850013b25336c6a",
+      "exit_code": 0,
+      "stdout": "C:\\CodexWorkspace\\share-0",
+      "reused_original_job": false
+    },
+    "node_hash": {
+      "action_id": "act_4af2b66cf2b14e859e50744fc05970cd",
+      "receipt_id": "rcpt_a9c0e0060eac4d9384c0b38557a6c0aa",
+      "exit_code": 0,
+      "stdout": "3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023",
+      "reused_original_job": false
+    },
+    "dotnet": {
+      "action_id": "act_83cbc8abd8104453b5d01084b00eb5e9",
+      "receipt_id": "rcpt_e48fb2fcf85a4e76b3084a573bd68dac",
+      "exit_code": 0,
+      "stdout": "10.0.102",
+      "reused_original_job": false
+    }
+  },
+  "live_execution_jobs_settled": true,
+  "native_resource_counts": {
+    "active_tool_calls": 0,
+    "active_commands": 0,
+    "starting_commands": 0,
+    "active_background_operations": 0,
+    "active_managed_processes": 0,
+    "foreign_heavy_processes": 0,
+    "active_agent_lanes": 0,
+    "threshold_sensitive_stale_candidates": 18,
+    "owned_codex_sidecar_residues": 0
+  },
+  "preserved_pending_canary": {
+    "run_id": "a123ac6f4c484f15a21033e0059d63d9",
+    "wave_id": "8aaccbc6dea74f9c96ffe6deb4844d82",
+    "last_observed_state": "ACCEPTING",
+    "same_wave_semantic_verification": false,
+    "accepted_or_terminalized": false
+  },
+  "preserved_history": {
+    "server_unknown_actions": 2,
+    "historical_acceptance_preserved": true
+  },
+  "deviations": [
+    "The original combined file harness stopped at an oversized exec argv before an exec action was admitted; file create/read/PATCH/read remained completed.",
+    "The original Node version Job completed; a harness compared the labeled output envelope as raw version text. The final helper re-observed that same Job without replay.",
+    "Additional short Node cwd/hash and dotnet version Jobs completed with exit 0.",
+    "The patch canary has no same-wave semantic proof and remains pending. Operational access PASS does not mark it ACCEPTED.",
+    "An isolated helper could not decrypt existing authorization. No production key was copied; its generated profile key was moved out of repository evidence with a retained remediation receipt."
+  ],
+  "evidence": [
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\canary\\autocad-folder-access-receipt-r9d-379870e54349464ca9bf8c1d03dd92e0.ndjson",
+      "sha256": "82d664772a44c82292405f8a7f8ee847f4e9e9a6bad891b4cf0e1a15bacc12ca"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\canary\\autocad-exec-remaining-receipt-r9d-912d867d0dff4ce98aa3b3220a096319.ndjson",
+      "sha256": "800e8f83118089c5aed49613a23ff1a4f8079bade4cb738ec845200330fe3162"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\final-server-surface-r9d-1791797626010.json",
+      "sha256": "9dfc11611c1ce865ab440f6243cb86f76fc1c45bc23d13bc64d254d761be393c"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-transition\\final-machine-observation-activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db-1791797633598.json",
+      "sha256": "0c77182a975cc0234ab96acfa845ff4340cce37229c007ade78ae3c017d421fb"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-transition\\coding-tools-shortcuts-after-r9d.json",
+      "sha256": "82527f364527d2c076eef1a5b5084b92053af236e780f9a650b2e233e05c8b71"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\server-deployment-receipt.json",
+      "sha256": "559df5bb180f31e2738d87c36091df6aabd0b04ba0f5e968b04362030ea84acd"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-parity.txt",
+      "sha256": "2f612a8536e81722302edbc8ece66f2e22aff346c26ec2f90820c9cbeada32d2"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-smoke.txt",
+      "sha256": "674aab1264a52d5120eb9c943c1bd89bfd396ae72db6a7a241598df71209e2c4"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\r9d-transition\\isolated-crypto-profile-remediation.json",
+      "sha256": "bcd65ffddd4dd6f39e2b32425117ddc83daf5f66d64d40af872195246dff4b54"
+    }
+  ]
+}

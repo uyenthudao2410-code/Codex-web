@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "timefix_continuation_resume_review",
+  "resume_runner": "run-native-exec-continuation-resume.py",
+  "resume_runner_sha256": "8a55c7fa22b986ff2658ebad3413607460f6e65c9c52a105da5fa8685540e1ac",
+  "resume_wrapper": "invoke-native-exec-continuation-resume.ps1",
+  "resume_wrapper_sha256": "efaa6ff866421592dfaa50442d6ae8c80adf87f1ba29a1305db0c8d7043d3525",
+  "prior_receipt": "continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson",
+  "prior_receipt_sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+  "original_actions_replayed": false,
+  "live_resume_performed": false,
+  "offline_tests_passed": 2
+}

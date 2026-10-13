@@ -1,0 +1,16 @@
+[Unit]
+Description=Renew bounded Coding Tools shared-service authority
+After=network-online.target codex-control-plane.service
+Wants=network-online.target codex-control-plane.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/codex-control-plane/control-plane.env
+ExecStart=/usr/bin/python3 -B %h/.local/lib/codex-control-plane/current/deploy/control-plane-authority-renewal.py
+TimeoutStartSec=30s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

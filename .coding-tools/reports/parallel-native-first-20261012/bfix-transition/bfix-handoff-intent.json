@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "operation": "bfix-packaged-handoff-intent",
+  "observed_at": "2026-10-13T05:12:32.966Z",
+  "old_owner": {
+    "owner_pid": 25784,
+    "owner_process_start_token": "134363331209599570",
+    "instance_id": "9e68eeec3d76441a47598e199ab26fd1",
+    "installation_id": "b63bb979e24f73a42337786d15a4bd59618750637c9800efd849b9e97897fe6d"
+  },
+  "old_manifest_sha256": "a8b6ca0eaa7f16b8f35fafc2474412b43248b83c52b165a6902f883003d50fde",
+  "new_candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "fence": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-bfix-handoff-20261013-2.json",
+    "sha256": "a216ca69eea20fdcf2e531a5c0e0b8726163ff36070e15e9324fafa4a6f9d7fc",
+    "capture_completed_at_ms": 1791868304876,
+    "age_ms": 38872,
+    "preserved_unknown_actions": [
+      "act_3849e259d55546639794cec40f63fea8",
+      "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "act_9db9b985a3d648b5b941f2e13a30ee47"
+    ]
+  },
+  "proof": {
+    "parity_sha256": "82607bb0e021c1e57ef1c9368544d7d273a1144f6b616b694434a7ec59905db0",
+    "smoke_sha256": "4cd556110f0817685d91961f792e3d07221231544b592fb44a26ab5f5bc5b24e",
+    "executable_sha256": "94f36ad726297bb2c4451ba9931b1532569f14f9f46526223e39fe75bc08e145",
+    "app_asar_sha256": "b3607da70af1df36a0aa1eb50f5771ba110069e33d08f256da542faca5f7b922",
+    "resources": {
+      "exact_source": true,
+      "file_count": 299
+    },
+    "adapter": {
+      "exact_source": true,
+      "file_count": 10
+    }
+  },
+  "no_replay": true
+}

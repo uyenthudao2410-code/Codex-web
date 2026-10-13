@@ -1,0 +1,50 @@
+{
+  "observed_at_ms": 1791772178752,
+  "observed_local_time": "2026-10-12T09:29:38.752+07:00",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "probe_mode": "canonical_sqlite_read_only",
+  "service_pid": 835411,
+  "serving_store_sha256": "f50ddce70d5821bd82a32b12640ce5609ec510409cac18a312f6ffd23d56d513",
+  "serving_api_constraints_verified_read_only": {
+    "create_requires_recovery": true,
+    "create_rejects_another_live_pilot": true,
+    "recovery_revokes_all_nonrevoked_pilots": true,
+    "enter_scoped_pilot_requires_exactly_one_live": true,
+    "supports_isolated_additive_pilot_while_preserving_existing_authority": false
+  },
+  "admission_mode": "scoped_pilot",
+  "admission_changed_at_ms": 1791764494518,
+  "this_device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+  "this_device_matching_live_pilot_count": 0,
+  "live_pilot": {
+    "decision_id": "pilot_7177a7cd197c4944ae77ebc1c4d433a3",
+    "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+    "binding_id": "bind_3e05bf64cb3e4bab93d930ae1692bebb",
+    "device_id": "72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "endpoint_id": "executor-72ceec2d-e3f2-472f-8e3c-99fffe053035",
+    "workspace_id": "workspace_dda1d78e9a21402aa6213f72af64f788",
+    "workspace_generation": "generation_c2f13e8d02344cf6a38a3f42ecfa59b6",
+    "display_name": "Tools-Codex-web",
+    "created_at_ms": 1791764483690,
+    "expires_at_ms": 1791776571067,
+    "target_current": true,
+    "principal_kind": "private_tunnel_service",
+    "live_service_grants": [
+      {
+        "grant_id": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+        "scopes": ["control-plane.inventory", "control-plane.patch", "control-plane.read"],
+        "expires_at_ms": 1792756981903
+      }
+    ]
+  },
+  "interpretation": {
+    "central_shared_service_exec_admitted_for_this_device": false,
+    "central_prerequisites": [
+      "A current owner scoped pilot decision must cover this exact device, endpoint, binding and workspace generation.",
+      "The current private service grant must include the configured inventory, content-read and patch/write scopes used by the exec surface; the observed other-target grant already has these scopes.",
+      "Bounded exec must use a current task and matching writer lease.",
+      "Local exact runtime, policy and Windows MXC sandbox admission must independently pass."
+    ],
+    "authority_mutations_performed": false
+  }
+}

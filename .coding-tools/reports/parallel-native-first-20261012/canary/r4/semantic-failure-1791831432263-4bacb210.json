@@ -1,0 +1,12 @@
+{
+  "operation": "failure",
+  "ok": false,
+  "code": "LOCAL_API_TIMEOUT_OBSERVE_ORIGINAL",
+  "error_message": "",
+  "error_stack": "Error\n    at failure (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:218:50)\n    at ClientRequest.<anonymous> (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\local-semantic-acceptance-timefix.cjs:233:54)\n    at ClientRequest.emit (node:events:509:28)\n    at Socket.emitRequestTimeout (node:_http_client:948:9)\n    at Object.onceWrapper (node:events:630:28)\n    at Socket.emit (node:events:521:24)\n    at Socket._onTimeout (node:net:611:8)\n    at listOnTimeout (node:internal/timers:605:17)\n    at process.processTimers (node:internal/timers:541:7)",
+  "partial_mutation_possible": true,
+  "automatic_retry_forbidden": true,
+  "next_action": "Inspect original RUN/WAVE through audit; do not repeat acceptance/transfer after uncertain response.",
+  "production_descriptor_stable": true,
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-failure-1791831432263-4bacb210.json"
+}

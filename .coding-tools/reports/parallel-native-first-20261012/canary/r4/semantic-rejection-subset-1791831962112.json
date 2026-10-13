@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "operation": "failure",
+  "ok": false,
+  "code": "INTENT_CONFLICT_patch_003",
+  "error_message": "INTENT_CONFLICT_patch_003",
+  "error_stack": "Error: INTENT_CONFLICT_patch_003\n    at need (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-reject-subset.cjs:4:112)\n    at main (E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-reject-subset.cjs:14:567)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+  "partial_mutation_possible": true,
+  "automatic_retry_forbidden": true
+}

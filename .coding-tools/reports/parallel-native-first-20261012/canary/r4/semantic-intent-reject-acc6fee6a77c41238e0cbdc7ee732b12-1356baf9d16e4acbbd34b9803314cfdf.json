@@ -1,0 +1,21 @@
+{
+  "operation": "semantic_acceptance_intent",
+  "canary_sha256": "e1993ce83b6efeee177e3d9a2f18f60d7dfaa5b8041fc8f944794d27538b1f7d",
+  "target": {
+    "lane": "patch_009",
+    "original_action_id": "act_d05f2ab8487042538655b4a7e690ed3b",
+    "original_task_id": "task_1e40ade529724f15837fe3b6ced72fee",
+    "task_context_id": "cpap_457b43dcc38f828e201f689f2c702ae1c1490c650e6c79825d95e136",
+    "run_id": "acc6fee6a77c41238e0cbdc7ee732b12",
+    "wave_id": "1356baf9d16e4acbbd34b9803314cfdf",
+    "acceptance_files": [
+      {
+        "path": "tests/fixtures/native-first-canary/file-009.txt",
+        "sha256": "b9e3a66916a27cfa91d2b9af759da5bffefb7aeed142158ff0c621312a6582bb"
+      }
+    ]
+  },
+  "idempotency_key": "native-first-semantic:e93a2987e3b7100f7786474b0bcfb25e09c5c0fb2c9dbe33727e6212f0e3a007",
+  "created_at": "2026-10-12T19:08:24.886Z",
+  "automatic_retry_forbidden": true
+}

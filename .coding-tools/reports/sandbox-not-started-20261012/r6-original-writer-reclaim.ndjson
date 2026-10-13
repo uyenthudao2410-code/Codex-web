@@ -1,0 +1,3 @@
+{"operation":"r6_three_stage_shared_exec_canary","phase":"original_writer_before_supported_claim","observed_at_ms":1791785576082,"task_id":"task_91b8033f78254a52bd83120411c7674e","prior":{"lease_generation":1,"expires_at_ms":1791785255435,"released_at_ms":null}}
+{"operation":"r6_three_stage_shared_exec_canary","phase":"original_writer_supported_claim_completed","observed_at_ms":1791785576096,"task_id":"task_91b8033f78254a52bd83120411c7674e","prior_generation":1,"current_generation":2,"generation_changed":true}
+{"operation":"r6_three_stage_shared_exec_canary","phase":"original_writer_hold_elapsed","observed_at_ms":1791786476921,"task_id":"task_91b8033f78254a52bd83120411c7674e","current_generation":2}

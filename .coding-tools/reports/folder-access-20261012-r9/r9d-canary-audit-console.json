@@ -1,0 +1,1 @@
+{"ok":false,"operation":"canary-audit","code":"EXISTING_NATIVE_AUTH_UNAVAILABLE","child_exit_code":1,"raw_output_emitted":false,"acceptance_performed":false,"unknown_effect_not_replayed":true,"secret_values_emitted":false}

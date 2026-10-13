@@ -1,0 +1,36 @@
+--- serving/control-plane/control_plane/http_api.py
++++ candidate/control-plane/control_plane/http_api.py
+@@ -1054,7 +1054,6 @@
+             "observed_at_ms": self.server.store.clock(),
+         }
+ 
+-
+     def _register_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+         """Accept a path-free workspace inventory only from its own node.
+ 
+@@ -1103,7 +1102,6 @@
+             workspace_id=self._field(body, "workspace_id"),
+             workspace_generation=self._field(body, "workspace_generation"),
+         )
+-
+ 
+     def _session_cookie(self, token: str, *, expires: bool = False) -> str:
+         if expires:
+@@ -1966,7 +1964,7 @@
+             if node_match:
+                 device_id = node_match.group(1)
+                 self._node(device_id)
+-                if not set(body) <= {"limit", "lane"}:
++                if not set(body) <= {"limit", "lane", "workspace_id", "workspace_generation"}:
+                     raise ValidationError("node poll payload is invalid.")
+                 lane = body.get("lane")
+                 if lane is not None and not isinstance(lane, str):
+@@ -1978,6 +1976,8 @@
+                             device_id=device_id,
+                             limit=body.get("limit", 10),
+                             lane=lane,
++                            workspace_id=body.get("workspace_id"),
++                            workspace_generation=body.get("workspace_generation"),
+                         )
+                     },
+                 )

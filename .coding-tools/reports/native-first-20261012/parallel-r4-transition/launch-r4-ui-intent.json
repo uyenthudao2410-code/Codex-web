@@ -1,0 +1,8 @@
+{
+  "operation": "launch_r4_ui_intent",
+  "observed_at_ms": 1791815713019,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "install_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\install_parallel_supervisor-1791815588847.json",
+  "no_replay": true,
+  "readiness_inferred": false
+}

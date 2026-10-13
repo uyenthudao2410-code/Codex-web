@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "operation": "local_original_read067_timeout_evidence",
+  "ok": true,
+  "observed_at_utc": "2026-10-12T13:09:14.589706+00:00",
+  "action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a",
+  "attempt_id": "try_8d31c7cfb661441aadb9e620e47508a3",
+  "read_only": true,
+  "journal_evidence": {
+    "sha256": "2ce8609db47b2938188325945a82ffe78ddaa5ea595d601745d9a29d3017bc32",
+    "size_bytes": 337868
+  },
+  "journal_projection": {
+    "state": "unknown",
+    "receipt_state": "unknown",
+    "receipt_submitted": true,
+    "has_local_handle": false,
+    "payload": {
+      "schema_version": 1,
+      "operation_kind": "control_plane_bounded_file_read",
+      "code": "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN",
+      "diagnostic_code": "CONTROL_PLANE_FILE_READ_TIMEOUT"
+    }
+  },
+  "expected_local_task_context_id": "cpfr_9d1badfbc4a03bf74fb743ab095ce420408c74b3a0971647185481a6",
+  "expected_transport_request_ids": [
+    "control-plane-file-read-bind-72f626fc9fb07f5f10c4855c",
+    "control-plane-file-read-read-72f626fc9fb07f5f10c4855c"
+  ],
+  "expected_workspace_scope": {
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097"
+  },
+  "file_policy_sha256": "b09b5cf34b6e09489aaf34431dfa6931755dd7c69d41d01bf1e3d825fd686c36",
+  "performance_evidence": {
+    "sha256": "6373cf219bbde3abe4504b4d230979ccd3bae8c3807060f7e6a2bb72468e5c46",
+    "size_bytes": 375764
+  },
+  "matching_retained_performance_events": [
+    {
+      "tool": "workspace_context",
+      "started_at": "2026-10-12T13:05:33.560Z",
+      "finished_at": "2026-10-12T13:05:33.854Z",
+      "duration_ms": 296,
+      "ok": true,
+      "error_class": "",
+      "outcome": {
+        "status": "ok"
+      },
+      "invocation": {
+        "request_id": "control-plane-file-read-bind-72f626fc9fb07f5f10c4855c",
+        "task_context_id": "cpfr_9d1badfbc4a03bf74fb743ab095ce420408c74b3a0971647185481a6",
+        "client_id": "electron-control-plane-file-read-bridge",
+        "client_type": "electron",
+        "invocation_id": "0610ca8e604936330a8ac465e930b44e935184d07e628dacfbd695accaa4de6b"
+      }
+    }
+  ],
+  "task_registry_evidence": {
+    "sha256": "d9dbdab52458cf28070721618797417375d8e3af679d8841f2a988cffeaf258d",
+    "size_bytes": 6583542
+  },
+  "local_task_context_present": true,
+  "owner": {
+    "owner_pid": 12604,
+    "owner_process_start_token": "134362825905927480",
+    "instance_id": "c05d5a902dc55835b2cdc9263799dea7",
+    "installation_id": "1db86beab972872a3361551fcae3d06bf8065f37027effa20b030a8cb921a606"
+  },
+  "owner_evidence": {
+    "sha256": "3fc4a61baa99c3c4fe481576842914abbb38647a9ba8acc27e10e89554f1df5a",
+    "size_bytes": 676
+  },
+  "runtime_evidence": {
+    "sha256": "5b20d4efb4f23a96e2be2480d6d995d395340899b5fe8d8bfb5c910b14928278",
+    "size_bytes": 1512
+  },
+  "runtime": {
+    "nativePid": 50724,
+    "nativeInstanceId": "77158689dbe28c64eae10fe6",
+    "nativeActivationEpochId": "activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762",
+    "nativeProcessStartToken": "134362825928499830"
+  },
+  "proof_limit": "Recent performance events are bounded dynamic projections. Matching read completion does not repair the missing exact bounded-result receipt or turn UNKNOWN into success.",
+  "journal_modified": false,
+  "reconciliation_performed": false,
+  "action_redispatched": false
+}

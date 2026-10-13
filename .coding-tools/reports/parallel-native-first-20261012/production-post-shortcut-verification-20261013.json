@@ -1,0 +1,30 @@
+﻿{
+    "schema_version":  1,
+    "operation":  "production_post_shortcut_verification",
+    "observed_at":  "2026-10-12T23:34:02.5894036+00:00",
+    "candidate":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+    "shortcut_results":  [
+                             {
+                                 "path":  "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk",
+                                 "target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+                                 "working_directory":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+                                 "matches_candidate":  true,
+                                 "sha256":  "ad7716fed32966a0c5a43dfd113df610438e0d2648dd3485887de857bbb1e035"
+                             },
+                             {
+                                 "path":  "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk",
+                                 "target":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+                                 "working_directory":  "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+                                 "matches_candidate":  true,
+                                 "sha256":  "2aa1751765a05a7fae03f58beb05dcb2dbe174ddfba70b62275da3b0a4bc36cd"
+                             }
+                         ],
+    "shortcuts_match_candidate":  true,
+    "supervisor_manifest_matches_candidate":  true,
+    "sandbox_named_process_count":  0,
+    "sandbox_named_processes":  [
+
+                                ],
+    "external_mutation_performed_before_capture":  true,
+    "credential_emitted":  false
+}

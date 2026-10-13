@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "operation": "remaining_original_plan_acceptance_audit",
+  "observed_at": "2026-10-13",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "scope": "Read-only corrected audit of the original user-supplied Native-First plan against retained r4 receipts and r5 immutable continuation join; no runtime mutation, redispatch, replay, settlement, or production policy change.",
+  "source_plan": "C:/Users/Admin/.codex/attachments/13ef5050-6f6b-4d6e-97f6-77977db851f1/Văn bản đã dán.txt",
+  "verdict": "OPERATIONAL_MATRIX_COVERED_WITH_SCOPE_LIMITATIONS",
+  "acceptance_matrix": [
+    {
+      "criterion": "Read 100 files, zero VM, matching results",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r5/native-first-continuation-evidence-join-20261013.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/shared-mcp-receipt-e343984bfcee4e8fb5f9de04038596a7.ndjson",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/continuation-resume-receipt-9509199d0c7b49bba496c971676a4882.ndjson",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/readback-finalizer-receipt-698fcc64e0b5431081e8a4e90fb7569f.ndjson"
+      ],
+      "observed": "The original 100-read/20-patch/20-readback receipt remains terminal and failed with ORIGINAL_JOB_IDENTITY_NOT_VERIFIED. Its immutable continuation/resume/readback chain verifies the same runtime and scope, all 20 patch/readback hashes, 10 native Node jobs, 3 native Git jobs, an explicitly approved build and artifact readback without original action replay.",
+      "remaining": "Retain the failed parent as chronology. No redispatch is required for completed lanes; semantic acceptance is evaluated separately."
+    },
+    {
+      "criterion": "Exact patch/hash/diff and writer lease",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/semantic-independent-audit-20261013.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/semantic-lanes-summary-compact-20261013.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r5/native-first-continuation-evidence-join-20261013.json"
+      ],
+      "observed": "20/20 independent semantic lanes accepted with verifier/exit proof and no replay/cache reuse.",
+      "remaining": "The joined immutable receipt chain supplies the 100/20 end-to-end lane and native Job lineage; the independent semantic 20/20 gate remains separate."
+    },
+    {
+      "criterion": "Git status/diff without VM or global Git mutation",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r5/native-first-continuation-evidence-join-20261013.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/continuation-resume-receipt-9509199d0c7b49bba496c971676a4882.ndjson",
+        "docs/NATIVE_FIRST_EXECUTION.md"
+      ],
+      "observed": "The same-runtime continuation chain verifies git_status, git_diff and git_log as three distinct native/process_container Jobs with task/action/attempt/receipt lineage and native_safe_command policy. The metadata grammar excludes global-config mutation and hostile helper execution.",
+      "remaining": "No Git redispatch is required. Semantic acceptance and AutoCAD UNKNOWN records remain separate."
+    },
+    {
+      "criterion": "Ten allowed CLI commands with complete native receipts",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r5/native-first-continuation-evidence-join-20261013.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/continuation-receipt-0fe3b0d6d1e44d8284760356bea309fc.ndjson"
+      ],
+      "observed": "Ten distinct native Node Jobs are linked to task/action/attempt/receipt identities and unique Job/command/local handles under the same exact runtime identity. Continuation failures are retained; completed lanes are joined rather than repeated.",
+      "remaining": "No additional CLI redispatch is needed; semantic acceptance remains separate."
+    },
+    {
+      "criterion": "Approved build/test executes within granted limits",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r5/native-first-continuation-evidence-join-20261013.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/continuation-resume-receipt-9509199d0c7b49bba496c971676a4882.ndjson",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/readback-finalizer-receipt-698fcc64e0b5431081e8a4e90fb7569f.ndjson"
+      ],
+      "observed": "One explicitly approved native build Job with native_explicit_approval and linked artifact readback is verified. The artifact SHA-256 matches the build stdout marker within the immutable same-runtime chain.",
+      "remaining": "This meets the approved-build canary criterion for the granted Node command. Real .NET/AutoCAD compatibility is a separate gate before converting those command groups; it is not evidence supplied by this fixture."
+    },
+    {
+      "criterion": "Untrusted/high-risk code is isolated or denied",
+      "status": "PASS_WITH_LIMITATION",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/production-evidence-aggregate-20261013-final3.json"
+      ],
+      "observed": "Isolated terminal Job exited 0; owned sandbox record/daemon/host and named memory aggregate disappeared; final aggregate was 0.",
+      "remaining": "The receipt itself notes no dedicated idle-teardown receipt; retain this as a live observation with that limitation."
+    },
+    {
+      "criterion": "Sandbox with no job stops safely and returns RAM",
+      "status": "PASS_WITH_LIMITATION",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json"
+      ],
+      "observed": "terminal_to_teardown_ms=390240; final_sandbox_working_set_bytes=0; no observer lifecycle mutation.",
+      "remaining": "No cold-start/peak baseline was measured; this proves safe observed teardown, not a universal RAM or latency reduction."
+    },
+    {
+      "criterion": "Reconnect/recovery preserves Job state and does not redispatch",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/production-evidence-aggregate-20261013-final3.json"
+      ],
+      "observed": "Live overlap receipt reports client_transport_only reconnect, no_second_exec_verified=true, two distinct native Jobs, and closed tasks/writers.",
+      "remaining": "The original failed parent remains retained; completed native lanes are joined by immutable references. This is client-transport reconnect proof, not an unobserved network failure scenario."
+    },
+    {
+      "criterion": "Switch Codex-web <-> Autocad without wrong scope or writer lease",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/production-evidence-aggregate-20261013-final3.json",
+        ".coding-tools/reports/parallel-native-first-20261012/server-readiness-final-restore-20261013-004.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/parallel-overlap-receipt-90307d8ef64b429aab250c9797538717.ndjson",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-policy-isolate-1791835493184-fe35a0c9.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-policy-restore-1791836088800-1617a882.json"
+      ],
+      "observed": "The live overlap used distinct exact bindings, workspace generations, tasks and writer leases for Codex-web and Autocad; both task/writer pairs terminalized. The policy isolated→native_first roundtrip changed only Codex-web while other_scope_unchanged=true and exact generation checks remained in force.",
+      "remaining": "This satisfies the original wrong-workspace/writer-lease criterion for the operated control-plane path. No extra renderer UI gesture is required by its wording."
+    },
+    {
+      "criterion": "Rollback to old runner without losing history",
+      "status": "PASS_WITH_SCOPE",
+      "evidence": [
+        ".coding-tools/reports/parallel-native-first-20261012/server-deployment-receipt.json",
+        ".coding-tools/reports/parallel-native-first-20261012/deployment-helper-preparation.json",
+        ".coding-tools/reports/parallel-native-first-20261012/authority-reissue-receipt.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-policy-plan-20261013-4.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-policy-isolate-1791835493184-fe35a0c9.json",
+        ".coding-tools/reports/parallel-native-first-20261012/canary/r4/isolated-idle-policy-restore-1791836088800-1617a882.json",
+        ".coding-tools/reports/parallel-native-first-20261012/server-readiness-final-restore-20261013-004.json"
+      ],
+      "observed": "Live runner rollback was exercised as native_first→isolated→native_first for the same exact workspace/generation. Isolate/restore receipts share plan, epoch, parity, smoke and other-scope hashes; restored policy matches its original hash, and other_scope_unchanged=true. The isolated Job/idle teardown completed and readiness still preserves five historical UNKNOWN actions. Server source-only backup exists without SQLite restore.",
+      "remaining": "The original wording requires returning to the old runner without losing history, which this policy/runner roundtrip proves. It does not require a binary/service rollback. Binary rollback may be evaluated separately for a release; never restore SQLite or replay UNKNOWN actions."
+    },
+    {
+      "criterion": "Native child token is non-elevated/restricted",
+      "status": "OPEN_EVIDENCE_GAP",
+      "evidence": [
+        ".coding-tools/reports/native-first-20261012/native-token-winapi-proof.json",
+        ".coding-tools/reports/native-first-20261012/lifecycle-token-audit-checkpoint.json"
+      ],
+      "observed": "Host token is non-elevated, medium integrity, and administrator group deny-only. Native child token is null/unknown because the CPython fixture exited 126 before token query; this is explicitly not evidence of child privilege absence.",
+      "remaining": "Use a working approved native child probe (for example Node) to capture child token facts, or record this criterion as not proven. Do not weaken policy to manufacture a pass."
+    }
+  ],
+  "autocad_unknown_disposition": {
+    "status": "QUARANTINED_PRESERVED",
+    "receipt": ".coding-tools/reports/parallel-native-first-20261012/quarantine-receipt.json",
+    "action_ids": [
+      "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "act_3849e259d55546639794cec40f63fea8"
+    ],
+    "immutable_history_sha256": "b9ab0423d195427636b0c408dbb20fb9705283681f461b045db84c6bd2c3cea5",
+    "actions_settled": false,
+    "actions_replayed": false,
+    "disposition": "quarantined_unknown",
+    "policy": "Keep these records reconcile_required; do not replay, settle, or use them as evidence for AutoCAD build/native approval."
+  },
+  "bounded_next_actions": [
+    "Retain original failed parent and all continuation receipts; use the same-runtime immutable join to report completed 100/20/10-CLI/Git/build/readback lanes without redispatch.",
+    "Keep independent semantic acceptance separate from the receipt join.",
+    "Keep child-token inspection as an explicit unproven security observation; a working probe can close that evidence gap without weakening policy.",
+    "Treat real .NET/AutoCAD build as a separate command-group conversion gate; preserve the three quarantined UNKNOWN records and do not grant broad prefixes from Node fixture proof."
+  ],
+  "no_claims": [
+    "This audit does not rewrite a failed parent receipt into a monolithic sequential canary pass.",
+    "This audit does not claim .NET/AutoCAD build compatibility.",
+    "This audit does not claim native child token restriction.",
+    "This audit does not settle or replay any UNKNOWN action.",
+    "This audit does not require unnecessary CLI/file redispatch or binary service rollback."
+  ]
+}

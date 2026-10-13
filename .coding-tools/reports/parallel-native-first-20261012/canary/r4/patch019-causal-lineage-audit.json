@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "operation": "r4_patch019_causal_lineage_audit",
+  "read_only": true,
+  "observed_at_utc": "2026-10-12T15:18:56.034893+00:00",
+  "central_evidence_source": "read-only SSH query of Ubuntu service DB; no mutation",
+  "local_evidence": {
+    "shared_receipt_path": ".coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\shared-mcp-receipt-feab8533616c4989b16cfc0dbdf9bd7d.ndjson",
+    "shared_receipt_sha256": "9f77ea276be200e808837d4cf5636d30a8905c1e55ebcdd5c90b95212e07a316",
+    "journal_path": "C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\control-plane-node.json.approved-patch-bridge-journal.json",
+    "journal_sha256": "4eff9a244dd936d666ac678eb68bc9e0a51817458526475c3d8c0d5c997c062f",
+    "task_context_path": ".coding-tools\\task-contexts\\2f4604b5adda953cd683f9d3.json",
+    "task_context_sha256": "e59b1e971c26b9e27a997882306efceaf4f786bed59dc163bd3e9eb54b3a14c6",
+    "wave_report_path": ".coding-tools\\orchestration\\reports\\run-e8cef362cfe94b0ba733b73a75fbe09d\\wave-001.md",
+    "wave_report_sha256": "c995d530c85b3768a8cb2d1fc2f940b8d64b3cc1b6c975d6cdd2bbeb280f7b52",
+    "ledger_path": ".coding-tools\\orchestration\\ledger.sqlite3",
+    "ledger_sha256": "b86a991da762fe114889d0c0dd59429068124135cae58243492e53484c4031f6"
+  },
+  "central_action": {
+    "action_id": "act_65fa937277dd4963a5ca39ffe9e291ec",
+    "request_id": "req_fa834eb81f9d4a868cb397d8bffcddbd",
+    "context_id": "ctx_7ea752887b4f48079cbed584ca6931c9",
+    "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+    "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+    "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "task_id": "task_fd7cb4192b7144bebec0275e66d5eb95",
+    "attempt_id": "try_8a7f3fedcddd4de8a1267eb87a7e39ed",
+    "attempt_number": 1,
+    "writer_lease_generation": 1,
+    "created_at_ms": 1791816803643,
+    "dispatched_at_ms": 1791816804779,
+    "expires_at_ms": 1791817403643,
+    "delivery_state": "reconcile_required",
+    "settled_at_ms": null,
+    "action_digest": "ef88a27d1e76b0966d0f77a41953b11923b273b1bb2afe9f217a96eccff70ba7",
+    "action_idempotency_key": "mcpap_be51ade96f99a5888db882d105e9fc3c8accbc00535d65378600d807c8098377",
+    "admission_reference": "mcp_standing_patch:1157080c423e5c274699f49567a58de58d269620dc8c956ce7839c3c5b6f5ef7",
+    "receipt_id": "rcpt_3c774da48ff34d34a342c824d8dc94b8",
+    "receipt_state": "unknown",
+    "local_handle": "",
+    "receipt_received_at_ms": 1791816818393,
+    "receipt_digest": "7f90df297a3f19cda34362624ddedc6bfcfd7e3e3cfb592c6dcf879e197623c4",
+    "arguments_json_sha256": "3c7601f81f007d034567b3228b87130c6fb353cd2a18f193e5ffd67020b4b818"
+  },
+  "local_bridge_digest_derivation": {
+    "algorithm": "controlPlaneBridgeDigest(canonicalJson)",
+    "input_fields": [
+      "action_id",
+      "attempt_id",
+      "patch_sha256",
+      "task_id",
+      "writer_lease_generation",
+      "facade_contract"
+    ],
+    "facade_contract": {
+      "schema_version": 32,
+      "profile": "control-plane-private-tunnel-service-v1",
+      "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+    },
+    "digest_full_sha256": "18aea322bb04475fa067299da53e2aa4e06e471b728251ecfd946343cfe56558",
+    "expected_local_idempotency_key": "cpap_18aea322bb04475fa067299da53e2aa4e06e471b728251ecfd946343",
+    "ledger_key_match": true
+  },
+  "local_idempotency_record": {
+    "idempotency_key": "cpap_18aea322bb04475fa067299da53e2aa4e06e471b728251ecfd946343",
+    "operation": "agent_workflow",
+    "request_hash": "03fd0fc893c052d3c2177f0e205823e4d8beafbc6887c68e9c254061588b2797",
+    "status": "completed",
+    "process_instance_id": "8vZ_MQ-kNrTus9ch",
+    "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+    "wave_id": "4987ffee3e1b4781b313b52ba2700717",
+    "started_at": "2026-10-12T14:53:26.209Z",
+    "updated_at": "2026-10-12T14:53:38.364Z",
+    "finished_at": "2026-10-12T14:53:38.364Z",
+    "error_code": "",
+    "workflow_patch_preflight": 0,
+    "summary_codec": "plain_json",
+    "summary_blob": null,
+    "summary_json_sha256": "1f5077dbd71b7b84ec51b1688cd3d19a04429519b9377f01a8ab6119f2aa3c4d",
+    "summary_projection": {
+      "execution_ok": true,
+      "execution_status": "passed",
+      "external_review_status": "skipped",
+      "orchestration_state": "ACCEPTING",
+      "phase": "execute",
+      "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+      "wave_id": "4987ffee3e1b4781b313b52ba2700717",
+      "workflow": "custom"
+    }
+  },
+  "local_run": {
+    "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+    "task_id": "1af5800a252c4d71aed167c3ad9b713e",
+    "objective": "Apply one owner-approved exact local patch.",
+    "status": "active",
+    "started_at": "2026-10-12T14:53:26.845Z",
+    "finished_at": null,
+    "metadata_json_sha256": "98c62ff3416d4faed537070fdc68bad4473b229f810a02d27ce3bae340b45d2d"
+  },
+  "local_wave": {
+    "wave_id": "4987ffee3e1b4781b313b52ba2700717",
+    "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+    "ordinal": 1,
+    "execution_mode": "mcp_only",
+    "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "worktree_fp": "e0af3be77ec688d894a56651d76c2712e7b0cd7f62c00b63e46443b3a39cb20e",
+    "contract_fp": "9fd54ebd362cc3578b6a0474d47c70b1ae611c480cc8f7f5126d6cc248bfda4a",
+    "status": "active",
+    "started_at": "2026-10-12T14:53:31.055Z",
+    "finished_at": null,
+    "metadata_json_sha256": "893e40cb178380eb250e26d2f198632ef9e5eb869b88c8efa8d2ff200d099878"
+  },
+  "local_task_context_projection": {
+    "task_id": "1af5800a252c4d71aed167c3ad9b713e",
+    "status": "waiting",
+    "orchestration": {
+      "run_id": "e8cef362cfe94b0ba733b73a75fbe09d",
+      "wave_id": "4987ffee3e1b4781b313b52ba2700717",
+      "orchestration_state": "ACCEPTING",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "worktree_fp": "e0af3be77ec688d894a56651d76c2712e7b0cd7f62c00b63e46443b3a39cb20e",
+      "contract_fp": "9fd54ebd362cc3578b6a0474d47c70b1ae611c480cc8f7f5126d6cc248bfda4a"
+    },
+    "current_step": "Acceptance decision - operator report required",
+    "completion_report_id": "f099a9f2d043fc1c7a505fb34dc16c282ac80527685cdadb32155bf2f3a2ecb1",
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "patch_surface_observation": {
+      "matching_event_count": 1,
+      "complete": true,
+      "file_count": 1,
+      "additions": 3,
+      "removals": 3,
+      "path_hashes_sha256": [
+        "65fdac4d98843ebfe3613fe11702f7b215863e522df98996b8f6d0c3a9b2c0a9"
+      ]
+    }
+  },
+  "causal_conclusion": {
+    "exact_action_to_local_idempotency": true,
+    "why": "Recomputed bridge digest from the original central action attempt, exact patch SHA, task/lease and facade contract equals canonical local cpap idempotency key; local ledger record is completed and same task context modified file-019.",
+    "local_effect_proven": true,
+    "central_receipt_terminal_proven": false,
+    "central_state": "reconcile_required",
+    "central_receipt_state": "unknown",
+    "local_handle_available": false,
+    "semantic_acceptance_proven": false,
+    "task_closure_proven": false,
+    "writer_release_proven": false
+  },
+  "safe_reconciliation": {
+    "must_not": "Do not redispatch act_65fa… or synthesize a completed node receipt/local_handle; journal has already terminalized the original node boundary as unknown.",
+    "next": "Use supported original-action observation/reconciliation for act_65fa…; compare its current central state with this immutable lineage. If central accepts a completed receipt, it must be generated by the node receipt API from a real retained payload/handle. If no payload exists, preserve UNKNOWN and replan/accept the local RUN/WAVE only through operator-controlled task_control; never claim central action settled.",
+    "evidence_needed": [
+      "central action transition/settled timestamp",
+      "validated node receipt with action_id/attempt_id/task_id/writer lease/run_id/wave_id/local_handle and postimage digest",
+      "task_control acceptance/rejection and writer release census"
+    ]
+  },
+  "sensitive_payloads_included": false
+}

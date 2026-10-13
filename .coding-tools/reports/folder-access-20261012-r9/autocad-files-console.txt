@@ -1,0 +1,2 @@
+{"operation":"files","ok":true,"code":null,"stage":null,"report_path":"E:\\DEV\\Codex-web\\.coding-tools\\reports\\folder-access-20261012-r9\\transition\\packaged-files-receipt-1791793210998.json","activation":null,"target":{"workspace_id":"workspace_bc86004be2684b958ab7a9a6f9530cd7","workspace_generation":"generation_03f9c04f1b14414fa4bfa7d91cc8ea7a","binding_id":null,"pilot_decision_id":null,"workspace_path":null,"expires_at_ms":null},"runtime":null}
+PROCESS_EXIT=0

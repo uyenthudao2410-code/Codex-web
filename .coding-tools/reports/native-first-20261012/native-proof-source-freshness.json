@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "captured_at_utc": "2026-10-12T11:14:52.958427+00:00",
+  "source_evidence": "native-execution-final-proof.json",
+  "native_proof_source_matches": {
+    "windows_execution_policy.py": true,
+    "exec_tools.py": true,
+    "processes.py": true,
+    "session_control.py": true,
+    "server.py": true,
+    "runtime_config.py": true,
+    "windows_mxc_sandbox.py": true
+  },
+  "all_native_execution_sources_unchanged": true,
+  "native_source_sha256": {
+    "windows_execution_policy.py": "64ddb0c698fd3ac2f81a38553ff525bd59dd356bb5160836e8ed81b853eef986",
+    "exec_tools.py": "0e241227147ff30314ed730c9b685c147b9aff973f8c6dd6018dab43d4d1448c",
+    "processes.py": "7bec816f59f9cc93e475406eaed26d34820fcce592be191fed9f780d5782c37f",
+    "session_control.py": "46e79de45e879ff08dae96d801c8c7487e32ef4b29f26f8f70003c218eb9e5cb",
+    "server.py": "01840da72f3dc79cc67ff75e3c2dceb92c19652d982aad9c5a43fba86890b7a1",
+    "runtime_config.py": "ba481eb36df1e339d26233b2c3f1fdf23ad919dbec092bb28b09a7a2da6d2f77",
+    "windows_mxc_sandbox.py": "a355fbae8a956bc9c49d253848fe2b8d06b18edeae96e600a7a07516a9315d58"
+  },
+  "manager_sha256": "63b27124cb66e300bd2fafa189ebe9a4369ae7c3246ffe1b00601d1f599173d7",
+  "idle_test_sha256": "03bdbeee2a97ac892686f9480c54046cd0c94318aa97e8ef5b2c8278479e76a6",
+  "idle_validation": {
+    "command": "python -m pytest tests/test_windows_sandbox_idle.py tests/test_windows_mxc_state_aware.py -q",
+    "passed_tests": 46,
+    "passed_subtests": 21,
+    "duration_seconds": 1.49,
+    "module_size_check": "passed",
+    "git_diff_whitespace_check": "passed"
+  },
+  "review": {
+    "expired_callback_contention": "blocking manager lock with exact timer generation/owned-ID checks",
+    "terminal_arm_contention": "generation-bound daemon waiter; independent dedup lock/set; shared locked admission checks; terminal receipt does not block",
+    "regressions": [
+      "observation lock does not discard expired callback",
+      "terminal generation survives contention and repeated observations deduplicate",
+      "stale queued terminal generation cannot arm a later command"
+    ]
+  },
+  "limitations": [
+    "Idle manager proven with mocked exact-owned VM operations, not live VM retirement/RAM measurement",
+    "No repeat of unchanged native path was needed; original 10 native receipts retain matching source fingerprints"
+  ]
+}

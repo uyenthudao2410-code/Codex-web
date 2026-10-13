@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "complete",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r4\\win-unpacked",
+  "observed_at": "2026-10-12T14:38:10.406Z",
+  "observed_at_ms": 1791815890406,
+  "ok": false,
+  "stage": "activation_completion",
+  "code": "ACTIVATION_EPOCH_TERMINAL",
+  "mutating_action_started": true,
+  "retry_instruction": "Observe exact current state and original operation receipt; do not replay uncertain mutations.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\complete-failure-1791815890406.json"
+}

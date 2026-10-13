@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "operation": "bfix_source_checkpoint_rebind",
+  "mode": "observe",
+  "observed_at": "2026-10-13T06:34:44.770Z",
+  "task_context_id": "bfix-source-acceptance-20261013",
+  "mutation_started": false,
+  "result_keys": [
+    "ok",
+    "operations",
+    "presentation",
+    "recovery",
+    "resources",
+    "state",
+    "task_context_id"
+  ],
+  "state": {
+    "task_id": "12aa9ad4bbcc4785b80b087305a031dd",
+    "status": "waiting",
+    "current_step": "Awaiting acceptance",
+    "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+    "orchestration": {
+      "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "contract_fp": "",
+      "delegation_id": "",
+      "execution_mode": "mcp_only",
+      "orchestration_state": "ACCEPTING",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "run_id": "02729745ff42457aa0dae1844d4534e7",
+      "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+      "worktree_fp": "9e83cb4ee63372f23f28eef955ef007b4b27cae90e34ca32b49ae8f57898c39b",
+      "write_lease_id": "",
+      "write_owner": ""
+    },
+    "completion_report_id": "be955152154cba383cf9a683578f7354d96965f67662332336cb8903f7040a46",
+    "failure": null
+  },
+  "completion_report": {
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "current_state": {
+      "integrity": {
+        "checked": 28,
+        "head_hash": "797e0af0be32b47ce6adcf8021adc5349b105964929f4274645864a96c6e6992",
+        "ok": true
+      },
+      "orchestration_state": "ACCEPTING",
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-02729745ff42457aa0dae1844d4534e7\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-02729745ff42457aa0dae1844d4534e7\\wave-001.md"
+        ]
+      },
+      "run_status": "active",
+      "task_status": "waiting",
+      "wave_status": "active"
+    },
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+    "operator_visible_required": true,
+    "proof_actually_run": {
+      "all_recorded_proofs_passed": true,
+      "count": 1,
+      "proofs": [
+        {
+          "cache_hit": false,
+          "duration_ms": 19264,
+          "exit_code": null,
+          "proof_id": "0a8ea85fe0f9412f87fd24a789cbdf36",
+          "stage_id": "verify:tests",
+          "status": "passed"
+        }
+      ]
+    },
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "schema_version": 1,
+    "source_run_wave": {
+      "base_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "checkpoint_id": "",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Bind the unchanged, already proven Recovery Host fix to the current worktree after maintained documentation changed. Verify exact bfix package Git identity without reapplying patches or replaying Jobs.",
+        "legacy_fallback": false,
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "objective_revision": 1,
+        "objective_sha256": "b7c5c842841b9a2192e9ba287ea279d3d6766aeb48de88812158b3c03ae58a80",
+        "objective_source": "run_initial_objective"
+      },
+      "run_id": "02729745ff42457aa0dae1844d4534e7",
+      "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+      "worktree_fp": "9e83cb4ee63372f23f28eef955ef007b4b27cae90e34ca32b49ae8f57898c39b"
+    },
+    "what_changed": {
+      "files": [],
+      "raw_source_or_command_output_included": false,
+      "source": "no_durable_file_receipts"
+    },
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave."
+  },
+  "ok": true
+}

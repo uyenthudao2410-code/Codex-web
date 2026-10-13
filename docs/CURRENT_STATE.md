@@ -1,5 +1,746 @@
 # Current Project State — Tools-Codex-web
 
+## Current operational checkpoint — 2026-10-13
+
+The parallel r4-timefix candidate is the live production runtime. Ubuntu
+service PID `970133` and the Windows MCP/native process remain READY/OPEN under
+activation epoch `activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c`. Both
+exact workspace scopes, Codex-web and Autocad, are restored to `native_first`.
+
+Current proof is additive and retained under
+`.coding-tools/reports/parallel-native-first-20261012/canary/r4/` and `r5/`:
+the final offline checkpoint is
+`canary/r5/production-final-evidence-20261013-v3.json`, with aggregate detail in
+`canary/r5/production-completion-evidence-20261013.json`:
+the linked continuation join proves 100 reads, 20 exact patches, 20 readbacks,
+10 distinct native Node Jobs, Git status/diff/log, an explicitly approved build,
+and its artifact readback. The original file lane remains recorded as a failed
+parent harness (`ORIGINAL_JOB_IDENTITY_NOT_VERIFIED`); the joiner preserves that
+classification and verifies the continuation source hashes and runtime identity
+instead of rewriting it. Independent semantic acceptance is 20/20 with no
+replay; the two-root live overlap is 2,078 ms with distinct native Jobs and
+client-only reconnect; the isolated idle lane automatically removed its owned
+sandbox record, daemon, hosts and sandbox-named RAM aggregate; and fresh
+Ubuntu readiness is healthy with Codex-web exact-scope idle.
+
+The first parallel production objective is complete at runtime-evidence level.
+The remaining boundaries are separate: the three Autocad `UNKNOWN` actions are
+preserved/quarantined and block only their unresolved history. The packaged
+r4-timefix ProcessContainer token probe has now completed through one exact
+native approval and was observed low-integrity, non-elevated, AppContainer,
+Administrator deny-only, with zero enabled sensitive privileges and no VM calls.
+The exact Codex-web policy was restored to its empty native-prefix baseline and
+independently read back; AutoCAD policy remained unchanged. Network/path and
+Job-limit dimensions not exercised by the read-only token probe remain locked to
+the existing isolated/deny boundary, with no broad script or toolchain approval.
+Real .NET/AutoCAD toolchain compatibility has not been granted. The latest
+continuation join is
+`canary/r5/native-first-continuation-evidence-join-20261013-v3.json`.
+
+Infrastructure closure phases A and B now have bounded receipts. Phase A is
+recorded by
+`canary/r5/packaged-token-canary-694a79bfeef446559b3897cc052e723a.ndjson`, its
+exact restore receipt
+`canary/r5/packaged-token-packaged-token-restore-1791850043345-d884cf29.json`,
+and readback
+`canary/r5/packaged-token-restore-verify-20261013.json`. The two earlier
+`TOKEN_POLICY_RESTORE_NOT_EXACT` attempts remain history; their mismatch was in
+the helper's comparison of policy SHA to raw scope hash, and no duplicate Job
+was dispatched. Phase B completed one real source Problem: the retained
+`.coding-tools` evidence volume caused `AUTO_ACTIVATION_GIT_TOO_LARGE` before
+source identity evaluation; the guarded pathspec fix in
+`electron/services/recoveryActionStore.js` and its focused test passed 38/38,
+then behavior confirmation accepted the repository and returned a source
+fingerprint. Receipt:
+`phase-b-real-problem-git-evidence-20261013.json`. The source-only fix is not
+loaded in the packaged production candidate. The sensitive-tracked guard's
+`maxBuffer` change in `scripts/check-sensitive-tracked.js` has a focused 4/4
+result; this is source evidence pending the final baseline staging guard.
+`CHANGED_NEEDS_DISCOVERY` is not
+a blocker for this `central_executor` runtime; it remains a direct-connector
+diagnostic. No commit, push, tag, installer publication, or additional
+deployment occurred in this checkpoint. A fresh live verification confirms the
+Supervisor and both repaired Desktop/Start Menu shortcuts point to the same
+r4-timefix candidate; no named Sandbox process is present.
+
+The source fix has a rebuilt candidate at
+`dist/windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix/win-unpacked`.
+Packaged parity and isolated recovery smoke pass, but the candidate is not
+production-loaded. The accepted current-HEAD Recovery Host checkpoint is
+`4e9e9eb6bb494ca5ae04c49c7092c126`; trusted bootstrap preflight is now
+`READY` with one receipt and no mutation. The development full-clean preflight
+still returns `RECOVERY_HOST_INSTALLATION_MISMATCH` because the serving host
+belongs to the packaged r4-timefix installation and the bfix unpacked candidate
+has a different installation identity. The supported lifecycle has no live
+packaged-to-packaged replacement path. The successor gate is recorded in
+`.coding-tools/reports/parallel-native-first-20261012/bfix-production-activation-gate-20261013-v2.json`.
+No deployment, restart or AutoCAD UNKNOWN reconciliation occurred in this wave.
+Fresh SSH to `svhome@100.116.112.22` is currently unavailable by connect timeout;
+the last retained Ubuntu proof remains historical.
+
+## Native-first and parallel workspaces: historical activation baseline — 12-10-2026
+
+The Windows structured execution path now routes through `native_first`
+(default), `native_only`, or `isolated`. File operations retain the existing
+File API and writer/preimage checks. Approved Git metadata and CLI versions
+use the pinned MXC ProcessContainer without a VM; project scripts/builds need
+an explicit native argv prefix. Unapproved commands select isolation, or are
+denied before spawn in `native_only`. Native failure never retries with host
+or elevated privileges. The public schema-32 facade remains unchanged.
+
+Native requires the deny-path ProcessContainer, no DACL fallback, denied
+network/loopback, minimal environment, a non-elevated medium-or-lower host
+token, and required Job resource limits before resume. Actual Node/Git jobs
+and an explicitly approved Node build passed. The source Runtime native-only
+token fixture passed its bounded WinAPI queries; the packaged production child
+token remains provisional, as do CPython loader compatibility and .NET/AutoCAD
+builds. These limitations prevent declaring general toolchain compatibility.
+
+Sandbox retirement is gated by terminal durable Job state and the exact
+owned sandbox/lease generation. Its 30-second daemon callback waits through
+lock contention; a new command invalidates the callback before unlocking.
+It never targets a VM from another application. Deferred terminal arming is
+deduplicated per generation and stays responsive behind later commands.
+Idle/state-aware validation passed 46 tests and 21 subtests after both
+contention fixes.
+
+Evidence is additive under
+[`native-first-20261012`](../.coding-tools/reports/native-first-20261012/):
+100 read/20 exact-patch fixture operations used no execution backend; 10
+actual Node commands produced distinct terminal Jobs without VM calls; hostile
+Git helpers did not run; an unapproved build was denied before spawn while
+its approved prefix produced the verified artifact. Windows production candidate
+`parallel-native-1012-r3` has exact source/package parity: 90 application files,
+299 resources and 10 adapters; its isolated packaged Recovery smoke passed.
+The r2 live launch exposed a standalone node-agent import defect under the
+actual Python `-I` launcher. Its direct-file loader now imports the exact
+packaged sibling without writing bytecode; real `-I` CLI/policy tests passed.
+The r3 production observation at **19:44:12 +07** confirms `fullyReady=true`,
+native/MCP running, central connected, and READY/OPEN epoch
+`activation-mv58t4he-c162dd8a1c513c77581c5adee2ae6762`, ready commit
+`fbd0fd5195b69788d847d2cb7ea06d91e57f2cc44eb17d924cca98193331f6f4`.
+Earlier candidate and failed transition receipts remain evidence. Activation
+does not establish live canary acceptance, strict connector rediscovery or
+toolchain compatibility.
+
+The following paragraphs retain the dated r3 baseline and its pending language
+as chronology; the current 13-10-2026 checkpoint above supersedes it.
+
+The source now supports concurrent Codex-web and Autocad scopes on the same
+node/principal. Each pilot, policy, task, writer lease and command retains its
+exact workspace/generation. Activating another root retains the first root's
+authority. The selected UI folder chooses the target for new tasks. Policy
+collections preserve each lane's original schema; native approvals never move
+between roots. Node polling filters the exact scope before its LIMIT, rotates
+eligible scopes and observes original command Jobs without waiting for one
+root's command to finish before servicing the other. Focused tests include
+simultaneous contexts, separate native approvals and distinct Jobs. Fresh Ubuntu
+inventory shows both exact roots active, ready, online and dispatchable under
+the r3 heartbeat. At that r3 checkpoint, genuine two-root live overlap remained
+pending; the current r4-timefix overlap is proven above.
+
+Ubuntu `svhome@100.116.112.22` now serves
+`codex-control-plane-parallel-native-1012-f7acd9ec4ba1`, package source
+`sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d`.
+The guarded deployment stopped and started `codex-control-plane.service`;
+post-start health bound PID 970133 and instance
+`cp_49af2c4d087147dfa64fecc067f97c19` to that package. Database schema 29,
+public facade schema 32 and facade hash
+`3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66`
+remain unchanged. Both exact workspace pilots were reissued after the recovery
+fence, Codex-web first; admission is `scoped_pilot`.
+Ubuntu retains this operated package: the Windows loader fix changes only
+`node_agent.py`'s direct-file branch. Its package import branch and all other
+AST statements are unchanged; the serving HTTP/renewal entrypoints do not
+execute that branch. No alignment restart is required. Canary pins must record
+the actual serving source hash separately from the Windows r3 loader hash;
+this is not a claim of byte parity between the two packages.
+
+Three historical Autocad read UNKNOWNs received supported quarantine
+dispositions. Their original actions, attempts and receipts remain unchanged;
+they were neither settled nor replayed. UNKNOWN now blocks its related scope,
+with generation and retired-root checks retained. The ambiguous generic
+`TARGET_MISSING` diagnostic remains UNKNOWN; only the initial validation
+boundary may emit `TARGET_MISSING_BEFORE_DISPATCH` as a pre-effect refusal.
+Deployment census reported zero live tasks/writers or active actions and
+preserved historical rows. Source/config rollback is prepared; no database
+restore occurred.
+
+At the r3 checkpoint, the first live acceptance remained **Codex-web**, followed
+by genuine overlapping work in both roots. The system was activated for scoped
+production on both roots; canaries and their semantic acceptance remained
+pending at that time. No commit,
+push, published installer or release
+has occurred. See [native-first operations and limits](NATIVE_FIRST_EXECUTION.md)
+and the [production acceptance checkpoint](../.coding-tools/reports/parallel-native-first-20261012/PRODUCTION_ACCEPTANCE.md).
+Deployment evidence: [server receipt](../.coding-tools/reports/parallel-native-first-20261012/server-deployment-receipt.json),
+[authority reissue](../.coding-tools/reports/parallel-native-first-20261012/authority-reissue-receipt.json),
+[quarantine](../.coding-tools/reports/parallel-native-first-20261012/quarantine-receipt.json).
+Windows evidence: [r3 parity](../.coding-tools/reports/native-first-20261012/parallel-r3-candidate-parity.json),
+[r3 smoke](../.coding-tools/reports/native-first-20261012/parallel-r3-packaged-smoke.json),
+[r3 activation/status](../.coding-tools/reports/native-first-20261012/parallel-r3-transition/status-1791809052309-179002f3.json)
+and [two-root readiness](../.coding-tools/reports/parallel-native-first-20261012/server-readiness-r3-initial.json).
+
+## Historical target-display checkpoint: r9e locally installed and verified — 12-10-2026
+
+This section records the prior r9e observation window. The rollout above is
+the current operated-state checkpoint.
+
+The controlled local `machine-folder-access-1012-r9e` package is **READY / OPEN**
+on epoch `activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937`, ready at
+**17:15:16 +07**. The final read-only local observer at **17:16:27 +07** verified
+that exact installed package, live native runtime and registered UI, current
+component revisions, stable descriptor/epoch, and idle resource predicates.
+Desktop and Start Menu **Coding Tools MCP** shortcuts both point to the verified
+r9e `win-unpacked` executable. Keep that candidate directory in place.
+This is controlled local installation with existing dirty work preserved on
+`main @ 7999c415`; no commit, push, published installer or release occurred.
+No `svhome` deployment, restart, or server configuration change occurred in
+this display wave; the selected Autocad binding, generation and pilot remain.
+
+The reported mismatch was a display defect: sidebar and Device read the native
+application default `E:\DEV\Codex-web`, while the execution view used the active
+central Autocad registration. A common `renderWorkspaceTarget` now renders
+sidebar, Device, execution, selected folder, metadata and workspace status from
+the exact verified active central target. Loading/unknown inventory, stale
+telemetry or authority, revoked authority, mismatched generations and mismatched
+passed snapshot identity clear the active labels. Async inventory and policy
+refreshes use the same renderer. Direct mode uses its settings workspace.
+Native application roots and runtime Git remain their actual values; the Device
+Git caption is **Git ứng dụng** so it describes the application repository.
+
+**Proof:** 96 focused tests passed, covering folder permissions/target rendering,
+Control Center and setup console; syntax and whitespace checks passed. Candidate
+verification matched 91 application files, 298 resources and 9 adapters against
+source, and the isolated packaged smoke passed. At **17:16:00 +07**, the exact
+packaged renderer ran its actual full render functions with freshly authenticated
+live runtime, authority, registry and policy observations in a memory DOM.
+`sideWorkspace`, `deviceWorkspace`, `executionWorkspaceLabel`, `selectedWorkspace`
+and `workspaceMeta` all resolved to **`E:\DEV\Autocad`**; read/write/exec policy
+readiness was true and a stale heartbeat cleared active labels. This is live-data
+renderer proof, without a direct screenshot or observation of the physical UI
+window. The verifier requested no Sandbox probe. Genuine r9d file/PATCH/command
+proof remains the prior execution evidence below; this display wave does not
+claim a new command Job or erase historical awaiting-acceptance state.
+
+The ordinary r9d stop ran once. Its operation succeeded, but the evidence helper
+read a full-snapshot result as lightweight top-level fields and reported
+`ORDINARY_STOP_NOT_CONFIRMED`. The original operation and failed confirmation
+remain preserved. An additive confirmation bound their hashes to an independent
+exact-owner stopped-runtime observation and quiescent canonical census; the stop
+was not replayed. During r9e activation, explicit completion at **17:15:14 +07**
+returned `RUNTIME_BUSY` while the activation worker was still processing. The
+same epoch became READY/OPEN automatically about two seconds later; no retry or
+lifecycle bypass was required.
+
+Evidence: [focused renderer proof](../.coding-tools/reports/workspace-display-20261012-r10/renderer-focused-proof.json),
+[candidate verification](../.coding-tools/reports/workspace-display-20261012-r10/r9e-candidate-verification.json),
+[live-data renderer verification](../.coding-tools/reports/workspace-display-20261012-r10/live-renderer-verification-1791800160320.json),
+[final local observer](../.coding-tools/reports/workspace-display-20261012-r10/r9e-transition/final-machine-observation-activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937-1791800187814.json),
+[additive ordinary-stop confirmation](../.coding-tools/reports/workspace-display-20261012-r10/r9e-transition/packaged-confirm-stopped-receipt-1791800009046.json),
+[original completion conflict](../.coding-tools/reports/workspace-display-20261012-r10/r9e-transition/packaged-complete-failure-1791800114319.json),
+and [READY observation after the conflict](../.coding-tools/reports/workspace-display-20261012-r10/r9e-transition/packaged-status-receipt-1791800136176.json).
+
+## Prior folder workflow proof: r9d live Autocad read/write/PATCH/exec passed — 12-10-2026
+
+The controlled local `machine-folder-access-1012-r9d` runtime is **READY / OPEN**
+on epoch `activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db`.
+Genuine shared MCP operations now verify the exact registered project
+`E:\DEV\Autocad`: create, initial read, exact PATCH, final read and sandboxed
+commands. Ubuntu `svhome` serves the reviewed r9 local-folder overlay, PID
+**946413**. This is local controlled activation with preserved uncommitted
+changes on `main @ 7999c415`, matching remote `main` in the final read-only
+`git ls-remote` check. This is not a published installer or release; no commit
+or push occurred. Desktop and Start Menu **Coding Tools MCP** shortcuts now
+target the exact verified r9d `win-unpacked` executable; guarded replacement
+preserved their other properties. Keep that candidate directory in place.
+
+Final read-only observations at **16:33 +07** confirmed the same READY/OPEN
+epoch and stable host descriptor, current native runtime/UI revisions, and
+**zero active tool calls, commands, background operations or managed processes**.
+Autocad's current registration has **0 unclosed tasks / 0 unreleased writers /
+0 unsettled actions**. Ubuntu reports online/ready, a dispatchable selected
+target with read/write/exec capabilities, tunnel HTTP **200**, SQLite integrity
+**ok**, and the enabled renewal timer following the selected pilot. Historical
+quarantined UNKNOWN actions and native awaiting-acceptance runs remain
+preserved; current-generation idle does not declare them completed. An exact
+canary audit through the existing gateway at **16:43 +07** confirmed the PATCH
+run remains `ACCEPTING` with no controller lease or same-wave proof. The helper
+exited without stop, acceptance or lease changes. That state alone does not
+block native folder switching; active commands/background work remain blockers.
+See the [gateway audit receipt](../.coding-tools/reports/folder-access-20261012-r9/r9d-transition/existing-gateway-canary-audit-1791798210962.json).
+
+On an already connected Windows machine, the normal local flow is **Thêm thư
+mục → choose the project directory → confirm once**. The default **Làm việc
+với mã nguồn** choice grants read, edit and command capabilities for that
+registered folder. The application registers the exact local path/generation,
+activates its existing private connector assignment, then installs the matching
+file and exec policies. Separate permission and revocation controls remain in
+**Quản lý nâng cao**. First-time machine pairing still requires valid server
+authorization.
+
+Adding or inspecting a folder does not launch Windows Sandbox. A real command
+starts its execution environment; the optional Sandbox diagnostic remains a
+separate explicit action. Permission readiness alone does not prove a command
+completed. Only the command's original Job and exit result establish execution.
+
+The shared connector currently selects one workspace on this machine. Switching
+to another locally confirmed registration reuses or creates its exact binding
+and creates a new immutable pilot with the previous expiry; old bindings,
+pilots, tasks, receipts and grants remain history. Private authority and policy
+inspection expose only that selected live pilot. Renewal follows the selected
+workspace under the existing owner/principal/device/endpoint anchor. This does
+not grant a different machine or extend the already approved pilot period.
+
+The r9c source adds the registered folder to the native authorized roots through
+the existing authorization API **before** switching the pilot. Existing roots
+remain available; selecting the native default or an already authorized root
+does not rewrite that list. Adding a new root at the existing limit of 32
+additional roots is refused before any pilot change. The native default
+workspace and activation epoch remain unchanged; central file and command
+bridges resolve their target from the exact registered task scope.
+
+A failed read-only `workspace_context` bootstrap now reports
+`CONTROL_PLANE_DOCUMENT_WRITE_BIND_REJECTED`: the document workflow has not been
+dispatched. Node handling records that as a pre-effect rejection. Errors after
+dispatching the real document workflow keep the conservative `UNKNOWN`
+classification and require local reconciliation; they are never retried as a
+replacement action automatically.
+
+**Focused r9c source proof:** four document bootstrap/runtime cases,
+two Node poll/journal cases, the selected-private-pilot fixture and seven
+workspace activation cases passed. These cover existing/default roots, the
+32-root boundary, native grant failure, and one bridge invocation after
+duplicate delivery. The earlier r9b Autocad create returned an original UNKNOWN
+receipt. Its offline scope diagnosis found a native default of
+`E:\DEV\Codex-web`, no additional authorized roots, and no Autocad context.
+The exact original context ID was subsequently derived from the original
+attempt, installed policy, task/lease and facade identities. It was absent
+from the durable context registry; reviewed package code binds that context
+before document dispatch and has no context deletion/eviction path.
+
+An authenticated Node receipt POST appended a **rejected** terminal receipt to
+the original action/attempt, retaining its earlier UNKNOWN. Its evidence
+explicitly labels the conclusion as **operator inference** from the exact
+package's binding order, absent durable context and absent effect evidence;
+the original native error response was not retained. This is not presented as
+a native original receipt. The node journal was not edited and the original
+action was not redispatched. Supported task cleanup then released the writer
+and closed the original task, without direct database mutation.
+
+The subsequent genuine r9c shared MCP create **completed on its first attempt**
+and produced `E:\DEV\Autocad\mcp-access-smoke-20261012-r9c.txt`: **62 bytes**,
+SHA256 `9e49f61b0725d9463f3cea5a04a26ae5794123a4f2bf8fa61af36bd29e439d89`.
+The next bounded read returned an invalid bridge result. Native `read_file`
+displays an additional-root file with an absolute path; the bridge expected the
+admitted relative path and rejected the result before relay. The original read
+UNKNOWN remains preserved. An additive authenticated Node **rejected** receipt
+labels `read_may_have_occurred=true` and `valid_bounded_read_receipt_retained=false`;
+it does not assert that no read took place. That action was not redispatched or
+its journal edited. Supported cleanup closed the r9c task and released its
+writer. The full r9c canary therefore failed at readback; PATCH and exec were
+not established by that run.
+
+The r9d source projects a native absolute read path only when it is the exact
+canonical registered target. Wrong roots/files and reparse aliases still fail;
+content, range and digest checks remain in force. **13 focused read tests**
+passed. Exec poll/stop now carry the same exact bound task context as exec run;
+**11 focused exec tests** passed. The consent dialog prefers the registered
+folder's full local path when available; **2 focused UI tests** passed,
+including duplicate display names. Approved patch already normalizes its
+affected paths against the request-bound workspace, so it needs no equivalent
+absolute-path conversion.
+
+The unpacked `machine-folder-access-1012-r9d` candidate verifies **91 application
+files / 298 resources / 9 adapters**, native provenance and sanitation; isolated
+packaged smoke passed. The live shared create/read/PATCH/read actions each
+completed with **one original delivery attempt**. The final fixture
+`E:\DEV\Autocad\mcp-access-smoke-20261012-r9d.txt` is **63 bytes**, SHA256
+`3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023`.
+PATCH action `act_79c3beb929774c63aa9f41ecd522d171` retains native RUN
+`a123ac6f4c484f15a21033e0059d63d9` / WAVE
+`8aaccbc6dea74f9c96ffe6deb4844d82` in **ACCEPTING** with semantic acceptance
+**pending**. Central receipt completion proves the exact applied effect; it
+does not accept the native RUN/WAVE. The file task closed and writer released.
+
+The first r9d combined canary stopped after those four successful effects
+because the harness's inline exec request failed schema validation before a
+command action was created. A later harness preflight error also dispatched
+no action. These original failed reports remain preserved. A subsequent
+`node --version` action `act_c4b96e42976c47b9a69d1275dd2487e4` completed with
+**attempt 1, exit 0**, but that harness initially misparsed paged output labels
+and reported `NODE_VERSION_NOT_VERIFIED`. Corrected observation of the **same
+original Job**, without re-execution, verified **v24.19.0**.
+
+Separate genuine shared Node commands verified guest cwd
+`C:\CodexWorkspace\share-0` and the exact MCP-created/PATCHed file's SHA256
+above; both completed with **exit 0**. `dotnet --version` completed with **exit
+0**, output **10.0.102**, receipt
+`rcpt_e48fb2fcf85a4e76b3084a573bd68dac`. The final remaining-exec helper passed;
+task `task_bc03b2a967c742b0af0e7bee28c11a21` closed, its writer released, and it
+had **zero unresolved original actions**. All command proof is from the real
+shared MCP path to the registered Autocad folder; no original action was
+replayed to obtain a successful result. Native semantic acceptance remains
+independent of those closed central tasks.
+
+Evidence: [document bootstrap focused proof](../.coding-tools/reports/folder-access-20261012-r9/document-bind-rejection-focused-proof.json),
+[activation root review and boundary tests](../.coding-tools/reports/folder-access-20261012-r9/activation-root-review-proof.json),
+[enrollment and activation source tests](../.coding-tools/reports/folder-access-20261012-r9/r9c-activation-tests.txt),
+[original UNKNOWN observation](../.coding-tools/reports/folder-access-20261012-r9/canary/original-create-unknown-read-only-diagnosis-3.ndjson),
+[offline native scope diagnosis](../.coding-tools/reports/folder-access-20261012-r9/original-create-scope-diagnosis-r9b-1791794423244.json),
+[additive original reconciliation](../.coding-tools/reports/folder-access-20261012-r9/original-create-reconcile-preflight-1791795110814.json),
+[supported original task cleanup](../.coding-tools/reports/folder-access-20261012-r9/canary/original-task-cleanup-console.txt),
+[r9c original create/read and cleanup](../.coding-tools/reports/folder-access-20261012-r9/canary/autocad-folder-access-receipt-r9c-f95317ec7fde48a0a113e83e9cddfa5b.ndjson),
+[original read path diagnosis](../.coding-tools/reports/folder-access-20261012-r9/original-read-path-diagnosis-r9c-1791795633356.json),
+[additive read reconciliation](../.coding-tools/reports/folder-access-20261012-r9/r9c-read-reconciliation-1791795718486.json),
+[read projection focused proof](../.coding-tools/reports/folder-access-20261012-r9/file-read-additional-root-fix-receipt-r9d.json),
+[registered path consent proof](../.coding-tools/reports/folder-access-20261012-r9/registered-folder-consent-path-proof.json),
+[r9d package verification](../.coding-tools/reports/folder-access-20261012-r9/r9d-candidate-verification.json),
+[r9d isolated packaged smoke](../.coding-tools/reports/folder-access-20261012-r9/r9d-smoke.txt),
+[r9d original file effects and harness rejection](../.coding-tools/reports/folder-access-20261012-r9/canary/autocad-folder-access-receipt-r9d-379870e54349464ca9bf8c1d03dd92e0.ndjson),
+[original successful Node Job and harness parsing failure](../.coding-tools/reports/folder-access-20261012-r9/canary/autocad-exec-only-receipt-r9d-cca0e0b874d74e9481e3d80896456a8a.ndjson),
+[original Job re-observation and final cwd/hash/dotnet proof](../.coding-tools/reports/folder-access-20261012-r9/canary/autocad-exec-remaining-receipt-r9d-912d867d0dff4ce98aa3b3220a096319.ndjson),
+[final server/current-generation observation](../.coding-tools/reports/folder-access-20261012-r9/final-server-surface-r9d-1791797626010.json),
+[final Windows machine observation](../.coding-tools/reports/folder-access-20261012-r9/r9d-transition/final-machine-observation-activation-mv514if9-7a4fabe0ce77708f8be03ff43a6518db-1791797633598.json),
+[verified r9d shortcuts](../.coding-tools/reports/folder-access-20261012-r9/r9d-transition/coding-tools-shortcuts-after-r9d.json).
+
+## Windows write/PATCH/exec operational on r8: historical checkpoint — 12-10-2026
+
+This is the earlier Codex-web acceptance window. The current folder repair and
+its remaining live proof are described above.
+
+The locally operated unpacked candidate is
+`machine-exec-lifecycle-1012-r8`. Both Coding Tools MCP shortcuts and the
+recovery supervisor target its `win-unpacked` directory. It must remain in
+place. This is local controlled activation, not a published installer or a
+signed release. Git remains `main` at
+`7999c4151cb501db86f2e4d0a2275d33fc248324`, with preserved local changes;
+no commit or push was performed in this repair.
+
+The r8 package verifies **91 app files / 298 resources / 9 adapters**, native
+provenance and sanitation, and passed isolated packaged recovery smoke.
+The three ordinary-stop source files match their reviewed proof hashes;
+**7 focused stop tests + 12 existing executor cleanup tests** passed.
+Packaged policy/authority inspection confirmed **zero Sandbox launches**.
+
+Genuine shared MCP create/read/PATCH/read actions verified the ordinary
+fixture `tests/fixtures/new-machine-shared-write-proof-20261012-r8.txt`:
+**63 bytes**, SHA256
+`99a756fdabac6c640b5752ae4ca6088301c1eff6318840a6377f6c262d42f8fa`.
+The first r8 exec action was refused before execution because the dead r7
+daemon's record still named `wsb:6973cf0f`. Its failed receipt, closed task
+and released writer remain preserved. The exact old mapping and absent
+processes were verified, then the supported deprovision API removed that
+owned record. No original action was replayed or canonical record edited.
+An initial diagnostic request used an invalid schema version and was rejected
+by the parser without lifecycle effects; the corrected supported request
+succeeded.
+
+A fresh r8 shared command then completed with **attempt 1, exit 0**:
+Job `da70404853284b52bba5eab347a95d69`, action
+`act_39a0f3d1484d4b839b788c2e5a619a36`. The command checked the exact
+MCP-created and patched fixture; its task closed and writer released.
+Ordinary supported Stop was exercised while `wsb:aa28a932` was live.
+The native owner stopped, user-mode Sandbox hosts exited, and its daemon and
+Sandbox records disappeared. The immediate combined producer gate reported
+incomplete; that original observation remains unchanged. A later independent
+read-only census confirmed the stopped runtime, zero active resources and
+complete exact owned teardown. No manual process kill was used. A lingering
+kernel memory aggregate was not treated as VM ownership.
+
+Supported restart reached **READY / OPEN** on epoch
+`activation-mv4xk8xx-3d9f30b9b0542ef0458f3c3b241d365a`. A new genuine shared
+command after Stop completed with **attempt 1, exit 0**, Job
+`b73b9d29c86e422da0355507cdd4eea5`, action
+`act_77427971b6714781898ed833dc4296fa`; its task closed and writer released.
+The cold-start, warm and cached-restart proofs from r6 and the r7 five-action
+success remain separate historical evidence. These shared MCP route probes
+do not assert an additional observed ChatGPT model retry.
+
+Ubuntu `svhome` continues serving its previously verified baseline plus the
+scoped `store.py` overlay; it is not a full latest-source server release.
+Facade schema **32** remains aligned with installed read/edit/exec policies.
+The scoped pilot targets this machine and automatic 20-hour renewal is
+enabled. This wave changed the local Windows runtime, supervisor and two
+shortcuts; it did not deploy or restart Ubuntu. PATCH semantic acceptance and
+historical awaiting-acceptance runs are preserved independently of closed
+central tasks and idle execution resources.
+
+Evidence: [r8 package parity](../.coding-tools/reports/sandbox-not-started-20261012/r8-candidate-verification.json),
+[write/PATCH and original failed exec](../.coding-tools/reports/shared-write-exec-20261012-r8/shared-write-exec-receipt-r8-69edb1dffa4740bfa6c56e8e3469b122.ndjson),
+[recovered original command](../.coding-tools/reports/shared-write-exec-20261012-r8/shared-exec-after-stop-receipt-r8-2a1f853f95c649ac991c7de88100420d.ndjson),
+[ordinary Stop supplement](../.coding-tools/reports/sandbox-not-started-20261012/r8-transition/ordinary-stop-readonly-supplement-a6d737ae3e1e4cffac7fbce4dd1698a3.json),
+[command after Stop](../.coding-tools/reports/shared-write-exec-20261012-r8/shared-exec-after-stop-receipt-r8-ce8fb9898c814735acdd59008411b470.ndjson).
+
+## Sandbox lifecycle repair: r6/r7 historical proof — 12-10-2026
+
+Actual ChatGPT calls now prove the imported exec schema, Windows delivery and
+file create/readback: the 75-byte `tests/fixtures/chatgpt-write-smoke-20261012-1213.txt`
+completed with matching SHA256. The original `node --version` action
+`act_f1b0df9d4be84f31b931696ff8d8f295` received exactly one delivery attempt;
+native Job `41d336e59e8340078b97d35760b4a649` exited **1** at **12:14:31 +07**,
+with `sandbox wsb:90b652fe is not started`. Its task is closed and no original
+action was replayed. This is an execution failure requiring repair, not a
+successful command test or the intended consequence of status-only inspection.
+
+Read-only lifecycle evidence shows VM disappearance and confirmed teardown at
+**12:12:49 +07**, followed by daemon-record removal. The r5b native Runtime
+remained alive and reused its cached sandbox ID without a lifecycle check.
+The disappearance trigger is unknown; cached-ID reuse is the inferred cause
+of the subsequent `not_started` result. The adapter source now reconciles
+`start` for the exact cached ID before constructing a new command. Exact
+structured `already_started` establishes same-ID ownership; native exec still
+checks readiness and protocol. Other errors block dispatch, clean the exact ID,
+and unconfirmed cleanup disables further automatic execution. The native
+start path also rejects a prior daemon record naming another Sandbox before
+spawning or reclaiming a process.
+
+The unpacked `machine-exec-lifecycle-1012-r6` reached **READY / OPEN** at
+**12:53:27 +07**. Two genuine shared MCP `node --version` Jobs (cold and warm)
+each completed with exactly one delivery attempt, exit **0**, and **v24.19.0**.
+The original task's writer expired during shutdown observation; supported
+`writer_claim` renewed it as generation **2**. Historical command receipts
+remain bound to generation **1**; no action was replayed.
+
+The supported stop of `wsb:e68057a4` returned and its record became stopped;
+the daemon and original user-mode hosts exited. Its initial bounded observer
+reported UNKNOWN because a protected kernel memory aggregate lingered. The
+pinned Microsoft MXC contract excludes that aggregate from VM ownership and
+new-launch blocking. The original UNKNOWN remains preserved. A later
+diagnostic `wsb list` activation correlated with a standalone management
+server. Its exact idle process was closed once through a verified live handle;
+no VM ownership was inferred from its name. An additive read-only observation
+confirmed the original stopped mapping, daemon absence, zero user-mode hosts,
+and zero kernel aggregates, preserving the earlier UNKNOWN report. The third
+cached restart Job `5f93717118a540b0bf373c2763dfe606` then completed with
+attempt **1**, exit **0**, **v24.19.0** on the same r6 runtime. Its task closed
+with **0 open tasks / 0 unreleased writers / 0 unsettled actions**.
+
+The r7 source removes the kernel aggregate from the cold-start host guard
+while preserving the four real Windows Sandbox host guards and fail-closed
+observation. **33 focused adapter tests**, **4 focused native tests**, and
+**12 build verification tests** passed. The separate unpacked r7 package
+verified **91 app files / 298 resources / 9 adapters** and passed its isolated
+smoke test. r7 reached **READY / OPEN** at **13:42:55 +07**, epoch
+`activation-mv4vxaab-907c8a927b8eb80e4e7b8b56bdb150ed`, Host PID **41236**,
+native PID **48080**, process `Gzm9K8GFf82uAtwO`, MCP instance
+`87JB3saNgxMlTI0m`. Both Coding Tools MCP shortcuts and the recovery supervisor
+now target that r7 candidate. Packaged status-only policy/authority inspection
+again verified **zero Sandbox launches**. Following exact r6 cleanup, the r7
+create/read/PATCH/read/exec canary completed with original attempt 1 receipts;
+Job `d618111e6a4e4e9484a48c76121ef259` exited 0. Its central task closed and
+writer released; PATCH semantic acceptance remained pending.
+
+The subsequently observed direct service-stop gap is repaired in local source:
+a healthy ordinary stop now prepares one authenticated owned-executor fence
+and observes the existing fixed cleanup deadline before stopping either
+process. Full-clean activation reuses its already confirmed fence. Lost or
+failed cleanup preserves the native owner and reports the failure; a retry
+observes the same operation. **19 focused stop/cleanup tests passed.** The r8
+package and live stop/restart proof are recorded above.
+
+Evidence: [actual server receipts](../.coding-tools/reports/sandbox-not-started-20261012/actual-chatgpt-sandbox-failure-server-observation.json),
+[original native Job](../.coding-tools/reports/sandbox-not-started-20261012/actual-chatgpt-sandbox-failure-native-job.json),
+[lifecycle diagnosis](../.coding-tools/reports/sandbox-not-started-20261012/original-failure-diagnostic-1791783529042.json),
+[focused adapter tests](../.coding-tools/reports/sandbox-not-started-20261012/adapter-focused-tests.txt).
+
+## Windows r5b READY; explicit Sandbox setup activated — 12-10-2026, 11:30 +07
+
+Historical r5b checkpoint; the actual ChatGPT result and remaining lifecycle
+failure are recorded above. Client-model-call absence below describes the
+earlier observation window only.
+
+The current local source separates folder permissions from starting a Windows
+Sandbox. Default exec-policy inspection, folder registration, file permission
+setup and automatic owner-authority checks observe policy/authority without
+launching a VM. **Kiểm tra Sandbox và bật lệnh** prepares exec only after a
+confirmation describing the Windows Sandbox window. The advanced
+**Kiểm tra Sandbox** action also confirms before requesting a real probe.
+
+A real filesystem/nested-process probe on the exact selected workspace remains
+mandatory before installing exec policy. Concurrent probes for the same root
+and validated candidate hashes share one in-flight operation; only successful
+receipts are cached for five minutes. Missing/expired receipts report
+`not_checked / SANDBOX_PROBE_REQUIRED` and never implicitly start another VM.
+The diagnostic cache is evidence of the completed probe, not evidence of a
+running VM. An existing standing policy remains authorized while its exact
+workspace/generation and installed facade match fresh authenticated server
+authority; diagnostic cache expiry does not disable that policy. Actual
+execution success still requires the original Job result.
+
+The packaged unpacked candidate `machine-write-exec-1012-r5b` is activated on
+`DESKTOP-63643J4`, workspace `E:\DEV\Codex-web`, profile `web-mcp-assistant`.
+Epoch `activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111` reached
+**READY / OPEN** at **11:30:04.722 +07** with verified central route and
+projection rebuild. Native process `ev_bVSX46CWc8WG5`, server instance
+`XobFwIqZETgu9SLo`, and Host PID 31528 identify this runtime.
+
+**70 focused source tests passed**, including zero implicit launch during
+registration/refresh, explicit confirmation, declined/cancelled preparation,
+single-flight, cache expiry and authority reuse. Actual r5b package parity
+verified **91 application files, 298 resources and 9 adapters**; isolated smoke
+passed. The packaged status-only observer verified enabled exec policy and
+fresh current authority with **zero Sandbox launches** and a distinct
+`not_checked` diagnostic state. No backend change or headless Windows Sandbox
+claim is made.
+
+The authorized `svhome` scoped-artifact deployment uses serving baseline
+`9cae1044…` plus a one-file `store.py` overlay; 37 other release files remain
+byte-identical. Schema 29 release verification and SQLite integrity passed.
+Its package fingerprint is
+`sha256:5370e6ce030e72514b664b771f400437d337e7c5eb1c39b1ac90748662c3ceb0`,
+serving PID **921509**. The existing pilot/grants and historical read families
+are unchanged by this deployment.
+
+The first new shared MCP canary genuinely created and read back its test file,
+then failed its exact-file patch because the test targeted the protected
+`.coding-tools/**` source-mutation scope (`PROTECTED_PATH_WRITE`). This was a
+canary scope error; the protection remains intact. A genuine authenticated
+node observer bound the original native idempotency, RUN/WAVE, guard event and
+resource census, then appended a **failed** terminal receipt through the Node
+API. The original unknown receipt, node journal and native audit were
+preserved; no action replay or semantic acceptance occurred. Supported writer
+release and task close succeeded, with a current-generation census of
+**0 open tasks / 0 unreleased writers / 0 unsettled actions** after cleanup.
+The second canary `682718c387c14047828a0a2a02faf57e` passed through the actual
+shared MCP service: its five original create/read/patch/read-final/exec actions
+each completed with exactly one delivery attempt. Target
+`tests/fixtures/new-machine-shared-write-proof-20261012.txt` read back with
+SHA256 `99a756fdabac6c640b5752ae4ca6088301c1eff6318840a6377f6c262d42f8fa`.
+Patch action `act_f1b4d13e5c8949378edbe2626ad1271a`, receipt
+`rcpt_8cd4ec63fb0b4d95856ec40095269708`, produced canonical RUN
+`4967dd953ce74b5d97cbf01aad827139` / WAVE
+`d4b12a2aff6f4e4eb7dd06de65833aab`; semantic acceptance remains pending.
+Exec action `act_e054bbb4d7854e51b23d792e2774b293` observed original Job
+`65c2908a7371487cbfbb22ee1d60c262`, command `rGvwOG9A-yEHoioWxEvkl_6p`,
+exit **0**, exact fixture bytes and marker
+`NEW_MACHINE_SHARED_MCP_WRITE_EXEC_20261012_OK`. Task
+`task_e9aa123232834a9a85008e920de7e12e` closed and its writer was released;
+no unresolved original action or semantic acceptance was created by the canary.
+The exact MCP tunnel restart passed: PID **5383 → 924785**, child
+**5503 → 924804**, actual enabled main probe `ok`, `/healthz` and `/readyz`
+HTTP **200**, and first control-plane poll `ok`. Canonical credentials,
+pilot/grants, server PID and tool schema were preserved. Post-tunnel server
+observation confirmed ready heartbeat (about 14 seconds old), SQLite integrity
+`ok`, renewal timer active/enabled and census **0 tasks / 0 writers / 0 unsettled
+actions**.
+
+The final read-only Windows observation at **12:03:23 +07** kept the same
+READY/open epoch, exact Host and package, with zero active tool calls,
+commands, managed processes or agent lanes. Four awaiting-acceptance RUNs
+(including the new patch) and 18 stale history candidates (including the first
+canary REPLAN) remain preserved. Two Sandbox server/daemon processes were
+observed at OS level; neither zero-Sandbox nor process ownership is inferred.
+
+In actual ChatGPT settings, the refresh button was clicked, disabled while
+working and became enabled without an error toast. The same current canonical
+tunnel client recorded one remote `server/discover` and one `tools/list`, both
+HTTP 200, since its **11:58:51 +07** restart. This corroborates the observed
+refresh; counters do not expose individual request timestamps or prove
+persisted imported schema. A real ChatGPT model call remains unobserved.
+The saved connector description includes “Đọc, ghi file và chạy lệnh Windows
+trong sandbox theo quyền của thư mục đã chọn trong ứng dụng.”
+No connector permission or user message was changed. If an existing chat still
+shows the old empty exec schema, retry the connected app in a fresh ChatGPT
+turn; a successful model call is the remaining client-side proof boundary.
+
+Evidence: [focused setup checkpoint](../.coding-tools/reports/sandbox-explicit-setup-20261012/checkpoint.md),
+[test log](../.coding-tools/reports/sandbox-explicit-setup-20261012/focused-tests.txt),
+[r5b package parity](../.coding-tools/reports/shared-write-exec-20261012/r5-candidate-verification.json),
+[status-only observer](../.coding-tools/reports/shared-write-exec-20261012/r5-status-only-observation.json),
+[exact runtime identities](../.coding-tools/reports/shared-write-exec-20261012/r5-exact-runtime-identities.json),
+[server deployment](../.coding-tools/reports/shared-write-exec-20261012/server-deployment-receipt.json),
+[original failure reconciliation](../.coding-tools/reports/shared-write-exec-20261012/original-patch-failure-reconciliation-receipt-1791780720527.json),
+[original task cleanup](../.coding-tools/reports/shared-write-exec-20261012/original-canary-task-cleanup-receipt.json),
+[r2 original receipts](../.coding-tools/reports/shared-write-exec-20261012/shared-write-exec-receipt-r2-682718c387c14047828a0a2a02faf57e.ndjson),
+[tunnel restart](../.coding-tools/reports/shared-write-exec-20261012/reviewed-tunnel-restart-receipt.json),
+[post-tunnel server census](../.coding-tools/reports/shared-write-exec-20261012/post-tunnel-final-server-surface.json),
+[final Windows observation](../.coding-tools/reports/shared-write-exec-20261012/final-machine-observation-activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111-1791781403713.json),
+[actual ChatGPT UI receipt](../.coding-tools/reports/shared-write-exec-20261012/chatgpt-ui-update-observation.json),
+[remote catalog refresh correlation](../.coding-tools/reports/shared-write-exec-20261012/actual-chatgpt-refresh-tunnel-correlation.json),
+[saved ChatGPT connector description](../.coding-tools/reports/shared-write-exec-20261012/chatgpt-plugin-updated.jpg).
+
+This wave proves source/package/live canonical MCP write and exec, tunnel
+health and a ChatGPT UI refresh corroborated by remote discovery/tools-list
+HTTP 200. Git remains uncommitted on
+`main @ 7999c415`; authorized deployment and service operations occurred, with
+no push, public release, reboot or signed installer delivery. Final coding-tools
+history and secret guards passed for **8,846 files**, including the latest
+receipts and UI image; diff whitespace passed with no conflicts. At about
+**12:07 +07**, GitHub `origin` HEAD and `main` both matched local
+`7999c4151cb501db86f2e4d0a2275d33fc248324`. All local changes remain preserved
+and uncommitted.
+
+## New Windows machine r4 READY; shared MCP exec and renewal passed — 12-10-2026, 10:25 +07
+
+Historical r4 checkpoint; its active installation has been superseded by r5b above.
+
+`DESKTOP-63643J4` now operates the packaged unpacked candidate
+`machine-coldstart-1012-r4` for `E:\DEV\Codex-web`, profile
+`web-mcp-assistant`. Source is based on `main @ 7999c415`; a final GitHub
+`ls-remote` still returned that HEAD. The local repairs remain uncommitted.
+The r4 epoch `activation-mv4od6fe-c45648f5d945ceeb7f3640048b0e91b7`
+automatically reached **READY / OPEN** at 10:11:37.093, with matching component
+identities/revisions, verified projection rebuild and central route. A later
+runtime observation confirmed `fullyReady`, `centralConnected` and
+`authorityReady`, with `updateIncomplete=false`.
+
+Repairs cover the cold Windows Sandbox rendezvous/ready deadlines (150/180 s),
+current roaming Supervisor detection, and exclusive ownership of activation
+receipt production through admission. The strict receipt equality and
+historical acceptance guards remain intact. The permission-editor fixture now
+provides the current facade contract and fresh authority observation; its
+production permission guard is unchanged. Focused source proof passed, including
+16 concurrency checks, 21 activation regressions and 3 real-process Recovery
+E2E checks. R4 package parity passed for 91 application files, 298 resources and
+9 adapters; isolated packaged smoke passed.
+
+On the explicitly authorized `svhome` target, a reviewed one-file `store.py`
+overlay of serving baseline `9cae1044…` is deployed. The other 37 release files
+are byte-identical. Its corrected package fingerprint is
+`sha256:f235d3a2898ad53597e3b48e55e27d2278ea7d6d0c9fb2fef21301467a5d9712`;
+service PID 912047 and HTTPS health match it. The first deployment was refused
+because its manifest fingerprint was computed incorrectly; that failure is
+preserved and was resolved using the official fingerprint helper. Schema 29
+and SQLite integrity passed; protected backups remain on the server.
+
+Supported pilot transfer selected `bind_71661b1046884174b01c99af5f8546aa`,
+generation `generation_a420c8bfcfcb4e42b5bb7fc5e5cec097`, and new decision
+`pilot_dfb3174078d842299c41c6638830e505`. The previous machine's pilot was revoked
+as authorized. The two expired quarantined read families remain unchanged and
+unsettled on their retired generation; no replay or synthetic settlement occurred.
+
+One actual shared MCP exec trial passed at 10:16:21.353: original action
+`act_df3616c34cc74c59846ae2d4b5adf509`, original Job
+`41965b8ea98447cebebc0fcc71ebf396`, exit 0, exactly one delivery attempt,
+verified marker and completed receipt. Task closure and writer release are
+verified. An earlier inventory HTTP 400 was a pre-effect request error caused
+by missing stateless client-capability metadata; it created no task/action.
+The subsequent distinct attempt used the actual contract. Central census at
+10:19:17 confirmed zero open tasks/writers and a fresh exact READY heartbeat.
+
+The final query-only local census at 10:23:23 confirmed the same READY/open
+epoch and exact Host, `fullyReady=true`, zero active tool calls/commands/managed
+processes/background work/agent lanes, SQLite integrity `ok` and zero foreign-key
+violations. Three historical awaiting-acceptance RUNs remain preserved. Native
+OS observation found two remaining Sandbox server/daemon processes; it is not
+a zero-Sandbox or ownership claim. The build patch now has an exact `eol=lf`
+attribute so a later Windows checkout preserves its pinned raw hash.
+
+Transfer preserved the original **12-10-2026 10:42:51.067 +07** expiry.
+The operator then explicitly approved a 20-hour extension and continuing
+automatic renewal for this machine. At 10:25:31, one exact pilot-ID change in
+the protected server environment and the official renewal oneshot succeeded.
+The current expiry is **13-10-2026 06:25:31.435 +07**. The existing timer remains
+active/enabled with identical pre/post configuration; pilot scope, grants,
+historical evidence and main service PID are unchanged. Future renewal cycles
+have been configured, not claimed as already observed.
+This is genuine shared-service MCP/Windows execution proof. ChatGPT UI
+discovery/acceptance, reboot/logon continuity and a public signed installer are
+separate unproven boundaries. No commit, push, public release or Windows reboot
+occurred. Detailed evidence and remaining proof boundaries are in the
+[new-machine checkpoint](../.coding-tools/reports/new-machine-readiness-20261012/completion-checkpoint.md).
+
 ## r14 activated; original MCP patch/Job/proof passed — 12-10-2026, 07:36 +07
 
 `workflow-timeout-1012-r14` is activated for `web-mcp-assistant` on

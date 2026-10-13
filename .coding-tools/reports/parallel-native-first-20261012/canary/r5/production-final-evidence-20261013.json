@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "operation": "native_first_production_evidence_checkpoint",
+  "observed_at_ms": 1791847305379,
+  "status": "production_runtime_ready_with_acceptance_gates_preserved",
+  "production_activation": {
+    "policy_ok": true,
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "codex_web_execution_mode": "native_first",
+    "autocad_execution_mode": "native_first",
+    "policy_cross_package_restoration": true
+  },
+  "ubuntu_readiness": {
+    "ok": true,
+    "service_pid": 970133,
+    "service_stable": true,
+    "node_readiness": "ready",
+    "runtime_instance_id": "-s21-KH6ldxHjCSO",
+    "mcp_server_instance_id": "7GYqt3ZdkU47_HIr",
+    "activation_epoch": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+    "connector_contract_state": null,
+    "scopes": {
+      "Codex-web": {
+        "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+        "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+        "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+        "exact_scope_idle": true,
+        "census": {
+          "unclosed_tasks": 0,
+          "live_open_tasks": 0,
+          "unreleased_writers": 0,
+          "live_writers": 0,
+          "unsettled_actions": 0,
+          "queued_actions": 0,
+          "active_dispatch_actions": 0,
+          "reconciliation_required_actions": 0
+        }
+      },
+      "Autocad": {
+        "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+        "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+        "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+        "exact_scope_idle": false,
+        "census": {
+          "unclosed_tasks": 0,
+          "live_open_tasks": 0,
+          "unreleased_writers": 0,
+          "live_writers": 0,
+          "unsettled_actions": 3,
+          "queued_actions": 0,
+          "active_dispatch_actions": 0,
+          "reconciliation_required_actions": 3
+        }
+      }
+    },
+    "whole_device_census": {
+      "unclosed_tasks": 0,
+      "unreleased_writers": 0,
+      "unsettled_actions": 5,
+      "reconciliation_required_actions": 5
+    },
+    "unknown_projection_truncated": false,
+    "historical_unknown_count": 5
+  },
+  "parallel_overlap": {
+    "ok": true,
+    "attempt_id": "90307d8ef64b429aab250c9797538717",
+    "observation_client_recreated": true,
+    "reconnect_scope": "client_transport_only",
+    "no_second_exec_verified": true,
+    "overlap": {
+      "overlap_started_at_ms": 1791829410583,
+      "overlap_finished_at_ms": 1791829412661,
+      "overlap_duration_ms": 2078,
+      "clock_source": "same_windows_node_Date_now_correlated_with_hrtime_duration"
+    }
+  },
+  "idle_observation": {
+    "ok": true,
+    "expected_idle_seconds": 30,
+    "deprovision_phase_bound_seconds": 425,
+    "owned_record_absent": true,
+    "owned_daemon_absent": true,
+    "original_owned_hosts_absent": true,
+    "sandbox_named_memory_aggregate_absent": true,
+    "peak_observed_sandbox_working_set_bytes": 2860322816,
+    "final_sandbox_working_set_bytes": 0,
+    "terminal_to_teardown_ms": 390240,
+    "limitation": "No dedicated idle teardown receipt exists. Kernel aggregates are observations and carry no process ownership authority."
+  },
+  "native_continuation": {
+    "status": "lanes_complete_semantic_gate_separate",
+    "semantic_acceptance_performed": false,
+    "replayed_original_actions": false,
+    "combined_proof_counts": {
+      "reads": 100,
+      "patches": 20,
+      "readbacks": 20,
+      "node_jobs": 10,
+      "git_jobs": 3,
+      "approved_build": 1,
+      "build_readback": 1
+    },
+    "counts_derived_from_exact_unique_lanes": true,
+    "distinct_proven_native_job_count": 14,
+    "separate_gates_not_evaluated": [
+      "semantic_acceptance",
+      "autocad_unknown_reconciliation",
+      "real_dotnet_autocad_build"
+    ]
+  },
+  "semantic_acceptance": {
+    "ok": true,
+    "source_final_audit_accepted_count": 20,
+    "rows_checked": 20,
+    "proof_waves": {
+      "distinct_count": 20,
+      "proof_ids_distinct_count": 20,
+      "run_ids_distinct_count": 20
+    },
+    "checks": {
+      "all_accepted": true,
+      "no_patch_replay": true,
+      "no_native_execution_claimed": true,
+      "ledger_metadata_result_passed": true,
+      "paths_bound_exactly": true,
+      "cache_hit_false": true,
+      "proof_reuse_absent": true
+    }
+  },
+  "remaining_acceptance_gates": [
+    {
+      "gate": "autocad_unknown_reconciliation",
+      "status": "preserved_quarantine_required"
+    },
+    {
+      "gate": "real_dotnet_autocad_build",
+      "status": "not_executed"
+    },
+    {
+      "gate": "connector_contract_discovery",
+      "status": null
+    },
+    {
+      "gate": "dedicated_idle_teardown_receipt",
+      "status": "observation_limitation"
+    }
+  ],
+  "sources": [
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\semantic-independent-audit-20261013.json",
+      "sha256": "27cb096c65167fd6cdc4262e85227b27b0dec03bd7cc27746f769effcd1ccce9",
+      "size_bytes": 7803
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\parallel-overlap-receipt-90307d8ef64b429aab250c9797538717.ndjson",
+      "sha256": "045bdfd9e4cf9a197d50fbefd17734bb342854a1b235f05d63fed9a121c2f1a7",
+      "size_bytes": 23332
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r4\\isolated-idle-observation-a00b2f59ccb14bc68cb09dc4159f2237.json",
+      "sha256": "825be034aadf91cf807795bbdcd0d93121832983eece18027dad964daa34fab9",
+      "size_bytes": 94698
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\final-policy-1791835447951-2c32b007.json",
+      "sha256": "0d6f0a8d0d80ca3b6eff68bbb716f93cc91af5b3f06994f02307a3c93d6f4736",
+      "size_bytes": 3481
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-completion-20261013-002.json",
+      "sha256": "6dd4df415c6f70398adc593808d20af5ea0435439e76e4e591f984ef3acc65ae",
+      "size_bytes": 35990
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\canary\\r5\\native-first-continuation-evidence-join-20261013-v2.json",
+      "sha256": "157985de9727a4bad017260ee314f672db3cb87b1e82c5969cccef75dc17dfd5",
+      "size_bytes": 6961
+    }
+  ],
+  "no_live_mutation_performed": true
+}

@@ -2015,7 +2015,7 @@ class Runtime(
         if handler is None:
             raise JsonRpcError(-32602, f"Unknown tool: {name}", {"reason": "unknown_tool"})
         spec = TOOL_REGISTRY[name]
-        validate_arguments(name, args)
+        validate_arguments(name, self._exec_public_schema_arguments(args) if name == "exec_command" else args)
         if name in {"agent_workflow", "exec_command"}:
             self._preflight_tool_workspace_scope(name, args)
         try:

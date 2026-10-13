@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "policies",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r2\\win-unpacked",
+  "observed_at": "2026-10-12T12:32:36.182Z",
+  "observed_at_ms": 1791808356183,
+  "ok": false,
+  "stage": "exact_policies_workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+  "code": "1",
+  "mutating_action_started": false,
+  "retry_instruction": "Resolve the read-only gate before applying.",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r2-transition\\policies-failure-1791808356183.json"
+}

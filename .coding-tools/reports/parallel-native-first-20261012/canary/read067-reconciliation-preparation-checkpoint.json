@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "operation": "original_read067_rejected_result_preparation",
+  "observed_at_utc": "2026-10-12T13:20:04.7413140Z",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "git_branch": "main",
+  "worktree_state": "shared dirty changes preserved",
+  "files_sha256": {
+    "reconcile-original-read067.py": "03160ca067d0206812b12581190fbdb2c269e1acbaf141b2f9bc21817ef934c1",
+    "test-reconcile-original-read067.py": "745b7e2b02217606510f14a7e7c5cff2251364fea790dee54c3b126420feb434",
+    "OPERATOR_COMMANDS.md": "f6b510c2e5040bfc33f0ebc4d6da39cf5efd18abc1ac4480c78a54752321a525",
+    ".coding-tools/reports/native-first-20261012/parallel-r3-transition/packaged-operations.cjs": "78351c86549b4fce32abd6a060e86974ce660983888f330dfff41462fd09753d"
+  },
+  "offline_tests_passed": 5,
+  "exact_python_isolated_help_passed": true,
+  "controller_node_syntax_passed": true,
+  "original_action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a",
+  "original_attempt_id": "try_8d31c7cfb661441aadb9e620e47508a3",
+  "source_package_frozen": true,
+  "controller_preflight_requires_fresh_server": true,
+  "controller_requires_canonical_zero_active_work": true,
+  "confirms_append_only_rejected_result": true,
+  "original_unknown_receipt_preserved": true,
+  "local_journal_mutated_by_helper": false,
+  "production_mutation_performed_by_this_lane": false,
+  "commit_or_push_performed_by_this_lane": false,
+  "proof_limit": "Offline lineage and controller gate proof; root owns live reconciliation and canary delivery",
+  "next_action": "Root reviews and runs exact guarded preflight, then appends conservative rejected result and observes original settlement before closing task and writer"
+}

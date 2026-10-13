@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "operation": "final_r5_freshness_checkpoint",
+  "observed_at": "2026-10-12T11:35:46.387Z",
+  "observed_git_head_reference": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "no_additional_tests_run": true,
+  "verification_kind": "read-only source/package and preserved local state hashes",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-native-first-1012-r5\\win-unpacked",
+  "application_code_files": 89,
+  "application_source_drift": [],
+  "resource_proof": {
+    "exact_source": true,
+    "file_count": 299
+  },
+  "adapter_proof": {
+    "exact_source": true,
+    "file_count": 9
+  },
+  "executable_sha256": "638a1ef8f603ae2196f9fa4187a8f81a7af0b8b48a53ea314a42e3629ebf7aa7",
+  "app_asar_sha256": "f48c9143d7ae328305eae495934de747edaff6ad0ef76e91b5df73be16780d35",
+  "package_stable": true,
+  "parity_receipt": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r5-candidate-parity.json",
+    "sha256": "f935f12f11a04d8c3fbef89182a58a00bda77b16ec04433be350e04882049eb5"
+  },
+  "smoke_receipt": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\r5-packaged-smoke.json",
+    "sha256": "5f79f69293d73cb130bf9800be0237c28588f7fbdea260683c6f051603bc14cd",
+    "ok": true,
+    "exit_code": 0,
+    "observed_at": "2026-10-12T11:25:39.118299+00:00",
+    "fixture_generations_alive_after": []
+  },
+  "production_identity": {
+    "owner_pid": 38436,
+    "owner_process_start_token": "134362736855547600",
+    "instance_id": "b81bbad41b65c71f1bb4f21b0bdb8d10",
+    "installation_id": "2e511714fe3f1f64484f11778e1fe2a5c46bb5d5873f02047144b417f7996d0a"
+  },
+  "production_identity_stable": true,
+  "policy_file_drift": [],
+  "production_runtime_census_reference": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\production-transition-preflight-1791804360927.json",
+    "sha256": "20fd287b7fe0b529d0c9889ab1867743b8aae126856a6d5b19e93ae8ca520bd2",
+    "observed_at": "2026-10-12T11:26:00.926Z",
+    "activation": {
+      "activation_epoch_id": "activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937",
+      "state": "READY",
+      "admission_open": true,
+      "operation_id": "full-clean-mv53hzd3-3e0396c548cce5166fb43fdd"
+    },
+    "local_live_work_idle": true,
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    }
+  },
+  "current_decision": "Keep Codex-web as first canary and wait for historical UNKNOWN authority gate; preserve production r9e",
+  "local_activation_performed": false,
+  "service_operations_performed": false,
+  "task_or_policy_changes_performed": false,
+  "remaining_gate": "Three historical AutoCAD file-read actions remain UNKNOWN; generic TARGET_MISSING has ambiguous pre/post-read origin",
+  "next_action": "Wait for legitimate phase evidence or supported authority resolution; do not launch local transition",
+  "limitations": [
+    "Hash freshness is separate from behavior tests; prior successful tests/smoke are reused",
+    "Live job state is the cited fresh final census, not inferred from file hashes"
+  ],
+  "ok": true
+}

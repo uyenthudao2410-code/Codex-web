@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "operation": "reconcile-read067",
+  "observed_at": "2026-10-12T13:19:12.826Z",
+  "observed_at_ms": 1791811152826,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "operation": "original_read067_rejected_result_reconciliation",
+    "ok": true,
+    "action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a",
+    "attempt_id": "try_8d31c7cfb661441aadb9e620e47508a3",
+    "payload": {
+      "schema_version": 1,
+      "operation_kind": "control_plane_bounded_file_read",
+      "code": "FILE_READ_RESULT_REJECTED_OPERATOR_RECONCILIATION",
+      "diagnostic_code": "CONTROL_PLANE_FILE_READ_TIMEOUT",
+      "original_unknown_receipt_preserved": true,
+      "original_unknown_receipt_id": "rcpt_03cb8c766afb4a0ab6d5f9c53c75f317",
+      "original_unknown_receipt_digest": "52de73f30a4dfb8a837dda517770173d49c9a121a93dc9c3ab4ba4ad6d4af724",
+      "read_may_have_occurred": true,
+      "valid_bounded_read_receipt_retained": false,
+      "read_success_claimed": false,
+      "action_redispatched": false,
+      "reconciliation_required": false,
+      "original_local_journal_sha256": "2ce8609db47b2938188325945a82ffe78ddaa5ea595d601745d9a29d3017bc32",
+      "local_evidence_sha256": "fd2e6fce0576fd8a1e88e816bae8febc4084fa882cedcd86126f713358edc8a8",
+      "server_evidence_sha256": "47129ff347436be4eb0f3f24143cefa29cd61eea0d2e3414f2d60a374d9a8163"
+    },
+    "node_journal_modified": false,
+    "controller_gate_sha256": "ef297aa460ef23677cd8eccf87beab152371b71908e90b202c21f39a6b6d3cab",
+    "mode": "append_rejected_result",
+    "server_receipt": {
+      "receipt_id": "rcpt_c1fc74bc54894262995bad367d76b214",
+      "action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a",
+      "attempt_id": "try_8d31c7cfb661441aadb9e620e47508a3",
+      "receipt_state": "rejected",
+      "delivery_state": "settled",
+      "replayed": false
+    },
+    "controller_gate": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\original-read067-reconciliation-gate-1791811151577-19941cf0.json",
+    "original_intent_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\original-read067-rejected-result-intent.json"
+  },
+  "mutating": true,
+  "historical_unknown_preserved": true,
+  "parity_proof_sha256": "7a87e6196acdfa9f45788e5e54da11dc2d77a409d04ca851d113fb1d7ff5979b",
+  "smoke_proof_sha256": "a9a448f345dfadeb6b2bd5b566e14eb5939d2cb543c6536213810f1e8654b8ff",
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\reconcile-read067-1791811152826-5f896ecd.json"
+}

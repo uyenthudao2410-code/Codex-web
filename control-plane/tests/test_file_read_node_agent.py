@@ -375,6 +375,44 @@ class FileReadNodeAgentTests(unittest.TestCase):
             {"limit": 1, "lane": "bounded_file_read"},
         ))
 
+    def test_missing_target_rejects_before_read_and_result_validation_remains_unknown(self) -> None:
+        policy = self.install_policy()
+        for index, (code, expected_state) in enumerate((
+            ("CONTROL_PLANE_FILE_READ_TARGET_MISSING_BEFORE_DISPATCH", "rejected"),
+            ("CONTROL_PLANE_FILE_READ_TARGET_MISSING", "unknown"),
+            ("CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID", "unknown"),
+        )):
+            with self.subTest(code=code):
+                action = self.action()
+                action["expires_at_ms"] = policy["expires_at_ms"] - 1
+                action["action_id"] = f"action-file-read-refusal-{index}"
+                action["attempt_id"] = f"attempt-file-read-refusal-{index}"
+                receipts: list[dict[str, object]] = []
+
+                def request(_url, path, payload, _authorization=None):
+                    if path.endswith("/poll"):
+                        return {"actions": [action]}
+                    self.assertTrue(path.endswith("/receipts"))
+                    receipts.append(payload)
+                    return {"receipt_id": f"receipt-file-read-refusal-{index}"}
+
+                with mock.patch("control_plane.node_agent._request", side_effect=request), \
+                     mock.patch("control_plane.node_agent._runtime_status", return_value=self.strict_status()), \
+                     mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self.strict_identity()), \
+                     mock.patch("control_plane.node_agent.recovery_file_read_bridge", return_value=(None, code)) as bridge, \
+                     redirect_stdout(io.StringIO()):
+                    self.assertEqual(poll_file_read_once(self.args()), 0)
+                bridge.assert_called_once()
+                self.assertEqual(len(receipts), 1)
+                self.assertEqual(receipts[0]["receipt_state"], expected_state)
+                payload = receipts[0]["payload"]
+                self.assertEqual(payload["code"], code if expected_state == "rejected" else "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN")
+                self.assertEqual(payload.get("diagnostic_code"), code if expected_state == "unknown" else None)
+                journal = _read_file_read_journal(_file_read_journal_path(self.config_path))
+                entry = journal["entries"][f"{action['action_id']}|{action['attempt_id']}"]
+                self.assertEqual(entry["state"], expected_state)
+                self.assertTrue(entry["receipt"]["receipt_submitted"])
+
     def test_artifact_policy_cannot_read_the_same_relative_path_from_another_registered_root(self) -> None:
         """A file allowlist is scoped to its policy root, not to every root on a node."""
 

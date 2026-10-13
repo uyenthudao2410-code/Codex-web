@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "operation": "production_live_readonly_verification",
+  "observed_at": "2026-10-12T23:30:12.3315445Z",
+  "external_mutations_performed": false,
+  "database_mutations_performed": false,
+  "ubuntu": {
+    "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-live-verify-20261013-001.json",
+    "report_sha256": "d981305655184c87c8a9fed3375e8ee845f42a4e7ff7c90046c8494c03403319",
+    "ok": true,
+    "service_pid": 970133,
+    "service_stable": true,
+    "node": {
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "owner_id": "owner_default",
+      "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "readiness": "ready",
+      "runtime_instance_id": "-s21-KH6ldxHjCSO",
+      "mcp_server_instance_id": "7GYqt3ZdkU47_HIr",
+      "activation_epoch": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+      "contract_version": "sha256:0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "last_seen_at_ms": 1791847606189,
+      "revoked_at_ms": null,
+      "policy_state": "enabled",
+      "policy_expires_at_ms": 1791847665884,
+      "policy_sha256": "229a2db47f0d2e582d176867024d20981f05bfe03f8a149cfa1054a810769bf8",
+      "policy_observed_at_ms": 1791847606189,
+      "heartbeat_age_ms": 14984,
+      "heartbeat_fresh_60000_ms": true
+    },
+    "codex_web_scope": {
+      "expected_workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+      "expected_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+      "active_bindings": [
+        {
+          "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+          "owner_id": "owner_default",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "created_at_ms": 1791772900597,
+          "revoked_at_ms": null
+        }
+      ],
+      "active_registrations": [
+        {
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "registered_at_ms": 1791772866762,
+          "retired_at_ms": null
+        }
+      ],
+      "delegated_inventory_targets": [
+        {
+          "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "binding_state": "active",
+          "workspace_state": "active",
+          "node_state": "active",
+          "readiness": "ready",
+          "presence_state": "online",
+          "dispatch_state": "dispatchable"
+        }
+      ],
+      "census": {
+        "unclosed_tasks": 0,
+        "live_open_tasks": 0,
+        "expired_unclosed_tasks": 0,
+        "unreleased_writers": 0,
+        "live_writers": 0,
+        "expired_unreleased_writers": 0,
+        "unsettled_actions": 0,
+        "unsettled_by_delivery_state": {},
+        "queued_actions": 0,
+        "active_dispatch_actions": 0,
+        "reconciliation_required_actions": 0
+      },
+      "exact_scope_idle": true,
+      "serving_activation_unresolved_action_blockers": 0
+    },
+    "autocad_scope": {
+      "expected_workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "expected_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "active_bindings": [
+        {
+          "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+          "owner_id": "owner_default",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "created_at_ms": 1791791011230,
+          "revoked_at_ms": null
+        }
+      ],
+      "active_registrations": [
+        {
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "registered_at_ms": 1791790578705,
+          "retired_at_ms": null
+        }
+      ],
+      "delegated_inventory_targets": [
+        {
+          "binding_id": "bind_8cd903180f3146099fea128bf55c0b4b",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "endpoint_id": "executor-4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+          "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+          "binding_state": "active",
+          "workspace_state": "active",
+          "node_state": "active",
+          "readiness": "ready",
+          "presence_state": "online",
+          "dispatch_state": "dispatchable"
+        }
+      ],
+      "census": {
+        "unclosed_tasks": 0,
+        "live_open_tasks": 0,
+        "expired_unclosed_tasks": 0,
+        "unreleased_writers": 0,
+        "live_writers": 0,
+        "expired_unreleased_writers": 0,
+        "unsettled_actions": 3,
+        "unsettled_by_delivery_state": {
+          "reconcile_required": 3
+        },
+        "queued_actions": 0,
+        "active_dispatch_actions": 0,
+        "reconciliation_required_actions": 3
+      },
+      "exact_scope_idle": false,
+      "serving_activation_unresolved_action_blockers": 0
+    },
+    "whole_device_census": {
+      "unclosed_tasks": 0,
+      "live_open_tasks": 0,
+      "expired_unclosed_tasks": 0,
+      "unreleased_writers": 0,
+      "live_writers": 0,
+      "expired_unreleased_writers": 0,
+      "unsettled_actions": 5,
+      "unsettled_by_delivery_state": {
+        "reconcile_required": 5
+      },
+      "queued_actions": 0,
+      "active_dispatch_actions": 0,
+      "reconciliation_required_actions": 5
+    },
+    "unknown_count": 5,
+    "unknown_action_ids": [
+      "act_9db9b985a3d648b5b941f2e13a30ee47",
+      "act_52409c69f1b84e08bb3fdd86747f79c3",
+      "act_3849e259d55546639794cec40f63fea8"
+    ],
+    "sqlite_integrity_ok": true,
+    "tunnel_ready": {
+      "ready": true,
+      "status": 200
+    }
+  },
+  "windows": {
+    "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\status-1791847730916-e31f2a58.json",
+    "report_sha256": "2b8ba5752b0d451be0beb08a526a81e50a654c22f518bcb399ec6c072a4f1036",
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "ok": true,
+    "runtime": {
+      "fullyReady": true,
+      "mcpRunning": true,
+      "nativeAlive": true,
+      "executionRole": "central_executor",
+      "authorityReady": true,
+      "centralConnected": true,
+      "centralStatusReason": null,
+      "updateIncomplete": false,
+      "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "activation": {
+      "activation_epoch_id": "activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c",
+      "operation_id": "full-clean-mv5gbrfl-df33ff07e69884911663f07d",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "b10bcb9eb9d2fd835989b3bf0fd8618eabbf2b48cfcc5c5a21f24a0718030479",
+      "expires_at_unix_ms": 1791822216033,
+      "ready_at": "2026-10-12T16:14:13.586Z",
+      "error": null
+    },
+    "census_counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    },
+    "runtime_census_blockers": [
+      "live_runtime_state_process"
+    ]
+  },
+  "supervisor_manifest": {
+    "path": "C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\recovery-supervisor\\manifest.json",
+    "sha256": "a8b6ca0eaa7f16b8f35fafc2474412b43248b83c52b165a6902f883003d50fde",
+    "mode": "packaged",
+    "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+    "app_root": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+    "agent_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\resources\\resources\\control-plane\\node_agent.py",
+    "node_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked\\Coding Tools MCP.exe",
+    "executable_sha256": "f88e1f0c810031c50b07532130fe946c07047c895780387313ad008f60aa2937",
+    "matches_candidate": true
+  },
+  "shortcuts": [
+    {
+      "path": "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk",
+      "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked\\Coding Tools MCP.exe",
+      "working_directory": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+      "matches_candidate": false
+    },
+    {
+      "path": "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk",
+      "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked\\Coding Tools MCP.exe",
+      "working_directory": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked",
+      "matches_candidate": false
+    }
+  ],
+  "shortcuts_match_candidate": false,
+  "sandbox_named_census": {
+    "process_count": 0,
+    "processes": []
+  },
+  "notes": [
+    "Shortcut audit is read-only and found stale r3 targets; no shortcut mutation performed.",
+    "Recovery Supervisor manifest points to exact r4-timefix candidate.",
+    "Autocad UNKNOWN actions remain reconcile_required/quarantined and were not settled or replayed.",
+    "Windows runtime census reports live_runtime_state_process only; active commands and managed jobs are zero."
+  ]
+}
+

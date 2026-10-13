@@ -1,0 +1,49 @@
+{
+  "operation": "native_overlay_inert_upload_and_preflight",
+  "ok": false,
+  "uploaded_artifacts": [
+    {
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-native-first-1012-e707cccda6fc.tar.gz",
+      "sha256": "68ce2356253b5e7ebdda0673693e7c15afe4a1a8822550698432cf089a3fc27b"
+    },
+    {
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.native-first-e707cccda6fc-5dbbd90823c5.json",
+      "sha256": "d85024c60a5e8510edd23184a2c856001253d25c87cb2172bdded859873c3094"
+    },
+    {
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.native-first-e707cccda6fc-5dbbd90823c5.py",
+      "sha256": "5dbbd90823c5fc10111955d0f041affb3ee97231225ffc8b0b544f6e1500177b"
+    }
+  ],
+  "upload_receipts": [
+    {
+      "operation": "inert_native_overlay_upload",
+      "ok": true,
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-native-first-1012-e707cccda6fc.tar.gz",
+      "sha256": "68ce2356253b5e7ebdda0673693e7c15afe4a1a8822550698432cf089a3fc27b"
+    },
+    {
+      "operation": "inert_native_overlay_upload",
+      "ok": true,
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.native-first-e707cccda6fc-5dbbd90823c5.json",
+      "sha256": "d85024c60a5e8510edd23184a2c856001253d25c87cb2172bdded859873c3094"
+    },
+    {
+      "operation": "inert_native_overlay_upload",
+      "ok": true,
+      "path": "/home/svhome/.local/lib/codex-control-plane/releases/.native-first-e707cccda6fc-5dbbd90823c5.py",
+      "sha256": "5dbbd90823c5fc10111955d0f041affb3ee97231225ffc8b0b544f6e1500177b"
+    }
+  ],
+  "preflight": {
+    "operation": "native_first_overlay_preflight",
+    "ok": false,
+    "stage": "read_only_preflight",
+    "error_code": "LIVE_WORK_BLOCKS_SERVICE_TRANSITION",
+    "external_mutations_performed": false
+  },
+  "runtime_mutations": false,
+  "authority_mutations": false,
+  "deployment_helper_sha256": "5dbbd90823c5fc10111955d0f041affb3ee97231225ffc8b0b544f6e1500177b",
+  "root_execute_command": "python3 -B /home/svhome/.local/lib/codex-control-plane/releases/.native-first-e707cccda6fc-5dbbd90823c5.py --receipt /home/svhome/.local/lib/codex-control-plane/releases/.native-first-e707cccda6fc-5dbbd90823c5.json --execute"
+}

@@ -34,6 +34,7 @@ __pycache__/
 .claude
 # Generated patch files
 *.patch
+!scripts/patches/mxc-windows-sandbox-c-drive-share.patch
 
 # Automation worktrees must live outside .coding-tools so Coding Tools history
 # remains fully versioned. Temporary worktrees outside that evidence root may

@@ -1,0 +1,49 @@
+{
+  "observed_at_utc": "2026-10-12T10:19:52.0471906+00:00",
+  "operation": "workspace_display_final_checkpoint",
+  "git_branch": "main",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "dirty": true,
+  "status_entry_count": 90,
+  "conflict_entry_count": 0,
+  "focused_source_unchanged": [
+    {
+      "path": "E:\\DEV\\Codex-web\\renderer\\app.js",
+      "matches": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\renderer\\index.html",
+      "matches": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\tests\\folder-permission-editor.test.js",
+      "matches": true
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\tests\\control-center-manager.test.js",
+      "matches": true
+    }
+  ],
+  "focused_tests_passed": 96,
+  "local_observer": "r9e-transition/final-machine-observation-activation-mv53i8gp-f06eeb5b46a11d2cf7ebdc9445606937-1791800187814.json",
+  "live_renderer": "live-renderer-verification-1791800160320.json",
+  "server_observer": "final-server-observation-1791800243955.json",
+  "local_runtime_ready_open_verified": true,
+  "live_commands_backgrounds_at_observation": 0,
+  "historical_acceptance_preserved": true,
+  "local_operations_performed": [
+    "ordinary_stop_once",
+    "retire_r9d_ui_host",
+    "install_r9e_supervisor",
+    "launch_r9e_ui",
+    "supported_full_clean_refresh",
+    "update_two_shortcuts"
+  ],
+  "server_mutation_performed": false,
+  "commit_push_release_performed": false,
+  "whitespace_check": "PASS",
+  "coding_tools_history_guard": "PASS",
+  "secret_guard": "PASS",
+  "report": "KET_QUA_r9e.md",
+  "remaining_blocker": null
+}

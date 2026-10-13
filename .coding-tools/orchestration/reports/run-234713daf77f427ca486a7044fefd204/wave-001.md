@@ -47,6 +47,7 @@
 | 45114 | 2026-09-09T06:18:58.743Z | quality_outcome_recorded |  |  |  |
 | 45115 | 2026-09-09T06:18:58.934Z | state_transition | ACCEPTING | CHECKPOINTED | reason=controller_acceptance |
 | 45116 | 2026-09-09T06:18:59.218Z | wave_processes_quiesced |  |  | reason=orchestration_state:checkpointed |
+| 48683 | 2026-09-11T03:25:09.273Z | observation_span_recorded |  |  |  |
 
 ## Proof
 
@@ -63,5 +64,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `231`
-- Chain head: `83c68f9b21664b18ba2e273df06f5ef64b59a53bb381c6d75417f9152e6f8859`
+- Events checked: `232`
+- Chain head: `b9416a08fc5b9abf654982dbe254dfcc40ce1f57dee0e17171eb79386904b448`

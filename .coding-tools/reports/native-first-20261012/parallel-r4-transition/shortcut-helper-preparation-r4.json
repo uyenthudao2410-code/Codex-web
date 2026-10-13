@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "operation": "shortcut_helper_preparation_r4",
+  "observed_at_utc": "2026-10-12T15:20:04.801727+00:00",
+  "read_only_preparation": true,
+  "production_shortcuts_mutated": false,
+  "one_shot_intent_required": true,
+  "apply_switch_required": true,
+  "no_replay_after_uncertain": true,
+  "preserves_existing_r3_backups": true,
+  "script": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\update-coding-tools-shortcuts-r4.ps1",
+  "script_sha256": "625dd1c5b070d48435e8bde706315d42ca1a4ab129c0c86dfe49ab9deb33bb0c",
+  "r3_shortcut_evidence": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\shortcuts-r3.json",
+  "r4_parity_proof": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-candidate-parity.json",
+  "r4_smoke_proof": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-packaged-smoke.json",
+  "r4_ready_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r4-transition\\status-1791815928643-e7d3c41b.json",
+  "validation": [
+    "PowerShell AST parser passed",
+    "git diff --check passed for helper diff"
+  ],
+  "runtime_mutation_performed": false
+}

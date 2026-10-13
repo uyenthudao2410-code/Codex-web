@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "operation": "prepared_owned_sandbox_supported_stop_producer",
+  "observed_at_ms": 1791784227359,
+  "script": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\sandbox-not-started-20261012\\owned-sandbox-stop-proof.py",
+  "script_sha256": "0800232e32ec042ea995b8991ad679c9846a27323cfb316877671a172cee35a7",
+  "invocation_performed": false,
+  "stop_effect_performed": false,
+  "source_edits_performed": false,
+  "validation": {
+    "ast_parse": "PASS",
+    "offline_guard_cases_passed": 7,
+    "cases": [
+      "exact owned ID/path/PID creation/vendor proof accepted with nonce excluded",
+      "foreign sandbox ID rejected",
+      "stopped record rejected",
+      "PID reuse rejected",
+      "foreign daemon executable rejected",
+      "foreign VM process rejected",
+      "wrong writable workspace rejected"
+    ],
+    "real_vm_or_command_effects": false
+  },
+  "manifest_schema": {
+    "candidate": "absolute reviewed r6 win-unpacked",
+    "ok": true,
+    "app_asar_sha256": "SHA256",
+    "executable_sha256": "SHA256",
+    "packaged_adapter_sha256": "SHA256",
+    "backend_hashes": {
+      "wxc-exec.exe": "SHA256",
+      "wxc-windows-sandbox-daemon.exe": "SHA256",
+      "wxc-windows-sandbox-guest.exe": "SHA256",
+      "mxc-windows-sandbox.provenance.json": "SHA256"
+    }
+  },
+  "warm_proof_shape": "ready_for_root_supported_owned_vm_stop NDJSON checkpoint from reviewed r6 three-stage canary",
+  "supported_phase": "stop",
+  "mapping_expected_after": "preserved stopped record",
+  "no_deprovision": true,
+  "no_arbitrary_process_kill": true,
+  "nonce_saved": false,
+  "next_action": "Root peer reviews producer before any read-only prepare invocation; exact warm proof and live r6 identity required"
+}

@@ -1,0 +1,18 @@
+{
+  "changes": [
+    {
+      "backup": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\shortcut-backup-0.lnk",
+      "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked\\Coding Tools MCP.exe",
+      "path": "C:\\Users\\Admin\\Desktop\\Coding Tools MCP.lnk"
+    },
+    {
+      "backup": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\shortcut-backup-1.lnk",
+      "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-native-1012-r3\\win-unpacked\\Coding Tools MCP.exe",
+      "path": "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Coding Tools MCP.lnk"
+    }
+  ],
+  "ok": true,
+  "observed_at_ms": 1791809672930,
+  "ready_receipt": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\native-first-20261012\\parallel-r3-transition\\status-1791809052309-179002f3.json",
+  "operation": "activate_production_shortcuts"
+}

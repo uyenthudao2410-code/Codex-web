@@ -1,0 +1,60 @@
+{
+  "operation": "r9d_exec_only_offline_validation",
+  "live_execution_performed": false,
+  "production_authority_modified": false,
+  "original_canary_file_preserved": true,
+  "commands": [
+    {
+      "lane": "node_version",
+      "argv_item_bytes": [
+        4,
+        9
+      ],
+      "facade": "pass",
+      "store": "pass"
+    },
+    {
+      "lane": "node_cwd",
+      "argv_item_bytes": [
+        4,
+        2,
+        13
+      ],
+      "facade": "pass",
+      "store": "pass"
+    },
+    {
+      "lane": "node_hash",
+      "argv_item_bytes": [
+        4,
+        2,
+        134
+      ],
+      "facade": "pass",
+      "store": "pass"
+    },
+    {
+      "lane": "dotnet",
+      "argv_item_bytes": [
+        6,
+        9
+      ],
+      "facade": "pass",
+      "store": "pass"
+    }
+  ],
+  "original_pre_admission_failure": {
+    "type": "ValidationError",
+    "message": "argv is invalid.",
+    "inline_bytes": 1201,
+    "contains_forbidden_semicolons": true,
+    "cwd_empty_is_valid": true
+  },
+  "python_sha256": "9d1903d588fddcd6c979c4c4f3e868c7156219c924717d8e6d502a1778ceb4d6",
+  "expected_guest_cwd": "C:\\CodexWorkspace\\share-0",
+  "expected_existing_file_sha256": "3a42ea5c3e68101db07001a265b9fb4fcbbc0021ed965139dcf10ea99ba73023",
+  "validator_sha256": {
+    "mcp_facade": "133b6d891290fd37303f14eb2919e03903ead7b3f36510c55ebd843dd36dcac0",
+    "store": "7c992e2242d8b4135a153c1fb2fd2714159ff0ae384c205314776d1bd687a3aa"
+  }
+}

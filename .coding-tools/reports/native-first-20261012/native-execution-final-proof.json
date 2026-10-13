@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "host": "DESKTOP-63643J4",
+  "capture_started_utc": "2026-10-12T11:03:20.416534+00:00",
+  "capture_finished_utc": "2026-10-12T11:03:38.135237+00:00",
+  "operator_timezone": "Asia/Saigon",
+  "scope": "final source checkout native-only temporary Windows workspace; no live Desktop or external Control Plane activation",
+  "source_sha256": {
+    "windows_execution_policy.py": "64ddb0c698fd3ac2f81a38553ff525bd59dd356bb5160836e8ed81b853eef986",
+    "exec_tools.py": "0e241227147ff30314ed730c9b685c147b9aff973f8c6dd6018dab43d4d1448c",
+    "processes.py": "7bec816f59f9cc93e475406eaed26d34820fcce592be191fed9f780d5782c37f",
+    "session_control.py": "46e79de45e879ff08dae96d801c8c7487e32ef4b29f26f8f70003c218eb9e5cb",
+    "server.py": "01840da72f3dc79cc67ff75e3c2dceb92c19652d982aad9c5a43fba86890b7a1",
+    "runtime_config.py": "ba481eb36df1e339d26233b2c3f1fdf23ad919dbec092bb28b09a7a2da6d2f77",
+    "windows_mxc_sandbox.py": "a355fbae8a956bc9c49d253848fe2b8d06b18edeae96e600a7a07516a9315d58"
+  },
+  "probe": {
+    "pinned_executor_sha256_verified": true,
+    "required_tier": "base-container",
+    "allow_dacl_mutation": false,
+    "result": "passed"
+  },
+  "host_token": {
+    "elevated": false,
+    "integrity_rid": 8192
+  },
+  "host_gate": {
+    "elevated_denied": true,
+    "integrity_above_medium_denied": true,
+    "unverified_query_denied": true
+  },
+  "measurement": {
+    "sample_size": 10,
+    "distinct_tool_shapes": 1,
+    "argv": [
+      "node",
+      "--version"
+    ],
+    "unique_command_ids": 10,
+    "unique_job_ids": 10,
+    "successful_terminal_jobs": 10,
+    "active_commands_after": 0,
+    "vm_adapter_calls": 0,
+    "duration_seconds": 10.561791
+  },
+  "vm_assertion": {
+    "primary_method": "VM adapter patched to raise if invoked during all 10 source-runtime commands",
+    "process_census_method": "before/after snapshots of named Sandbox/Vmmem processes, not continuous monitoring",
+    "before": [],
+    "after": []
+  },
+  "security_and_git_proof": {
+    "test": "tests/test_windows_execution_policy.py::WindowsNativeExecutionIntegrationTests::test_native_git_metadata_does_not_execute_repository_helpers",
+    "actual_cli_shapes": [
+      [
+        "git",
+        "status",
+        "--short"
+      ],
+      [
+        "git",
+        "diff"
+      ],
+      [
+        "git",
+        "log",
+        "--oneline",
+        "-n",
+        "1"
+      ]
+    ],
+    "result": "passed",
+    "fixture": "temporary E: Git repository with local fsmonitor/extdiff/textconv/GPG script helpers; all helper sentinel files remained absent; VM adapter call count 0; rooted gitdir/work-tree remain inside workspace"
+  },
+  "resource_caps": {
+    "memory_bytes": 2147483648,
+    "active_processes": 64,
+    "cpu_rate_percent": 50,
+    "cpu_time_ms": 30000,
+    "installed_before_resume": true,
+    "actual_query_test": "tests/test_windows_job_object.py::WindowsJobObjectTests::test_native_limits_are_installed_on_the_windows_job"
+  },
+  "limitations": [
+    "10 repetitions of one Node version shape, not 10 different CLI toolchain compatibility proofs",
+    "Child effective token queries unavailable: whoami group/priv queries returned1; Python token fixture exited126; no child privilege claim",
+    "Bare Python approved runtime fixture compatibility failed exit126; Python/AutoCAD/.NET builds are not proven on host",
+    "leastPrivilege LPAC switch incompatible with required no-DACL BaseContainer, not enabled; host elevation gate used",
+    "No production workspace binding, task recovery canary, deployment, service restart, VM startup or VM shutdown performed",
+    "Job caps queried on Windows, but peak resource usage and RAM return not benchmarked"
+  ],
+  "commands": [
+    {
+      "ordinal": 1,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "dylv9Hs_OQPETgU0BGGe3aMf",
+      "job_id": "6b60fd320c904216a72bb817baffe556",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.069672,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 2,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "tLuWni265WBdNK12qhT2bAb3",
+      "job_id": "56ee4d23041947c4b37e08d033ad6159",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.818677,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 3,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "Cd-a0vWnocvIKnSJ29V9gVig",
+      "job_id": "b1d07b0d0c4a4079ba23367368266ec3",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.913384,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 4,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "qXs7oBGJT6yX-YQ07AiT8lJO",
+      "job_id": "f7b3b3837fb7423fa731ae8cf5b8f4c5",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.873185,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 5,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "jsNx0f1lxjMRLfn5Wxx-0kN-",
+      "job_id": "76b559336e844079b01cf111684f2f31",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.071628,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 6,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "dE3a1dTobNM10ycxAdp50NWG",
+      "job_id": "0b3be7f171e447d0988041bd59e3b2c6",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.084336,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 7,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "1mlINKoz0b94Pl72LlFvK8Q6",
+      "job_id": "bd3037422e5f41c0aa0a37fe4671fb2e",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.253104,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 8,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "CBoRTCIf5en83cigaAlXOUdB",
+      "job_id": "70a1440dad084b3c82f18cc80d75133a",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.399383,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 9,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "Sw5gs0Kzx_WwVya-Vpu6cajm",
+      "job_id": "dcb3dc794bbb4b6194b76a54b59a7841",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 1.131756,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ordinal": 10,
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "command_id": "fcn6NkaQqe2DrxGwWuHqU4ZM",
+      "job_id": "90a6869ca63f4897b362efd7e233575b",
+      "status": "exited",
+      "durable_lifecycle_state": "exited",
+      "exit_code": 0,
+      "execution_backend": "native",
+      "isolation_level": "process_container",
+      "policy_decision": "native_safe_command",
+      "later_poll_matches": true,
+      "duration_seconds": 0.946666,
+      "stdout_sha256": "bc697de995dc791df53d688ef69c08994cdffc8ce30c906b1ffc65b131ccd0eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

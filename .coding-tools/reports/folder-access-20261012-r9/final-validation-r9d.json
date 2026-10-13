@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "operation": "final_operator_validation_receipt",
+  "observed_at": "2026-10-12T09:40:19.313Z",
+  "basis": "Prior successful tool outputs in this repair; no product or database mutations by this receipt",
+  "git": {
+    "branch": "main",
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "remote_main": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "remote_query": "git ls-remote origin refs/heads/main",
+    "remote_query_exit_code": 0,
+    "remote_matches_head": true,
+    "changed_paths": 86,
+    "untracked_paths": 42,
+    "conflict_paths": 0,
+    "diff_check_exit_code": 0,
+    "commit": false,
+    "push": false
+  },
+  "autocad": {
+    "branch": "feat/qs-trace-popup-horizontal",
+    "head": "4d6c6aee0733c334756c3220d4df40767c74322e",
+    "conflict_paths": 0,
+    "changes": [
+      ".coding-tools/",
+      "mcp-access-smoke-20261012-r9c.txt",
+      "mcp-access-smoke-20261012-r9d.txt"
+    ],
+    "functional_source_changed": false
+  },
+  "policy": {
+    "command": "npm run check:coding-tools-history",
+    "exit_code": 0,
+    "repository_secret_check": "PASS",
+    "coding_tools_history_check": "PASS",
+    "observed_evidence_files": 9506
+  },
+  "limitations": [
+    "Counts are the earlier final Git/policy observations, before completion report additions; volatile evidence may grow.",
+    "Pending native semantic acceptance and historical UNKNOWN evidence are projected separately in completion-r9d.json."
+  ]
+}

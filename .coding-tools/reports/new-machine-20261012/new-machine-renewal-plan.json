@@ -1,0 +1,107 @@
+{
+  "operation": "new_machine_authority_renewal_plan",
+  "mode": "read_only_proposal_not_executed",
+  "inspection": [
+    {
+      "operation": "authority_renewal_readonly_inspection",
+      "observed_at_ms": 1791774858173,
+      "configured_nonsecret_authority_fields": {
+        "CONTROL_PLANE_SCOPED_PILOT_DECISION_ID": "pilot_88e220659e1d43a6b1b2a301f8424f88",
+        "CONTROL_PLANE_MCP_SERVICE_GRANT_ID": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+        "CONTROL_PLANE_AUTHORITY_RENEWAL_ENABLED": "true",
+        "CONTROL_PLANE_AUTHORITY_GRANT_TTL_SECONDS": "2419200",
+        "CONTROL_PLANE_AUTHORITY_GRANT_WINDOW_SECONDS": "86400",
+        "CONTROL_PLANE_AUTHORITY_PILOT_TTL_SECONDS": "72000",
+        "CONTROL_PLANE_AUTHORITY_PILOT_WINDOW_SECONDS": "7200"
+      }
+    },
+    {
+      "configured_decision": [
+        {
+          "decision_id": "pilot_88e220659e1d43a6b1b2a301f8424f88",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "binding_id": "bind_5a2b112661cf421aaf68f42b1828b172",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_fe5aea8e583749c3bd59986650144bb2",
+          "expires_at_ms": 1791718289192,
+          "revoked_at_ms": 1791689938056
+        }
+      ],
+      "new_decision": [
+        {
+          "decision_id": "pilot_dfb3174078d842299c41c6638830e505",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+          "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+          "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+          "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+          "expires_at_ms": 1791776571067,
+          "revoked_at_ms": null
+        }
+      ],
+      "grant": [
+        {
+          "grant_id": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+          "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+          "scopes_json": "[\"control-plane.inventory\",\"control-plane.patch\",\"control-plane.read\"]",
+          "expires_at_ms": 1792756981903,
+          "revoked_at_ms": null
+        }
+      ]
+    },
+    {
+      "unit": "codex-control-plane-authority-renewal.service",
+      "configuration_lines": [
+        "EnvironmentFile=%h/.config/codex-control-plane/control-plane.env",
+        "ExecStart=/usr/bin/python3 -B %h/.local/lib/codex-control-plane/current/deploy/control-plane-authority-renewal.py"
+      ]
+    },
+    {
+      "unit": "codex-control-plane-authority-renewal.timer",
+      "configuration_lines": [
+        "OnUnitInactiveSec=15min",
+        "Persistent=true",
+        "Unit=codex-control-plane-authority-renewal.service"
+      ]
+    },
+    {
+      "renewal_failure_safe_reason": "configured scoped pilot decision is expired or revoked"
+    },
+    {
+      "renewal_failure_safe_reason": "configured scoped pilot decision is expired or revoked"
+    },
+    {
+      "renewal_failure_safe_reason": "configured scoped pilot decision is expired or revoked"
+    }
+  ],
+  "protected_environment": {
+    "path": "/home/svhome/.config/codex-control-plane/control-plane.env",
+    "mode": "0600",
+    "observed_sha256": "397deda57770c66ab40ef2bae19506118b99605549551c3f199859c7cc6c347d"
+  },
+  "exact_proposed_change": {
+    "key": "CONTROL_PLANE_SCOPED_PILOT_DECISION_ID",
+    "from": "pilot_88e220659e1d43a6b1b2a301f8424f88",
+    "to": "pilot_dfb3174078d842299c41c6638830e505"
+  },
+  "authorization_needed": "Explicitly continue and renew the exact new-machine pilot beyond original 2026-10-12T10:42:51.067+07:00 expiry.",
+  "existing_policy": {
+    "grant_ttl_seconds": 2419200,
+    "grant_window_seconds": 86400,
+    "pilot_ttl_seconds": 72000,
+    "pilot_window_seconds": 7200,
+    "api_grant_max_seconds": 2592000,
+    "api_pilot_max_seconds": 86400,
+    "timer_on_active_seconds": 300,
+    "timer_on_unit_inactive_seconds": 900
+  },
+  "proposed_sequence": [
+    "Verify current service/READY/registered generation/binding/principal and live exact new pilot; source helper hash and protected environment SHA unchanged.",
+    "Write protected remote0600 backup, guarded replace exactly one configured pilot ID, preserve all other environment bytes.",
+    "Start existing codex-control-plane-authority-renewal.service before pilot expiry. It reloads EnvironmentFile; no main server restart or daemon-reload needed.",
+    "Read back exact target pilot renewal receipt, expiry within current20h TTL/API24h maximum, unchanged scopes/principal/binding/generation and grant bearer; verify timer continues existing schedule."
+  ],
+  "failure_behavior": "Expired/revoked pilots cannot be renewed; preserve fail-closed admission and use separately authorized recovery-time exact new decision if deadline was missed.",
+  "executed": false
+}

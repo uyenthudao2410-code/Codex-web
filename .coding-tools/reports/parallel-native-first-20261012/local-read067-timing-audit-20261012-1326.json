@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "operation": "local_original_read067_timing_audit",
+  "observed_at_utc": "2026-10-12T13:28:39.443722+00:00",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "git_branch": "main",
+  "source_worktree_hashes": {
+    "electron/services/runtimeOrchestrator.js": "e9d42d7e78e8605b5da8d52d90e659ccc6dfa7480e37fb08b9dbaee5bf355e60",
+    "electron/services/recoveryHost.js": "a9eabdb51fc5d0f8844f03fc027efedf1dd159b8887b047b0f9a8c7a4c190813",
+    "electron/services/recoveryIpc.js": "57e0154c4d9f80bcfc5fa95ec5c4643de436d8fe945e9b3ab884afd9b8faebc2",
+    "electron/services/recoveryHostLauncher.js": "04999b097376ba69c95927db6936df21f8ada58198af9b14e803e8fcc1137fd1",
+    "control-plane/control_plane/recovery_file_read_bridge.cjs": "a5faf8b9d6b47b3d17e7b1c8dcaf436fab9a43b427958844c306af429eaeb964",
+    "control-plane/control_plane/node_agent.py": "bee27651ef1fba03f6f6c52dd1a93fe671f07d7b73b0402118ead88c97f9dffe",
+    "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py": "ab689ccd9843b1a9afd443fdff61c9c35d5b1e054e99a85bd2e8130a69a54e9f",
+    "resources/coding-tools-mcp/coding_tools_mcp/server.py": "01840da72f3dc79cc67ff75e3c2dceb92c19652d982aad9c5a43fba86890b7a1",
+    "resources/coding-tools-mcp/coding_tools_mcp/workspace_context_registry.py": "e9d34f604ed17b39dea657bc8a1ee40ed88b24f80da6c95fc8101ca36527c4b5",
+    "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py": "10ce85a85944cdd4d18f6f4f60a126c0bf295ca767374c25cff83807d4dc7b8c"
+  },
+  "read_only_observation": true,
+  "action_id": "act_1de2cef3dc304d6e8b3f90237d7c136a",
+  "attempt_id": "try_8d31c7cfb661441aadb9e620e47508a3",
+  "evidence": {
+    "readiness": {
+      "path": ".coding-tools\\reports\\parallel-native-first-20261012\\server-readiness-read067-unknown.json",
+      "sha256": "57886e25448750732add30df3d9dd06231134e62a18f35ffab0b647ae21dcc38",
+      "size_bytes": 39232
+    },
+    "local_timeout": {
+      "path": ".coding-tools\\reports\\parallel-native-first-20261012\\local-read067-timeout-evidence.json",
+      "sha256": "fd2e6fce0576fd8a1e88e816bae8febc4084fa882cedcd86126f713358edc8a8",
+      "size_bytes": 3387
+    },
+    "performance": {
+      "path": ".coding-tools\\performance.json",
+      "sha256": "5238717a8e9aae7e140650ad02b75527c7212f8aec5ca0352aa3e5f627a1ea65",
+      "size_bytes": 376070
+    }
+  },
+  "performance_window_utc": [
+    "2026-10-12T13:04:50",
+    "2026-10-12T13:05:45.999"
+  ],
+  "retained_performance_sample_size": 100,
+  "window_sample_size": 0,
+  "window_events": [],
+  "exact_original_events_from_preserved_observation": [
+    {
+      "tool": "workspace_context",
+      "started_at": "2026-10-12T13:05:33.560Z",
+      "finished_at": "2026-10-12T13:05:33.854Z",
+      "duration_ms": 296,
+      "ok": true,
+      "error_class": "",
+      "request_id": "control-plane-file-read-bind-72f626fc9fb07f5f10c4855c"
+    }
+  ],
+  "preserved_original_performance_evidence": {
+    "sha256": "6373cf219bbde3abe4504b4d230979ccd3bae8c3807060f7e6a2bb72468e5c46",
+    "size_bytes": 375764
+  },
+  "projection_limit": "Current recent-100 window can roll off; exact original timing is derived from the preserved local-timeout observation, not inferred from an absent live entry.",
+  "measured": {
+    "dispatch_at_ms": 1791810310801,
+    "unknown_received_at_ms": 1791810319316,
+    "unknown_after_dispatch_ms": 8515,
+    "bind_tool_start_after_dispatch_ms": 22759,
+    "bind_tool_start_after_unknown_ms": 14244,
+    "bind_tool_wall_duration_ms": 294,
+    "bind_tool_reported_duration_ms": 296,
+    "matching_retained_read_file_events": 0,
+    "original_journal_was_unknown": true
+  },
+  "current_deadline_contract": {
+    "local_mcp_each_request_socket_inactivity_ms": 8000,
+    "local_mcp_sequential_phases": [
+      "workspace_context",
+      "read_file"
+    ],
+    "local_mcp_shared_absolute_action_deadline": false,
+    "recovery_ipc_read_only_default_socket_inactivity_ms": 15000,
+    "file_read_bridge_timeout_override": false,
+    "node_file_read_subprocess_default_seconds": 20,
+    "actual_node_timeout_argument_observed": false
+  },
+  "source_findings": [
+    "Recovery IPC invokes each async handler directly; no generic IPC request queue lock was found.",
+    "MCP uses ThreadingHTTPServer, with separate request threads; no global FIFO tool lock was found.",
+    "Before dispatch_rpc, handle_rpc resolves workspace scope, reads request task state and touches the durable hub client.",
+    "Tool performance start is recorded inside Runtime.call_tool, after those HTTP predispatch boundaries.",
+    "Task-context registry and ledger use RLocks; registry persists the complete JSON with fsync while locked; ledger connections use SQLite busy_timeout=5000.",
+    "A disconnected MCP client does not cancel the handler; later response writes suppress broken pipe."
+  ],
+  "hypotheses_not_proven": [
+    "The 22.759s dispatch-to-tool-entry gap includes node/Recovery preflight, HTTP scheduling and predispatch; request-arrival clocks do not identify which boundary dominated.",
+    "Registry or ledger lock/I/O contention is plausible, but current timing and event projections do not prove the cause or duration."
+  ],
+  "canonical_ledger_observation": {
+    "read_only_uri": true,
+    "query_only": true,
+    "transaction_snapshot": true,
+    "window_utc": [
+      "2026-10-12T13:04:50",
+      "2026-10-12T13:05:45.999"
+    ],
+    "event_count": 0,
+    "allowlisted_events": [],
+    "limit": "These are run lifecycle events, not request-arrival or lock-wait instrumentation; absence does not exclude contention."
+  },
+  "recommendation": {
+    "current_eight_second_budget": "One observed valid exact bootstrap entered after UNKNOWN; 8s is insufficient for this observed path.",
+    "twenty_second_candidate": "20s remains below the observed 22.759s dispatch-to-tool-entry delay.",
+    "thirty_second_candidate": "30s is an evidence-backed candidate with about 7s headroom for this one observed delayed bootstrap; it is not a reliability percentile or proven SLA.",
+    "align_all_layers": "Prefer one bounded absolute budget for the bind+read operation and give IPC/subprocess additional bounded preflight/return margin. Raising only the inner timeout is clipped by current 15s IPC or configured subprocess budget.",
+    "if_retaining_per_request_budgets": "Two sequential 30s requests need outer IPC/subprocess budgets above 60s plus bounded preflight and return margin; do not describe this as a 30s whole-action deadline.",
+    "focused_validation": "After an authorized source/package revision, inject a 23s pre-tool delay, verify a single bind/read succeeds within the aligned budget, and verify expiration remains UNKNOWN with no redispatch or unsupported success reconciliation.",
+    "current_original_action": "Preserve UNKNOWN and reconcile only the exact original action/attempt through supported authority; late bootstrap success cannot prove bounded file-read success.",
+    "freeze": "No source or production changes made by this audit; root continues original rejection and the new canary independently."
+  },
+  "source_modified": false,
+  "runtime_modified": false,
+  "journal_modified": false,
+  "action_redispatched": false,
+  "commit_push_release_deploy_service_operation_performed": false
+}

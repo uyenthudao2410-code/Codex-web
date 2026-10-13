@@ -1,0 +1,28 @@
+'use strict';
+// Read-only proof of the exact package and repaired Git identity behavior.
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const { spawnSync } = require('node:child_process');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '../../../..');
+const candidate = path.join(root, 'dist/windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix/win-unpacked');
+const executable = path.join(candidate, 'Coding Tools MCP.exe');
+const sha = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const sourcePath = 'electron/services/recoveryActionStore.js';
+assert.equal(sha(path.join(root, sourcePath)), '6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646');
+assert.equal(sha(executable), '94f36ad726297bb2c4451ba9931b1532569f14f9f46526223e39fe75bc08e145');
+assert.equal(sha(path.join(candidate, 'resources/app.asar')), 'b3607da70af1df36a0aa1eb50f5771ba110069e33d08f256da542faca5f7b922');
+const prior = JSON.parse(fs.readFileSync(path.join(__dirname, '../phase-b-real-problem-git-evidence-20261013.json'), 'utf8'));
+assert.equal(prior.validation.tests_passed, 38);
+assert.equal(prior.validation.tests_failed, 0);
+const probe = `const fs=require('node:fs'),crypto=require('node:crypto');const file=process.resourcesPath+'/app.asar/${sourcePath}';const sha=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');require(file).workspaceIdentity(process.cwd()).then(i=>console.log(JSON.stringify({sha256:sha,head:i.head,worktree_fp:i.worktree_fp,source_entries:i.entries.length,evidence_excluded:i.entries.every(e=>!e.path.toLowerCase().startsWith('.coding-tools/'))}))).catch(()=>process.exit(1));`;
+const result = spawnSync(executable, ['-e', probe], { cwd: root, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, windowsHide: true, encoding: 'utf8', timeout: 20000, maxBuffer: 65536 });
+assert.equal(result.status, 0, 'Exact packaged identity probe must complete');
+const observed = JSON.parse(result.stdout.trim());
+assert.equal(observed.sha256, sha(path.join(root, sourcePath)));
+assert.equal(observed.head, '7999c4151cb501db86f2e4d0a2275d33fc248324');
+assert.equal(observed.evidence_excluded, true);
+assert.ok(/^[a-f0-9]{64}$/.test(observed.worktree_fp));
+assert.ok(observed.source_entries > 0 && observed.source_entries < 2000);
+console.log(JSON.stringify({ ok: true, proof: 'exact_bfix_package_git_identity', ...observed, prior_focused_tests_reused: 38, vm_calls: 0, source_mutated: false }));

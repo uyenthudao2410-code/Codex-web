@@ -58,7 +58,7 @@
       <div class="content-viewport">
         <section class="page active" data-page-view="overview">
           <article class="execution-workspace-strip panel" aria-label="Dự án đang thực thi">
-            <div class="execution-workspace-copy"><span class="section-kicker">DỰ ÁN HIỆN TẠI</span><h2 id="executionWorkspaceLabel">Chưa chọn thư mục</h2><p id="executionAccessSummary">Đang kiểm tra kết nối, quyền và trạng thái thực thi.</p></div>
+            <div class="execution-workspace-copy"><span class="section-kicker">THƯ MỤC MCP HIỆN TẠI</span><h2 id="executionWorkspaceLabel">Chưa kích hoạt thư mục</h2><p id="executionAccessSummary">Đang kiểm tra kết nối, quyền và trạng thái thực thi.</p></div>
             <div class="execution-workspace-actions"><button class="primary-button" id="executionNextAction" data-nav="system" type="button">Thiết lập máy & thư mục</button><button class="secondary-button" data-nav="task" type="button">Theo dõi thực thi</button></div>
           </article>
           <div class="control-hero">
@@ -610,7 +610,7 @@
 
         <section class="page" data-page-view="device">
           <div class="section-header"><div><span class="section-kicker">DEVICE CONTROL</span><h2>Thiết bị hiện tại</h2><p>Định danh thiết bị, runtime, Tunnel và Git của máy đang chạy Recovery Host này. Panel này chỉ điều khiển máy hiện tại; shared-account inventory và chọn binding được thực hiện qua Ubuntu Control Plane/MCP.</p></div><div class="inline-actions"><span id="deviceScopeBadge" class="security-chip">Local only</span><button class="secondary-button" id="deviceRefresh">Làm mới</button></div></div>
-          <div class="device-overview-grid"><article class="panel device-identity-card"><div class="panel-title"><div><span class="section-kicker">IDENTITY</span><h3 id="deviceDisplayName">Thiết bị hiện tại</h3><p>device_id bền vững theo cài đặt; device_instance_id đổi theo lifecycle Recovery Host.</p></div><span id="deviceOnline" class="soft-badge neutral">Đang kiểm tra</span></div><div class="device-kv-grid"><div><span>Device ID</span><code id="deviceId">—</code></div><div><span>Device instance</span><code id="deviceInstanceId">—</code></div><div><span>Workspace</span><code id="deviceWorkspace">—</code></div><div><span>Git</span><code id="deviceGitState">Không có dữ liệu</code></div></div></article><article class="panel"><div class="panel-title"><div><span class="section-kicker">OWNERSHIP</span><h3>Runtime trên thiết bị này</h3><p>Process/tunnel chỉ được điều khiển khi persistent device_id khớp.</p></div></div><div class="device-service-grid"><div class="device-service-card"><span>Coding</span><b id="deviceCodingState">Đang kiểm tra</b><small id="deviceCodingTunnelId">Tunnel: —</small></div><div class="device-service-card"><span>Recovery</span><b id="deviceRecoveryState">Đang kiểm tra</b><small id="deviceRecoveryTunnelId">Tunnel: —</small></div></div><div class="notice warning"><b>Ranh giới hiện tại</b><p>Panel này chỉ điều khiển process của device hiện tại. Client cùng tài khoản ChatGPT chọn binding_id qua Control Plane để task chạy tại node đã bind; panel không tự gửi thao tác remote và không retarget task.</p></div></article></div>
+          <div class="device-overview-grid"><article class="panel device-identity-card"><div class="panel-title"><div><span class="section-kicker">IDENTITY</span><h3 id="deviceDisplayName">Thiết bị hiện tại</h3><p>device_id bền vững theo cài đặt; device_instance_id đổi theo lifecycle Recovery Host.</p></div><span id="deviceOnline" class="soft-badge neutral">Đang kiểm tra</span></div><div class="device-kv-grid"><div><span>Device ID</span><code id="deviceId">—</code></div><div><span>Device instance</span><code id="deviceInstanceId">—</code></div><div><span>Workspace</span><code id="deviceWorkspace">—</code></div><div><span>Git ứng dụng</span><code id="deviceGitState">Không có dữ liệu</code></div></div></article><article class="panel"><div class="panel-title"><div><span class="section-kicker">OWNERSHIP</span><h3>Runtime trên thiết bị này</h3><p>Process/tunnel chỉ được điều khiển khi persistent device_id khớp.</p></div></div><div class="device-service-grid"><div class="device-service-card"><span>Coding</span><b id="deviceCodingState">Đang kiểm tra</b><small id="deviceCodingTunnelId">Tunnel: —</small></div><div class="device-service-card"><span>Recovery</span><b id="deviceRecoveryState">Đang kiểm tra</b><small id="deviceRecoveryTunnelId">Tunnel: —</small></div></div><div class="notice warning"><b>Ranh giới hiện tại</b><p>Panel này chỉ điều khiển process của device hiện tại. Client cùng tài khoản ChatGPT chọn binding_id qua Control Plane để task chạy tại node đã bind; panel không tự gửi thao tác remote và không retarget task.</p></div></article></div>
           <article class="panel device-actions-panel"><div><span class="section-kicker">CURRENT DEVICE ACTIONS</span><h3>Điều khiển an toàn</h3><p>Dùng đúng các workflow Recovery Host đã có; không tạo destructive action xuyên thiết bị.</p></div><div class="device-actions"><button class="secondary-button" id="deviceStart">Khởi động</button><button class="secondary-button" id="deviceRestart">Khởi động lại</button><button class="danger-button" id="deviceStop">Dừng</button><button class="primary-button" id="deviceRepair">Kiểm tra & sửa chữa</button></div></article>
         </section>
 
@@ -671,19 +671,20 @@
             </section>
 
             <section class="setup-section" id="setupFolderSection" aria-labelledby="setupFolderTitle" tabindex="-1">
-              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">2</span><div><h3 id="setupFolderTitle">Chọn thư mục và quyền làm việc</h3><p>Chọn đúng dự án, gửi mức quyền và theo dõi phê duyệt ngay bên dưới.</p></div></div>
+              <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">2</span><div><h3 id="setupFolderTitle">Thêm thư mục cho MCP</h3><p>Chọn dự án và xác nhận một lần để đọc, sửa file và chạy lệnh.</p></div></div>
               <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
             <div class="setup-mode-notice" id="workspaceSetupDevelopmentNotice" role="status" hidden><b>Cần xác minh bản cài đặt</b><p>Chọn thư mục, đăng ký workspace và bật quyền Ubuntu cần bản cài đặt đã được xác minh.</p></div>
-            <div class="panel-title"><div><h3>Thư mục ủy quyền</h3><p>Chọn thư mục đã thêm để thiết lập quyền, hoặc thêm thư mục mới.</p></div><button id="refreshControlPlaneWorkspaces" class="secondary-button" type="button">Làm mới</button></div>
+            <div class="panel-title"><div><h3>Thư mục đã thêm</h3><p>Bấm dùng thư mục trong danh sách, hoặc thêm dự án mới.</p></div><button id="refreshControlPlaneWorkspaces" class="secondary-button" type="button">Làm mới</button></div>
             <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
             <section id="centralWorkspacePermissionEditor" class="workspace-permission-editor" tabindex="-1" aria-label="Thiết lập quyền thư mục">
-            <div class="workspace-folder-choice"><span class="input-action-meta"><b id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</b><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span><button id="chooseControlPlaneWorkspace" class="secondary-button" type="button">Chọn thư mục mới</button></div>
+            <div class="workspace-folder-choice"><span class="input-action-meta"><b id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục local.</b><small id="controlPlaneWorkspaceDevice">Máy này: đang đọc định danh…</small></span><button id="chooseControlPlaneWorkspace" class="primary-button" type="button">Thêm thư mục</button></div>
+            <details class="workspace-permission-help"><summary>Tùy chỉnh quyền</summary>
             <fieldset class="capability-picker" aria-describedby="controlPlaneCapabilitySummary">
               <legend>Mức quyền cho thư mục này</legend>
-              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read" checked><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
-              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code"><span><b>Làm việc với mã nguồn</b><small>Đọc, sửa file và chạy lệnh trong sandbox.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="read"><span><b>Chỉ xem</b><small>Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small></span></label>
+              <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="code" checked><span><b>Làm việc với mã nguồn</b><small>Đọc, sửa file và chạy lệnh theo policy.</small></span></label>
               <label class="capability-preset"><input type="radio" name="centralWorkspacePreset" value="custom"><span><b>Tùy chỉnh</b><small>Chọn từng quyền trong phần nâng cao.</small></span></label>
-              <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc danh sách và kết quả; không sửa file hoặc chạy lệnh.</small>
+              <small id="controlPlaneCapabilitySummary" class="capability-summary">Đọc, sửa file và chạy lệnh trong thư mục này.</small>
               <details id="centralWorkspaceCustomCapabilities" class="capability-custom">
                 <summary>Chọn từng quyền</summary>
                 <label><input id="controlPlaneCapabilityRead" type="checkbox" checked disabled><span><b>Đọc</b><small>Bắt buộc để inventory và đọc kết quả.</small></span></label>
@@ -691,25 +692,28 @@
                 <label><input id="controlPlaneCapabilityExec" type="checkbox"><span><b>Chạy</b><small>Cho phép runtime local chạy process theo policy máy.</small></span></label>
               </details>
             </fieldset>
-            <div class="workspace-permission-submit"><button id="registerControlPlaneWorkspace" class="primary-button" type="button">Đăng ký thư mục</button><p id="controlPlaneWorkspaceRegistrationStatus" role="status">Chọn mức quyền rồi đăng ký. Sau khi liên kết trên Ubuntu, bật quyền tại đây.</p></div>
+            </details>
+            <div class="workspace-permission-submit"><button id="registerControlPlaneWorkspace" class="secondary-button" type="button">Dùng thư mục & cấp quyền</button><p id="controlPlaneWorkspaceRegistrationStatus" role="status">Thêm thư mục và xác nhận quyền một lần.</p></div>
             </section>
-            <details class="workspace-permission-help"><summary>Cách áp dụng quyền</summary><p>Các ô quyền là lựa chọn chưa lưu; dòng thư mục hiển thị quyền đã đăng ký và policy đang bật. Đổi mức quyền cần liên kết lại trên Ubuntu. Bật quyền đã đăng ký chỉ cần một lần xác nhận; sandbox và quyền tài khoản vẫn được kiểm tra.</p><p>Đường dẫn chỉ được giữ trên máy này. Mỗi máy giữ một policy file/lệnh hiện hành; bật cho thư mục khác sẽ thay thế policy cũ. Các nút bật riêng từng quyền và thu hồi nằm trong “Quản lý nâng cao”.</p></details>
+            <details class="workspace-permission-help"><summary>Cách dùng thư mục</summary><p>Thư mục được chọn là đích cho tác vụ mới. Các tác vụ đã gắn với Codex-web hoặc AutoCAD tiếp tục dùng đúng thư mục và quyền của mình. Quyền đọc, sửa và chạy được áp dụng sau lần xác nhận của bạn; kết nối MCP vẫn phải hợp lệ.</p><p>Thêm thư mục, đọc/sửa file và kiểm tra quyền không mở Windows Sandbox. Metadata Git và phiên bản CLI dùng native theo policy. Mã dự án cần quyền native riêng hoặc cách ly; kiểm tra Sandbox là thao tác riêng. Các nút quyền và thu hồi nằm trong “Quản lý nâng cao”.</p></details>
           </article>
             </section>
 
             <section class="setup-section" id="setupExecutionSection" aria-labelledby="setupExecutionTitle" tabindex="-1">
               <div class="setup-section-heading"><span class="setup-section-number" aria-hidden="true">3</span><div><h3 id="setupExecutionTitle">Kiểm tra khả năng thực thi mã</h3><p>Quyền được cấp và kết quả thao tác thực tế được kiểm tra riêng.</p></div></div>
               <article class="panel setup-execution-panel">
+                <label class="field"><span>Môi trường thực thi</span><select id="controlPlaneExecutionMode"><option value="native_first" selected>Tự động có kiểm soát · Native trước</option><option value="native_only">Chỉ native có kiểm soát · Không mở VM</option><option value="isolated">Ưu tiên cách ly · Windows Sandbox</option></select><small>Đọc/sửa file luôn dùng File API. Chạy mã dự án cần allowlist native được cấp riêng; quyền thư mục không tự cấp quyền native cho build/test.</small></label>
+                <p id="controlPlaneRunnerState" class="setup-proof-note" role="status">Chưa kiểm tra capability native; chưa có telemetry trực tiếp về VM hoặc RAM.</p>
                 <ul id="setupExecutionChecklist" class="setup-execution-checklist" aria-label="Trạng thái từng thao tác">
                   <li id="setupReadCheck" data-state="unknown"><b>Đọc mã nguồn</b><small>Chưa kiểm chứng thao tác đọc.</small></li>
                   <li id="setupPatchCheck" data-state="unknown"><b>Sửa mã nguồn</b><small>Chưa kiểm chứng thao tác sửa.</small></li>
                   <li id="setupExecCheck" data-state="unknown"><b>Chạy lệnh & test</b><small>Chưa kiểm chứng kết quả thực thi.</small></li>
                 </ul>
                 <div class="setup-continuation">
-                  <div><b>Hoàn tất bước còn thiếu</b><p id="setupContinueStatus" role="status" aria-live="polite">Kiểm tra trạng thái để tiếp tục thiết lập. Thao tác cần cấp quyền vẫn yêu cầu xác nhận.</p></div>
-                  <div class="inline-actions"><button class="primary-button" id="setupContinueAction" type="button">Tiếp tục thiết lập</button><button class="secondary-button" id="setupCancelContinuation" type="button" hidden>Dừng chờ</button></div>
+                  <div><b>Quyền của thư mục đã chọn</b><p id="setupContinueStatus" role="status" aria-live="polite">Thêm thư mục và xác nhận một lần để MCP đọc, sửa và chạy lệnh.</p></div>
+                  <div class="inline-actions"><button class="primary-button" id="setupContinueAction" type="button">Dùng thư mục & cấp quyền</button><button class="secondary-button" id="setupPrepareExecAction" type="button" hidden>Kiểm tra Sandbox riêng</button><button class="secondary-button" id="setupCancelContinuation" type="button" hidden>Dừng chờ</button></div>
                 </div>
-                <p class="setup-proof-note">Chỉ hiển thị kết quả đã quan sát. Chạy test không tự sửa mã nguồn hoặc cấp thêm quyền.</p>
+                <p class="setup-proof-note">Kiểm tra quyền không tự mở Sandbox. Chế độ native dùng ProcessContainer có giới hạn quyền và chặn mạng; không tương đương cách ly VM. Lệnh cần cách ly hoặc kiểm tra Sandbox có thể mở Windows Sandbox. Kết quả thực thi được xác nhận từ Job.</p>
                 <button class="secondary-button" type="button" data-nav="task">Xem tác vụ & kết quả</button>
               </article>
             </section>

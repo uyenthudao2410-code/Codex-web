@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "operation": "windows_r3_direct_loader_delta_against_serving_ubuntu",
+  "ok": true,
+  "captured_at_utc": "2026-10-12T12:39:18.455582+00:00",
+  "observed_git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "readiness_sha256": "99345d5c80c6c7b8237fdfa621c809d5d49d0de2d61cca7793d197d10875f285",
+  "readiness_captured_at_ms": 1791807566761,
+  "serving_service_pid": 970133,
+  "serving_release_root": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+  "serving_package_source_sha256": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+  "serving_node_agent_sha256": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+  "windows_r3_node_agent_raw_sha256": "bee27651ef1fba03f6f6c52dd1a93fe671f07d7b73b0402118ead88c97f9dffe",
+  "package_import_branch_unchanged": true,
+  "all_ast_except_direct_file_else_unchanged": true,
+  "serving_http_entrypoint": "python3 -B -m control_plane -> .http_api.serve_from_environment",
+  "serving_http_and_renewal_do_not_import_node_agent": true,
+  "contract": {
+    "schema_version": 32,
+    "profile": "control-plane-private-tunnel-service-v1",
+    "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+  },
+  "ubuntu_alignment_deployment_required": false,
+  "ubuntu_alignment_deployment_performed": false,
+  "external_mutations_performed": false,
+  "canary_pin_rule": "Pin actual serving node_agent hash separately from the Windows packaged direct-loader hash; never claim byte parity between them."
+}

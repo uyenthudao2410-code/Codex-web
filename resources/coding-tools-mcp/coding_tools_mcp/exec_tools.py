@@ -39,6 +39,7 @@ from . import processes
 from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var
 from .task_state import command_payload_succeeded
 from .windows_mxc_sandbox import build_mxc_invocation, cleanup_mxc_invocation
+from .windows_execution_policy import decide_windows_execution
 from .windows_mxc_state_aware import (
     MxcWindowsSandboxManager,
     build_mxc_windows_sandbox_invocation,
@@ -217,6 +218,17 @@ def truncate_evidence(text: str, limit: int = 240) -> str:
 
 
 class ExecToolsMixin:
+    def _exec_public_schema_arguments(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Keep local attested routing policy outside the public MCP schema."""
+        identity = self._current_hub_client()
+        if args.get("argv") is not None and isinstance(identity, dict) \
+                and identity.get("client_id") == "electron-control-plane-exec-bridge" \
+                and identity.get("client_type") == "electron" \
+                and identity.get("attestation_verified") is True:
+            return {key: value for key, value in args.items()
+                    if key not in {"_windows_execution_mode", "_windows_native_argv_prefixes"}}
+        return args
+
     def exec_command(self, args: dict[str, Any]) -> dict[str, Any]:
         self._prune_sessions()
         bridge_argv = args.get("argv")
@@ -316,6 +328,10 @@ class ExecToolsMixin:
         popen_shell = structured_argv is None
         popen_extra = process_group_popen_kwargs()
         windows_mxc = os.name == "nt" and structured_argv is not None
+        windows_decision = decide_windows_execution(
+            structured_argv, args, attested_bridge=bridge_argv is not None,
+            approved_internal_argv=raw_argv is not None,
+        ) if windows_mxc else None
         windows_mxc_invocation = None
         windows_mxc_stateful = False
         windows_mxc_session_holder: dict[str, ExecSession | None] = {"session": None}
@@ -442,7 +458,10 @@ class ExecToolsMixin:
                     wave_id=owner_wave,
                     owner=principal_id,
                     resource_class=args.get("resource_class", ""),
-                    metadata={"workspace_identity": command_workspace_identity},
+                    metadata={
+                        "workspace_identity": command_workspace_identity,
+                        **(windows_decision.metadata() if windows_decision is not None else {}),
+                    },
                 )
             except ExecutionResourceError as exc:
                 raise ToolFailure(
@@ -454,14 +473,20 @@ class ExecToolsMixin:
                 ) from exc
             if windows_mxc:
                 workspace_root = self._current_request_workspace_root()
-                if windows_sandbox_feature_enabled():
+                if windows_decision.execution_backend == "isolated":
+                    if not windows_sandbox_feature_enabled():
+                        raise ToolFailure(
+                            "WINDOWS_SANDBOX_FEATURE_DISABLED",
+                            "This command requires the isolated Windows Sandbox runner.",
+                            category="security", details={"execution_started": False, **windows_decision.metadata()},
+                        )
                     with self.sessions_lock:
                         sandbox_manager = getattr(self, "_windows_mxc_sandbox_manager", None)
                         if sandbox_manager is None:
                             sandbox_manager = MxcWindowsSandboxManager()
                             self._windows_mxc_sandbox_manager = sandbox_manager
                     invocation = build_mxc_windows_sandbox_invocation(
-                        structured_argv,
+                        list(windows_decision.argv),
                         manager=sandbox_manager,
                         workspace_root=workspace_root,
                         workdir=workdir.path,
@@ -477,15 +502,16 @@ class ExecToolsMixin:
                             or session_state.sandbox_abort_on_cleanup
                             or session_state.signal_name is not None
                         )
-                        return cleanup_mxc_windows_sandbox_invocation(invocation, abort=abort)
+                        return cleanup_mxc_windows_sandbox_invocation(invocation, abort=abort, retire_when_idle=False)
                     sandbox_cleanup_callback = cleanup_stateful_sandbox
                 else:
                     invocation = build_mxc_invocation(
-                        structured_argv,
+                        list(windows_decision.argv),
                         workspace_root=workspace_root,
                         workdir=workdir.path,
                         timeout_ms=timeout_ms,
                         extra_environment=args.get("env", {}),
+                        allow_workspace_executable=windows_decision.policy_decision != "native_safe_command",
                     )
                     sandbox_cleanup_callback = lambda: cleanup_mxc_invocation(invocation)
                 windows_mxc_invocation = invocation
@@ -504,6 +530,8 @@ class ExecToolsMixin:
                 env=env,
                 tty=tty,
                 popen_kwargs=popen_extra,
+                **({"windows_job_limits": processes.WindowsJobLimits(cpu_time_ms=timeout_ms)}
+                   if windows_decision is not None and windows_decision.execution_backend == "native" else {}),
             )
             self.execution_resource_governor.bind_process(admission, process)
             session_warnings = [landlock_warning] if landlock_warning else []
@@ -523,9 +551,11 @@ class ExecToolsMixin:
                 warnings=session_warnings or None,
                 pty_master_fd=pty_master_fd,
                 cleanup_callback=sandbox_cleanup_callback,
+                execution_metadata=windows_decision.metadata() if windows_decision is not None else None,
             )
             if windows_mxc_stateful:
                 windows_mxc_session_holder["session"] = session
+                session.sandbox_idle_generation = windows_mxc_invocation.lease_generation
             try:
                 self.task_state.record_command_started(
                     cmd,

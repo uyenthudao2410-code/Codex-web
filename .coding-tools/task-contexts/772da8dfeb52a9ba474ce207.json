@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "task_id": "90e858ad8e254df5b138b23146400dbb",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "tests/fixtures/new-machine-shared-write-proof-20261012-r8.txt",
+      "operation": "create",
+      "updated_at": "2026-10-12T07:10:27.883Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Review or use the generated document.",
+  "created_at": "2026-10-12T07:10:27.880Z",
+  "updated_at": "2026-10-12T07:10:27.883Z",
+  "events": [
+    {
+      "time": "2026-10-12T07:10:27.880Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-10-12T07:10:27.883Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    }
+  ]
+}

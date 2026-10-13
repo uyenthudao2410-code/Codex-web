@@ -31,6 +31,29 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
+if __package__:
+    from .workspace_policy_store import (
+        read_entries as _workspace_policy_entries, read_selected as _workspace_policy_selected,
+        write_policy as _workspace_policy_write, scope as _workspace_policy_scope,
+    )
+else:  # The installed Windows launcher executes this file directly.
+    # Isolated Python (-I) omits the adapter directory from sys.path and ignores
+    # PYTHONDONTWRITEBYTECODE. Load only the owned sibling without mutating the
+    # manifest-pinned adapter tree or broadening module discovery.
+    sys.dont_write_bytecode = True
+    import importlib.util
+
+    _policy_store_spec = importlib.util.spec_from_file_location(
+        "control_plane_workspace_policy_store", Path(__file__).with_name("workspace_policy_store.py"))
+    if _policy_store_spec is None or _policy_store_spec.loader is None:
+        raise RuntimeError("CONTROL_PLANE_POLICY_STORE_UNAVAILABLE")
+    _policy_store_module = importlib.util.module_from_spec(_policy_store_spec)
+    _policy_store_spec.loader.exec_module(_policy_store_module)
+    _workspace_policy_entries = _policy_store_module.read_entries
+    _workspace_policy_selected = _policy_store_module.read_selected
+    _workspace_policy_write = _policy_store_module.write_policy
+    _workspace_policy_scope = _policy_store_module.scope
+
 
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 READ_ONLY_TOOL_NAME = "workspace_context"
@@ -218,6 +241,9 @@ FILE_READ_PRE_EFFECT_REJECTION_CODES = frozenset({
     "CONTROL_PLANE_FILE_READ_REQUEST_EXPIRED",
     "CONTROL_PLANE_FILE_READ_REQUEST_TOO_LARGE",
     "CONTROL_PLANE_FILE_READ_TARGET_MISMATCH",
+    # Only the Recovery Host's pre-dispatch resolver attests this phase. The
+    # generic TARGET_MISSING can also arise after a read and remains UNKNOWN.
+    "CONTROL_PLANE_FILE_READ_TARGET_MISSING_BEFORE_DISPATCH",
     "CONTROL_PLANE_FILE_READ_TOOL_DENIED",
     "CONTROL_PLANE_FILE_READ_CONTRACT_MISMATCH",
     "CONTROL_PLANE_FILE_READ_PATH_DENIED",
@@ -306,6 +332,7 @@ APPROVED_PATCH_POLICY_STOP_CODES = frozenset({
 })
 DOCUMENT_WRITE_PRE_EFFECT_REJECTION_CODES = frozenset({
     "CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_BIND_REJECTED",
     "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_MISSING",
     "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_INVALID",
     "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_EXPIRED",
@@ -1404,16 +1431,21 @@ def _normalise_read_only_policy(policy: Any, *, now_ms: int | None = None, requi
     }
 
 
-def _read_local_policy(policy_path: Path) -> dict[str, Any]:
+def _read_local_policy(policy_path: Path, *, target: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
-        stat = policy_path.stat()
-        if not policy_path.is_file() or stat.st_size > READ_ONLY_POLICY_MAX_BYTES:
+        policy_path.stat()
+        value = _workspace_policy_selected(policy_path, target)
+        if len(json.dumps(value).encode("utf-8")) > READ_ONLY_POLICY_MAX_BYTES:
             raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID")
-        value = json.loads(policy_path.read_text(encoding="utf-8"))
     except FileNotFoundError as error:
         raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_MISSING") from error
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID") from error
+    except RuntimeError as error:
+        if str(error).startswith("CONTROL_PLANE_POLICY_"):
+            code = "CONTROL_PLANE_BRIDGE_POLICY_CONFIG_MISMATCH" if str(error) == "CONTROL_PLANE_POLICY_TARGET_NOT_FOUND" else "CONTROL_PLANE_BRIDGE_POLICY_INVALID"
+            raise RuntimeError(code) from error
+        raise
     return _normalise_read_only_policy(value)
 
 
@@ -1440,46 +1472,47 @@ def _standing_policy_observation(args: argparse.Namespace, config: dict[str, Any
     saw_candidate = False
     admitted: list[dict[str, str]] = []
     for lane, path_factory, reader in candidates:
-        try:
-            policy_path = path_factory(args)
-            if not policy_path.exists():
-                continue
-            saw_candidate = True
-            policy = reader(policy_path)
-            if (
-                policy.get("enabled") is not True
-                or policy.get("authority_mode") != "standing"
-                or policy.get("expires_at_ms") is not None
-                or policy.get("server_origin") != _server_origin(config.get("server_url"))
-                or policy.get("device_id") != config.get("device_id")
-                or policy.get("endpoint_id") != config.get("endpoint_id")
-            ):
-                continue
-            if hasattr(args, "workspace_registry"):
-                if not str(getattr(args, "workspace_registry", "") or "").strip():
+        for scoped_args in _lane_scope_args(args, path_factory):
+            try:
+                policy_path = path_factory(args)
+                if not policy_path.exists():
+                    continue
+                saw_candidate = True
+                policy = reader(policy_path, target=_policy_target(scoped_args))
+                if (
+                    policy.get("enabled") is not True
+                    or policy.get("authority_mode") != "standing"
+                    or policy.get("expires_at_ms") is not None
+                    or policy.get("server_origin") != _server_origin(config.get("server_url"))
+                    or policy.get("device_id") != config.get("device_id")
+                    or policy.get("endpoint_id") != config.get("endpoint_id")
+                ):
+                    continue
+                if hasattr(args, "workspace_registry"):
+                    if not str(getattr(args, "workspace_registry", "") or "").strip():
+                        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED")
+                    config_path = Path(args.config).expanduser().resolve()
+                    _require_current_local_workspace_registration(
+                        args,
+                        config_path=config_path,
+                        workspace_id=policy["workspace_id"],
+                        workspace_generation=policy["workspace_generation"],
+                    )
+                elif _runtime_mode(args) == "packaged":
+                    # The installed Supervisor always supplies the sibling
+                    # registry.  A packaged caller without it cannot prove the
+                    # policy still targets a current local root.
                     raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED")
-                config_path = Path(args.config).expanduser().resolve()
-                _require_current_local_workspace_registration(
-                    args,
-                    config_path=config_path,
-                    workspace_id=policy["workspace_id"],
-                    workspace_generation=policy["workspace_generation"],
-                )
-            elif _runtime_mode(args) == "packaged":
-                # The installed Supervisor always supplies the sibling
-                # registry.  A packaged caller without it cannot prove the
-                # policy still targets a current local root.
-                raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED")
-            admitted.append({
-                "lane": lane,
-                "policy_sha256": _policy_digest(policy),
-                "workspace_id": policy["workspace_id"],
-                "workspace_generation": policy["workspace_generation"],
-            })
-        except (OSError, RuntimeError, ValueError):
-            # Keep the observation credential-free and avoid allowing one
-            # malformed lane to make another lane look broader than it is.
-            continue
+                admitted.append({
+                    "lane": lane,
+                    "policy_sha256": _policy_digest(policy),
+                    "workspace_id": policy["workspace_id"],
+                    "workspace_generation": policy["workspace_generation"],
+                })
+            except (OSError, RuntimeError, ValueError):
+                # Keep the observation credential-free and avoid allowing one
+                # malformed lane to make another lane look broader than it is.
+                continue
 
     if not saw_candidate:
         return None
@@ -1491,7 +1524,7 @@ def _standing_policy_observation(args: argparse.Namespace, config: dict[str, Any
             "policy_sha256": None,
             "reason": "CONTROL_PLANE_STANDING_POLICY_UNAVAILABLE",
         }
-    digest_input = json.dumps(sorted(admitted, key=lambda item: item["lane"]), separators=(",", ":"), sort_keys=True)
+    digest_input = json.dumps(sorted(admitted, key=lambda item: (item["lane"], item["workspace_id"], item["workspace_generation"])), separators=(",", ":"), sort_keys=True)
     return {
         "state": "enabled",
         "expires_at_ms": now_ms + STANDING_POLICY_OBSERVATION_TTL_MS,
@@ -1673,16 +1706,21 @@ def _normalise_file_read_policy(
     return result
 
 
-def _read_file_read_policy(policy_path: Path) -> dict[str, Any]:
+def _read_file_read_policy(policy_path: Path, *, target: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
-        stat = policy_path.stat()
-        if not policy_path.is_file() or stat.st_size <= 0 or stat.st_size > FILE_READ_POLICY_MAX_BYTES:
+        policy_path.stat()
+        value = _workspace_policy_selected(policy_path, target)
+        if len(json.dumps(value).encode("utf-8")) > FILE_READ_POLICY_MAX_BYTES:
             raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
-        value = json.loads(policy_path.read_text(encoding="utf-8"))
     except FileNotFoundError as error:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_MISSING") from error
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID") from error
+    except RuntimeError as error:
+        if str(error).startswith("CONTROL_PLANE_POLICY_"):
+            code = "CONTROL_PLANE_FILE_READ_TARGET_MISMATCH" if str(error) == "CONTROL_PLANE_POLICY_TARGET_NOT_FOUND" else "CONTROL_PLANE_FILE_READ_POLICY_INVALID"
+            raise RuntimeError(code) from error
+        raise
     return _normalise_file_read_policy(value)
 
 
@@ -1848,16 +1886,21 @@ def _normalise_approved_patch_policy(
     return result
 
 
-def _read_approved_patch_policy(policy_path: Path) -> dict[str, Any]:
+def _read_approved_patch_policy(policy_path: Path, *, target: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
-        stat = policy_path.stat()
-        if not policy_path.is_file() or stat.st_size <= 0 or stat.st_size > APPROVED_PATCH_POLICY_MAX_BYTES:
+        policy_path.stat()
+        value = _workspace_policy_selected(policy_path, target)
+        if len(json.dumps(value).encode("utf-8")) > APPROVED_PATCH_POLICY_MAX_BYTES:
             raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
-        value = json.loads(policy_path.read_text(encoding="utf-8"))
     except FileNotFoundError as error:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING") from error
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID") from error
+    except RuntimeError as error:
+        if str(error).startswith("CONTROL_PLANE_POLICY_"):
+            code = "CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH" if str(error) == "CONTROL_PLANE_POLICY_TARGET_NOT_FOUND" else "CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID"
+            raise RuntimeError(code) from error
+        raise
     return _normalise_approved_patch_policy(value)
 
 
@@ -1866,11 +1909,12 @@ def _approved_patch_policy_admission(
     *,
     config_path: Path,
     config: dict[str, Any],
+    target: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Verify exact C4 local write authority before delivery or bridge launch."""
 
     policy = _normalise_approved_patch_policy(
-        _read_approved_patch_policy(_approved_patch_policy_path(args)),
+        _read_approved_patch_policy(_approved_patch_policy_path(args), target=target or _policy_target(args)),
         now_ms=int(time.time() * 1000),
         require_enabled=True,
     )
@@ -1891,11 +1935,12 @@ def _file_read_policy_admission(
     *,
     config_path: Path,
     config: dict[str, Any],
+    target: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Verify the independent C3 policy before a queue dequeue or local read."""
 
     policy = _normalise_file_read_policy(
-        _read_file_read_policy(_file_read_policy_path(args)),
+        _read_file_read_policy(_file_read_policy_path(args), target=target or _policy_target(args)),
         now_ms=int(time.time() * 1000),
         require_enabled=True,
     )
@@ -1920,7 +1965,7 @@ def _admit_file_read_policy_request(
 ) -> dict[str, Any]:
     """Recheck all local C3 authority immediately before bridge launch."""
 
-    policy, _entry = _file_read_policy_admission(args, config_path=config_path, config=config)
+    policy, _entry = _file_read_policy_admission(args, config_path=config_path, config=config, target=request)
     for field in ("server_origin", "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
         if request.get(field) != policy[field]:
             raise RuntimeError("CONTROL_PLANE_FILE_READ_TARGET_MISMATCH")
@@ -2108,7 +2153,7 @@ def _admit_approved_patch_policy_request(
         expected_fields.add("verification")
     if not isinstance(request, dict) or set(request) != expected_fields:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
-    policy, _entry = _approved_patch_policy_admission(args, config_path=config_path, config=config)
+    policy, _entry = _approved_patch_policy_admission(args, config_path=config_path, config=config, target=request)
     for field in ("server_origin", "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
         if request.get(field) != policy[field]:
             raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH")
@@ -2192,7 +2237,7 @@ def _read_only_loop_policy_admission(args: argparse.Namespace) -> None:
     """
     config_path = Path(args.config).expanduser().resolve()
     config = _config(config_path)
-    policy = _read_local_policy(_read_only_policy_path(args))
+    policy = _read_local_policy(_read_only_policy_path(args), target=_policy_target(args))
     policy = _normalise_read_only_policy(
         policy,
         now_ms=int(time.time() * 1000),
@@ -2220,7 +2265,7 @@ def read_only_policy_observation(args: argparse.Namespace, config: dict[str, Any
         standing = _standing_policy_observation(args, config)
         if standing is not None:
             return standing
-        policy = _read_local_policy(_read_only_policy_path(args))
+        policy = _read_local_policy(_read_only_policy_path(args), target=_policy_target(args))
         if (
             policy["server_origin"] != _server_origin(config.get("server_url"))
             or policy["device_id"] != config["device_id"]
@@ -2327,10 +2372,44 @@ def _route_evidence_from_heartbeat(
 
 
 def _write_local_policy(policy_path: Path, policy: dict[str, Any], *, replace: bool) -> None:
-    if policy_path.exists() and not replace:
-        raise RuntimeError("CONTROL_PLANE_POLICY_ALREADY_EXISTS")
-    policy_path.parent.mkdir(parents=True, exist_ok=True)
-    _write_json_atomic(policy_path, policy)
+    _workspace_policy_write(policy_path, policy, replace=replace, atomic_writer=_write_json_atomic)
+
+
+def _policy_target(args: argparse.Namespace) -> dict[str, str] | None:
+    workspace_id = getattr(args, "workspace_id", None)
+    generation = getattr(args, "workspace_generation", None)
+    if not workspace_id and not generation:
+        return None
+    target = {"workspace_id": workspace_id, "workspace_generation": generation}
+    _workspace_policy_scope(target)
+    return target
+
+
+def _lane_scope_args(args: argparse.Namespace, path_factory: Callable) -> list[argparse.Namespace]:
+    """Enumerate stored identities without treating enumeration as admission."""
+    if _policy_target(args) is not None:
+        return [args]
+    try:
+        path = path_factory(args)
+    except RuntimeError:
+        return [args]
+    if not path.exists():
+        return [args]
+    result = []
+    try:
+        for policy in _workspace_policy_entries(path):
+            workspace_id, generation = _workspace_policy_scope(policy)
+            result.append(argparse.Namespace(**{**vars(args), "workspace_id": workspace_id,
+                                               "workspace_generation": generation}))
+    except (OSError, RuntimeError, ValueError):
+        # Existing lane admission emits its own typed policy failure.
+        return [args]
+    return result
+
+
+def _targeted_poll(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str, Any]:
+    target = _policy_target(args)
+    return {**payload, **target} if target is not None else payload
 
 
 def _install_read_only_policy_values(
@@ -2529,7 +2608,7 @@ def inspect_read_only_policy(args: argparse.Namespace) -> int:
     """Print a credential-free policy state; absence/invalidity is not readiness."""
 
     try:
-        policy = _read_local_policy(_read_only_policy_path(args))
+        policy = _read_local_policy(_read_only_policy_path(args), target=_policy_target(args))
         now_ms = int(time.time() * 1000)
         state = "enabled" if policy["enabled"] and policy["expires_at_ms"] > now_ms else "expired_or_disabled"
         result: dict[str, Any] = {
@@ -2559,7 +2638,7 @@ def disable_read_only_policy(args: argparse.Namespace) -> int:
     if getattr(args, "confirm_disable", False) is not True:
         raise RuntimeError("CONTROL_PLANE_POLICY_DISABLE_CONFIRMATION_REQUIRED")
     policy_path = _read_only_policy_path(args)
-    policy = _read_local_policy(policy_path)
+    policy = _read_local_policy(policy_path, target=_policy_target(args))
     policy["enabled"] = False
     _write_local_policy(policy_path, policy, replace=True)
     print(json.dumps({
@@ -2719,7 +2798,7 @@ def inspect_file_read_policy(args: argparse.Namespace) -> int:
     """Report file-read policy state without disclosing its allowed paths."""
 
     try:
-        policy = _read_file_read_policy(_file_read_policy_path(args))
+        policy = _read_file_read_policy(_file_read_policy_path(args), target=_policy_target(args))
         now_ms = int(time.time() * 1000)
         state = "enabled" if policy["enabled"] and (
             policy.get("authority_mode") == FILE_READ_POLICY_STANDING_AUTHORITY
@@ -2759,7 +2838,7 @@ def disable_file_read_policy(args: argparse.Namespace) -> int:
     if getattr(args, "confirm_disable", False) is not True:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_DISABLE_CONFIRMATION_REQUIRED")
     policy_path = _file_read_policy_path(args)
-    policy = _read_file_read_policy(policy_path)
+    policy = _read_file_read_policy(policy_path, target=_policy_target(args))
     policy["enabled"] = False
     _write_local_policy(policy_path, policy, replace=True)
     print(json.dumps({
@@ -2899,7 +2978,7 @@ def inspect_approved_patch_policy(args: argparse.Namespace) -> int:
     """Report C4 policy state without returning path or patch authority."""
 
     try:
-        policy = _read_approved_patch_policy(_approved_patch_policy_path(args))
+        policy = _read_approved_patch_policy(_approved_patch_policy_path(args), target=_policy_target(args))
         now_ms = int(time.time() * 1000)
         state = "enabled" if policy["enabled"] and (
             policy.get("authority_mode") == APPROVED_PATCH_POLICY_STANDING_AUTHORITY
@@ -2940,7 +3019,7 @@ def disable_approved_patch_policy(args: argparse.Namespace) -> int:
     if getattr(args, "confirm_disable", False) is not True:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_DISABLE_CONFIRMATION_REQUIRED")
     policy_path = _approved_patch_policy_path(args)
-    policy = _read_approved_patch_policy(policy_path)
+    policy = _read_approved_patch_policy(policy_path, target=_policy_target(args))
     policy["enabled"] = False
     _write_local_policy(policy_path, policy, replace=True)
     print(json.dumps({
@@ -3501,11 +3580,12 @@ def _document_write_policy_admission(
     *,
     config_path: Path,
     config: dict[str, Any],
+    target: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Reuse the standing approved-patch write policy as document authority."""
 
     try:
-        policy, entry = _approved_patch_policy_admission(args, config_path=config_path, config=config)
+        policy, entry = _approved_patch_policy_admission(args, config_path=config_path, config=config, target=target)
     except RuntimeError as error:
         raise RuntimeError(str(error).replace("APPROVED_PATCH", "DOCUMENT_WRITE")) from error
     if (
@@ -3537,7 +3617,7 @@ def _admit_document_write_policy_request(
     }
     if not isinstance(request, dict) or set(request) != expected_fields:
         raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
-    policy, entry = _document_write_policy_admission(args, config_path=config_path, config=config)
+    policy, entry = _document_write_policy_admission(args, config_path=config_path, config=config, target=request)
     for field in ("server_origin", "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
         if request.get(field) != policy[field]:
             raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_TARGET_MISMATCH")
@@ -5069,7 +5149,8 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
     The enrolled node obtains the current owner and facade contract from
     Ubuntu. This installs no policy and returns neither a path nor credential.
     Local-registration checks bracket HTTP so a removed/replaced root cannot
-    be promoted from stale UI data.
+    be promoted from stale UI data. Receipt freshness uses this node's local
+    observation clock; the Ubuntu clock is retained separately as provenance.
     """
 
     config_path = Path(args.config).expanduser().resolve()
@@ -5104,14 +5185,14 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
     standing_write_enabled = response["standing_write_enabled"]
     exec_enabled = response["exec_enabled"]
     exec_binding_count = response["exec_binding_count"]
-    observed_at_ms = response["observed_at_ms"]
+    server_observed_at_ms = response["observed_at_ms"]
     if (
         not isinstance(binding_count, int) or isinstance(binding_count, bool) or binding_count < 1
         or not isinstance(standing_write_enabled, bool)
         or not isinstance(exec_enabled, bool)
         or not isinstance(exec_binding_count, int) or isinstance(exec_binding_count, bool)
         or not 0 <= exec_binding_count <= binding_count
-        or not isinstance(observed_at_ms, int) or isinstance(observed_at_ms, bool) or observed_at_ms <= 0
+        or not isinstance(server_observed_at_ms, int) or isinstance(server_observed_at_ms, bool) or server_observed_at_ms <= 0
     ):
         raise RuntimeError("CONTROL_PLANE_POLICY_AUTHORITY_INVALID")
     owner_id = _policy_identifier(response["owner_id"], "owner_id")
@@ -5135,7 +5216,11 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
         "standing_write_enabled": standing_write_enabled,
         "exec_enabled": exec_enabled,
         "exec_binding_count": exec_binding_count,
-        "observed_at_ms": observed_at_ms,
+        # This is a fresh authenticated request, not a cached server receipt.
+        # Windows and Ubuntu need not have identical wall clocks. Do not use
+        # their clock difference to classify this local observation as stale.
+        "observed_at_ms": int(time.time() * 1000),
+        "server_observed_at_ms": server_observed_at_ms,
         "runtime_mode": _runtime_mode(args),
     }, separators=(",", ":")))
     return 0
@@ -5520,9 +5605,10 @@ def _disable_matching_retired_workspace_policy(args: argparse.Namespace, entry: 
             return False
         raise
     try:
-        policy = _read_local_policy(policy_path)
+        policy = _read_local_policy(policy_path, target=entry)
     except RuntimeError as error:
         if str(error) in {
+            "CONTROL_PLANE_BRIDGE_POLICY_CONFIG_MISMATCH",
             "CONTROL_PLANE_BRIDGE_POLICY_MISSING",
             "CONTROL_PLANE_BRIDGE_POLICY_INVALID",
         }:
@@ -5555,9 +5641,10 @@ def _disable_matching_retired_workspace_file_read_policy(args: argparse.Namespac
             return False
         raise
     try:
-        policy = _read_file_read_policy(policy_path)
+        policy = _read_file_read_policy(policy_path, target=entry)
     except RuntimeError as error:
         if str(error) in {
+            "CONTROL_PLANE_FILE_READ_TARGET_MISMATCH",
             "CONTROL_PLANE_FILE_READ_POLICY_MISSING",
             "CONTROL_PLANE_FILE_READ_POLICY_INVALID",
         }:
@@ -5584,9 +5671,10 @@ def _disable_matching_retired_workspace_approved_patch_policy(args: argparse.Nam
             return False
         raise
     try:
-        policy = _read_approved_patch_policy(policy_path)
+        policy = _read_approved_patch_policy(policy_path, target=entry)
     except RuntimeError as error:
         if str(error) in {
+            "CONTROL_PLANE_APPROVED_PATCH_TARGET_MISMATCH",
             "CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING",
             "CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID",
         }:
@@ -5613,9 +5701,10 @@ def _disable_matching_retired_workspace_exec_policy(args: argparse.Namespace, en
             return False
         raise
     try:
-        policy = _read_exec_policy(policy_path)
+        policy = _read_exec_policy(policy_path, target=entry)
     except RuntimeError as error:
         if str(error) in {
+            "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH",
             "CONTROL_PLANE_EXEC_POLICY_MISSING",
             "CONTROL_PLANE_EXEC_POLICY_INVALID",
             "CONTROL_PLANE_EXEC_POLICY_EXPIRED",
@@ -5995,6 +6084,52 @@ def register_workspace(args: argparse.Namespace) -> int:
     return 0
 
 
+def activate_workspace(args: argparse.Namespace) -> int:
+    """Apply the local owner's exact registered-folder selection.
+
+    Both sides check the opaque generation. The node also brackets the
+    authenticated request with its private canonical-root registration so a
+    stale renderer selection never turns into authority for another path.
+    """
+    if getattr(args, "confirm_activate", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_ACTIVATION_CONFIRMATION_REQUIRED")
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    entry = _require_current_local_workspace_registration(
+        args, config_path=config_path, workspace_id=args.workspace_id,
+        workspace_generation=args.workspace_generation,
+    )
+    response = _request(
+        str(config["server_url"]), f"/v1/nodes/{config['device_id']}/activate-workspace",
+        {"workspace_id": entry["workspace_id"], "workspace_generation": entry["workspace_generation"],
+         "confirm_activate": True}, f"Node {config['node_secret']}",
+    )
+    expected = {"device_id", "workspace_id", "workspace_generation", "binding_id",
+                "pilot_decision_id", "expires_at_ms", "replayed", "state"}
+    if (not isinstance(response, dict) or set(response) != expected
+            or response.get("device_id") != config["device_id"]
+            or response.get("workspace_id") != entry["workspace_id"]
+            or response.get("workspace_generation") != entry["workspace_generation"]
+            or not isinstance(response.get("binding_id"), str)
+            or re.fullmatch(r"bind_[a-f0-9]{32}", response["binding_id"]) is None
+            or not isinstance(response.get("pilot_decision_id"), str)
+            or re.fullmatch(r"pilot_[a-f0-9]{32}", response["pilot_decision_id"]) is None
+            or not isinstance(response.get("expires_at_ms"), int)
+            or isinstance(response.get("expires_at_ms"), bool)
+            or response["expires_at_ms"] <= int(time.time() * 1000)
+            or not isinstance(response.get("replayed"), bool)
+            or response.get("state") != "active"):
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_ACTIVATION_RESPONSE_INVALID")
+    current_entry = _require_current_local_workspace_registration(
+        args, config_path=config_path, workspace_id=entry["workspace_id"],
+        workspace_generation=entry["workspace_generation"],
+    )
+    if current_entry != entry:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_ACTIVATION_LOCAL_STATE_CHANGED")
+    print(json.dumps(response, separators=(",", ":")))
+    return 0
+
+
 def heartbeat(args: argparse.Namespace) -> int:
     config = _config(Path(args.config).expanduser().resolve())
     response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/heartbeat", {
@@ -6311,7 +6446,7 @@ def _poll_file_read_once(args: argparse.Namespace) -> int:
     response = _request(
         str(config["server_url"]),
         f"/v1/nodes/{config['device_id']}/poll",
-        {"limit": 1, "lane": "bounded_file_read"},
+        _targeted_poll(args, {"limit": 1, "lane": "bounded_file_read"}),
         f"Node {config['node_secret']}",
     )
     actions = response.get("actions")
@@ -6481,7 +6616,7 @@ def _poll_approved_patch_once(args: argparse.Namespace) -> int:
     response = _request(
         str(config["server_url"]),
         f"/v1/nodes/{config['device_id']}/poll",
-        {"limit": 1, "lane": "approved_patch"},
+        _targeted_poll(args, {"limit": 1, "lane": "approved_patch"}),
         f"Node {config['node_secret']}",
     )
     actions = response.get("actions")
@@ -6811,7 +6946,7 @@ def _poll_document_write_once(args: argparse.Namespace) -> int:
     response = _request(
         str(config["server_url"]),
         f"/v1/nodes/{config['device_id']}/poll",
-        {"limit": 1, "lane": "document_write"},
+        _targeted_poll(args, {"limit": 1, "lane": "document_write"}),
         f"Node {config['node_secret']}",
     )
     actions = response.get("actions")
@@ -7732,7 +7867,7 @@ def _connected_exec_policy_admission(args: argparse.Namespace) -> tuple[dict[str
     config_path = Path(args.config).expanduser().resolve()
     config = _config(config_path)
     policy = _normalise_exec_policy(
-        _read_exec_policy(_exec_policy_path(args)),
+        _read_exec_policy(_exec_policy_path(args), target=_policy_target(args)),
         now_ms=int(time.time() * 1000),
         require_enabled=True,
     )
@@ -7791,17 +7926,40 @@ def _connected_agent_iteration(
         | {"CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT", "CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED"}
     )
     result: list[dict[str, str]] = []
+    factories = {"file_read": _file_read_policy_path, "artifact": _file_read_policy_path,
+                 "approved_patch": _approved_patch_policy_path, "document_write": _approved_patch_policy_path,
+                 "exec": _exec_policy_path}
+    busy_codes = {
+        "file_read": "CONTROL_PLANE_FILE_READ_POLL_ALREADY_RUNNING",
+        "artifact": "CONTROL_PLANE_ARTIFACT_POLL_ALREADY_RUNNING",
+        "approved_patch": "CONTROL_PLANE_APPROVED_PATCH_POLL_ALREADY_RUNNING",
+        "document_write": "CONTROL_PLANE_DOCUMENT_WRITE_POLL_ALREADY_RUNNING",
+        "exec": "CONTROL_PLANE_EXEC_POLL_ALREADY_RUNNING",
+    }
     for lane, poller in lanes:
-        try:
-            _connected_agent_lane_admission(args, lane)
-        except RuntimeError as error:
-            code = _safe_error_code(error)
-            if code in stop_codes:
-                result.append({"lane": lane, "state": "disabled", "reason": code})
-                continue
-            raise
-        poller(args)
-        result.append({"lane": lane, "state": "polled", "reason": ""})
+        for scoped_args in _lane_scope_args(args, factories[lane]):
+            try:
+                _connected_agent_lane_admission(scoped_args, lane)
+            except RuntimeError as error:
+                code = _safe_error_code(error)
+                if code in stop_codes:
+                    result.append({"lane": lane, "state": "disabled", "reason": code,
+                                   **(_policy_target(scoped_args) or {})})
+                    continue
+                raise
+            try:
+                poller(scoped_args)
+            except RuntimeError as error:
+                code = _safe_error_code(error)
+                if code == busy_codes[lane]:
+                    # The current lock owner remains authoritative. A busy
+                    # lane must not suppress heartbeats or other admitted lanes.
+                    result.append({"lane": lane, "state": "busy", "reason": code,
+                                   **(_policy_target(scoped_args) or {})})
+                    continue
+                raise
+            result.append({"lane": lane, "state": "polled", "reason": "",
+                           **(_policy_target(scoped_args) or {})})
     return result
 
 
@@ -7923,8 +8081,14 @@ def run_connected_agent(args: argparse.Namespace) -> int:
                 except RuntimeError as error:
                     reason = _safe_error_code(error)
                     state = "degraded"
-                    failures += 1
-                    delay_seconds = min(max_backoff_seconds, interval_seconds * (2 ** min(failures - 1, 16)))
+                    if heartbeat_succeeded:
+                        # Capability delivery may fail independently of node
+                        # connectivity; preserve the healthy heartbeat cadence.
+                        failures = 0
+                        delay_seconds = interval_seconds
+                    else:
+                        failures += 1
+                        delay_seconds = min(max_backoff_seconds, interval_seconds * (2 ** min(failures - 1, 16)))
                     agent_status.update({
                         "last_iteration_state": "degraded",
                         "last_heartbeat_state": "succeeded" if heartbeat_succeeded else "failed",
@@ -8085,6 +8249,7 @@ def _normalise_exec_policy(policy: Any, *, now_ms: int | None = None, require_en
                 "allowed_argv_prefixes", "max_timeout_ms", "max_output_bytes", "max_concurrent"}
     if standing:
         expected.add("authority_mode")
+        expected.update(key for key in ("execution_mode", "native_argv_prefixes") if key in policy)
     if not (standing or legacy) or set(policy) != expected:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
     if not isinstance(policy.get("enabled"), bool):
@@ -8115,6 +8280,24 @@ def _normalise_exec_policy(policy: Any, *, now_ms: int | None = None, require_en
         if not isinstance(prefix, list) or not 1 <= len(prefix) <= EXEC_MAX_ARGV_ITEMS:
             raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
         normalised_prefixes.append([_exec_argv_item(item) for item in prefix])
+    routing: dict[str, Any] = {}
+    if "execution_mode" in policy:
+        if policy["execution_mode"] not in ("native_first", "native_only", "isolated"):
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+        routing["execution_mode"] = policy["execution_mode"]
+    if "native_argv_prefixes" in policy:
+        native_prefixes = policy["native_argv_prefixes"]
+        if not isinstance(native_prefixes, list) or len(native_prefixes) > EXEC_MAX_ALLOWED_PREFIXES:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+        normalized_native: list[list[str]] = []
+        for prefix in native_prefixes:
+            if not isinstance(prefix, list) or not 1 <= len(prefix) <= EXEC_MAX_ARGV_ITEMS:
+                raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+            normalized_prefix = [_exec_argv_item(item) for item in prefix]
+            if re.search(r"[\\/:]", normalized_prefix[0]) or normalized_prefix in normalized_native:
+                raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+            normalized_native.append(normalized_prefix)
+        routing["native_argv_prefixes"] = normalized_native
     max_timeout = policy.get("max_timeout_ms")
     max_output = policy.get("max_output_bytes")
     max_concurrent = policy.get("max_concurrent")
@@ -8140,19 +8323,25 @@ def _normalise_exec_policy(policy: Any, *, now_ms: int | None = None, require_en
         "max_timeout_ms": max_timeout,
         "max_output_bytes": max_output,
         "max_concurrent": max_concurrent,
+        **routing,
     }
 
 
-def _read_exec_policy(policy_path: Path) -> dict[str, Any]:
+def _read_exec_policy(policy_path: Path, *, target: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
-        stat = policy_path.stat()
-        if not policy_path.is_file() or stat.st_size <= 0 or stat.st_size > EXEC_POLICY_MAX_BYTES:
+        policy_path.stat()
+        value = _workspace_policy_selected(policy_path, target)
+        if len(json.dumps(value).encode("utf-8")) > EXEC_POLICY_MAX_BYTES:
             raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
-        value = json.loads(policy_path.read_text(encoding="utf-8"))
     except FileNotFoundError as error:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_MISSING") from error
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID") from error
+    except RuntimeError as error:
+        if str(error).startswith("CONTROL_PLANE_POLICY_"):
+            code = "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH" if str(error) == "CONTROL_PLANE_POLICY_TARGET_NOT_FOUND" else "CONTROL_PLANE_EXEC_POLICY_INVALID"
+            raise RuntimeError(code) from error
+        raise
     return _normalise_exec_policy(value)
 
 
@@ -8182,6 +8371,8 @@ def _exec_policy_receipt_scope(policy: dict[str, Any]) -> dict[str, Any]:
         "max_timeout_ms": policy["max_timeout_ms"],
         "max_output_bytes": policy["max_output_bytes"],
         "max_concurrent": policy["max_concurrent"],
+        "execution_mode": policy.get("execution_mode", "native_first"),
+        "native_argv_prefixes": policy.get("native_argv_prefixes", []),
     }
 
 
@@ -8293,7 +8484,7 @@ def _admit_exec_policy_request(args: argparse.Namespace, *, config_path: Path, c
     operation = request.get("operation")
     if operation not in EXEC_CONTROL_OPERATIONS:
         raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
-    policy = _read_exec_policy(_exec_policy_path(args))
+    policy = _read_exec_policy(_exec_policy_path(args), target=request)
     if policy["enabled"] is not True:
         raise RuntimeError("CONTROL_PLANE_EXEC_DISABLED")
     now_ms = int(time.time() * 1000)
@@ -8589,6 +8780,21 @@ def _flush_exec_journal(config: dict[str, Any], journal_path: Path, journal: dic
     return submitted
 
 
+def _safe_exec_metadata(value: dict[str, Any]) -> dict[str, str]:
+    keys = ("execution_backend", "isolation_level", "policy_decision")
+    present = [key for key in keys if key in value]
+    if not present:
+        return {}
+    if len(present) != len(keys) or not (
+        value["execution_backend"] == "native" and value["isolation_level"] == "process_container"
+        and value["policy_decision"] in ("native_safe_command", "native_explicit_approval")
+        or value["execution_backend"] == "isolated" and value["isolation_level"] == "hypervisor"
+        and value["policy_decision"] in ("isolated_unapproved_command", "isolated_preferred")
+    ):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID")
+    return {key: value[key] for key in keys}
+
+
 def _safe_exec_bridge_result(
     value: Any,
     request: dict[str, Any],
@@ -8670,6 +8876,7 @@ def _safe_exec_bridge_result(
         "run_id": run_id,
         "wave_id": wave_id,
         "output_refs": output_refs,
+        **_safe_exec_metadata(value),
     }
     expected_response = hashlib.sha256(json.dumps(
         safe, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -8704,6 +8911,7 @@ def _safe_exec_bridge_result(
         "run_id": run_id,
         "wave_id": wave_id,
         "output_refs": output_refs,
+        **_safe_exec_metadata(value),
         "response_sha256": expected_response,
     }
 
@@ -8720,6 +8928,7 @@ EXEC_CONTROL_RECONCILE_CODES = frozenset({
     "CONTROL_PLANE_EXEC_RESULT_IDENTITY_INVALID",
     "CONTROL_PLANE_EXEC_RESULT_CONTRACT_INVALID",
     "CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID",
+    "CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID",
     "CONTROL_PLANE_EXEC_MCP_REJECTED",
 })
 
@@ -8848,8 +9057,8 @@ def _control_bridge_observation(
             operation=operation,
             signal=signal,
             wait_ms=wait_ms,
-            # Leave transport time for health, workspace binding and the receipt.
-            yield_time_ms=min(30_000, max(0, int(getattr(args, "timeout_seconds", 20) * 1000) - 10_000)),
+            # Durable observations must not stall admission for another root.
+            yield_time_ms=0,
         )
         policy = _admit_exec_policy_request(args, config_path=config_path, config=config, request=control_request)
         expected_policy_sha256 = _policy_digest(policy)
@@ -8869,6 +9078,9 @@ def _control_bridge_observation(
             _write_json_atomic(journal_path, journal)
             return "running", 0
         safe = _safe_exec_bridge_result(result, control_request, expected_policy_sha256)
+        prior_metadata = _safe_exec_metadata(prior)
+        if prior_metadata and _safe_exec_metadata(safe) != prior_metadata:
+            raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID")
         # The initial exec_run receipt adds this projection before it is
         # submitted.  Control observations are independently validated and
         # must carry the same bounded byte count before a terminal receipt is
@@ -8908,6 +9120,10 @@ def _resume_running_exec_entries(
     for key in sorted(list(journal.get("entries", {}))):
         entry = journal["entries"].get(key)
         if not isinstance(entry, dict) or entry.get("state") != "running":
+            continue
+        target = _policy_target(args)
+        if target is not None and any((entry.get("request") or {}).get(field) != value
+                                      for field, value in target.items()):
             continue
         state, count = _control_bridge_observation(
             args,
@@ -9042,7 +9258,7 @@ def _poll_exec_once(args: argparse.Namespace) -> int:
     )
     submitted_receipts += stop_submitted
     response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/poll",
-                        {"limit": 1, "lane": "bounded_exec"}, f"Node {config['node_secret']}")
+                        _targeted_poll(args, {"limit": 1, "lane": "bounded_exec"}), f"Node {config['node_secret']}")
     actions = response.get("actions")
     if not isinstance(actions, list) or len(actions) > 1:
         raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
@@ -9295,6 +9511,15 @@ def install_exec_policy(args: argparse.Namespace) -> int:
         prefixes.append([_exec_argv_item(item) for item in parsed])
     if getattr(args, "expires_at_ms", None) is not None:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRY_UNSUPPORTED")
+    routing: dict[str, Any] = {}
+    if getattr(args, "execution_mode", None) is not None:
+        routing["execution_mode"] = args.execution_mode
+    raw_native_prefixes = getattr(args, "native_argv_prefix", None)
+    if raw_native_prefixes is not None:
+        try:
+            routing["native_argv_prefixes"] = [json.loads(raw) for raw in raw_native_prefixes]
+        except (TypeError, ValueError) as error:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID") from error
     workspace_id = _policy_identifier(getattr(args, "workspace_id", ""), "workspace_id")
     workspace_generation = _policy_identifier(getattr(args, "workspace_generation", ""), "workspace_generation")
     entry = _require_current_local_workspace_registration(
@@ -9317,6 +9542,7 @@ def install_exec_policy(args: argparse.Namespace) -> int:
         "max_timeout_ms": getattr(args, "max_timeout_ms", None),
         "max_output_bytes": getattr(args, "max_output_bytes", None),
         "max_concurrent": 2,
+        **routing,
     }, require_enabled=True)
     _write_local_policy(_exec_policy_path(args), policy, replace=getattr(args, "replace", False) is True)
     print(json.dumps({
@@ -9334,7 +9560,7 @@ def install_exec_policy(args: argparse.Namespace) -> int:
 
 def inspect_exec_policy(args: argparse.Namespace) -> int:
     try:
-        policy = _read_exec_policy(_exec_policy_path(args))
+        policy = _read_exec_policy(_exec_policy_path(args), target=_policy_target(args))
         print(json.dumps({
             "operation": "control_plane_exec_policy_observation",
             "execution": "exec_policy_inspected",
@@ -9350,7 +9576,7 @@ def inspect_exec_policy(args: argparse.Namespace) -> int:
     except RuntimeError as error:
         code = _safe_error_code(error, "CONTROL_PLANE_EXEC_POLICY_UNAVAILABLE")
         if code not in {"CONTROL_PLANE_EXEC_POLICY_MISSING", "CONTROL_PLANE_EXEC_POLICY_INVALID",
-                        "CONTROL_PLANE_EXEC_POLICY_EXPIRED"}:
+                        "CONTROL_PLANE_EXEC_POLICY_EXPIRED", "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH"}:
             raise
         print(json.dumps({
             "operation": "control_plane_exec_policy_observation",
@@ -9367,7 +9593,7 @@ def disable_exec_policy(args: argparse.Namespace) -> int:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_DISABLE_CONFIRMATION_REQUIRED")
     path = _exec_policy_path(args)
     try:
-        policy = _read_exec_policy(path)
+        policy = _read_exec_policy(path, target=_policy_target(args))
     except RuntimeError as error:
         if _safe_error_code(error) == "CONTROL_PLANE_EXEC_POLICY_MISSING":
             print(json.dumps({
@@ -9380,7 +9606,7 @@ def disable_exec_policy(args: argparse.Namespace) -> int:
             return 0
         raise
     policy["enabled"] = False
-    _write_json_atomic(path, policy)
+    _write_local_policy(path, policy, replace=True)
     print(json.dumps({
         "operation": "control_plane_exec_policy_disabled",
         "execution": "exec_policy_disabled",
@@ -9503,7 +9729,7 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                          separators=(",", ":")))
         return 0
     response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/poll",
-                        {"limit": 1, "lane": "bounded_artifact"}, f"Node {config['node_secret']}")
+                        _targeted_poll(args, {"limit": 1, "lane": "bounded_artifact"}), f"Node {config['node_secret']}")
     actions = response.get("actions")
     if not isinstance(actions, list) or len(actions) > 1:
         raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
@@ -9537,6 +9763,7 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                 args,
                 config_path=config_path,
                 config=config,
+                target=action,
             )
             _artifact_request_expiry(action, policy)
             for field in ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
@@ -9554,7 +9781,7 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                 raise RuntimeError("CONTROL_PLANE_FILE_READ_CONTRACT_MISMATCH")
             artifact_cap = 256 * 1024 if kind == "document" else 1024 * 1024
             raw = _read_artifact_bytes(root, rel, min(policy["max_bytes"], artifact_cap))
-            current_policy, current_entry = _file_read_policy_admission(args, config_path=config_path, config=config)
+            current_policy, current_entry = _file_read_policy_admission(args, config_path=config_path, config=config, target=action)
             _artifact_request_expiry(action, current_policy)
             if _policy_digest(current_policy) != _policy_digest(policy) or current_entry != entry:
                 raise RuntimeError("CONTROL_PLANE_FILE_READ_TARGET_MISMATCH")
@@ -9709,6 +9936,15 @@ def main(argv: list[str] | None = None) -> int:
     register_workspace_parser.add_argument("--project-root", default="")
     register_workspace_parser.add_argument("--node", default="node")
     register_workspace_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    activate_workspace_parser = subcommands.add_parser("activate-workspace")
+    activate_workspace_parser.add_argument("--config", required=True)
+    activate_workspace_parser.add_argument("--workspace-registry", required=True)
+    activate_workspace_parser.add_argument("--workspace-id", required=True)
+    activate_workspace_parser.add_argument("--workspace-generation", required=True)
+    activate_workspace_parser.add_argument("--confirm-activate", action="store_true")
+    activate_workspace_parser.add_argument("--project-root", default="")
+    activate_workspace_parser.add_argument("--node", default="node")
+    activate_workspace_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     list_workspaces_parser = subcommands.add_parser("list-workspaces")
     list_workspaces_parser.add_argument("--config", required=True)
     list_workspaces_parser.add_argument("--workspace-registry", required=True)
@@ -9853,12 +10089,16 @@ def main(argv: list[str] | None = None) -> int:
     install_file_read_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     inspect_file_read_policy_parser = subcommands.add_parser("inspect-file-read-policy")
     inspect_file_read_policy_parser.add_argument("--data-root", default="")
+    inspect_file_read_policy_parser.add_argument("--workspace-id")
+    inspect_file_read_policy_parser.add_argument("--workspace-generation")
     inspect_file_read_policy_parser.add_argument("--project-root", default="")
     inspect_file_read_policy_parser.add_argument("--node", default="node")
     inspect_file_read_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     disable_file_read_policy_parser = subcommands.add_parser("disable-file-read-policy")
     disable_file_read_policy_parser.add_argument("--confirm-disable", action="store_true")
     disable_file_read_policy_parser.add_argument("--data-root", default="")
+    disable_file_read_policy_parser.add_argument("--workspace-id")
+    disable_file_read_policy_parser.add_argument("--workspace-generation")
     disable_file_read_policy_parser.add_argument("--project-root", default="")
     disable_file_read_policy_parser.add_argument("--node", default="node")
     disable_file_read_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
@@ -9868,7 +10108,7 @@ def main(argv: list[str] | None = None) -> int:
     approved_patch_poll.add_argument("--project-root", required=True)
     approved_patch_poll.add_argument("--node", default="node")
     approved_patch_poll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
-    approved_patch_poll.add_argument("--timeout-seconds", type=int, default=20)
+    approved_patch_poll.add_argument("--timeout-seconds", type=int, default=40)
     approved_patch_poll.add_argument("--data-root", default="")
     approved_patch_loop = subcommands.add_parser("run-approved-patch-loop")
     approved_patch_loop.add_argument("--config", required=True)
@@ -9876,7 +10116,7 @@ def main(argv: list[str] | None = None) -> int:
     approved_patch_loop.add_argument("--project-root", required=True)
     approved_patch_loop.add_argument("--node", default="node")
     approved_patch_loop.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
-    approved_patch_loop.add_argument("--timeout-seconds", type=int, default=20)
+    approved_patch_loop.add_argument("--timeout-seconds", type=int, default=40)
     approved_patch_loop.add_argument("--interval-seconds", type=int, default=60)
     approved_patch_loop.add_argument("--max-iterations", type=int, default=1)
     approved_patch_loop.add_argument("--data-root", default="")
@@ -9923,12 +10163,16 @@ def main(argv: list[str] | None = None) -> int:
     install_approved_patch_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     inspect_approved_patch_policy_parser = subcommands.add_parser("inspect-approved-patch-policy")
     inspect_approved_patch_policy_parser.add_argument("--data-root", default="")
+    inspect_approved_patch_policy_parser.add_argument("--workspace-id")
+    inspect_approved_patch_policy_parser.add_argument("--workspace-generation")
     inspect_approved_patch_policy_parser.add_argument("--project-root", default="")
     inspect_approved_patch_policy_parser.add_argument("--node", default="node")
     inspect_approved_patch_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     disable_approved_patch_policy_parser = subcommands.add_parser("disable-approved-patch-policy")
     disable_approved_patch_policy_parser.add_argument("--confirm-disable", action="store_true")
     disable_approved_patch_policy_parser.add_argument("--data-root", default="")
+    disable_approved_patch_policy_parser.add_argument("--workspace-id")
+    disable_approved_patch_policy_parser.add_argument("--workspace-generation")
     disable_approved_patch_policy_parser.add_argument("--project-root", default="")
     disable_approved_patch_policy_parser.add_argument("--node", default="node")
     disable_approved_patch_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
@@ -9962,6 +10206,8 @@ def main(argv: list[str] | None = None) -> int:
     install_exec_policy_parser.add_argument("--allowed-argv-prefix", action="append", required=True)
     install_exec_policy_parser.add_argument("--max-timeout-ms", type=int, required=True)
     install_exec_policy_parser.add_argument("--max-output-bytes", type=int, required=True)
+    install_exec_policy_parser.add_argument("--execution-mode", choices=("native_first", "native_only", "isolated"))
+    install_exec_policy_parser.add_argument("--native-argv-prefix", action="append")
     # Standing local exec authority is intentionally not time-limited.  Keep
     # the legacy option parseable only to return a typed migration error.
     install_exec_policy_parser.add_argument("--expires-at-ms", type=int, required=False, help=argparse.SUPPRESS)
@@ -9973,12 +10219,16 @@ def main(argv: list[str] | None = None) -> int:
     install_exec_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     inspect_exec_policy_parser = subcommands.add_parser("inspect-exec-policy")
     inspect_exec_policy_parser.add_argument("--data-root", default="")
+    inspect_exec_policy_parser.add_argument("--workspace-id")
+    inspect_exec_policy_parser.add_argument("--workspace-generation")
     inspect_exec_policy_parser.add_argument("--project-root", default="")
     inspect_exec_policy_parser.add_argument("--node", default="node")
     inspect_exec_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     disable_exec_policy_parser = subcommands.add_parser("disable-exec-policy")
     disable_exec_policy_parser.add_argument("--confirm-disable", action="store_true")
     disable_exec_policy_parser.add_argument("--data-root", default="")
+    disable_exec_policy_parser.add_argument("--workspace-id")
+    disable_exec_policy_parser.add_argument("--workspace-generation")
     disable_exec_policy_parser.add_argument("--project-root", default="")
     disable_exec_policy_parser.add_argument("--node", default="node")
     disable_exec_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
@@ -10028,12 +10278,16 @@ def main(argv: list[str] | None = None) -> int:
     install_policy_assignment.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     inspect_policy = subcommands.add_parser("inspect-read-only-policy")
     inspect_policy.add_argument("--data-root", default="")
+    inspect_policy.add_argument("--workspace-id")
+    inspect_policy.add_argument("--workspace-generation")
     inspect_policy.add_argument("--project-root", default="")
     inspect_policy.add_argument("--node", default="node")
     inspect_policy.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     disable_policy = subcommands.add_parser("disable-read-only-policy")
     disable_policy.add_argument("--confirm-disable", action="store_true")
     disable_policy.add_argument("--data-root", default="")
+    disable_policy.add_argument("--workspace-id")
+    disable_policy.add_argument("--workspace-generation")
     disable_policy.add_argument("--project-root", default="")
     disable_policy.add_argument("--node", default="node")
     disable_policy.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
@@ -10046,6 +10300,7 @@ def main(argv: list[str] | None = None) -> int:
             "inspect-policy-authority": inspect_policy_authority,
             "rotate-credential": rotate_node_credential,
             "register-workspace": register_workspace,
+            "activate-workspace": activate_workspace,
             "list-workspaces": list_workspaces,
             "retire-workspace": retire_workspace,
             "replace-workspace": replace_workspace,

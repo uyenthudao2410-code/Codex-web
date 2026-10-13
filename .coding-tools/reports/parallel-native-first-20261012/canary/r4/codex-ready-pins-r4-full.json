@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "principal_id": "svcprn_cd98750c7c7e45678d201066dc1b7d7a",
+  "grant_id": "mcpsvcgrant_bf8c94291a1b448abcfdaaba5531a5bd",
+  "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+  "activation_epoch": "activation-mv5cvpnu-2ddc4f6edfe0487ec46a1594cb87218d",
+  "process_instance_id": "8vZ_MQ-kNrTus9ch",
+  "server_instance_id": "MSZYKc9xLwRhDOMM",
+  "local_tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+  "facade_schema_version": 32,
+  "facade_contract_sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66",
+  "service_pid": 970133,
+  "serving_mcp_facade_sha256": "dd78b10a6d69518089b66ad809592e535a11ab1f26cfd9517a31b1802157c98f",
+  "serving_node_agent_sha256": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+  "serving_store_sha256": "a1e9863161e01cbf1eff9d36555a705cbac1ca78ac3dcea1bd9eec6ec4af47b3",
+  "workspace_label": "Codex-web",
+  "workspace_id": "workspace_f93b5bac9dc74fae9cea66f44c4ebc94",
+  "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+  "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+  "pilot_decision_id": "pilot_9c586c58bf104766a8644b5187ba4afe",
+  "activation_verified": true,
+  "exec_policy_sha256": "4ca0707dd6380a4c592fe24547c7b5d40affdb074c5c2b1639d497fcf6d5da57",
+  "trusted_build_explicitly_approved": true,
+  "evidence_sha256": {
+    "server-readiness-r4-after-build-approval.json": "9f22db12cf062353c7e1e46932014598e6d5991875095c4e0dd2dd1c1740b6f1",
+    "canary-build-1791816064960-4ac26460.json": "ed08a9d7e01c978032fe687d6d5e85e0a6413a65df1dcf9d15a096826f1abfab",
+    "fixture-preparation.json": "4b8bbe525036278a4840fa1f0fc18d4158b4f9b4bb88a96361bee10f60f74102"
+  }
+}

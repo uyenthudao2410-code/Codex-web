@@ -1,0 +1,1 @@
+{"operation":"autocad_folder_access_canary","phase":"original_reconciled_task_closed","observed_at_ms":1791795127739,"ok":true,"service_pid":946413,"task_id":"task_09461f4e2d3b4992811812e816a6edbc","original_action_id":"act_ed8982433bf347ef8c32aebc17b23d43","original_unknown_preserved":true,"writer_released":true,"task_closed":true,"database_direct_mutation":false}

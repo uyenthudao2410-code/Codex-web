@@ -1,0 +1,29 @@
+{
+  "operation": "document_write_bind_rejection_focused_proof",
+  "source_only": true,
+  "runtime_mutations": 0,
+  "external_mutations": 0,
+  "git_branch": "main",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "changed_behavior": "Read-only workspace bootstrap failures are rejected before any document workflow is dispatched; document workflow failures retain unknown-effect classification.",
+  "files": {
+    "electron/services/runtimeOrchestrator.js": "f7f1b58da2166b60d95917dcc8fa568e1d0d95d575a9ddcf3ceae26dd98d1b06",
+    "control-plane/control_plane/node_agent.py": "1748832db26b40a459ab1dd3181fae6c237e01267ef345ccfc2ca691f1c36dd2",
+    "tests/control-plane-document-write-runtime.test.js": "3f31005fd3f72ad4167d264990070215c43a23ea4fbd085757e9b3d5255fc2ec",
+    "control-plane/tests/test_document_write_node_agent.py": "2f9e1f1f903c6e8b539ecd03dc6a13da5c56d1fe914da1e21b0a1a297db81315",
+    "control-plane/tests/test_mcp_oauth.py": "1c72cd385ffe0aa010df52fb37efd64752df6b90e80226c3d93133825f5f57e1"
+  },
+  "validation": {
+    "javascript_runtime_boundary": {"command": "node --test tests/control-plane-document-write-runtime.test.js", "passed": 4, "failed": 0, "cases": ["bootstrap rejection", "bootstrap invalid JSON", "bootstrap transport failure", "actual document workflow rejection"]},
+    "node_poll_boundary": {"passed": 2, "failed": 0, "cases": ["test_bind_rejection_is_terminal_before_document_effect", "test_mcp_rejection_keeps_unknown_document_effect"], "duplicate_delivery_bridge_call_count": 1, "journal_and_receipt_verified": true},
+    "private_policy_fixture": {"passed": 1, "failed": 0, "case": "PrivateTunnelServiceHttpTests.test_node_policy_authority_requires_exact_active_writable_binding", "unscoped_private_denied": true, "exact_selected_pilot_accepted": true},
+    "git_diff_check": "pass"
+  },
+  "original_canary": {
+    "action_id": "act_ed8982433bf347ef8c32aebc17b23d43",
+    "task_id": "task_09461f4e2d3b4992811812e816a6edbc",
+    "attempt_id": "try_79756ada1f5c45c389f4c133ecb55c95",
+    "diagnostic_code": "CONTROL_PLANE_DOCUMENT_WRITE_MCP_REJECTED",
+    "diagnosis": "Read-only remote snapshot and MCP status confirm reconcile_required and one original dispatch. This lane did not settle, quarantine, close, redispatch, or modify original evidence."
+  }
+}

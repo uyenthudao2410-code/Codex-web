@@ -530,6 +530,10 @@ async function gitStatus(workspace, forceUntracked = false) {
   const root = String((await runGit(workspace, ['rev-parse', '--show-toplevel'])).stdout || '').trim();
   if (!root || !samePath(root, workspace)) throw actionError('AUTO_ACTIVATION_WORKSPACE_MISMATCH', 'Automatic activation requires the configured workspace Git root.');
   const args = ['status', '--porcelain=v1', '-z', '-b', forceUntracked ? '--untracked-files=all' : '--untracked-files=no'];
+  // Retained runtime evidence is not source identity; exclude it before both
+  // the Git output budget and the exact-source entry bound are applied.
+  const exclude = process.platform === 'win32' ? 'top,exclude,icase' : 'top,exclude';
+  args.push('--', ':(top)**', `:(${exclude}).coding-tools`, `:(${exclude}).coding-tools/**`);
   const parsed = parseGitStatus((await runGitBytes(workspace, args)).stdout);
   const head = String((await runGit(workspace, ['rev-parse', 'HEAD'])).stdout || '').trim();
   return { ...parsed, head };

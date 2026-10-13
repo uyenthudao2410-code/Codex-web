@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "operation": "reviewed_shared_write_exec_r2_actual_plan",
+  "observed_at_ms": 1791780944423,
+  "effects_dispatched": false,
+  "authorization": "root_exactly_one_r2_after_verified_original_boundary_cleanup",
+  "git": {
+    "root": "E:\\DEV\\Codex-web",
+    "branch": "main",
+    "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+    "status_entry_count": 280,
+    "unmerged_entry_count": 0
+  },
+  "attempt_id": "682718c387c14047828a0a2a02faf57e",
+  "target": "E:\\DEV\\Codex-web\\tests\\fixtures\\new-machine-shared-write-proof-20261012.txt",
+  "target_absent": true,
+  "receipt_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\shared-write-exec-receipt-r2-682718c387c14047828a0a2a02faf57e.ndjson",
+  "receipt_absent": true,
+  "source_sha256": {
+    "run-shared-write-exec-canary-r2.py": "a0aa5b81df0c54b66c17cce0647121585ef297b7d16039f7a59ac90e555148f8",
+    "invoke-shared-write-exec-canary-r2.ps1": "8e41c719e42b9d7bfb714777cca44906ff22b6369798d5414f05b3d310828032",
+    "shared-write-exec-check-r2.cjs": "ba39e6aa6927711a1f85a3aa1df5fed5f72d594eea85ed7d1544c07b1bcabcc6"
+  },
+  "original_task_cleanup_receipt_sha256": "978d32e9eb114c34ae89ea7faadbc143063fc457572a4b9194a0255c3d554dc0",
+  "runtime": {
+    "runtime_report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\shared-write-exec-20261012\\final-machine-observation-activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111-1791780943934.json",
+    "runtime_report_sha256": "93bae4fd8f69bea1f25070212ec61b0f28b22879e432bf8faa56fe7bcd2b1950",
+    "activation_epoch": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+    "process_instance_id": "ev_bVSX46CWc8WG5",
+    "server_instance_id": "XobFwIqZETgu9SLo",
+    "contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+    "package_hashes": {
+      "resources/app.asar": "3e5b87823089d08058620fdda56e3c410e92387c258add1ec2beeae6e4c771ba",
+      "Coding Tools MCP.exe": "960adeec5aebad36374f556718d738ca50482540f427bf62cbc3178fe4078f5f",
+      "resources/resources/control-plane/node_agent.py": "bc28e81636d4d1edb35fcfd4b05e905241f4f63ba18ceac38e8c9043cce56840",
+      "resources/resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py": "6b75a3b4e7785b5fd5740140a5cd3bee95e31703dbe733124b5d65c48e983ba9",
+      "resources/resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py": "b2df54b2450237cfff50b9662a5746704855fda8708a7076ea606a43e0b36ebb"
+    }
+  },
+  "canonical_preflight": {
+    "operation": "r2_readonly_canonical_preflight",
+    "ok": true,
+    "observed_at_ms": 1791780944052,
+    "service_pid": 921509,
+    "mcp_port": 8766,
+    "facade_contract": {
+      "schema_version": 32,
+      "profile": "control-plane-private-tunnel-service-v1",
+      "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+    },
+    "boundary_census": {
+      "open_tasks": 0,
+      "unreleased_writers": 0,
+      "unsettled_actions": 0
+    },
+    "ready_identity": {
+      "activation_epoch": "activation-mv4r64ul-235cac58cc9592bd08ffc95abe94a111",
+      "process_instance_id": "ev_bVSX46CWc8WG5",
+      "server_instance_id": "XobFwIqZETgu9SLo"
+    },
+    "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+    "workspace_generation": "generation_a420c8bfcfcb4e42b5bb7fc5e5cec097",
+    "pilot_decision_id": "pilot_dfb3174078d842299c41c6638830e505"
+  },
+  "workflow": [
+    "doc_create_overwrite_false",
+    "exact_read_initial",
+    "exact_existing_file_patch",
+    "exact_read_final",
+    "one_structured_node_test_job",
+    "supported_writer_release_task_close"
+  ],
+  "native_semantic_acceptance_authorized": false,
+  "original_actions_replayed": false
+}

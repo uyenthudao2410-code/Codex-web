@@ -1,0 +1,632 @@
+{
+  "schema_version": 1,
+  "operation": "bfix_operator_activation-preflight",
+  "observed_at": "2026-10-13T06:36:36.879Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "mutation_started": false,
+  "owner": {
+    "owner_pid": 41352,
+    "owner_process_start_token": "134363434192821600",
+    "instance_id": "748a7b9e958236326c5d6f07f0c18592",
+    "installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+    "runtime_mode": "packaged",
+    "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973"
+  },
+  "host": {
+    "pid": 41352,
+    "instance_id": "748a7b9e958236326c5d6f07f0c18592",
+    "process_start_token": "134363434192821600",
+    "state": "healthy",
+    "full_clean_activation": {
+      "available": true,
+      "contract_version": 1,
+      "running_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "state": "current",
+      "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973"
+    },
+    "activation_epoch": {
+      "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+      "operation_id": "bfix-refresh-mv690kyy-15ac432fd5415cb6",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "970b247d9ef8fb4d6e8e4b4875de82ceccdb1e9e2ce39edaa277329575e97af1",
+      "expires_at_unix_ms": 1791870403311,
+      "ready_at": "2026-10-13T05:37:25.046Z",
+      "error": null
+    },
+    "code_revision": {
+      "running_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-13T06:36:31.446Z",
+      "file_count": 40
+    },
+    "ready_adoption": {
+      "state": "adopted"
+    },
+    "recovery_bootstrap": null,
+    "activation_closure": {
+      "schema_version": 1,
+      "source_checkpoint_id": "887cb157d88b46b585f5dc7ef8ea9985",
+      "run_id": "02729745ff42457aa0dae1844d4534e7",
+      "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+      "proof_fingerprint": "313568e8299da05b504b06f1e6e66ba2ff7a1b2fc62df8c0a6a4c203bef8bd6e",
+      "accepted_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "valid": true,
+      "checkpoint_identity_valid": true,
+      "closure_input_schema_supported": true,
+      "source_accepted": true,
+      "accepted_receipts_complete": true,
+      "activation_eligible": false,
+      "eligibility_code": "ACTIVATABLE",
+      "affected_components": [
+        "recovery_host"
+      ],
+      "affected_components_valid": true,
+      "component_receipts": {
+        "recovery_host": [
+          {
+            "path": "electron/services/recoveryActionStore.js",
+            "state": "file",
+            "sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646",
+            "size_bytes": 84284,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "02729745ff42457aa0dae1844d4534e7",
+            "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+            "restart_safe": true,
+            "content_addressed": true
+          }
+        ]
+      },
+      "component_receipts_valid": true,
+      "postflight_receipts": {
+        "recovery_host": null
+      },
+      "postflight_receipts_valid": false,
+      "component_current": {
+        "recovery_host": false
+      },
+      "components_current": false,
+      "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+      "connector_continuity_only": false,
+      "connector_refresh_required": true,
+      "connector_acknowledgement_pending": false,
+      "connector_rediscovered_at": null,
+      "connector_compatibility_acknowledged_at": null,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "connector_contract_current": false,
+      "lifecycle_decision": null,
+      "lifecycle_clean": false,
+      "lifecycle_code": null,
+      "runtime_running": true,
+      "tunnel_running": false,
+      "runtime_fully_ready": false,
+      "observed_at": "2026-10-13T06:36:36.453Z",
+      "release_state": "NOT_RELEASED",
+      "production_state": "NOT_CLAIMED",
+      "closure_state": "ACTIVATABLE",
+      "live_closure": "ACTIVATABLE"
+    },
+    "auto_activation": {
+      "trust_model": "running_baseline_accepted_receipts_v2",
+      "continuity_mode": "detached_runtime_children_v1",
+      "running": true,
+      "processing": false,
+      "pending": 0,
+      "deferred": 0,
+      "awaiting": 0,
+      "blocked": 2,
+      "failed": 0,
+      "completed": 0,
+      "baseline_head": "7f26754657c5a1e933dea000fb75a0624e72f152",
+      "processed_checkpoints": 2,
+      "closure_input": {
+        "schema_version": 1,
+        "source_checkpoint_id": "887cb157d88b46b585f5dc7ef8ea9985",
+        "run_id": "02729745ff42457aa0dae1844d4534e7",
+        "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+        "proof_fingerprint": "313568e8299da05b504b06f1e6e66ba2ff7a1b2fc62df8c0a6a4c203bef8bd6e",
+        "accepted_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+        "source_accepted": true,
+        "accepted_receipts_complete": true,
+        "activation_eligible": false,
+        "eligibility_code": "ACTIVATABLE",
+        "affected_components": [
+          "recovery_host"
+        ],
+        "affected_components_valid": true,
+        "component_receipts_valid": true,
+        "component_receipts": {
+          "recovery_host": [
+            {
+              "path": "electron/services/recoveryActionStore.js",
+              "state": "file",
+              "sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646",
+              "size_bytes": 84284,
+              "receipt_kind": "explicit_existing_file",
+              "run_id": "02729745ff42457aa0dae1844d4534e7",
+              "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+              "restart_safe": true,
+              "content_addressed": true,
+              "expected_sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646"
+            }
+          ]
+        },
+        "postflight_receipts": {},
+        "components_current": false,
+        "lifecycle_decision": null,
+        "lifecycle_clean": false,
+        "observed_at": "2026-10-13T06:35:28.596Z"
+      },
+      "last_error": null
+    },
+    "electron_ui_recovery": {
+      "state": "healthy",
+      "registered": true,
+      "alive": true,
+      "pid": 45636,
+      "instance_id": "67b4b7236d920c36b0d1fd418812d27c",
+      "started_at_unix_ms": 1791869829266,
+      "runtime_mode": "packaged",
+      "recovery_host_runtime_mode": "packaged",
+      "recovery_host_installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+      "ui_runtime_mode": "packaged",
+      "ui_installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+      "suppressed": false,
+      "suppression_reason": "",
+      "attempts_in_window": 0,
+      "last_launch_pid": null,
+      "initial_registration_grace_until_unix_ms": null,
+      "pending_registration_until_unix_ms": null,
+      "next_attempt_at_unix_ms": null,
+      "circuit_suppressed_until_unix_ms": null,
+      "last_error_code": null
+    },
+    "runtime": {
+      "mcp": true,
+      "tunnel": false,
+      "execution_role": "central_executor",
+      "central_connected": true,
+      "authority_ready": true,
+      "central_status_reason": null,
+      "fully_ready": true,
+      "update_incomplete": false,
+      "connector_ready": false,
+      "connector_ack_sha_matches": false,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+      "recovering": false,
+      "recovery_blocked": false
+    }
+  },
+  "node_runtime_projection": {
+    "observation_schema_version": 1,
+    "observation_kind": "recovery_runtime_read_only",
+    "installation_id": "59a87bbca055c73c86823c5ecedea371c4e5443542cf70b773c74fec7a8c8a70",
+    "runtime_mode": "packaged",
+    "recovery_host_instance_id": "748a7b9e958236326c5d6f07f0c18592",
+    "strict_ready": true
+  },
+  "identity_observation": {
+    "observation_schema_version": 1,
+    "observation_kind": "mcp_identity_read_only",
+    "observed_at": "2026-10-13T06:36:38.144Z",
+    "recovery_host_instance_id": "748a7b9e958236326c5d6f07f0c18592",
+    "mcp_process_instance_id": "QqMd66BffLuwvrKn",
+    "mcp_server_instance_id": "klMHdqQ2r53haqlu",
+    "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+    "current_activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+    "tool_contract_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+    "mcp_ready": true,
+    "identity_current": true,
+    "workspace_read": null
+  },
+  "runtime": {
+    "fullyReady": true,
+    "mcpRunning": true,
+    "nativeAlive": true,
+    "centralConnected": true,
+    "authorityReady": true,
+    "componentsReady": true,
+    "updateIncomplete": false,
+    "connectorContractState": "CHANGED_NEEDS_DISCOVERY",
+    "codeRevision": {
+      "codingMcp": {
+        "running_revision": "dbb2c5af325486fa4f44617836ad49961c23341d439018443f1ceeead5ace026",
+        "disk_revision": "dbb2c5af325486fa4f44617836ad49961c23341d439018443f1ceeead5ace026",
+        "update_pending": false,
+        "state": "current",
+        "checked_at": "2026-10-13T06:36:31.426Z",
+        "file_count": 150,
+        "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973"
+      }
+    },
+    "activationClosure": {
+      "schema_version": 1,
+      "source_checkpoint_id": "887cb157d88b46b585f5dc7ef8ea9985",
+      "run_id": "02729745ff42457aa0dae1844d4534e7",
+      "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+      "proof_fingerprint": "313568e8299da05b504b06f1e6e66ba2ff7a1b2fc62df8c0a6a4c203bef8bd6e",
+      "accepted_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+      "valid": true,
+      "checkpoint_identity_valid": true,
+      "closure_input_schema_supported": true,
+      "source_accepted": true,
+      "accepted_receipts_complete": true,
+      "activation_eligible": false,
+      "eligibility_code": "ACTIVATABLE",
+      "affected_components": [
+        "recovery_host"
+      ],
+      "affected_components_valid": true,
+      "component_receipts": {
+        "recovery_host": [
+          {
+            "path": "electron/services/recoveryActionStore.js",
+            "state": "file",
+            "sha256": "6f8bfc43491bf7a9019dce176f34078a4572e6e6f09681e95a272e55fca0a646",
+            "size_bytes": 84284,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "02729745ff42457aa0dae1844d4534e7",
+            "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+            "restart_safe": true,
+            "content_addressed": true
+          }
+        ]
+      },
+      "component_receipts_valid": true,
+      "postflight_receipts": {
+        "recovery_host": null
+      },
+      "postflight_receipts_valid": false,
+      "component_current": {
+        "recovery_host": false
+      },
+      "components_current": false,
+      "connector_contract_state": "CHANGED_NEEDS_DISCOVERY",
+      "connector_continuity_only": false,
+      "connector_refresh_required": true,
+      "connector_acknowledgement_pending": false,
+      "connector_rediscovered_at": null,
+      "connector_compatibility_acknowledged_at": null,
+      "connector_current_sha256": "0e4733844a471814a3a6240fa9c0423b56195ab80f6e5283b5c978e28edaaed4",
+      "connector_acknowledged_sha256": null,
+      "connector_contract_current": false,
+      "lifecycle_decision": null,
+      "lifecycle_clean": false,
+      "lifecycle_code": null,
+      "runtime_running": true,
+      "tunnel_running": false,
+      "runtime_fully_ready": false,
+      "observed_at": "2026-10-13T06:36:36.453Z",
+      "release_state": "NOT_RELEASED",
+      "production_state": "NOT_CLAIMED",
+      "closure_state": "ACTIVATABLE",
+      "live_closure": "ACTIVATABLE"
+    },
+    "activationEpoch": {
+      "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+      "operation_id": "bfix-refresh-mv690kyy-15ac432fd5415cb6",
+      "state": "READY",
+      "epoch_state": "READY",
+      "admission_open": true,
+      "update_incomplete": false,
+      "ready_commit_digest": "970b247d9ef8fb4d6e8e4b4875de82ceccdb1e9e2ce39edaa277329575e97af1",
+      "expires_at_unix_ms": 1791870403311,
+      "ready_at": "2026-10-13T05:37:25.046Z",
+      "error": null
+    },
+    "device": {
+      "scope": "current_device_only",
+      "registry": "local",
+      "device_id": "4c4b7a5b-7744-49ae-a490-78a528a00471",
+      "device_instance_id": "748a7b9e958236326c5d6f07f0c18592",
+      "display_name": "DESKTOP-63643J4",
+      "online": true,
+      "workspace": "E:\\DEV\\Codex-web",
+      "execution_role": "central_executor",
+      "coding": {
+        "mcp_running": true,
+        "native_alive": true,
+        "tunnel_running": false,
+        "tunnel_managed": false,
+        "tunnel_id": null,
+        "endpoint_device_instance_id": "748a7b9e958236326c5d6f07f0c18592",
+        "ownership": "device_id"
+      },
+      "git": {
+        "available": true,
+        "branch": "main",
+        "head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+        "head_short": "7999c415",
+        "dirty": true
+      },
+      "recovery": {
+        "host_running": true,
+        "mcp_running": true,
+        "tunnel_running": false,
+        "tunnel_state": "not_configured",
+        "tunnel_id": null
+      }
+    }
+  },
+  "epoch": {
+    "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+    "operation_id": "bfix-refresh-mv690kyy-15ac432fd5415cb6",
+    "state": "READY",
+    "epoch_state": "READY",
+    "admission_open": true,
+    "update_incomplete": false,
+    "ready_commit_digest": "970b247d9ef8fb4d6e8e4b4875de82ceccdb1e9e2ce39edaa277329575e97af1",
+    "expires_at_unix_ms": 1791870403311,
+    "ready_at": "2026-10-13T05:37:25.046Z",
+    "error": null
+  },
+  "source_checkpoint": {
+    "checkpoint_id": "887cb157d88b46b585f5dc7ef8ea9985",
+    "run_id": "02729745ff42457aa0dae1844d4534e7",
+    "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+    "proof_fingerprint": "313568e8299da05b504b06f1e6e66ba2ff7a1b2fc62df8c0a6a4c203bef8bd6e",
+    "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324"
+  },
+  "request": {
+    "operation_id": "bfix-source-mv6b5n29-fd3c9d9c94dd266b",
+    "component": "recovery_host",
+    "expected_disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+    "requested_at_unix_ms": 1791873398529,
+    "expires_at_unix_ms": 1791873453529,
+    "allow_acceptance_pending": true,
+    "source_checkpoint": {
+      "checkpoint_id": "887cb157d88b46b585f5dc7ef8ea9985",
+      "run_id": "02729745ff42457aa0dae1844d4534e7",
+      "wave_id": "dcad4dfbc9b54a3caad9a216933648ba",
+      "proof_fingerprint": "313568e8299da05b504b06f1e6e66ba2ff7a1b2fc62df8c0a6a4c203bef8bd6e",
+      "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324"
+    },
+    "full_clean_required": true,
+    "activation_mode": "full_clean_activation"
+  },
+  "preflight": {
+    "safe": true,
+    "code": "ALREADY_CURRENT",
+    "component": "recovery_host",
+    "revision": {
+      "running_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-13T06:36:38.530Z",
+      "file_count": 40
+    },
+    "runtime": {
+      "acceptance_pending": true,
+      "code": "READY",
+      "counts": {
+        "active_agent_lanes": 0,
+        "active_background_operations": 0,
+        "active_commands": 0,
+        "active_managed_processes": 0,
+        "active_tool_calls": 0,
+        "foreign_heavy_processes": 0,
+        "owned_codex_sidecar_residues": 0,
+        "self_controller_leases_discounted": 0,
+        "starting_commands": 0,
+        "threshold_sensitive_stale_candidates": 18
+      },
+      "fence_operation_id": null,
+      "fenced": false,
+      "lifecycle": {
+        "classification_counts": {
+          "AWAITING_ACCEPTANCE": 27,
+          "P5_EXPERIMENT_ANCHOR": 6,
+          "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 18
+        },
+        "live_owned_runs": [],
+        "p5_lifecycles": [
+          "EPOCH_CLOSED",
+          "EPOCH_HARD_STOPPED"
+        ],
+        "projection": {
+          "available": true,
+          "bound_relevant_run_count": 27,
+          "classification": "CONTEXTUAL_PROJECTIONS",
+          "conflicting_run_count": 0,
+          "context_count": 1186,
+          "contextual_sha256": "c1ca4f23701df8c3e34810737fc4ffb7818175393f810ea8325be7aaab9eb804",
+          "malformed_context_projection": false,
+          "missing_run_count": 0,
+          "mode": "contextual",
+          "orchestration_state": "",
+          "relevant_run_count": 27,
+          "run_id": "",
+          "unprojected_historical_acceptance_count": 0,
+          "wave_id": ""
+        },
+        "projection_classification": "CONTEXTUAL_PROJECTIONS",
+        "projection_rebuild": {
+          "current": true,
+          "receipt": {
+            "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+            "completed_at": "2026-10-13T06:36:47.949Z",
+            "completed_at_unix_ms": 1791873407949,
+            "integrity_sha256": "e3c09466c52302a0e6d17494b90f72fdc3f49dc53bf850c3189b2ae9d90db69d",
+            "kind": "coding_tools_mcp_projection_rebuild",
+            "ledger_integrity": {
+              "backup_api_copy": true,
+              "foreign_key_check_rows": 0,
+              "immutable": true,
+              "integrity_check": [
+                "ok"
+              ],
+              "query_only": true
+            },
+            "ledger_logical_sha256": "d7b07056e1da0ab656b753cae200810b92ca6c0d8a23fae6bebf70d81ef5ab97",
+            "ledger_snapshot_sha256": "9695716adb70fb5cca586160708e3f1ce9d96b081d5f3c924bc81763c56316e4",
+            "process_instance_id": "QqMd66BffLuwvrKn",
+            "projection": {
+              "context_count": 1186,
+              "contextual_sha256": "c1ca4f23701df8c3e34810737fc4ffb7818175393f810ea8325be7aaab9eb804",
+              "mode": "contextual",
+              "orchestration_state": "",
+              "run_id": "",
+              "wave_id": ""
+            },
+            "projection_classification": "CONTEXTUAL_PROJECTIONS",
+            "reconciled": true,
+            "schema_version": 2,
+            "server_instance_id": "klMHdqQ2r53haqlu",
+            "workspace": "E:\\DEV\\Codex-web"
+          },
+          "validation": {
+            "code": "READY",
+            "projection_classification": "CONTEXTUAL_PROJECTIONS",
+            "reasons": [],
+            "valid": true
+          }
+        },
+        "projection_rebuild_receipt": {
+          "activation_epoch_id": "activation-mv690w8u-f0fe66921f2b660dc1b2d690365e0973",
+          "completed_at": "2026-10-13T06:36:47.949Z",
+          "completed_at_unix_ms": 1791873407949,
+          "integrity_sha256": "e3c09466c52302a0e6d17494b90f72fdc3f49dc53bf850c3189b2ae9d90db69d",
+          "kind": "coding_tools_mcp_projection_rebuild",
+          "ledger_integrity": {
+            "backup_api_copy": true,
+            "foreign_key_check_rows": 0,
+            "immutable": true,
+            "integrity_check": [
+              "ok"
+            ],
+            "query_only": true
+          },
+          "ledger_logical_sha256": "d7b07056e1da0ab656b753cae200810b92ca6c0d8a23fae6bebf70d81ef5ab97",
+          "ledger_snapshot_sha256": "9695716adb70fb5cca586160708e3f1ce9d96b081d5f3c924bc81763c56316e4",
+          "process_instance_id": "QqMd66BffLuwvrKn",
+          "projection": {
+            "context_count": 1186,
+            "contextual_sha256": "c1ca4f23701df8c3e34810737fc4ffb7818175393f810ea8325be7aaab9eb804",
+            "mode": "contextual",
+            "orchestration_state": "",
+            "run_id": "",
+            "wave_id": ""
+          },
+          "projection_classification": "CONTEXTUAL_PROJECTIONS",
+          "reconciled": true,
+          "schema_version": 2,
+          "server_instance_id": "klMHdqQ2r53haqlu",
+          "workspace": "E:\\DEV\\Codex-web"
+        },
+        "run_ids_by_class": {
+          "AWAITING_ACCEPTANCE": [
+            "0d4f567d1e5c4f90b174bad40d9e3efa",
+            "0dfb72d0c6944d2d87ecb741dc439267",
+            "28a5f750466048438307b96872e24f01",
+            "2cc8555d10fa4739b07ef55ec715f79c",
+            "351a78fd610d4f0baa15faa62f1aa39b",
+            "372352c060a34387bf1641e355fbc775",
+            "3d9a3ad822054c49a0ebf2ec857bad2e",
+            "435e64ffe1b041eea2cab17bb36ae994",
+            "490900eb8d37453baa8fb5bfb9eb72e6",
+            "4967dd953ce74b5d97cbf01aad827139",
+            "4a80ae60c2e441d8896c1ace8710c384",
+            "598f9c7aafaa4e1aa764a8392fdf7a3e",
+            "631c9d4ebee141c49471cad7d1d69366",
+            "6664f948cfb14a75958518548352896e",
+            "69f3491b6b7c45249af33903bb3221a5",
+            "6c0b08fa765b423584a42213d7f62024",
+            "7563451dc47742b39de3e3fa40ad3810",
+            "79f51b49525c459c864e94a662682759",
+            "95e909f0040a448faa9f1f3257e2ee2c",
+            "98513cec254841d4b2a2a3cabb854925"
+          ],
+          "P5_EXPERIMENT_ANCHOR": [
+            "p5-210b508d30894c55a15303a76c80982b",
+            "p5-3401fec450fe463d839bd7b2ddc6d5f6",
+            "p5-6e995b1e3242412e9cc907e71c9f19c5",
+            "p5-98d70e8f24c544588ab28367ec5ce81f",
+            "p5-9c0473d4777e4b73996dfd30af727b6b",
+            "p5-f923270b9e1d405184b100144af08f0d"
+          ],
+          "THRESHOLD_SENSITIVE_STALE_CANDIDATE": [
+            "2375a022574e497eaebdc49a519ee537",
+            "2d7809721eda458e855950c53ed4c0f1",
+            "4ea601f3f7154ecda879a6986a5d7f41",
+            "5a5bee6d76c049e1876006a65ec7bdd5",
+            "6247675bd8c84a4691cb102d49e44e59",
+            "729dbb850fa04352b4f950d47319ffc9",
+            "8bb3700b2f3c44fb9c11e90b5f9028a2",
+            "935b494b20d842249b6cafb33064fdd1",
+            "9b6d90d2151e4b959ca13da6b31327ee",
+            "aa9a593805a345ad833797185876ba5d",
+            "b65f16b4359d459cb5c8c7fab563735b",
+            "bf9a29e7393c41e8afa3fcc57d1ea883",
+            "c939fa550f344c94b4f30352fe2cefe4",
+            "ca3ad1e41ed74e628227d39e9ca6c607",
+            "ca939345575948449e97c8d85705bd0d",
+            "d24346d2665847c2abe9d95238474af3",
+            "d41f26ae1c5949aa9d8e993179a0e994",
+            "e22c0974d9a64f6499269044e93d485b"
+          ]
+        },
+        "snapshot": {
+          "backup_api_copy": true,
+          "foreign_key_check_rows": 0,
+          "immutable": true,
+          "integrity_check": [
+            "ok"
+          ],
+          "logical_sha256": "d7b07056e1da0ab656b753cae200810b92ca6c0d8a23fae6bebf70d81ef5ab97",
+          "query_only": true,
+          "schema_version": 12,
+          "sha256": "9695716adb70fb5cca586160708e3f1ce9d96b081d5f3c924bc81763c56316e4",
+          "size_bytes": 101216256,
+          "snapshot_at": "2026-10-13T06:36:47.022Z"
+        },
+        "unbound_live_resource_residues": 0,
+        "unbound_live_resources": [],
+        "unexplained_active_runs": 0
+      },
+      "operation_id": "bfix-source-mv6b5n29-fd3c9d9c94dd266b",
+      "orchestration_state": "QUIESCENT_WITH_THRESHOLD_CANDIDATES",
+      "process_instance_id": "QqMd66BffLuwvrKn",
+      "reason": "acceptance_state_is_durable",
+      "run_id": "",
+      "safe": true,
+      "server_instance_id": "klMHdqQ2r53haqlu",
+      "source_checkpoint": {
+        "accepted_file_count": 1,
+        "checkpoint_id": "887cb157d88b46b585f5dc7ef8ea9985",
+        "code": "ACTIVATABLE",
+        "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+        "ok": true,
+        "proof_fingerprint": "313568e8299da05b504b06f1e6e66ba2ff7a1b2fc62df8c0a6a4c203bef8bd6e",
+        "run_id": "02729745ff42457aa0dae1844d4534e7",
+        "wave_id": "dcad4dfbc9b54a3caad9a216933648ba"
+      },
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "lifecycle_decision": {
+      "schema_version": 1,
+      "clean": false,
+      "code": "READY",
+      "reason": "acceptance_state_is_durable",
+      "observed_at": "2026-10-13T06:36:48.445Z",
+      "canonical_lifecycle_observed": true,
+      "source_checkpoint_verified": true,
+      "fence_released": true,
+      "fenced": false,
+      "fence_operation_id": null,
+      "operation_id": "bfix-source-mv6b5n29-fd3c9d9c94dd266b",
+      "counts": {},
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0
+    }
+  },
+  "ok": true
+}

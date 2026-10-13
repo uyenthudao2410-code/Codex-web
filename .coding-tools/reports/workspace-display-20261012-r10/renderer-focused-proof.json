@@ -1,0 +1,57 @@
+{
+  "captured_at_utc": "2026-10-12T10:00:00.9582466Z",
+  "repository": "E:\\DEV\\Codex-web",
+  "git_head": "7999c4151cb501db86f2e4d0a2275d33fc248324",
+  "git_branch": "main",
+  "claim": "Source-level focused proof only; this lane did not install, deploy, restart, commit, or push.",
+  "changes": [
+    "Common target display uses verified active central workspace for sidebar/device/execution/selected/meta/status",
+    "Unknown/loading inventory, stale/revoked authority, mismatched generation or snapshot identity clear target labels",
+    "Source and current snapshot must both have fresh runtime telemetry",
+    "Direct mode consistently uses settings.workspace; native root and runtime Git preserved",
+    "Device Git label identifies application Git"
+  ],
+  "validation": [
+    {
+      "command": "node --check renderer/app.js",
+      "exit_code": 0
+    },
+    {
+      "command": "node --test tests/folder-permission-editor.test.js tests/control-center-manager.test.js",
+      "exit_code": 0,
+      "passed": 76,
+      "failed": 0
+    },
+    {
+      "command": "node --test tests/system-setup-console.test.js",
+      "exit_code": 0,
+      "passed": 20,
+      "failed": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "notes": "No whitespace/conflict error; preexisting CRLF normalization warnings only"
+    }
+  ],
+  "files": [
+    {
+      "path": "E:\\DEV\\Codex-web\\renderer\\app.js",
+      "sha256": "8dbc227e9f762c035d339d37e1f37aa4a4785c69dd48f46a50283f5b2c2e70ab"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\renderer\\index.html",
+      "sha256": "0bdce1403a81b2c3a12082912520de931beb0e63dd1b53913ee0c8cf89883505"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\tests\\folder-permission-editor.test.js",
+      "sha256": "ac8888302c92a58f486eee866e762c76cd95d6458be3b2bdc457c6bc1b0775cf"
+    },
+    {
+      "path": "E:\\DEV\\Codex-web\\tests\\control-center-manager.test.js",
+      "sha256": "eb6cee6dbb8f8ff5514b66ef42376d362f822cbe95220115afab3f643bfad644"
+    }
+  ],
+  "external_operations": [],
+  "note": "Existing unrelated dirty work and runtime evidence preserved. Root owns current active job/writer state and live r9e deployment."
+}

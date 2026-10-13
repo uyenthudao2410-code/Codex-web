@@ -1,0 +1,32 @@
+{
+  "after": {
+    "command_lines_collected": false,
+    "processes": [
+      {
+        "pid": 16828,
+        "process_name": "vmmemCmZygote",
+        "private_memory_bytes": 812281856,
+        "working_set_bytes": 0
+      }
+    ],
+    "process_count": 1,
+    "observed_at_ms": 1791825171368
+  },
+  "before": {
+    "command_lines_collected": false,
+    "processes": [
+      {
+        "pid": 16828,
+        "process_name": "vmmemCmZygote",
+        "private_memory_bytes": 812281856,
+        "working_set_bytes": 0
+      }
+    ],
+    "process_count": 1,
+    "observed_at_ms": 1791822386309
+  },
+  "attempt_id": "e343984bfcee4e8fb5f9de04038596a7",
+  "operation": "native_first_windows_sandbox_census",
+  "ssh_exit_code": 1,
+  "limitation": "Two process samples cannot exclude transient VM startup; native routing receipts are the execution backend evidence."
+}

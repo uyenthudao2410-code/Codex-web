@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "operation": "final-policy-target",
+  "observed_at": "2026-10-12T19:37:33.326Z",
+  "observed_at_ms": 1791833853326,
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-parallel-r4-timefix\\win-unpacked",
+  "ok": true,
+  "receipt": {
+    "workspace_label": "Autocad",
+    "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+    "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+    "removed_canary_argv": [
+      [
+        "node",
+        "tests/fixtures/parallel-native-overlap-20261012/hold.cjs"
+      ]
+    ],
+    "policy": {
+      "state": "enabled",
+      "enabled": true,
+      "workspace_id": "workspace_bc86004be2684b958ab7a9a6f9530cd7",
+      "workspace_generation": "generation_03f9c04f1b14414fa4bfa7d91cc8ea7a",
+      "facade_contract": {
+        "schema_version": 32,
+        "profile": "control-plane-private-tunnel-service-v1",
+        "sha256": "3664b70740d8d7359a3605b5ce42d7cbf3329e27dcfeec27d22b23ec9c631f66"
+      },
+      "policy_sha256": "0d42309ae640f768ba2c5e114822e3cd0d536a2dbab93d381850faf120c10782",
+      "allowed_argv_prefix_count": 7,
+      "allowed_argv_prefixes_sha256": "946a086580d5456c8d9aabd4c1b02459c7b860ce2f315bec3942d17c0b78d7db",
+      "execution_mode": "native_first",
+      "native_argv_prefixes": []
+    }
+  },
+  "report_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\parallel-native-first-20261012\\final-policy-target-1791833853326-90a6d852.json"
+}
