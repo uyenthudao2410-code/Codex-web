@@ -174,7 +174,7 @@ from .fs_utils import DEFAULT_EXCLUDED_NAMES, cached_which, entry_for_path, file
 from .git_utils import parse_branch_line, parse_git_blame_porcelain, redact_for_trace, require_git, validate_git_ref  # noqa: F401  # compatibility re-export
 from .image_utils import IMAGE_RESIZE_MAX_DIMENSION, identify_image, resize_image_bytes, should_resize_image  # noqa: F401  # compatibility re-export
 from .landlock_exec import SPECIAL_DEVICE_PATHS, guard_allow_roots, landlock_exec_argv, landlock_status_payload, landlock_unavailable_warning, open_landlock_ruleset  # noqa: F401  # compatibility re-export
-from .runtime_config import PERMISSION_MODE_CAPABILITIES, PERMISSION_MODE_CHOICES, RuntimePolicy, SHELL_ENV_INHERIT_CHOICES, ShellEnvPolicy, WINDOWS_CORE_ENV_NAMES, env_int, env_pattern_matches, fallback_runtime_dir_for_workspace, is_core_command_env_name, is_filtered_env_var, runtime_dir_for_workspace, runtime_policy_from_args  # noqa: F401  # compatibility re-export
+from .runtime_config import PERMISSION_MODE_CAPABILITIES, PERMISSION_MODE_CHOICES, RuntimePolicy, SHELL_ENV_INHERIT_CHOICES, ShellEnvPolicy, WINDOWS_CORE_ENV_NAMES, env_int, env_pattern_matches, fallback_runtime_dir_for_workspace, is_core_command_env_name, is_filtered_env_var, is_sandboxed_execution, runtime_dir_for_workspace, runtime_policy_from_args  # noqa: F401  # compatibility re-export
 from .tool_schema import DIFF_CONTINUATION_TOKEN_MAX_CHARS, EVALUATION_SCHEMA_VERSION, input_schemas, tool_annotations, tool_definition, validate_arguments  # noqa: F401  # compatibility re-export
 from .transport_http import STATELESS_HTTP_2026_ENV, _decode_mcp_name_header, _first_form_value, _first_header_value, _forwarded_header_param, _http_base_for_bind_host, _request_mcp_name, _safe_external_host, new_workspace_session_id, stateless_http_2026_enabled  # noqa: F401  # compatibility re-export
 
@@ -1376,7 +1376,12 @@ class Runtime(
         return self.workspace.resolve_existing_at(self._request_default_cwd(), raw_path)
 
     def _resolve_authorized_execution_scope(self, raw_path: object, *, field: str) -> ResolvedPath:
-        """Resolve a tool target against the primary workspace plus explicit authorized roots."""
+        """Resolve a tool target against the primary workspace plus explicit authorized roots.
+
+        For flexible multi-project work in local mode, use
+        Workspace.add_authorized_root() explicitly (e.g. via a future
+        authorize_workspace_root tool) rather than silent auto-extension.
+        """
         raw = str(raw_path or ".")
         try:
             return self.resolve_existing(raw)

@@ -36,7 +36,7 @@ from .landlock_exec import (
     open_landlock_ruleset,
 )
 from . import processes
-from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var
+from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var, is_sandboxed_execution
 from .task_state import command_payload_succeeded
 from .windows_mxc_sandbox import build_mxc_invocation, cleanup_mxc_invocation
 from .windows_execution_policy import decide_windows_execution
@@ -327,7 +327,15 @@ class ExecToolsMixin:
         popen_cmd: Any = structured_argv if structured_argv is not None else cmd
         popen_shell = structured_argv is None
         popen_extra = process_group_popen_kwargs()
-        windows_mxc = os.name == "nt" and structured_argv is not None
+        # Local mode (default): run directly as the invoking user, like Claude
+        # Code. The heavy per-command MXC sandbox applies only when the
+        # operator explicitly opted into "sandboxed" execution mode
+        # (CODING_TOOLS_MCP_EXECUTION_MODE=sandboxed) for untrusted remote use.
+        windows_mxc = (
+            os.name == "nt"
+            and structured_argv is not None
+            and is_sandboxed_execution()
+        )
         windows_decision = decide_windows_execution(
             structured_argv, args, attested_bridge=bridge_argv is not None,
             approved_internal_argv=raw_argv is not None,
@@ -847,10 +855,40 @@ class ExecToolsMixin:
             if isinstance(env, dict) and any(is_filtered_env_var(str(key), str(value)) for key, value in env.items()):
                 raise ToolFailure("PERMISSION_REQUIRED", "Sensitive environment variables require explicit permission.", category="permission")
             if DESTRUCTIVE_RE.search(compact):
-                raise ToolFailure("PERMISSION_REQUIRED", "Destructive commands are blocked without explicit permission.", category="permission")
+                self._require_destructive_confirmation(args, compact)
             if not self.allow_network and NETWORK_RE.search(compact) and not is_literal_network_reference_command(compact):
                 raise ToolFailure("PERMISSION_REQUIRED", "Network access is denied by default.", category="permission")
         self._reject_setuid_executable(argv[0])
+
+    def _require_destructive_confirmation(self, args: dict[str, Any], command: str) -> None:
+        """Gate destructive commands.
+
+        Local mode (default): like Claude Code — tell the agent to ask the user
+        in chat for explicit confirmation, then retry with
+        confirm_destructive=true. The confirmation is auditable in the tool
+        call history.
+        Sandboxed mode: keep the hard fail-closed block for untrusted remote use.
+        """
+        if args.get("confirm_destructive") is True:
+            return
+        if is_sandboxed_execution():
+            raise ToolFailure(
+                "PERMISSION_REQUIRED",
+                "Destructive commands are blocked without explicit permission.",
+                category="permission",
+                details={"permission": "destructive_command", "command": command},
+            )
+        raise ToolFailure(
+            "DESTRUCTIVE_CONFIRMATION_REQUIRED",
+            "This command looks destructive. Ask the user in chat for explicit "
+            "confirmation, then retry with confirm_destructive=true.",
+            category="permission",
+            details={
+                "permission": "destructive_command",
+                "command": command,
+                "retry_with": {"confirm_destructive": True},
+            },
+        )
 
     def _check_command_policy(self, cmd: str, args: dict[str, Any]) -> None:
         if self.dangerously_skip_all_permissions:
@@ -884,19 +922,9 @@ class ExecToolsMixin:
                 details={"permission": "shell_expansion", "command": compact},
             )
         if re.search(r"(^|[;&|]\s*)rm\s+(-[^\s]*r[^\s]*f|-?[^\s]*f[^\s]*r)\s+/", compact):
-            raise ToolFailure(
-                "PERMISSION_REQUIRED",
-                "Destructive commands are blocked without explicit permission.",
-                category="permission",
-                details={"permission": "destructive_command", "command": compact},
-            )
+            self._require_destructive_confirmation(args, compact)
         if DESTRUCTIVE_RE.search(cmd):
-            raise ToolFailure(
-                "PERMISSION_REQUIRED",
-                "Destructive commands are blocked without explicit permission.",
-                category="permission",
-                details={"permission": "destructive_command", "command": compact},
-            )
+            self._require_destructive_confirmation(args, compact)
         if not self.allow_network and NETWORK_RE.search(cmd) and not is_literal_network_reference_command(cmd):
             raise ToolFailure(
                 "PERMISSION_REQUIRED",
