@@ -212,3 +212,27 @@ test('Recovery Host legacy revision bridge pins added device identity bytes', (t
   fs.appendFileSync(target, '\n// tampered after legacy authorization\n');
   assert.throws(() => recoveryHostLegacyV1Revision(appRoot), { code: 'REVISION_BRIDGE_DIGEST_MISMATCH' });
 });
+
+test('every runtime-sensitive source file in the tree has exactly one component owner', () => {
+  const { componentOwners } = require('../electron/services/componentRevision');
+  const root = path.join(__dirname, '..');
+  const sensitivePrefixes = ['electron/', 'renderer/', 'resources/coding-tools-mcp/coding_tools_mcp/'];
+  const codeExtensions = new Set(['.js', '.py', '.html', '.css', '.ps1', '.py']);
+  const unmapped = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+      const full = path.join(dir, entry.name);
+      const rel = path.relative(root, full).replace(/\\/g, '/');
+      if (entry.isDirectory()) { walk(full); continue; }
+      if (!sensitivePrefixes.some((prefix) => rel.startsWith(prefix))) continue;
+      if (!codeExtensions.has(path.extname(rel).toLowerCase())) continue;
+      const owners = componentOwners(rel);
+      if (owners.length !== 1) unmapped.push(`${rel} -> ${JSON.stringify(owners)}`);
+    }
+  };
+  walk(path.join(root, 'electron'));
+  walk(path.join(root, 'renderer'));
+  walk(path.join(root, 'resources', 'coding-tools-mcp', 'coding_tools_mcp'));
+  assert.deepEqual(unmapped, [], 'runtime files without exactly one component owner block accepted-code activation (COMPONENT_MAPPING_UNMAPPED)');
+});
