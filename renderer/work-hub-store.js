@@ -643,6 +643,37 @@
     return raw.map((f) => (typeof f === 'string' ? f : String(f?.path || f?.file || ''))).filter(Boolean);
   }
 
+  function taskRunId(task) {
+    // Canonical run-id path (same precedence as handoffPreview): the panel
+    // task state carries the run under orchestration first.
+    return String(task?.orchestration?.run_id || task?.run_id || '');
+  }
+
+  function capsuleView(capsule) {
+    if (!capsule || typeof capsule !== 'object') return null;
+    const payload = capsule.payload && typeof capsule.payload === 'object' ? capsule.payload : {};
+    const runtime = payload.runtime && typeof payload.runtime === 'object' ? payload.runtime : {};
+    return {
+      capsuleId: String(capsule.capsule_id || ''),
+      version: capsule.version ?? null,
+      status: String(capsule.status || ''),
+      createdAt: String(capsule.created_at || ''),
+      runId: String(capsule.run_id || ''),
+      sha256: String(capsule.sha256 || ''),
+      objective: String(runtime.objective || payload.objective || ''),
+      panelSummary: String(payload.panel_summary || ''),
+      baseHead: String(runtime.base_head || ''),
+      taskStatus: String(runtime.task_status || ''),
+    };
+  }
+
+  function headMatches(baseHead, currentHead) {
+    const base = String(baseHead || '').trim().toLowerCase();
+    const current = String(currentHead || '').trim().toLowerCase();
+    if (!base || !current || Math.min(base.length, current.length) < 7) return null;
+    return base.startsWith(current) || current.startsWith(base);
+  }
+
   function handoffPreview(task) {
     if (!task || typeof task !== 'object') return null;
     const steps = taskSteps(task);
@@ -824,6 +855,7 @@
     emptyData, sanitizeData, createStore,
     buildRequest, handoffPreview, formatHandoffText, searchAll,
     taskSteps, stepText, taskTests, testFailed, testLabel, taskFiles,
+    taskRunId, capsuleView, headMatches,
     hashText, contextContentText, planView, goalRequestText, buildReportText, sshArgs,
   };
 

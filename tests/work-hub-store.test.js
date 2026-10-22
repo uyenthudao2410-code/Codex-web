@@ -249,3 +249,32 @@ test('F39 chats and F40 ssh targets are stored with validation', () => {
   const pkg = store.contextContentText(PROJECT_A, [{ path: 'a.js', size: 3, content: 'x=1', truncated: true, hash: 'abc' }]);
   assert.match(pkg, /đã bị cắt/);
 });
+
+test('A8 regression: taskRunId uses the canonical orchestration path first', () => {
+  assert.equal(storeApi.taskRunId({ orchestration: { run_id: 'run-A' }, run_id: 'run-other' }), 'run-A');
+  assert.equal(storeApi.taskRunId({ run_id: 'run-B' }), 'run-B');
+  assert.equal(storeApi.taskRunId({}), '');
+  assert.equal(storeApi.taskRunId(null), '');
+});
+
+test('A8 regression: capsuleView normalizes the recorded capsule shape', () => {
+  const view = storeApi.capsuleView({
+    capsule_id: 'cap-1', run_id: 'run-A', version: 3, status: 'recorded', created_at: '2026-10-22T09:00:00Z', sha256: 'abc123',
+    payload: { panel_summary: 'Đã sửa xong module X', runtime: { objective: 'Sửa module X', base_head: 'deadbeefcafe', task_status: 'completed' } },
+  });
+  assert.equal(view.runId, 'run-A');
+  assert.equal(view.objective, 'Sửa module X');
+  assert.equal(view.panelSummary, 'Đã sửa xong module X');
+  assert.equal(view.baseHead, 'deadbeefcafe');
+  assert.equal(view.taskStatus, 'completed');
+  assert.equal(storeApi.capsuleView(null), null);
+});
+
+test('A8 regression: headMatches compares prefixes and refuses weak evidence', () => {
+  assert.equal(storeApi.headMatches('deadbeefcafe1234', 'deadbeefcafe1234'), true);
+  assert.equal(storeApi.headMatches('deadbeefcafe1234', 'deadbeef'), true);
+  assert.equal(storeApi.headMatches('deadbeefcafe1234', '0123456789abcdef'), false);
+  assert.equal(storeApi.headMatches('', 'deadbeef'), null);
+  assert.equal(storeApi.headMatches('deadbeef', ''), null);
+  assert.equal(storeApi.headMatches('abc', 'abc'), null);
+});

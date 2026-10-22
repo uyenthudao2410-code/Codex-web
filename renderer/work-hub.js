@@ -1149,10 +1149,19 @@
     });
     $('#whRunImports')?.addEventListener('click', async () => {
       const dest = $('#whImportDest')?.value || '';
+      const results = [];
       for (const source of ui.pendingImports) {
-        await window.mcpAssistant.workhubCopyIn(source, dest).catch(() => null);
+        try {
+          const copied = unwrap(await window.mcpAssistant.workhubCopyIn(source, dest));
+          results.push({ source, ok: true, dest: copied?.rel || '' });
+        } catch (error) {
+          results.push({ source, ok: false, error: error?.message || 'không rõ lỗi' });
+        }
       }
-      ui.pendingImports = [];
+      // Keep only the failures queued so the user can retry them; report
+      // every file's outcome instead of clearing the list silently.
+      ui.pendingImports = results.filter((r) => !r.ok).map((r) => r.source);
+      ui.importResults = results;
       renderImports();
       renderFiles();
     });
@@ -1234,6 +1243,67 @@
       link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 5000);
     });
+    $('#whReadCapsule')?.addEventListener('click', async () => {
+      const box = $('#whCapsuleView');
+      if (!box) return;
+      const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+      const runId = S.taskRunId(task);
+      box.replaceChildren();
+      // Never query without an exact run id: the runtime falls back to the
+      // latest capsule overall, which could belong to another task.
+      if (!runId) {
+        box.appendChild(el('p', 'task-muted', 'Chưa xác định được RUN của tác vụ hiện tại nên không đọc capsule — tránh lấy nhầm capsule của tác vụ khác. Hãy mở trang Tác vụ để trạng thái tác vụ được nạp.'));
+        return;
+      }
+      box.appendChild(el('span', 'task-muted', 'Đang đọc capsule từ ledger…'));
+      const result = unwrap(await window.mcpAssistant.workhubHandoffGet({ runId }).catch((error) => ({ error: error.message })));
+      const view = S.capsuleView(result?.capsule || null);
+      box.replaceChildren();
+      if (!view) {
+        box.appendChild(el('p', 'task-muted', result?.recommended_next_action || 'Chưa có capsule nào được ghi cho run này. Hãy ghi capsule từ trang Tác vụ trước khi chuyển hội thoại.'));
+        return;
+      }
+      if (view.runId && view.runId !== runId) {
+        box.appendChild(el('p', 'task-muted', `Cảnh báo: capsule trả về thuộc run ${view.runId}, khác run đang chọn (${runId}) — không dùng capsule này.`));
+        return;
+      }
+      const head = el('div', 'wh-row');
+      head.appendChild(el('b', '', `Capsule ${view.capsuleId.slice(0, 12)} · v${view.version ?? '?'}`));
+      head.appendChild(el('span', 'soft-badge', view.status));
+      box.appendChild(head);
+      box.appendChild(el('p', '', `Mục tiêu khi ghi: ${view.objective || '—'}`));
+      if (view.panelSummary) box.appendChild(el('p', 'task-muted', `Tóm tắt panel: ${view.panelSummary}`));
+      box.appendChild(el('p', 'task-muted', `Ghi lúc ${view.createdAt || '—'} · run ${view.runId || '—'} · sha256 ${view.sha256.slice(0, 12)}…`));
+      // Revalidate the capsule against the CURRENT workspace state.
+      // workhubGitLog takes a numeric limit and returns the commit array.
+      const checks = [];
+      if (view.baseHead) {
+        const log = unwrap(await window.mcpAssistant.workhubGitLog(1).catch(() => null));
+        const currentHead = Array.isArray(log) ? String(log[0]?.hash || '') : '';
+        const matched = S.headMatches(view.baseHead, currentHead);
+        checks.push(matched === null
+          ? `HEAD: capsule ${view.baseHead.slice(0, 8)} — không đọc được HEAD hiện tại để đối chiếu.`
+          : `HEAD: capsule ${view.baseHead.slice(0, 8)} vs hiện tại ${currentHead.slice(0, 8)} — ${matched ? 'KHỚP' : 'ĐÃ ĐỔI (cần xem lại diff kể từ base)'}`);
+      }
+      checks.push(`Trạng thái task khi ghi: ${view.taskStatus || '—'}; hiện tại: ${task?.status || '—'}.`);
+      for (const line of checks) box.appendChild(el('p', 'task-muted', line));
+      if (result?.recommended_next_action) box.appendChild(el('p', 'task-muted', result.recommended_next_action));
+      const useBtn = el('button', 'secondary-button wh-small', 'Tạo yêu cầu tiếp tục từ capsule');
+      useBtn.addEventListener('click', () => {
+        const text = [
+          `Tiếp tục từ capsule ${view.capsuleId} (run ${view.runId}).`,
+          view.objective ? `Mục tiêu: ${view.objective}` : '',
+          view.panelSummary ? `Tóm tắt: ${view.panelSummary}` : '',
+          checks.map((line) => `- ${line}`).join('\n'),
+          'Không phát lại transcript cũ; tiếp tục từ trạng thái đã kiểm tra ở trên.',
+        ].filter(Boolean).join('\n');
+        const preview = $('#whPreview');
+        if (preview) preview.value = text;
+        try { store.saveDraft(currentProject(), text); } catch { /* draft store full */ }
+        renderDraftState();
+      });
+      box.appendChild(useBtn);
+    });
     $('#whRevalidate')?.addEventListener('click', async () => {
       const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
       const files = S.taskFiles(task || {});
@@ -1284,8 +1354,20 @@
   function renderImports() {
     const box = $('#whImportList');
     if (!box) return;
-    if (!ui.pendingImports.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa chọn tệp nào để nhập.')); return; }
-    box.replaceChildren(...ui.pendingImports.map((file) => el('div', 'wh-row', file)));
+    box.replaceChildren();
+    if (Array.isArray(ui.importResults) && ui.importResults.length) {
+      const okCount = ui.importResults.filter((r) => r.ok).length;
+      box.appendChild(el('p', '', `Kết quả nhập: ${okCount}/${ui.importResults.length} tệp thành công.`));
+      for (const r of ui.importResults) {
+        box.appendChild(el('div', 'wh-row', r.ok ? `✓ ${r.source}${r.dest ? ` → ${r.dest}` : ''}` : `✗ ${r.source} — ${r.error}`));
+      }
+      if (ui.pendingImports.length) box.appendChild(el('p', 'task-muted', 'Các tệp thất bại vẫn ở hàng chờ bên dưới — sửa nguyên nhân rồi bấm Nhập lại.'));
+    }
+    if (!ui.pendingImports.length) {
+      if (!box.childNodes.length) box.appendChild(el('span', 'task-muted', 'Chưa chọn tệp nào để nhập.'));
+      return;
+    }
+    for (const file of ui.pendingImports) box.appendChild(el('div', 'wh-row', file));
   }
 
   window.WorkHubUI = { refresh, store };
