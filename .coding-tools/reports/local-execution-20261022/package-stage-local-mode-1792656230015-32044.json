@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "stage_id": "local-mode-1792656230015-32044",
+  "observed_at": "2026-10-22T08:03:50.015Z",
+  "staged": [
+    {
+      "path": "resources/app.asar",
+      "sha256": "b032027dcb71aecd19cc9118f0fdccc44eb0b29df93c7c0d85e5ad5879f343a9"
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "sha256": "baeaa8d4b25cdd87c6d5a2af9e0b673f376993cf2ae8a10f0b3ce6cc7ef41378"
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+      "sha256": "6cbbd5bb43671a17aa6f933f4172746e1191638ecf7dc627fc8249a06a702478"
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "sha256": "091b92d7ef165d7136f59ebcb4305fdfa434c4e94788890b0bdf98ea37f16ab2"
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+      "sha256": "14c6125d767dc86fe375ff4f5d7578a8b38e2e7d760df2beb078f51d6835c98a"
+    },
+    {
+      "path": "resources/resources/control-plane/node_agent.py",
+      "sha256": "4ceeff50f3436043da3a8ee6d3344743d8b9ee59db95ca7b8cbfdabdd16c838c"
+    }
+  ],
+  "settings_saved": true,
+  "backup_directory": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\local-execution-20261022\\package-backup\\local-mode-1792656230015-32044",
+  "settings_backup_directory": "C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\backups\\local-mode-1792656230015-32044",
+  "checkpoint": {
+    "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+    "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+    "wave_id": "3b42877879354c97b7b87d69bdb7a9c8",
+    "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+    "git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609"
+  },
+  "evidence_file": "resume-05-stopped-census.json",
+  "ok": true,
+  "service_operations": false
+}

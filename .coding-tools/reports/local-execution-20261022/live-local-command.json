@@ -1,0 +1,22 @@
+{
+  "observed_at": "2026-10-22T08:06:01.185Z",
+  "task_context_id": "ctx_dd0a56524349243c39f85301b6f701f5",
+  "command": "node --version",
+  "command_id": "N3sFdbNOujqBHh_F3VXYx9av",
+  "execution_mode": "local",
+  "status": "exited",
+  "exit_code": 0,
+  "execution_backend": "local",
+  "isolation_level": "host_user",
+  "policy_decision": "operator_local",
+  "execution_owner": {
+    "job_id": "f3e1357f680c46c580bd8a9602d32fa0",
+    "resource_class": "LIGHT",
+    "run_id": "",
+    "wave_id": ""
+  },
+  "stdout": "v24.19.0\r\n",
+  "stderr": "",
+  "timed_out": false,
+  "ok": true
+}

@@ -1,0 +1,94 @@
+{
+  "objective": "Persist direct Windows host-user execution instead of per-command Sandbox or ProcessContainer execution",
+  "status": "complete",
+  "date": "2026-10-22",
+  "git": {
+    "branch": "main",
+    "head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+    "worktree": "uncommitted task and pre-existing changes preserved",
+    "diff_whitespace_check": "passed",
+    "unmerged_entries": 0,
+    "commit_performed": false,
+    "push_performed": false
+  },
+  "source_changes": [
+    "electron/main.js",
+    "electron/services/config.js",
+    "electron/services/nativeService.js",
+    "electron/services/controlPlaneExecBridge.js",
+    "electron/services/controlPlaneEnrollment.js",
+    "renderer/app.js",
+    "renderer/index.html",
+    "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+    "control-plane/control_plane/node_agent.py",
+    "docs/CURRENT_STATE.md",
+    "docs/MCP_WEB_OPERATIONS.md",
+    "docs/NATIVE_FIRST_EXECUTION.md"
+  ],
+  "source_scope_note": "Some source files also contain preserved pre-existing changes; focused acceptance receipts identify the exact validated source. Tests and operational evidence are retained with this task.",
+  "windows": {
+    "installation": "E:/DEV/Codex-web/dist/windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix/win-unpacked",
+    "package_files_updated": [
+      "resources/app.asar",
+      "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "resources/resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+      "resources/resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "resources/resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+      "resources/resources/control-plane/node_agent.py"
+    ],
+    "retained_executable_verified": true,
+    "settings_execution_mode": "local",
+    "replacement_host_pid": 44456,
+    "activation_epoch_id": "activation-mvj98u37-58fee116ec3e535bd9606fb00e0ecf99",
+    "activation_state": "READY",
+    "admission_open": true,
+    "fully_ready": true,
+    "central_connected": true,
+    "supervisor_refresh": "maintained Install operation completed and healthy",
+    "local_public_mcp_smoke": "node --version; v24.19.0; exit_code 0; local / host_user / operator_local",
+    "smoke_job_id": "f3e1357f680c46c580bd8a9602d32fa0",
+    "smoke_job_state": "exited"
+  },
+  "ubuntu": {
+    "source": "User terminal activation output",
+    "service": "codex-control-plane.service",
+    "user": "svhome",
+    "new_service_pid": 2104520,
+    "release": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-metadata-20261022-5af9fe034347",
+    "change": "Exact two-line local execution metadata support in node_agent.py",
+    "all_three_bindings_preserved": true,
+    "pilots_and_admission_preserved": true,
+    "timers_restored": true,
+    "tunnel_configuration_or_credentials_changed": false
+  },
+  "validation": {
+    "official_focused_node_proof": "118/118 passed, exit 0, no cache",
+    "ubuntu_activation_transition_tests": "15/15 passed",
+    "installed_package_parity": "6/6 replacements match candidate and backups match originals",
+    "accepted_source_parity": "26/26 accepted file receipts and whole worktree fingerprint unchanged",
+    "local_execution": "directly observed public MCP Job exited successfully",
+    "remote_execution": "user-reported ChatGPT to Ubuntu to Windows action completed successfully"
+  },
+  "deviations_and_limits": [
+    "An earlier Windows bootstrap stop response timed out after stopping MCP; operation 05 reconciled the stopped state and completed supported bootstrap. Earlier failure evidence is retained.",
+    "Ubuntu script preflight first rejected two generated Python cache files, then a nonexistent health service_pid field; both preflight checks were corrected before Ubuntu activation, with all source pins retained.",
+    "Remote ChatGPT execution is user-reported; the remote receipt does not separately attest the absolute workspace path.",
+    "Local mode executes with host-user filesystem and network access. Application authentication, workspace and command admission, Job lifecycle and timeout/cancellation checks remain."
+  ],
+  "service_operations_occurred": true,
+  "controlled_local_deployment_occurred": true,
+  "installer_or_release_publication_occurred": false,
+  "remaining_required_work": [],
+  "evidence": [
+    "resume-05-final.json",
+    "resume-05-supervisor-refresh.json",
+    "live-local-command.json",
+    "final-live-job-state.json",
+    "final-delivery-readonly-review.json",
+    "ubuntu-activation-user-reported-20261022.json",
+    "end-to-end-user-reported.json"
+  ]
+}

@@ -27,6 +27,8 @@
       <nav class="nav-list" aria-label="Điều hướng chính">
 
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Thực thi mã</span></button>
+        <button class="nav-item" data-page="workhub"><span class="nav-icon">WH</span><span>Làm việc</span></button>
+        <button class="nav-item" data-page="usage"><span class="nav-icon">TK</span><span>Sử dụng</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tác vụ & kết quả</span></button>
         <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
         <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
@@ -608,6 +610,54 @@
           </div>
         </section>
 
+        <section class="page" data-page-view="workhub">
+          <div class="section-header"><div><span class="section-kicker">LÀM VIỆC</span><h2>Chuẩn bị & giao việc</h2><p>Chọn dự án → chọn tệp → chuẩn bị yêu cầu → xem thay đổi → kiểm thử → nhận kết quả. Tìm mọi thứ bằng Ctrl+K.</p></div></div>
+          <div class="task-grid">
+            <article class="panel"><div class="panel-title"><h3>Dự án</h3><span class="soft-badge neutral">Ghim & đặt tên</span></div><div class="wh-list" id="whProjects"><span class="task-muted">Đang tải…</span></div></article>
+            <article class="panel"><div class="panel-title"><h3>Giỏ ngữ cảnh @file</h3><span class="soft-badge neutral" id="whBasketProject">—</span></div>
+              <label class="field"><span>Đường dẫn tệp</span><input id="whFilePath" placeholder="src\login.js"></label>
+              <label class="field"><span>Kích thước (bytes, không bắt buộc)</span><input id="whFileSize" type="number" min="0" placeholder="1024"></label>
+              <div class="inline-actions"><button class="primary-button" id="whAddFile" type="button">Thêm vào giỏ</button><button class="secondary-button" id="whImportTaskFiles" type="button">Nhập tệp từ tác vụ</button><button class="secondary-button" id="whClearBasket" type="button">Xóa giỏ</button></div>
+              <div class="wh-list" id="whBasketList"></div>
+            </article>
+          </div>
+          <div class="task-grid">
+            <article class="panel"><div class="panel-title"><h3>Chuẩn bị yêu cầu</h3><span class="soft-badge neutral">Loại việc & thư viện lời nhắc</span></div>
+              <label class="field"><span>Loại công việc</span><select id="whTaskType"><option value="bugfix">Sửa lỗi</option><option value="feature">Thêm tính năng</option><option value="review">Review</option><option value="test">Kiểm thử / chạy test</option><option value="docs">Viết tài liệu</option></select></label>
+              <div id="whTypeFields"></div>
+              <label class="field"><span>Mẫu trong thư viện lời nhắc</span><select id="whPromptSelect"></select></label>
+              <label class="field"><span>Tên mẫu</span><input id="whPromptName"></label>
+              <label class="field"><span>Nội dung mẫu (biến: {{project}}, {{request}}, {{files}})</span><textarea id="whPromptBody" rows="5"></textarea></label>
+              <div class="inline-actions"><button class="secondary-button" id="whPromptSave" type="button">Lưu mẫu</button><button class="secondary-button" id="whPromptNew" type="button">Mẫu mới</button><button class="secondary-button" id="whPromptDelete" type="button">Xóa mẫu</button></div>
+              <div class="inline-actions"><button class="primary-button" id="whBuildBtn" type="button">Tạo yêu cầu từ loại việc</button><button class="secondary-button" id="whUsePromptBtn" type="button">Tạo từ mẫu đã chọn</button></div>
+              <label class="field"><span>Yêu cầu đã tạo (xem trước, không tự gửi)</span><textarea id="whPreview" rows="7" readonly></textarea></label>
+              <button class="primary-button" id="whCopyBtn" type="button">Sao chép yêu cầu</button>
+            </article>
+            <article class="panel"><div class="panel-title"><h3>Lệnh dự án đã lưu</h3><span class="soft-badge neutral">Recipe</span></div>
+              <label class="field"><span>Tên lệnh</span><input id="whRecipeName" placeholder="Test module"></label>
+              <label class="field"><span>Lệnh</span><input id="whRecipeCommand" placeholder="npm test"></label>
+              <label class="field"><span>Thư mục chạy (mặc định: dự án hiện tại)</span><input id="whRecipeCwd" placeholder="E:\DEV\..."></label>
+              <button class="primary-button" id="whAddRecipe" type="button">Lưu lệnh</button>
+              <div class="wh-list" id="whRecipeList"></div>
+              <p class="task-muted">Chạy lệnh qua trang Xác minh & Build hoặc terminal của bạn để giữ đúng Job/authority hiện tại; ở đây lưu, xem lại lệnh + thư mục trước khi chạy và sao chép nhanh.</p>
+            </article>
+          </div>
+          <div class="task-grid">
+            <article class="panel"><div class="panel-title"><h3>Tệp & kết quả của tác vụ</h3><span class="soft-badge neutral">Tóm tắt</span></div><div id="whTaskSummary"><span class="task-muted">Đang tải…</span></div></article>
+            <article class="panel"><div class="panel-title"><h3>Tiếp tục công việc & thông báo</h3></div>
+              <div class="inline-actions"><button class="secondary-button" id="whLoadHandoff" type="button">Xem trước bản tiếp tục</button><button class="secondary-button" id="whCopyHandoff" type="button">Sao chép bản tiếp tục</button></div>
+              <pre class="task-command" id="whHandoffView">Chưa tải trạng thái tác vụ.</pre>
+              <label class="choice"><input id="whNotifyToggle" type="checkbox"><span><b>Thông báo khi tác vụ cần chú ý</b><small>Báo một lần khi xong, lỗi, chờ duyệt hoặc tạm dừng; bấm vào trang này để xem đúng tác vụ.</small></span></label>
+              <button class="secondary-button" id="whNotifyTest" type="button">Gửi thông báo thử</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" data-page-view="usage">
+          <div class="section-header"><div><span class="section-kicker">SỬ DỤNG</span><h2>Sử dụng Token</h2><p>Theo dõi token, chi phí và hiệu quả sử dụng.</p></div></div>
+          <div id="usageAnalyticsContainer"></div>
+        </section>
+
         <section class="page" data-page-view="device">
           <div class="section-header"><div><span class="section-kicker">DEVICE CONTROL</span><h2>Thiết bị hiện tại</h2><p>Định danh thiết bị, runtime, Tunnel và Git của máy đang chạy Recovery Host này. Panel này chỉ điều khiển máy hiện tại; shared-account inventory và chọn binding được thực hiện qua Ubuntu Control Plane/MCP.</p></div><div class="inline-actions"><span id="deviceScopeBadge" class="security-chip">Local only</span><button class="secondary-button" id="deviceRefresh">Làm mới</button></div></div>
           <div class="device-overview-grid"><article class="panel device-identity-card"><div class="panel-title"><div><span class="section-kicker">IDENTITY</span><h3 id="deviceDisplayName">Thiết bị hiện tại</h3><p>device_id bền vững theo cài đặt; device_instance_id đổi theo lifecycle Recovery Host.</p></div><span id="deviceOnline" class="soft-badge neutral">Đang kiểm tra</span></div><div class="device-kv-grid"><div><span>Device ID</span><code id="deviceId">—</code></div><div><span>Device instance</span><code id="deviceInstanceId">—</code></div><div><span>Workspace</span><code id="deviceWorkspace">—</code></div><div><span>Git ứng dụng</span><code id="deviceGitState">Không có dữ liệu</code></div></div></article><article class="panel"><div class="panel-title"><div><span class="section-kicker">OWNERSHIP</span><h3>Runtime trên thiết bị này</h3><p>Process/tunnel chỉ được điều khiển khi persistent device_id khớp.</p></div></div><div class="device-service-grid"><div class="device-service-card"><span>Coding</span><b id="deviceCodingState">Đang kiểm tra</b><small id="deviceCodingTunnelId">Tunnel: —</small></div><div class="device-service-card"><span>Recovery</span><b id="deviceRecoveryState">Đang kiểm tra</b><small id="deviceRecoveryTunnelId">Tunnel: —</small></div></div><div class="notice warning"><b>Ranh giới hiện tại</b><p>Panel này chỉ điều khiển process của device hiện tại. Client cùng tài khoản ChatGPT chọn binding_id qua Control Plane để task chạy tại node đã bind; panel không tự gửi thao tác remote và không retarget task.</p></div></article></div>
@@ -879,6 +929,7 @@
                   <div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div>
                   <div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div>
                   <div class="setting-row"><span><b>Dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div>
+                  <label class="setting-row"><span><b>Chế độ thực thi</b><small>Chạy trực tiếp bằng user Windows hiện tại, không tạo container hoặc Windows Sandbox. Chế độ cách ly có thể bật riêng. Áp dụng sau khi khởi động lại runtime.</small></span><span class="setting-control"><select id="executionModeSelect"><option value="local">Trực tiếp trên máy (mặc định)</option><option value="sandboxed">Cách ly</option></select><small class="setting-save-state" data-setting-state="executionMode">Đã lưu</small></span></label>
                 </article>
                 <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
               </div>
@@ -890,7 +941,16 @@
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>Đang xử lý</b><span>Vui lòng không nhấp liên tục vào nút thao tác</span></div>
+  <div class="wh-overlay" id="whSearchOverlay" hidden>
+    <div class="wh-search-box panel">
+      <div class="panel-title"><h3>Tìm kiếm chung</h3><button class="secondary-button wh-small" id="whSearchClose" type="button">Đóng (Esc)</button></div>
+      <label class="field"><span>Tìm thao tác, dự án, tác vụ, lời nhắc, lệnh đã lưu — hỗ trợ không dấu</span><input id="whSearchInput" placeholder="Ví dụ: quyen, test module, sua loi"></label>
+      <div class="wh-list" id="whSearchResults"></div>
+    </div>
+  </div>
   <script src="app.js"></script>
+  <script src="work-hub-store.js"></script>
+  <script src="work-hub.js"></script>
   <script src="p5-a0.js"></script>
   <script src="control-center.js"></script>
   <script src="dashboard.js"></script>

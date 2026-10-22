@@ -44,6 +44,26 @@ class Workspace:
         self.authorized_roots = tuple(roots)
         self.git_path = shutil.which("git")
 
+    def add_authorized_root(self, root: Path) -> bool:
+        """Dynamically authorize an additional workspace root at runtime.
+
+        Supports Claude Code-like flexibility in local mode: the operator can
+        point the agent at any project directory without restarting the server
+        or editing configuration. Returns True if the root was added, False if
+        it was already authorized or invalid.
+        """
+        try:
+            resolved = root.expanduser().resolve(strict=True)
+        except (OSError, RuntimeError):
+            return False
+        if not resolved.is_dir() or resolved.parent == resolved:
+            return False
+        key = os.path.normcase(str(resolved))
+        if any(os.path.normcase(str(item)) == key for item in self.authorized_roots):
+            return False
+        self.authorized_roots = self.authorized_roots + (resolved,)
+        return True
+
     def _candidate(self, base: Path, raw_path: str) -> Path:
         if not isinstance(raw_path, str) or not raw_path:
             raise ToolFailure("INVALID_ARGUMENT", "Path must be a non-empty string.", category="validation")

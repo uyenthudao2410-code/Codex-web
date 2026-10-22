@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "operation_id": "full-clean-cli-direct-local-20261022-05",
+  "required": true,
+  "staged": true,
+  "replacement_pid": 5992,
+  "expected_recovery_revision": "c0730e289eb4bd042b31a1cb686225fcc050a571ec102333a63a8ae2a082fc11"
+}

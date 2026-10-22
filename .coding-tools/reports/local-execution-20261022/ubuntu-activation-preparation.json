@@ -1,0 +1,54 @@
+{
+  "source_script_sha256": "00704f19e2f503412f7d5b9156a4a1c834590abfa9dbec6a12bcee35dfa4a5f2",
+  "paste_command_sha256": "6f875f2dd3f24ad6ceb5c8fcc7193eea23d5ba2e721d30d27df0b9dc1faf40bc",
+  "paste_command_embeds_script_exactly": true,
+  "remote_execution_performed": false,
+  "state": "success",
+  "activation": {
+    "state": "success",
+    "source": "User Ubuntu terminal output",
+    "evidence_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\local-execution-20261022\\ubuntu-activation-user-reported-20261022.json",
+    "recorded_at_utc": "2026-10-22T08:06:07Z",
+    "user_executed_activation": true,
+    "direct_remote_execution_by_codex": false,
+    "new_pid": 2104520,
+    "package_fingerprint": "sha256:a96208eb770ef62cc58566bf7ebd7202b56a7c0f2713521d943fb0cfc49e1734",
+    "stage": "complete"
+  },
+  "paste_command_path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\local-execution-20261022\\activate-exact-ubuntu-local-metadata.sh",
+  "offline_transition_tests": {
+    "passed": 15,
+    "failed": 0,
+    "duration_seconds": 62.03,
+    "command": "python -B .coding-tools/reports/local-execution-20261022/test_exact_ubuntu_local_metadata.py"
+  },
+  "syntax_check": true,
+  "prior_paste_command_sha256": [
+    "935579fd2240080d40ff3ad5231a44c5191f00af08d66ea85ea0480b97a9a72f",
+    "9eae0c6078d6e19c89493a39f029c995b63d832b1a7fcf8786323531f902360f",
+    "a8daec90bc3aeca0beb51d6584ab3911d98e0f978e9f8ef09939d04e0a0b85d8"
+  ],
+  "read_only_diagnostic": {
+    "path": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\local-execution-20261022\\diagnose-ubuntu-release-integrity.sh",
+    "sha256": "06937b9c1276bc24df4013bf7c206433edfcecb83daf94ee2c686119a0df9f0d",
+    "offline_cases_passed": 3
+  },
+  "preflight_failure_on_ubuntu_reported_by_user": "Confirmed exactly two generated Python3.14 cache files; manifested file bytes unchanged; no remote mutation by Codex",
+  "cache_exception_validation": {
+    "accepted_exact_pair_and_excluded_from_candidate": true,
+    "live_baseline_cache_files_unchanged": true,
+    "third_extra_cache_denied_without_mutation": true,
+    "focused_cases_passed": 2,
+    "duration_seconds": 5.099
+  },
+  "confirmed_generated_cache_paths": [
+    "control-plane/control_plane/__pycache__/__init__.cpython-314.pyc",
+    "control-plane/control_plane/__pycache__/store.cpython-314.pyc"
+  ],
+  "listener_identity_validation": {
+    "baseline_health_has_no_service_pid_field": true,
+    "proof": "Both configured IPv4 TCP listening socket inodes must be held by exact systemd MainPID; recheck MainPID after observation",
+    "focused_cases_passed": 3,
+    "duration_seconds": 7.911
+  }
+}

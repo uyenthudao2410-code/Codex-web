@@ -1,0 +1,2 @@
+
+{"ok":false,"code":"MESSAGE_NOT_FOUND","details":{"error":{"category":"not_found","code":"MESSAGE_NOT_FOUND","details":{},"message":"The coordination message or workspace-local completion report was not found.","retryable":false},"ok":false,"task_context_id":"ctx_fe8b942d69fe9e353b66241c142e7536"}}

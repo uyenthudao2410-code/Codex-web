@@ -7,6 +7,7 @@ const {
   ACTIVATION_GATE_CLOSED,
   ACTIVATION_GATE_OPEN,
   buildNativeMcpEnv,
+  runtimeFingerprint,
   normalizeActivationGate
 } = require('../electron/services/nativeService');
 
@@ -69,4 +70,17 @@ test('closed gate input is normalized consistently for an epoch-bound launch', (
     activationGate: '  CLOSED '
   });
   assert.equal(env.CODING_TOOLS_MCP_ACTIVATION_GATE, ACTIVATION_GATE_CLOSED);
+});
+
+test('operator execution mode controls the child and prevents reuse across mode changes', () => {
+  assert.equal(buildEnv().CODING_TOOLS_MCP_EXECUTION_MODE, 'local');
+  assert.equal(buildEnv({
+    sourceEnv: { CODING_TOOLS_MCP_EXECUTION_MODE: 'sandboxed' },
+    settings: { executionMode: 'local' }
+  }).CODING_TOOLS_MCP_EXECUTION_MODE, 'local');
+  assert.equal(buildEnv({ settings: { executionMode: 'sandboxed' } })
+    .CODING_TOOLS_MCP_EXECUTION_MODE, 'sandboxed');
+  const settings = { workspace: os.tmpdir(), mcpPort: 18766 };
+  assert.equal(runtimeFingerprint(settings), runtimeFingerprint({ ...settings, executionMode: 'local' }));
+  assert.notEqual(runtimeFingerprint(settings), runtimeFingerprint({ ...settings, executionMode: 'sandboxed' }));
 });

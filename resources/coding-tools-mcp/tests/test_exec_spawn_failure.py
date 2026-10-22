@@ -22,6 +22,7 @@ class ExecSpawnFailureTests(unittest.TestCase):
             try:
                 with (
                     patch("coding_tools_mcp.exec_tools.os.name", "nt"),
+                    patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True),
                     patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=True),
                     patch("coding_tools_mcp.exec_tools.build_mxc_windows_sandbox_invocation", side_effect=failure),
                     patch("coding_tools_mcp.exec_tools.spawn_process") as spawn,
@@ -29,10 +30,10 @@ class ExecSpawnFailureTests(unittest.TestCase):
                     if lookup_unavailable:
                         with patch.object(runtime.execution_resource_governor, "find_exact_job", side_effect=OSError("unavailable")):
                             with self.assertRaises(ToolFailure) as observed:
-                                runtime.exec_command({"cmd": "node", "argv": ["node", "--version"]})
+                                runtime.exec_command({"cmd": "node", "argv": ["node", "--version"], "_windows_execution_mode": "isolated"})
                     else:
                         with self.assertRaises(ToolFailure) as observed:
-                            runtime.exec_command({"cmd": "node", "argv": ["node", "--version"]})
+                            runtime.exec_command({"cmd": "node", "argv": ["node", "--version"], "_windows_execution_mode": "isolated"})
                 spawn.assert_not_called()
                 self.assertIs(observed.exception, failure)
                 rows = runtime.execution_resource_governor._rows()

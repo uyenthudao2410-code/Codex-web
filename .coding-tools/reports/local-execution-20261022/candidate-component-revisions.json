@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-22T07:44:52.689Z",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-local-1022b\\win-unpacked",
+  "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "proof_kind": "maintained_path_independent_component_hash_over_exact_candidate",
+  "candidate_app_asar_sha256": "b032027dcb71aecd19cc9118f0fdccc44eb0b29df93c7c0d85e5ad5879f343a9",
+  "component_revision_implementation_sha256": "a589cf43a12f2989e23b307c47e5da9e85e06f7635059d29589bff9c2df89b5a",
+  "components": {
+    "recovery_host": {
+      "revision": "c0730e289eb4bd042b31a1cb686225fcc050a571ec102333a63a8ae2a082fc11",
+      "file_count": 40,
+      "missing_files": 4,
+      "total_bytes": 1209485
+    },
+    "coding_mcp": {
+      "revision": "fef687a59b0193ba4eab8740acfc8742844e2604553db8f1bd1b4672fd524293",
+      "file_count": 150,
+      "missing_files": 0,
+      "total_bytes": 3927054
+    },
+    "electron_ui": {
+      "revision": "3cc502bdd18ebf291702601edadbb5ba393aa7196a698483413c422920602b56",
+      "file_count": 32,
+      "missing_files": 0,
+      "total_bytes": 1107261
+    }
+  }
+}

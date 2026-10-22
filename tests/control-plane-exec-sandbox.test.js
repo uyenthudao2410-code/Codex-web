@@ -457,6 +457,76 @@ test('native-only setup preserves explicitly approved build prefixes in the exac
   assert.deepEqual(installation.args.flatMap((arg, index, args) => arg === '--native-argv-prefix' ? [JSON.parse(args[index + 1])] : []), prefixes);
 });
 
+test('local setup installs and observes exact standing authority without any runner probe', async (t) => {
+  const item = fixture(t), calls = [];
+  const service = new ControlPlaneEnrollmentService({ paths: item.paths,
+    getExecutionMode: () => 'local', runner: installRunner(item, calls) });
+  service.inspectMxcSandbox = async () => { throw new Error('local setup must not probe any container or VM'); };
+  const receipt = await service.installStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration,
+    executionMode: 'isolated', probeSandbox: true });
+  assert.deepEqual(receipt.sandbox, { state: 'not_required', backend: 'host_user', reason: 'OPERATOR_LOCAL_EXECUTION' });
+  assert.equal(receipt.execution_mode, 'isolated', 'retain the policy selection for a later sandboxed runtime');
+  assert.deepEqual(calls.map(({ args }) => args[2]), [
+    'list-workspaces', 'inspect-policy-authority', 'install-exec-policy', 'inspect-exec-policy'
+  ]);
+  calls.length = 0;
+  const observed = await service.inspectStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration, probeSandbox: true });
+  assert.equal(observed.policy.state, 'enabled');
+  assert.deepEqual(observed.policy.current_facade_contract, facade);
+  assert.deepEqual(observed.sandbox, receipt.sandbox);
+  assert.deepEqual(calls.map(({ args }) => args[2]), ['inspect-exec-policy', 'inspect-policy-authority']);
+});
+
+test('local setup retains current target, authority, packaged and receipt gates', async (t) => {
+  const item = fixture(t);
+  for (const [scenario, code] of [
+    ['wrong-generation', 'CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH'],
+    ['stale', 'CONTROL_PLANE_POLICY_AUTHORITY_STALE'],
+    ['not-admitted', 'CONTROL_PLANE_EXEC_NOT_ADMITTED'],
+    ['changed-receipt', 'CONTROL_PLANE_EXEC_POLICY_OUTPUT_INVALID']
+  ]) {
+    const calls = [];
+    const install = installRunner(item, calls, {
+      workspaces: () => scenario === 'wrong-generation' ? { workspaces: [{ ...workspaceList().workspaces[0],
+        workspace_generation: 'generation_' + 'f'.repeat(32) }] } : workspaceList(),
+      policyAuthority: () => ({ ...authority(),
+        ...(scenario === 'stale' ? { observed_at_ms: Date.now() - 60_000 } : {}),
+        ...(scenario === 'not-admitted' ? { exec_enabled: false } : {}) })
+    });
+    const service = new ControlPlaneEnrollmentService({ paths: item.paths, getExecutionMode: () => 'local',
+      runner: async (command, args, options) => {
+        const result = await install(command, args, options);
+        return scenario === 'changed-receipt' && args[2] === 'install-exec-policy'
+          ? { stdout: JSON.stringify({ ...JSON.parse(result.stdout), execution_mode: 'isolated' }) } : result;
+      } });
+    service.inspectMxcSandbox = async () => { throw new Error('local setup must not probe a runner'); };
+    await assert.rejects(service.installStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration }), { code }, scenario);
+    if (scenario !== 'changed-receipt') assert.equal(calls.some(({ args }) => args[2] === 'install-exec-policy'), false);
+  }
+  const development = fixture(t, 'development');
+  const service = new ControlPlaneEnrollmentService({ paths: development.paths, getExecutionMode: () => 'local' });
+  await assert.rejects(service.installStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration }), {
+    code: 'CONTROL_PLANE_EXEC_POLICY_PACKAGED_REQUIRED'
+  });
+});
+
+test('execution mode comes from current trusted settings and invalid modes cannot bypass setup', async (t) => {
+  const item = fixture(t), calls = [];
+  let executionMode = 'local';
+  const service = new ControlPlaneEnrollmentService({ paths: item.paths, getExecutionMode: () => executionMode,
+    runner: async (_command, args) => ({ stdout: JSON.stringify(args[2] === 'inspect-policy-authority' ? authority() : execObservation()) }) });
+  service.inspectMxcSandbox = async () => { calls.push('sandbox-probe'); return { state: 'not_checked' }; };
+  assert.equal((await service.inspectStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration })).sandbox.state, 'not_required');
+  assert.deepEqual(calls, []);
+  executionMode = 'sandboxed';
+  assert.equal((await service.inspectStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration })).sandbox.state, 'not_checked');
+  assert.deepEqual(calls, ['sandbox-probe']);
+  executionMode = 'invalid';
+  await assert.rejects(service.installStandingWorkspaceExecPolicy({ workspaceId, workspaceGeneration }), {
+    code: 'CONTROL_PLANE_EXECUTION_MODE_INVALID'
+  });
+});
+
 test('native setup rejects unsupported capability, modified binary, and invalid selection before permission mutation', async (t) => {
   const item = fixture(t), calls = [];
   const service = new ControlPlaneEnrollmentService({ paths: item.paths,

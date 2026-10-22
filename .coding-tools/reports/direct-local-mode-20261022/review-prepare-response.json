@@ -1,0 +1,747 @@
+{
+  "id": "direct-local-mode-prepare-1792653306345",
+  "jsonrpc": "2.0",
+  "result": {
+    "_meta": {
+      "io.coding-tools/endpoint": {
+        "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+        "automatic": true,
+        "device_instance_id": "77ffb14ade98d7d7083ec013911f075a",
+        "display_name": "DESKTOP-63643J4",
+        "endpoint_id": "637116aa8fd1f8e6211882db3d917509df84169d034026e130b0eb552e733a62",
+        "endpoint_scope": "device_installation",
+        "pinning": "endpoint_id+workspace_id+workspace_generation",
+        "process_instance_id": "iP5VK8z9t2lNqsBV",
+        "route_key": "desktop-63643j4-637116aa",
+        "schema_version": 1,
+        "server_instance_id": "YmyE2H10Z7fmkF04",
+        "workspace": "E:\\DEV\\Codex-web",
+        "workspace_binding_id": "37f918fae4420b75425dc9370c6abf609392a3799fa06b8af416aabc37d46adc",
+        "workspace_generation": 1,
+        "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251",
+        "workspace_name": "Codex-web"
+      },
+      "io.coding-tools/routingInstructions": "Automatic endpoint identity: route_key=desktop-63643j4-637116aa, endpoint_id=637116aa8fd1f8e6211882db3d917509df84169d034026e130b0eb552e733a62, device=DESKTOP-63643J4, workspace=E:\\DEV\\Codex-web, workspace_id=368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251, workspace_generation=1. This endpoint is already bound to that device and workspace. Reuse it for the same task without probing other Coding Tools endpoints merely to compare identities. Select another endpoint only when the user names another device/workspace or this endpoint returns a typed unavailable or stale-identity result. Never silently fail over a mutating task.",
+      "io.coding-tools/taskContextId": "ctx_fe8b942d69fe9e353b66241c142e7536",
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "coding-tools-mcp",
+        "title": "Coding Tools · DESKTOP-63643J4 · Codex-web",
+        "version": "1.0.7"
+      }
+    },
+    "content": [
+      {
+        "text": "agent_workflow: completed.",
+        "type": "text"
+      }
+    ],
+    "isError": false,
+    "resultType": "complete",
+    "structuredContent": {
+      "admission_budget": {
+        "attempts_used": 1,
+        "max_attempts": 1,
+        "max_auto_steps": 64,
+        "max_estimated_credits": 0,
+        "max_runtime_seconds": 600,
+        "max_tool_hops": 96,
+        "planned_auto_steps": 2,
+        "planned_tool_hops": 2,
+        "retry_mode": "manual_replan_only"
+      },
+      "completion_readiness": {
+        "acceptance": {
+          "business_outcome_not_inferred_from_build": true,
+          "missing": [
+            "chatweb_sol_final_acceptance"
+          ],
+          "status": "NOT_PROVEN"
+        },
+        "artifacts": {
+          "artifact_identity_not_proven": false,
+          "configured_path_count": 2,
+          "required_after_build": false,
+          "status": "NOT_REQUIRED"
+        },
+        "blocking_reason_codes": [],
+        "command_root_is_workspace_relative": true,
+        "oracle_preflight": {
+          "blocking": false,
+          "classification": "NOT_RUN",
+          "command_sha256": null,
+          "reason_code": "BASELINE_NOT_RUN",
+          "strong_oracle": false
+        },
+        "problem_revision": {
+          "binding_status": "NOT_REQUIRED",
+          "business_outcome_confirmation_required": false,
+          "exact_binding_required": false,
+          "work_origin": "unknown"
+        },
+        "project": {
+          "package_manager": "npm",
+          "type": "electron"
+        },
+        "schema_version": 2,
+        "scope": {
+          "dirty_worktree_adoption_automatic": false,
+          "planned_write_paths": [],
+          "understood_path_count": 1,
+          "understood_paths": [
+            "electron/main.js"
+          ],
+          "write_lease_not_granted_by_readiness": true
+        },
+        "status": "READY_FOR_EXECUTION",
+        "verification": {
+          "commands_are_hashed": true,
+          "commands_are_not_execution_proof": true,
+          "execution_environment_preflight_required": false,
+          "mode": "none",
+          "steps": []
+        },
+        "workspace": {
+          "base_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+          "bound": true,
+          "recheck_before_write_and_acceptance": true,
+          "worktree_fingerprint": "1b6d9f21700afc713dcc59c929216669b833eba7da32637ae17a2a4650852c49"
+        }
+      },
+      "context": {
+        "cache_hit": false,
+        "cache_ttl_seconds": 30,
+        "composite_read": {
+          "cache": {
+            "age_ms": 0,
+            "hit": false,
+            "source": "live_execution"
+          },
+          "execution": {
+            "content_bytes": 1487,
+            "localization": {
+              "native_admission": null,
+              "provider": {
+                "available": false,
+                "binding": {
+                  "credential_file_configured": false,
+                  "missing": [
+                    "origin",
+                    "credential_file"
+                  ],
+                  "origin_configured": false,
+                  "state": "unconfigured"
+                },
+                "provider": null,
+                "read_only": true,
+                "reason": "NATIVE_LSP_BINDING_NOT_CONFIGURED",
+                "schema_version": 1
+              },
+              "semantic_attempted": 0,
+              "semantic_graph": {
+                "completeness": "complete",
+                "current_records": 0,
+                "fallback_records": 0,
+                "indexed_records": 0,
+                "last_update": {
+                  "bytes_read": 0,
+                  "dropped_records": 0,
+                  "evicted_records": 0,
+                  "refreshed_paths": 0,
+                  "retained_records": 0
+                },
+                "provider": null,
+                "provider_available": false,
+                "provider_reason": "NATIVE_LSP_BINDING_NOT_CONFIGURED",
+                "provider_version": null,
+                "read_only": true,
+                "schema_version": 1,
+                "source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "stale_records": 0,
+                "uncertain_records": 0
+              },
+              "semantic_handled": 0,
+              "strategy": "semantic_first_text_fallback",
+              "text_fallback_queries": 0
+            },
+            "materialized_file_count": 1,
+            "operation_count": 2,
+            "operations": [
+              {
+                "duration_ms": 687,
+                "id": "workspace:0",
+                "kind": "workspace_context",
+                "stage": "workspace",
+                "status": "completed"
+              },
+              {
+                "content_bytes": 1487,
+                "duration_ms": 0,
+                "id": "read:0",
+                "kind": "read_file",
+                "path": "electron/main.js",
+                "stage": "materialize",
+                "status": "completed",
+                "truncated": true
+              }
+            ],
+            "parallelism": {
+              "materialization_parallel": false,
+              "search_max_workers": 0,
+              "search_parallel": false
+            },
+            "phase_timing": {
+              "localization_ms": 0,
+              "materialization_ms": 0,
+              "source": "monotonic_local",
+              "total_ms": 704,
+              "workspace_ms": 687
+            },
+            "selected_path_count": 1,
+            "status": "completed"
+          },
+          "plan": {
+            "limits": {
+              "max_files": 1,
+              "max_lines_per_file": 30,
+              "max_matches_per_query": 20,
+              "max_total_bytes": 4096
+            },
+            "mode": "model_free",
+            "plan_sha256": "c6588fdce042eb70ada3cf50fbacdda039ba264fb7bfbb83347b9aeb14fcb765",
+            "query_count": 0,
+            "requested_path_count": 23,
+            "schema_version": 1,
+            "stages": [
+              {
+                "id": "workspace",
+                "kind": "workspace_context",
+                "max_operations": 1,
+                "parallel_safe": false
+              },
+              {
+                "id": "localize",
+                "kind": "semantic_then_text_fallback",
+                "max_operations": 0,
+                "max_workers": 0,
+                "parallel_safe": true,
+                "semantic_available": false,
+                "semantic_provider": null
+              },
+              {
+                "byte_budget": 4096,
+                "id": "materialize",
+                "kind": "read_file",
+                "max_operations": 1,
+                "parallel_safe": false
+              }
+            ]
+          },
+          "schema_version": 1
+        },
+        "files": [
+          {
+            "bytes_read": 1487,
+            "content": "const path = require('node:path');\nconst fs = require('node:fs/promises');\nconst crypto = require('node:crypto');\nconst http = require('node:http');\nconst { pathToFileURL } = require('node:url');\nconst { performance: nodePerformance } = require('node:perf_hooks');\nconst { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, clipboard } = require('electron');\nconst { SettingsStore } = require('./services/settingsStore');\nconst { SecretStore } = require('./services/secretStore');\nconst { LogService } = require('./services/logService');\nconst { EnvironmentService, pythonStatus } = require('./services/environmentService');\nconst { run } = require('./services/commandRunner');\nconst { resolveProxy, clearProxyCache } = require('./services/proxyService');\nconst { BuildVerificationService } = require('./services/buildVerificationService');\nconst { buildCodexDesktopMcpConfig } = require('./services/codexDesktopConfig');\nconst { readJson, writeJsonAtomic } = require('./services/jsonStore');\nconst runtimePathApi = require('./paths');\nconst { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;\nconst {\n  createElectronRuntimePaths,\n  configureElectronUserDataPath,\n  singleInstanceLockPath\n} = require('./services/runtimePaths');\nconst { RecoveryIpcClient } = require('./services/recoveryIpc');\nconst {\n  ensureRecoveryHost,\n  recoveryLoginItemArguments,\n  electronUiArguments,\n  assertActivationDeadline\n} = require('./services/recoveryHostLauncher');",
+            "encoding": "utf-8",
+            "end_line": 30,
+            "first_line_exceeds_limit": false,
+            "max_bytes": 4096,
+            "next_action": {
+              "arguments": {
+                "max_bytes": 4096,
+                "max_lines": 30,
+                "path": "electron/main.js",
+                "start_line": 31
+              },
+              "tool": "read_file"
+            },
+            "next_start_line": 31,
+            "output_bytes": 1487,
+            "output_lines": 30,
+            "path": "electron/main.js",
+            "start_line": 1,
+            "total_bytes": 69023,
+            "total_lines": 1485,
+            "truncated": true,
+            "truncated_by": "lines",
+            "warnings": [
+              "content truncated"
+            ]
+          }
+        ],
+        "instructions": {
+          "nested_paths": [
+            "resources/coding-tools-mcp/AGENTS.md"
+          ],
+          "root": [
+            {
+              "content": "# AGENTS.md — Tools-Codex-web / WebCodex Repository Guide\r\n\r\nThese are the always-on rules for ordinary repository work. Read only the linked sections needed for the current task. A deeper `AGENTS.md` governs its directory.\r\n\r\n## 0. Current product truth and document precedence\r\n\r\n- The current operated product is the Windows **Electron Execution Hub + Coding Tools MCP** stack. WebCodex Rust/server/runner code remains an important foundation/subsystem, but WebCodex-core docs do not automatically describe current Desktop operations.\r\n- Resolve conflicts in this order: current implementation/focused tests/live contract -> [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) -> maintained product docs -> component-specific `docs/agent/*` / `docs/MODEL_EXECUTION.md` -> dated `docs/research/*` snapshots.\r\n- In `smart-v3`, the public MCP surface is exactly `workspace_context`, `agent_workflow`, `task_control`, `document_workflow`, `exec_command`, `command_control`, `request_permissions`, and `view_image`. `restart_runtime` is a `task_control` action.\r\n- `execution_route=auto` is currently evidence-gated and fail-closed to `deterministic`; do not infer automatic Mini/Luna/Terra/Sol routing from route availability or old research plans.\r\n- Source presence, focused proof, live controlled activation, and packaged/released state are different claims. State the strongest one actually proven.\r\n- Dated research documents are immutable chronology/evidence by default. Correct current guidance instead of rewriting old measurements to look current.\r\n\r\n## 1. Verify and preserve\r\n\r\n- Work only in the repository, worktree, and external target authorized by the user.\r\n- At task start, verify the root, branch, HEAD, status, relevant changes, and recent history. Recheck only after a Git operation, an observed concurrent change, or before committing.\r\n- Treat prompt hashes, paths, branches, and runtime state as expectations to verify, never as reasons to overwrite the actual repository.\r\n- Preserve unrelated work. Do not reset, rebase, restore, clean, or rewrite history unless the user explicitly requests that operation.\r\n- Inspect only the implementation, tests, documentation, and diff relevant to the task; do not bulk-read unrelated material.\r\n\r\n### `.coding-tools` retention invariant\r\n\r\n- Treat **every file under `.coding-tools/**`** as repository history/evidence that must remain version-controlled and be included when project state is committed/pushed, except exactly `.coding-tools/orchestration/ledger.sqlite3-shm` and `.coding-tools/orchestration/ledger.sqlite3-wal`. The canonical `.coding-tools/orchestration/ledger.sqlite3`, host-turn correlation state, task/performance projections, run/wave reports, logs, backups, and future telemetry artifacts remain mandatory repository evidence.\r\n- The only repository-local `.coding-tools` ignore exceptions are the two transient SQLite sidecars named above. Never broaden the exception to `*.sqlite3-*`, other SQLite files, other runtime projections, `.git/info/exclude`, or a global ignore rule. Automation worktrees/nested repositories must live outside `.coding-tools`; a gitlink is not a substitute for preserving the files.\r\n- Before **every commit or push**, run `npm run stage:coding-tools-delivery`, then `npm run check:coding-tools-delivery`. The staging command stages the complete evidence tree while placing a transactionally consistent snapshot of the live canonical `ledger.sqlite3` into the Git index and staging a fresh `.coding-tools/delivery-snapshot.json` receipt bound to that exact ledger blob and its SQLite integrity metadata. The two approved sidecars stay ignored/untracked. Live post-snapshot drift of the canonical ledger is allowed only when a fresh delivery-snapshot receipt is staged for the current delivery attempt and `--verify-index` proves the receipt, staged ledger blob, and SQLite integrity metadata agree. If the guard reports any other new runtime mutation, rerun `npm run stage:coding-tools-delivery` and the delivery guard before delivery.\r\n- `npm run check:coding-tools-history` is the repository policy guard: it must require the two named sidecars to remain ignored and untracked, reject any other ignored `.coding-tools` evidence, and reject nested Git repository/gitlinks under that tree.\r\n- If credential/secret material is ever detected under `.coding-tools`, do **not** silently omit the file. Stop delivery, report the conflict, and remediate/rotate/move the secret so the evidence policy can be satisfied without publishing credentials. Only an explicit user instruction naming the exception may override this retention invariant.\r\n\r\n## 2. Build the simplest useful product\r\n\r\n- Optimize for a workflow that is simple, obvious, and easy to operate.\r\n- Prefer the smallest direct solution. Add abstractions, configuration, modes, compatibility layers, or extension points only for a concrete current need or a demonstrated reliability problem.\r\n- Do not build a general framework for one use case. Wait for a second concrete use case before extracting shared machinery.\r\n- Do not design for hypothetical consumers, tenants, deployment scales, or trust boundaries that the product does not have.\r\n- Protect real boundaries—credentials, public entry points, destructive actions, wrong-target execution, repository history, and published artifacts—without adding policy machinery for imaginary ones.\r\n- When two designs satisfy the current need, choose the one with fewer concepts, states, configuration paths, and maintenance costs.\r\n- For model-facing execution, prefer structured process/argv and durable Job/observation primitives over shell-text orchestration. Keep shell as an escape hatch; structured lifecycle state is the source of truth for retry safety.\r\n- Treat demonstrated host features such as MCP App orchestration as optional adapters. Core execution and Job semantics must remain protocol-, UI-, transport-, and OS-neutral.\r\n\r\nProduct direction: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). [`docs/MODEL_EXECUTION.md`](docs/MODEL_EXECUTION.md) is the WebCodex core execution-subsystem contract.\r\n\r\n## 3. Follow intent and make focused changes\r\n\r\n- The requested outcome, scope, prohibited actions, and acceptance conditions are hard constraints. Suggested files, symbols, commands, and step order are guidance unless explicitly mandatory.\r\n- If guidance conflicts with current code or repository conventions, make the smallest adjustment that still satisfies the task.\r\n- Do not knowingly create a bug, inconsistent state, resource leak, compatibility hazard, or false validation result.\r\n- Prefer the smallest coherent change. Follow existing architecture and naming; avoid speculative compatibility, duplicate representations, unrelated cleanup, and broad refactors without a named current need.\r\n- Keep only the interfaces actually affected by the change consistent. Do not touch or revalidate unrelated projections merely because they exist.\r\n- Add focused tests for changed behavior when practical. Update documentation when public behavior or operations change.\r\n- Ask only when required information cannot be discovered, instructions materially conflict, or proceeding could destroy work. Otherwise continue and report any material deviation.\r\n\r\n## 4. Validate only changed behavior\r\n\r\nValidation is evidence, not ceremony.\r\n\r\n- Start with the smallest check that can detect a regression. Stop when sufficient relevant evidence has passed.\r\n- Reuse a successful result from the exact same HEAD when relevant files have not changed.\r\n- Do not rerun the same command unless relevant code changed, a rebase or conflict invalidated it, the earlier run was incomplete or flaky, or the user requested a repeat.\r\n- Documentation-only changes do not require Cargo compilation or tests.\r\n- Rust changes normally require affected formatting, the smallest relevant package check when compilation may be affected, and focused tests.\r\n- Full library or workspace tests, `--all-targets`, ignored tests, real-process harnesses, and E2E scripts are not defaults. Run them only for an explicit user request, release or deployment, a genuinely cross-cutting boundary, broad conflict resolution, or when focused validation cannot cover the change. State the reason first.\r\n- Distinguish current failures from pre-existing failures, expected negative cases, and failures resolved by a successful retry.\r\n- Before finishing, review the diff and confirm whitespace, worktree, conflict, and active-job state.\r\n\r\nTesting guidance: [`docs/TESTING.md`](docs/TESTING.md).\r\n\r\n### Runtime evidence for research and evaluation\r\n\r\nWhen producing repository-local research, benchmarking, postmortems, scientific evaluation, or routing/cost analysis, treat the following `.coding-tools` artifacts as first-class evidence sources when they exist and are relevant:\r\n\r\n1. `.coding-tools/orchestration/ledger.sqlite3` — **canonical causal audit source** for runs, waves, state transitions, delegation/authority, proof lineage, replans, acceptance, and timing relationships.\r\n2. `.coding-tools/performance.json` — dynamic performance/usage projection for tool calls, errors, cache/dedup, routing counts, bytes, and timing aggregates; snapshot it with an observation timestamp and do not present internal credit estimates as provider billing.\r\n3. `.coding-tools/task-history.json` — archived task-level continuity/outcome records; useful for longitudinal task-class and acceptance analysis, but not a replacement for the orchestration ledger.\r\n4. `.coding-tools/task-state.json` — current task/run/wave projection for operator/UI state; useful for present-state evidence, not full forensic history.\r\n\r\nThese files are **volatile runtime evidence and repository history, not source-code inputs**. Except for the two explicitly approved SQLite sidecars above, volatility is not permission to ignore or omit them from project-state commits. For research claims, record the observed Git HEAD, capture time/evidence window, sample size where relevant, and distinguish measured/provider-reported facts from derived estimates and scenario assumptions. If projections disagree on causal history, prefer the orchestration ledger and explain the discrepancy. Do not manually edit runtime evidence to make a report look cleaner, and do not let `.coding-tools` volatility participate in source/worktree fingerprints or invalidate otherwise matching code proof.\r\n\r\n## 5. Protect work and keep delivery explicit\r\n\r\n- Never print, commit, or expose credentials, authorization headers, private keys, tokens, secret files, or sensitive command output.\r\n- Do not silently overwrite concurrent changes. Prefer guarded or conflict-detecting edits.\r\n- Do not weaken meaningful authentication, authorization, validation, schemas, sandboxing, or tests merely to obtain a green result.\r\n- Do not force-push, move published tags, overwrite releases, destructively reset other work, or rewrite published history without an explicit request naming the operation and target.\r\n- Push, publish, tag, release, deploy, restart services, or alter external systems only when the task explicitly includes it and identifies the destination.\r\n- Review status and diff before committing. Do not mix unrelated work or amend an unrelated commit.\r\n\r\nCurrent Desktop release guidance: [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). Use [`docs/agent/release-process.md`](docs/agent/release-process.md) only when releasing the WebCodex core/server/npm component it describes.\r\n\r\n## 6. Load domain rules only when relevant\r\n\r\n- Public runtime and API surfaces: [`docs/agent/openapi-guidelines.md`](docs/agent/openapi-guidelines.md).\r\n- Workflow Sessions: [`docs/agent/session-model.md`](docs/agent/session-model.md).\r\n- Authority boundaries: [`docs/agent/permission-model.md`](docs/agent/permission-model.md).\r\n- Architecture decisions: [`docs/agent/architecture-decisions.md`](docs/agent/architecture-decisions.md).\r\n\r\nUse these documents as sources of truth **inside their subsystem scope** instead of copying invariants into every task prompt. If they conflict with the current Desktop boundary, follow Section 0 precedence.\r\n\r\n## 7. Report progress and completed state\r\n\r\n- Every material work wave or batch **must end with an operator-visible status checkpoint**. Tool cards, raw tool output, and internal orchestration state are evidence; none of them is a substitute for the status report or may be the final visible state by itself.\r\n- Emit a checkpoint when a wave completes; when a blocker causes `BLOCKED`, `REPLAN`, or `ABORTED`; before pausing or handing work to another controller; and before a task or session stops.\r\n- Each checkpoint must state: what was completed or changed; the current Git/run/external-system state and strongest proof; any blocker or failure classification; remaining work; and the exact next action.\r\n- During long tool sequences, report at meaningful wave boundaries instead of after every tool call. If work will continue automatically, say so explicitly before continuing.\r\n- Never stop silently because a tool returned, failed, timed out, requested acceptance, or changed orchestration state. Reconcile or terminalize that boundary when safe, then report it. If work cannot continue, name the exact approval, evidence, or external action required.\r\n- The final report must include the outcome, changed files or external resources, validation performed, final Git and job state, material deviations, remaining risks, and whether push, release, deployment, or service operations occurred.\r\n",
+              "path": "AGENTS.MD",
+              "truncated": false
+            },
+            {
+              "content": "# AGENTS.md — Tools-Codex-web / WebCodex Repository Guide\r\n\r\nThese are the always-on rules for ordinary repository work. Read only the linked sections needed for the current task. A deeper `AGENTS.md` governs its directory.\r\n\r\n## 0. Current product truth and document precedence\r\n\r\n- The current operated product is the Windows **Electron Execution Hub + Coding Tools MCP** stack. WebCodex Rust/server/runner code remains an important foundation/subsystem, but WebCodex-core docs do not automatically describe current Desktop operations.\r\n- Resolve conflicts in this order: current implementation/focused tests/live contract -> [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) -> maintained product docs -> component-specific `docs/agent/*` / `docs/MODEL_EXECUTION.md` -> dated `docs/research/*` snapshots.\r\n- In `smart-v3`, the public MCP surface is exactly `workspace_context`, `agent_workflow`, `task_control`, `document_workflow`, `exec_command`, `command_control`, `request_permissions`, and `view_image`. `restart_runtime` is a `task_control` action.\r\n- `execution_route=auto` is currently evidence-gated and fail-closed to `deterministic`; do not infer automatic Mini/Luna/Terra/Sol routing from route availability or old research plans.\r\n- Source presence, focused proof, live controlled activation, and packaged/released state are different claims. State the strongest one actually proven.\r\n- Dated research documents are immutable chronology/evidence by default. Correct current guidance instead of rewriting old measurements to look current.\r\n\r\n## 1. Verify and preserve\r\n\r\n- Work only in the repository, worktree, and external target authorized by the user.\r\n- At task start, verify the root, branch, HEAD, status, relevant changes, and recent history. Recheck only after a Git operation, an observed concurrent change, or before committing.\r\n- Treat prompt hashes, paths, branches, and runtime state as expectations to verify, never as reasons to overwrite the actual repository.\r\n- Preserve unrelated work. Do not reset, rebase, restore, clean, or rewrite history unless the user explicitly requests that operation.\r\n- Inspect only the implementation, tests, documentation, and diff relevant to the task; do not bulk-read unrelated material.\r\n\r\n### `.coding-tools` retention invariant\r\n\r\n- Treat **every file under `.coding-tools/**`** as repository history/evidence that must remain version-controlled and be included when project state is committed/pushed, except exactly `.coding-tools/orchestration/ledger.sqlite3-shm` and `.coding-tools/orchestration/ledger.sqlite3-wal`. The canonical `.coding-tools/orchestration/ledger.sqlite3`, host-turn correlation state, task/performance projections, run/wave reports, logs, backups, and future telemetry artifacts remain mandatory repository evidence.\r\n- The only repository-local `.coding-tools` ignore exceptions are the two transient SQLite sidecars named above. Never broaden the exception to `*.sqlite3-*`, other SQLite files, other runtime projections, `.git/info/exclude`, or a global ignore rule. Automation worktrees/nested repositories must live outside `.coding-tools`; a gitlink is not a substitute for preserving the files.\r\n- Before **every commit or push**, run `npm run stage:coding-tools-delivery`, then `npm run check:coding-tools-delivery`. The staging command stages the complete evidence tree while placing a transactionally consistent snapshot of the live canonical `ledger.sqlite3` into the Git index and staging a fresh `.coding-tools/delivery-snapshot.json` receipt bound to that exact ledger blob and its SQLite integrity metadata. The two approved sidecars stay ignored/untracked. Live post-snapshot drift of the canonical ledger is allowed only when a fresh delivery-snapshot receipt is staged for the current delivery attempt and `--verify-index` proves the receipt, staged ledger blob, and SQLite integrity metadata agree. If the guard reports any other new runtime mutation, rerun `npm run stage:coding-tools-delivery` and the delivery guard before delivery.\r\n- `npm run check:coding-tools-history` is the repository policy guard: it must require the two named sidecars to remain ignored and untracked, reject any other ignored `.coding-tools` evidence, and reject nested Git repository/gitlinks under that tree.\r\n- If credential/secret material is ever detected under `.coding-tools`, do **not** silently omit the file. Stop delivery, report the conflict, and remediate/rotate/move the secret so the evidence policy can be satisfied without publishing credentials. Only an explicit user instruction naming the exception may override this retention invariant.\r\n\r\n## 2. Build the simplest useful product\r\n\r\n- Optimize for a workflow that is simple, obvious, and easy to operate.\r\n- Prefer the smallest direct solution. Add abstractions, configuration, modes, compatibility layers, or extension points only for a concrete current need or a demonstrated reliability problem.\r\n- Do not build a general framework for one use case. Wait for a second concrete use case before extracting shared machinery.\r\n- Do not design for hypothetical consumers, tenants, deployment scales, or trust boundaries that the product does not have.\r\n- Protect real boundaries—credentials, public entry points, destructive actions, wrong-target execution, repository history, and published artifacts—without adding policy machinery for imaginary ones.\r\n- When two designs satisfy the current need, choose the one with fewer concepts, states, configuration paths, and maintenance costs.\r\n- For model-facing execution, prefer structured process/argv and durable Job/observation primitives over shell-text orchestration. Keep shell as an escape hatch; structured lifecycle state is the source of truth for retry safety.\r\n- Treat demonstrated host features such as MCP App orchestration as optional adapters. Core execution and Job semantics must remain protocol-, UI-, transport-, and OS-neutral.\r\n\r\nProduct direction: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). [`docs/MODEL_EXECUTION.md`](docs/MODEL_EXECUTION.md) is the WebCodex core execution-subsystem contract.\r\n\r\n## 3. Follow intent and make focused changes\r\n\r\n- The requested outcome, scope, prohibited actions, and acceptance conditions are hard constraints. Suggested files, symbols, commands, and step order are guidance unless explicitly mandatory.\r\n- If guidance conflicts with current code or repository conventions, make the smallest adjustment that still satisfies the task.\r\n- Do not knowingly create a bug, inconsistent state, resource leak, compatibility hazard, or false validation result.\r\n- Prefer the smallest coherent change. Follow existing architecture and naming; avoid speculative compatibility, duplicate representations, unrelated cleanup, and broad refactors without a named current need.\r\n- Keep only the interfaces actually affected by the change consistent. Do not touch or revalidate unrelated projections merely because they exist.\r\n- Add focused tests for changed behavior when practical. Update documentation when public behavior or operations change.\r\n- Ask only when required information cannot be discovered, instructions materially conflict, or proceeding could destroy work. Otherwise continue and report any material deviation.\r\n\r\n## 4. Validate only changed behavior\r\n\r\nValidation is evidence, not ceremony.\r\n\r\n- Start with the smallest check that can detect a regression. Stop when sufficient relevant evidence has passed.\r\n- Reuse a successful result from the exact same HEAD when relevant files have not changed.\r\n- Do not rerun the same command unless relevant code changed, a rebase or conflict invalidated it, the earlier run was incomplete or flaky, or the user requested a repeat.\r\n- Documentation-only changes do not require Cargo compilation or tests.\r\n- Rust changes normally require affected formatting, the smallest relevant package check when compilation may be affected, and focused tests.\r\n- Full library or workspace tests, `--all-targets`, ignored tests, real-process harnesses, and E2E scripts are not defaults. Run them only for an explicit user request, release or deployment, a genuinely cross-cutting boundary, broad conflict resolution, or when focused validation cannot cover the change. State the reason first.\r\n- Distinguish current failures from pre-existing failures, expected negative cases, and failures resolved by a successful retry.\r\n- Before finishing, review the diff and confirm whitespace, worktree, conflict, and active-job state.\r\n\r\nTesting guidance: [`docs/TESTING.md`](docs/TESTING.md).\r\n\r\n### Runtime evidence for research and evaluation\r\n\r\nWhen producing repository-local research, benchmarking, postmortems, scientific evaluation, or routing/cost analysis, treat the following `.coding-tools` artifacts as first-class evidence sources when they exist and are relevant:\r\n\r\n1. `.coding-tools/orchestration/ledger.sqlite3` — **canonical causal audit source** for runs, waves, state transitions, delegation/authority, proof lineage, replans, acceptance, and timing relationships.\r\n2. `.coding-tools/performance.json` — dynamic performance/usage projection for tool calls, errors, cache/dedup, routing counts, bytes, and timing aggregates; snapshot it with an observation timestamp and do not present internal credit estimates as provider billing.\r\n3. `.coding-tools/task-history.json` — archived task-level continuity/outcome records; useful for longitudinal task-class and acceptance analysis, but not a replacement for the orchestration ledger.\r\n4. `.coding-tools/task-state.json` — current task/run/wave projection for operator/UI state; useful for present-state evidence, not full forensic history.\r\n\r\nThese files are **volatile runtime evidence and repository history, not source-code inputs**. Except for the two explicitly approved SQLite sidecars above, volatility is not permission to ignore or omit them from project-state commits. For research claims, record the observed Git HEAD, capture time/evidence window, sample size where relevant, and distinguish measured/provider-reported facts from derived estimates and scenario assumptions. If projections disagree on causal history, prefer the orchestration ledger and explain the discrepancy. Do not manually edit runtime evidence to make a report look cleaner, and do not let `.coding-tools` volatility participate in source/worktree fingerprints or invalidate otherwise matching code proof.\r\n\r\n## 5. Protect work and keep delivery explicit\r\n\r\n- Never print, commit, or expose credentials, authorization headers, private keys, tokens, secret files, or sensitive command output.\r\n- Do not silently overwrite concurrent changes. Prefer guarded or conflict-detecting edits.\r\n- Do not weaken meaningful authentication, authorization, validation, schemas, sandboxing, or tests merely to obtain a green result.\r\n- Do not force-push, move published tags, overwrite releases, destructively reset other work, or rewrite published history without an explicit request naming the operation and target.\r\n- Push, publish, tag, release, deploy, restart services, or alter external systems only when the task explicitly includes it and identifies the destination.\r\n- Review status and diff before committing. Do not mix unrelated work or amend an unrelated commit.\r\n\r\nCurrent Desktop release guidance: [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). Use [`docs/agent/release-process.md`](docs/agent/release-process.md) only when releasing the WebCodex core/server/npm component it describes.\r\n\r\n## 6. Load domain rules only when relevant\r\n\r\n- Public runtime and API surfaces: [`docs/agent/openapi-guidelines.md`](docs/agent/openapi-guidelines.md).\r\n- Workflow Sessions: [`docs/agent/session-model.md`](docs/agent/session-model.md).\r\n- Authority boundaries: [`docs/agent/permission-model.md`](docs/agent/permission-model.md).\r\n- Architecture decisions: [`docs/agent/architecture-decisions.md`](docs/agent/architecture-decisions.md).\r\n\r\nUse these documents as sources of truth **inside their subsystem scope** instead of copying invariants into every task prompt. If they conflict with the current Desktop boundary, follow Section 0 precedence.\r\n\r\n## 7. Report progress and completed state\r\n\r\n- Every material work wave or batch **must end with an operator-visible status checkpoint**. Tool cards, raw tool output, and internal orchestration state are evidence; none of them is a substitute for the status report or may be the final visible state by itself.\r\n- Emit a checkpoint when a wave completes; when a blocker causes `BLOCKED`, `REPLAN`, or `ABORTED`; before pausing or handing work to another controller; and before a task or session stops.\r\n- Each checkpoint must state: what was completed or changed; the current Git/run/external-system state and strongest proof; any blocker or failure classification; remaining work; and the exact next action.\r\n- During long tool sequences, report at meaningful wave boundaries instead of after every tool call. If work will continue automatically, say so explicitly before continuing.\r\n- Never stop silently because a tool returned, failed, timed out, requested acceptance, or changed orchestration state. Reconcile or terminalize that boundary when safe, then report it. If work cannot continue, name the exact approval, evidence, or external action required.\r\n- The final report must include the outcome, changed files or external resources, validation performed, final Git and job state, material deviations, remaining risks, and whether push, release, deployment, or service operations occurred.\r\n",
+              "path": "AGENTS.md",
+              "truncated": false
+            }
+          ],
+          "warnings": []
+        },
+        "objective": "Validate and accept the exact completed source for permanent direct Windows host execution without ProcessContainer or Windows Sandbox, preserving permission controls, existing workspace/node identity and unrelated work.",
+        "recommended_next_action": "Use apply_changes_and_verify with all related patches and required checks in one call.",
+        "searches": [],
+        "selected_paths": [
+          "electron/main.js"
+        ],
+        "task_resume": {
+          "current_step": "Run complete agent workflow",
+          "next_step": "",
+          "orchestration": {
+            "base_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+            "contract_fp": "",
+            "delegation_id": "",
+            "execution_mode": "auto",
+            "orchestration_state": "PREFLIGHT",
+            "route_requested": "",
+            "route_resolved": "",
+            "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+            "wave_id": "231d6e0028134903a87b6a31498e5285",
+            "worktree_fp": "1b6d9f21700afc713dcc59c929216669b833eba7da32637ae17a2a4650852c49",
+            "write_lease_id": "",
+            "write_owner": ""
+          },
+          "status": "active",
+          "task_id": "879261902e1745eea28ea3e7b8e8d89c"
+        },
+        "total_content_bytes": 1487,
+        "workspace": {
+          "activation": {
+            "activation_admission": "open",
+            "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+            "activation_gate": "open",
+            "admission": "open",
+            "admission_open": true,
+            "completion_closed": false,
+            "configured_gate": "closed",
+            "executor_cleanup": null,
+            "expires_at_unix_ms": 1792652247089,
+            "ready_commit_digest": "6dd8d617343fae7b4585965e8dfddb381c23444804d1b99862dbd8a9e4c3347f",
+            "snapshot_busy": false
+          },
+          "cache": {
+            "age_ms": 0,
+            "hit": false
+          },
+          "completed": true,
+          "default_cwd": ".",
+          "detail": "compact",
+          "endpoint": {
+            "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+            "automatic": true,
+            "device_instance_id": "77ffb14ade98d7d7083ec013911f075a",
+            "display_name": "DESKTOP-63643J4",
+            "endpoint_id": "637116aa8fd1f8e6211882db3d917509df84169d034026e130b0eb552e733a62",
+            "endpoint_scope": "device_installation",
+            "pinning": "endpoint_id+workspace_id+workspace_generation",
+            "process_instance_id": "iP5VK8z9t2lNqsBV",
+            "route_key": "desktop-63643j4-637116aa",
+            "schema_version": 1,
+            "server_instance_id": "YmyE2H10Z7fmkF04",
+            "workspace": "E:\\DEV\\Codex-web",
+            "workspace_binding_id": "37f918fae4420b75425dc9370c6abf609392a3799fa06b8af416aabc37d46adc",
+            "workspace_generation": 1,
+            "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251",
+            "workspace_name": "Codex-web"
+          },
+          "entries": [
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.013279Z",
+              "name": "AGENTS.md",
+              "path": "AGENTS.md",
+              "size_bytes": 13708,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.013279Z",
+              "name": "Cargo.lock",
+              "path": "Cargo.lock",
+              "size_bytes": 111324,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.013279Z",
+              "name": "Cargo.toml",
+              "path": "Cargo.toml",
+              "size_bytes": 3340,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.013279Z",
+              "name": "Dockerfile",
+              "path": "Dockerfile",
+              "size_bytes": 1912,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.013279Z",
+              "name": "LICENSE",
+              "path": "LICENSE",
+              "size_bytes": 11560,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-24T00:55:21.810055Z",
+              "name": "NVIDIA Corporation",
+              "path": "NVIDIA Corporation",
+              "size_bytes": 0,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-25T02:58:41.654259Z",
+              "name": "README.md",
+              "path": "README.md",
+              "size_bytes": 31340,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-25T04:02:12.027679Z",
+              "name": "SECURITY.md",
+              "path": "SECURITY.md",
+              "size_bytes": 7631,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-12T01:42:51.075268Z",
+              "name": "Some'",
+              "path": "Some'",
+              "size_bytes": 0,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-24T01:50:23.612835Z",
+              "name": "THIRD_PARTY_NOTICES.md",
+              "path": "THIRD_PARTY_NOTICES.md",
+              "size_bytes": 3521,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.015796Z",
+              "name": "backend",
+              "path": "backend",
+              "size_bytes": 0,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.016793Z",
+              "name": "compose.yaml",
+              "path": "compose.yaml",
+              "size_bytes": 1300,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-23T06:54:50.929299Z",
+              "name": "control-plane",
+              "path": "control-plane",
+              "size_bytes": 0,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.081677Z",
+              "name": "crates",
+              "path": "crates",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-24T07:10:43.564749Z",
+              "name": "deploy",
+              "path": "deploy",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-13T09:26:58.510709Z",
+              "name": "docs",
+              "path": "docs",
+              "size_bytes": 12288,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-12T01:44:18.393717Z",
+              "name": "electron",
+              "path": "electron",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.256889Z",
+              "name": "examples",
+              "path": "examples",
+              "size_bytes": 0,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.262645Z",
+              "name": "frontend",
+              "path": "frontend",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.262645Z",
+              "name": "npm",
+              "path": "npm",
+              "size_bytes": 0,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.262645Z",
+              "name": "opencode.json",
+              "path": "opencode.json",
+              "size_bytes": 1303,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.262645Z",
+              "name": "package-lock.json",
+              "path": "package-lock.json",
+              "size_bytes": 132672,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-12T11:52:10.173085Z",
+              "name": "package.json",
+              "path": "package.json",
+              "size_bytes": 7157,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.262645Z",
+              "name": "recover_chatweb_ui_bound_v5.cmd",
+              "path": "recover_chatweb_ui_bound_v5.cmd",
+              "size_bytes": 42453,
+              "type": "file"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-12T01:44:18.434009Z",
+              "name": "renderer",
+              "path": "renderer",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-25T03:26:47.513241Z",
+              "name": "resources",
+              "path": "resources",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-13T08:30:05.346949Z",
+              "name": "scripts",
+              "path": "scripts",
+              "size_bytes": 12288,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.911757Z",
+              "name": "src",
+              "path": "src",
+              "size_bytes": 8192,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-22T11:42:41.527086Z",
+              "name": "tasks",
+              "path": "tasks",
+              "size_bytes": 0,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-10-12T08:41:45.166983Z",
+              "name": "tests",
+              "path": "tests",
+              "size_bytes": 28672,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.984369Z",
+              "name": "tmp",
+              "path": "tmp",
+              "size_bytes": 4096,
+              "type": "directory"
+            },
+            {
+              "is_hidden": false,
+              "is_ignored": false,
+              "modified": "2026-09-21T10:14:08.985333Z",
+              "name": "work",
+              "path": "work",
+              "size_bytes": 0,
+              "type": "directory"
+            }
+          ],
+          "entries_truncated": false,
+          "git": {
+            "branch": "main",
+            "changed_count": 44,
+            "is_repo": true,
+            "truncated": false
+          },
+          "project": {
+            "name": "coding-tools-mcp",
+            "type": "electron",
+            "version": "1.0.7"
+          },
+          "retryable": false,
+          "task": {
+            "current_step": "Run complete agent workflow",
+            "failure": null,
+            "next_step": "",
+            "objective": "Validate and accept the exact completed source for permanent direct Windows host execution without ProcessContainer or Windows Sandbox, preserving permission controls, existing workspace/node identity and unrelated work.",
+            "status": "active",
+            "task_id": "879261902e1745eea28ea3e7b8e8d89c"
+          },
+          "task_context_id": "mcp2026:ctx_fe8b942d69fe9e353b66241c142e7536",
+          "tool_mode": "smart",
+          "workspace": "E:\\DEV\\Codex-web",
+          "workspace_accessed": true,
+          "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+        }
+      },
+      "ok": true,
+      "orchestration": {
+        "activation": {
+          "activation_admission": "open",
+          "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+          "activation_gate": "open",
+          "admission": "open",
+          "admission_open": true,
+          "completion_closed": false,
+          "configured_gate": "closed",
+          "executor_cleanup": null,
+          "expires_at_unix_ms": 1792652247089,
+          "ready_commit_digest": "6dd8d617343fae7b4585965e8dfddb381c23444804d1b99862dbd8a9e4c3347f",
+          "snapshot_busy": false
+        },
+        "base_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+        "contract_fp": "",
+        "delegation_id": "",
+        "execution_mode": "auto",
+        "final_acceptance_required": false,
+        "integrity": {
+          "checked": 4,
+          "head_hash": "ed1ac7b61495970e118848c8c80b0ba9298d3a7d1810f57c9b1a1057dddbe09c",
+          "ok": true
+        },
+        "orchestration_state": "PREFLIGHT",
+        "reports": {},
+        "route_requested": "",
+        "route_resolved": "",
+        "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+        "runtime": {
+          "activation_admission": "open",
+          "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+          "activation_gate": "open",
+          "admission": "open",
+          "admission_open": true,
+          "completion_closed": false,
+          "configured_gate": "closed",
+          "executor_cleanup": null,
+          "expires_at_unix_ms": 1792652247089,
+          "ready_commit_digest": "6dd8d617343fae7b4585965e8dfddb381c23444804d1b99862dbd8a9e4c3347f",
+          "snapshot_busy": false
+        },
+        "wave_id": "231d6e0028134903a87b6a31498e5285",
+        "worktree_fp": "1b6d9f21700afc713dcc59c929216669b833eba7da32637ae17a2a4650852c49",
+        "write_lease_id": "",
+        "write_owner": ""
+      },
+      "phase": "prepare",
+      "prepared_binding": {
+        "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+        "wave_id": "231d6e0028134903a87b6a31498e5285"
+      },
+      "presentation": {
+        "card": "workflow",
+        "schema_version": 1,
+        "title": "Run complete agent workflow"
+      },
+      "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set, verification plan, and this exact prepared_binding run_id/wave_id.",
+      "solution_shadow_enrollment": {
+        "automatic_policy_activation": false,
+        "enrolled": false,
+        "production_behavior_changed": false,
+        "provenance": "unlabeled",
+        "recording": null,
+        "recording_policy": "agent_workflow_pre_first_write_v1",
+        "required": false,
+        "workflow": "custom"
+      },
+      "task_context_id": "ctx_fe8b942d69fe9e353b66241c142e7536",
+      "workflow": "custom"
+    }
+  }
+}

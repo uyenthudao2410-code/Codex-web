@@ -259,6 +259,7 @@ test('exec metadata is all-or-none, constrained and bound to the result digest',
   const original = safeResult(admitted);
   assert.equal(Object.hasOwn(normaliseExecResult(original, admitted), 'execution_backend'), false);
   for (const metadata of [
+    { execution_backend: 'local', isolation_level: 'host_user', policy_decision: 'operator_local' },
     { execution_backend: 'native', isolation_level: 'process_container', policy_decision: 'native_safe_command' },
     { execution_backend: 'native', isolation_level: 'process_container', policy_decision: 'native_explicit_approval' },
     { execution_backend: 'isolated', isolation_level: 'hypervisor', policy_decision: 'isolated_unapproved_command' },
@@ -272,6 +273,8 @@ test('exec metadata is all-or-none, constrained and bound to the result digest',
       { code: 'CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID' });
   }
   for (const metadata of [
+    { execution_backend: 'local', isolation_level: 'process_container', policy_decision: 'operator_local' },
+    { execution_backend: 'local', isolation_level: 'host_user', policy_decision: 'native_explicit_approval' },
     { execution_backend: 'native' },
     { execution_backend: 'native', isolation_level: 'hypervisor', policy_decision: 'native_safe_command' },
     { execution_backend: 'isolated', isolation_level: 'hypervisor', policy_decision: 'native_explicit_approval' }

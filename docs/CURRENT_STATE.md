@@ -1,6 +1,28 @@
 # Current Project State — Tools-Codex-web
 
-## Current operational checkpoint — 2026-10-13
+## Direct Windows execution — 2026-10-22
+
+The current source defaults `executionMode` to `local`. The persisted setting is
+available in Settings → Chế độ thực thi and is applied on runtime restart.
+Windows commands then run directly as the current Windows user without MXC,
+ProcessContainer or Windows Sandbox. Results and durable Job receipts identify
+this explicitly as `local / host_user / operator_local`. Host execution has the
+user's filesystem and network access; workspace selection and argv admission
+are application checks, not an OS isolation boundary.
+
+Durable Job identity, output, timeout/cancellation, Windows Job resource limits,
+destructive-command checks and central workspace/authority/argv admission remain
+in place. Local standing-policy setup does not probe or require a sandbox.
+Explicit `executionMode=sandboxed` retains the existing `native_first`,
+`native_only` and `isolated` routing and fail-closed backend behavior. Changing
+execution mode invalidates native-process reuse through its runtime fingerprint.
+
+Focused direct Windows execution, cancellation/timeout, settings/environment,
+bridge receipt/digest and setup tests pass. Packaging and live activation are
+separate evidence boundaries; the October 13 operational checkpoint below is
+historical and does not establish that the new local mode is loaded.
+
+## Historical operational checkpoint — 2026-10-13
 
 The parallel r4-timefix candidate is the live production runtime. Ubuntu
 service PID `970133` and the Windows MCP/native process remain READY/OPEN under

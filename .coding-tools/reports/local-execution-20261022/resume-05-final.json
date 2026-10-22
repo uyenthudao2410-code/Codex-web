@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "operation_id": "full-clean-cli-direct-local-20261022-05",
+  "checkpoint": {
+    "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+    "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+    "wave_id": "3b42877879354c97b7b87d69bdb7a9c8",
+    "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+    "git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609"
+  },
+  "activation_epoch_id": "activation-mvj98u37-58fee116ec3e535bd9606fb00e0ecf99",
+  "staged": true,
+  "expected_recovery_revision": "c0730e289eb4bd042b31a1cb686225fcc050a571ec102333a63a8ae2a082fc11",
+  "replacement_pid": 44456,
+  "state": "READY",
+  "admission_open": true,
+  "fully_ready": true,
+  "connector_acknowledged": false
+}

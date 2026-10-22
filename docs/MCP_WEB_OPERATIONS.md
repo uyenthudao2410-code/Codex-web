@@ -43,9 +43,12 @@ zero queued/accepted actions và zero open tasks/writers. Xem
 
 ## Thiết lập xuyên suốt trong mã nguồn mới
 
-Luồng dưới đây đã có trong source, chưa được kích hoạt trên profile đang dùng.
-Bản Windows có live proof gần nhất vẫn là r5 mô tả ở trên. Các mốc quyền đã ghi
-không tự gia hạn khi UI được thay đổi.
+Source ngày 22-10-2026 mặc định lưu `executionMode=local`: lệnh chạy trực tiếp
+bằng user Windows, không cần ProcessContainer hoặc Windows Sandbox. Chế độ
+`sandboxed` vẫn có thể được chọn trong Cài đặt; đổi chế độ cần restart runtime.
+Host execution có quyền filesystem/network của user; thư mục và argv được
+kiểm tra ở tầng ứng dụng. Mốc triển khai thực tế xem
+[`CURRENT_STATE.md`](CURRENT_STATE.md); các quyền có hạn không tự gia hạn.
 
 1. App Desktop mở một cửa sổ chính. Trong **Cài đặt**, đi theo ba phần liền nhau:
    **Máy chủ & máy này → Thư mục & quyền → Kiểm tra thực thi**. Bảng **Thực thi
@@ -56,7 +59,8 @@ không tự gia hạn khi UI được thay đổi.
 3. Bấm **Hoàn tất thiết lập** và xác nhận đúng máy, thư mục cùng mức quyền. App
    kiểm tra quyền Ubuntu mỗi 15 giây, tối đa 10 phút. Khi đúng target đã được
    cấp, app đồng bộ metadata và dùng các API policy đọc/sửa/chạy hiện có cho
-   những bước còn thiếu. Quyền Chạy vẫn cần sandbox sẵn sàng.
+   những bước còn thiếu. Với `local`, bước này không probe hay yêu cầu sandbox;
+   với `sandboxed`, backend được chọn vẫn phải sẵn sàng.
 4. Owner dùng form thư mục gộp trên Console để chọn đúng máy/workspace, dùng lại
    hoặc tạo binding và cấp một context có hạn. Form không tạo grant/pilot hoặc
    mở admission. Với private tunnel service, owner còn phải hoàn tất service
@@ -66,8 +70,8 @@ không tự gia hạn khi UI được thay đổi.
    workspace; mở lại phải xác nhận tiếp tục. Nút đóng cửa sổ khi app chạy nền
    vẫn giữ lượt chờ đang còn hạn.
 
-UI mới không cấp quyền tự động và không bỏ gate xác thực, policy, sandbox hay
-receipt. Checklist đọc/sửa/chạy xác nhận policy tương ứng; chỉ receipt lệnh
+UI mới không cấp quyền tự động. Xác thực, policy và receipt vẫn được kiểm tra;
+Sandbox chỉ áp dụng khi chọn `sandboxed`. Checklist đọc/sửa/chạy xác nhận policy tương ứng; chỉ receipt lệnh
 settled, exit code và output mới chứng minh test thực tế. Chọn folder cũng không
 đổi workspace của tác vụ đang có. Sau rollout được duyệt, kiểm chứng từ client
 ChatGPT bằng các bước dưới đây và giữ nguyên quy tắc xử lý UNKNOWN.

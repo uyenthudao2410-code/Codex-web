@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "code": "RECOVERY_BOOTSTRAP_STOP_UNCONFIRMED",
+  "stage_receipt": null,
+  "operation_id": "full-clean-cli-direct-local-20261022-04",
+  "next_action": "Inspect durable bootstrap and exact activation status before retrying."
+}

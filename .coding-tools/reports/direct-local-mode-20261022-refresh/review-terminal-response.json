@@ -1,0 +1,118 @@
+{
+  "id": "direct-local-mode-terminal-1792654559938",
+  "jsonrpc": "2.0",
+  "result": {
+    "_meta": {
+      "io.coding-tools/endpoint": {
+        "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+        "automatic": true,
+        "device_instance_id": "77ffb14ade98d7d7083ec013911f075a",
+        "display_name": "DESKTOP-63643J4",
+        "endpoint_id": "637116aa8fd1f8e6211882db3d917509df84169d034026e130b0eb552e733a62",
+        "endpoint_scope": "device_installation",
+        "pinning": "endpoint_id+workspace_id+workspace_generation",
+        "process_instance_id": "iP5VK8z9t2lNqsBV",
+        "route_key": "desktop-63643j4-637116aa",
+        "schema_version": 1,
+        "server_instance_id": "YmyE2H10Z7fmkF04",
+        "workspace": "E:\\DEV\\Codex-web",
+        "workspace_binding_id": "37f918fae4420b75425dc9370c6abf609392a3799fa06b8af416aabc37d46adc",
+        "workspace_generation": 1,
+        "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251",
+        "workspace_name": "Codex-web"
+      },
+      "io.coding-tools/routingInstructions": "Automatic endpoint identity: route_key=desktop-63643j4-637116aa, endpoint_id=637116aa8fd1f8e6211882db3d917509df84169d034026e130b0eb552e733a62, device=DESKTOP-63643J4, workspace=E:\\DEV\\Codex-web, workspace_id=368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251, workspace_generation=1. This endpoint is already bound to that device and workspace. Reuse it for the same task without probing other Coding Tools endpoints merely to compare identities. Select another endpoint only when the user names another device/workspace or this endpoint returns a typed unavailable or stale-identity result. Never silently fail over a mutating task.",
+      "io.coding-tools/taskContextId": "ctx_c341afdb8f17abfbdd7eaff85d92b564",
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "coding-tools-mcp",
+        "title": "Coding Tools · DESKTOP-63643J4 · Codex-web",
+        "version": "1.0.7"
+      }
+    },
+    "content": [
+      {
+        "text": "exit 0 | 0.0s | 127 lines | tail: 'ℹ duration_ms 953.0814'",
+        "type": "text"
+      }
+    ],
+    "isError": false,
+    "resultType": "complete",
+    "structuredContent": {
+      "command_id": "VtPgBpW733zYnQTQW1mkzfep",
+      "consumer_id": null,
+      "execution_owner": {
+        "job_id": "bec1bc9d28c74d778e2485088e2cb5a5",
+        "resource_class": "LIGHT",
+        "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+        "wave_id": "30396900a00e4b7ea394d483b3288af8"
+      },
+      "exit_code": 0,
+      "legacy_output_refs": {
+        "stderr": "session:VtPgBpW733zYnQTQW1mkzfep:stderr",
+        "stdout": "session:VtPgBpW733zYnQTQW1mkzfep:stdout"
+      },
+      "ok": true,
+      "output_ref": "command:VtPgBpW733zYnQTQW1mkzfep:stdout",
+      "output_refs": {
+        "stderr": "command:VtPgBpW733zYnQTQW1mkzfep:stderr",
+        "stdout": "command:VtPgBpW733zYnQTQW1mkzfep:stdout"
+      },
+      "output_retention": {
+        "stderr": {
+          "evict_events": 0,
+          "evicted_bytes_total": 0,
+          "evicted_gap_bytes": 0,
+          "head_retained_bytes": 0,
+          "tail_retained_bytes": 0,
+          "tail_start_offset": 0,
+          "total_retained_bytes": 0,
+          "total_stream_bytes": 0
+        },
+        "stdout": {
+          "evict_events": 0,
+          "evicted_bytes_total": 0,
+          "evicted_gap_bytes": 0,
+          "head_retained_bytes": 12039,
+          "tail_retained_bytes": 0,
+          "tail_start_offset": 12039,
+          "total_retained_bytes": 12039,
+          "total_stream_bytes": 12039
+        }
+      },
+      "output_stream": "stdout",
+      "presentation": {
+        "card": "terminal",
+        "command_id": "VtPgBpW733zYnQTQW1mkzfep",
+        "exit_code": 0,
+        "schema_version": 1,
+        "session_id": "VtPgBpW733zYnQTQW1mkzfep",
+        "status": "exited",
+        "title": "Control command session"
+      },
+      "session_id": "VtPgBpW733zYnQTQW1mkzfep",
+      "signal": null,
+      "status": "exited",
+      "stderr": "",
+      "stderr_dropped_bytes": 0,
+      "stderr_omitted_bytes": 0,
+      "stderr_output_bytes": 0,
+      "stderr_output_lines": 1,
+      "stderr_truncated": false,
+      "stderr_truncated_by": null,
+      "stdout": "✔ tunnel id must use the official prefix (0.5101ms)\n✔ central executor validation ignores stale direct and recovery Tunnel settings (0.9038ms)\n✔ recent workspaces use a 50-item MRU list (11.8686ms)\n✔ workspace paths are fully qualified and preserve filesystem roots (0.5157ms)\n✔ settings normalization removes cwd-dependent workspace history and roots (0.283ms)\nℹ tests 118\nℹ suites 0\nℹ pass 118\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 953.0814\n",
+      "stdout_dropped_bytes": 0,
+      "stdout_omitted_bytes": 0,
+      "stdout_output_bytes": 489,
+      "stdout_output_lines": 14,
+      "stdout_truncated": false,
+      "stdout_truncated_by": null,
+      "summary": "exit 0 | 0.0s | 127 lines | tail: 'ℹ duration_ms 953.0814'",
+      "task_context_id": "ctx_c341afdb8f17abfbdd7eaff85d92b564",
+      "timed_out": false,
+      "truncated": false,
+      "warnings": [
+        "Linux Landlock filesystem confinement is unavailable on this host; exec_command ran with policy checks only. Use an external sandbox before running untrusted commands."
+      ]
+    }
+  }
+}

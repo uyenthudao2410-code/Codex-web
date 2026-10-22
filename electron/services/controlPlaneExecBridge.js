@@ -388,7 +388,9 @@ function executionMetadata(value) {
     || !(value.execution_backend === 'native' && value.isolation_level === 'process_container'
       && ['native_safe_command', 'native_explicit_approval'].includes(value.policy_decision))
       && !(value.execution_backend === 'isolated' && value.isolation_level === 'hypervisor'
-        && ['isolated_unapproved_command', 'isolated_preferred'].includes(value.policy_decision))) {
+        && ['isolated_unapproved_command', 'isolated_preferred'].includes(value.policy_decision))
+      && !(value.execution_backend === 'local' && value.isolation_level === 'host_user'
+        && value.policy_decision === 'operator_local')) {
     throw bridgeError('CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID');
   }
   return Object.fromEntries(keys.map((key) => [key, value[key]]));

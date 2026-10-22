@@ -58,6 +58,8 @@ function createPreviewApi() {
 
 const pageMeta = {
   overview: ['EXECUTION CONTROL', 'Command Center', 'Runtime, clients, routing, authority and proof in one operational view.'],
+  workhub: ['LÀM VIỆC', 'Làm việc', 'Chọn dự án và tệp, chuẩn bị yêu cầu, dùng lệnh đã lưu và tiếp tục công việc — mọi thứ ở một chỗ, tìm bằng Ctrl+K.'],
+  usage: ['SỬ DỤNG', 'Sử dụng Token', 'Theo dõi token, chi phí và hiệu quả sử dụng.'],
   device: ['DEVICE CONTROL', 'Thiết bị hiện tại', 'Định danh thiết bị, ownership, Coding/Recovery, Tunnel và Git của máy đang chạy Recovery Host.'],
   deploy: ['KẾT NỐI', 'Kết nối máy chủ', 'Kết nối Ubuntu hoặc cấu hình direct legacy trong phần nâng cao.'],
   workspace: ['THƯ MỤC & QUYỀN', 'Thư mục & quyền', 'Chọn đường dẫn local và xem rõ quyền đọc, ghi, chạy đang được áp dụng.'],
@@ -566,12 +568,15 @@ async function startSetupContinuation({ prepareExec = false } = {}) {
   const origin = setupOrigin();
   const device = setupDevice();
   const executionMode = state.centralExecutionMode || 'native_first';
+  prepareExec = prepareExec && !isLocalExecution();
   const accepted = window.confirm(
     `Cho phép MCP dùng thư mục “${folderLabel}” trên ${state.snapshot?.device?.display_name || 'máy này'}? `
       + `Quyền đã chọn: ${centralWorkspaceCapabilityLabel(capabilities)}. `
       + 'MCP sẽ dùng đúng thư mục này và áp dụng quyền đã chọn. Các thư mục đã thêm được giữ để dùng lại. '
       + (capabilities.exec
-        ? prepareExec
+        ? isLocalExecution()
+          ? 'Lệnh chạy trực tiếp bằng user Windows hiện tại, có quyền truy cập file và mạng của user đó. Không tạo container hoặc Windows Sandbox. '
+          : prepareExec
           ? 'Ứng dụng sẽ mở Windows Sandbox để kiểm tra và bật quyền chạy. Cửa sổ có thể xuất hiện vài phút; lệnh không có mạng, tối đa 5 phút. '
           : executionMode === 'isolated' ? 'Ưu tiên cách ly: Windows Sandbox chỉ mở khi chạy lệnh. '
             : executionMode === 'native_only' ? 'Chỉ native có kiểm soát: không mở VM; chặn lệnh ngoài policy native. '
@@ -711,7 +716,9 @@ async function continueSetup() {
     }
     if (!isCurrent()) return null;
     if (workspace.capabilities?.exec) {
-      state.setupContinuationMessage = scope.prepare_exec
+      state.setupContinuationMessage = isLocalExecution()
+        ? 'Đang xác minh quyền chạy trực tiếp trên máy…'
+        : scope.prepare_exec
         ? 'Đang mở và kiểm tra Windows Sandbox. Lần đầu có thể mất vài phút…'
         : 'Đang đọc trạng thái quyền chạy lệnh…';
       renderSetupExecution();
@@ -799,7 +806,9 @@ function renderSetupExecution() {
       : savedPolicyNeedsSync(state.centralFilePolicies?.file_read) ? syncGuidance : 'Chưa xác minh policy đọc.',
     patch: access.patch ? 'Policy sửa đã khớp thư mục.'
       : savedPolicyNeedsSync(state.centralFilePolicies?.approved_patch) ? syncGuidance : 'Chưa xác minh policy sửa.',
-    exec: access.exec ? (access.executionMode === 'isolated'
+    exec: access.exec ? (isLocalExecution()
+      ? 'Policy đã khớp thư mục. Lệnh chạy trực tiếp bằng user Windows hiện tại; kết quả xem từ Job.'
+      : access.executionMode === 'isolated'
       ? 'Policy ưu tiên cách ly đã khớp thư mục. VM chỉ mở khi chạy lệnh; kết quả xem trong tác vụ.'
       : access.executionMode === 'native_only'
         ? 'Policy chỉ native đã khớp thư mục. Lệnh ngoài chính sách bị chặn; không mở VM.'
@@ -826,17 +835,20 @@ function renderSetupExecution() {
   }
   const prepareExec = $('#setupPrepareExecAction');
   if (prepareExec) {
-    prepareExec.hidden = !workspace?.capabilities?.exec;
+    prepareExec.hidden = isLocalExecution() || !workspace?.capabilities?.exec;
     prepareExec.disabled = state.setupStartBusy || state.setupContinuationBusy || state.centralWorkspaceBusy
       || state.centralPolicyBusy || state.centralExecBusy || state.snapshot?.environment?.runtimeMode === 'development';
   }
   const executionMode = $('#controlPlaneExecutionMode');
   if (executionMode) {
+    executionMode.closest('label').hidden = isLocalExecution();
     executionMode.value = state.centralExecutionMode || 'native_first';
     executionMode.disabled = state.setupStartBusy || state.setupContinuationBusy || state.centralExecBusy;
   }
   const runnerState = $('#controlPlaneRunnerState');
-  if (runnerState) runnerState.textContent = access.sandbox?.backend === 'process_container'
+  if (runnerState) runnerState.textContent = isLocalExecution()
+    ? 'Chạy trực tiếp bằng user Windows hiện tại. Không tạo container hoặc Windows Sandbox.'
+    : access.sandbox?.backend === 'process_container'
     ? access.sandbox.capability_verified === true
       ? 'Native: đã kiểm tra capability ProcessContainer; kết quả lệnh được xác nhận từ Job. RAM VM: chưa có telemetry trực tiếp.'
       : 'Native: chưa kiểm tra capability trong phiên này. RAM VM: chưa có telemetry trực tiếp.'
@@ -844,7 +856,9 @@ function renderSetupExecution() {
   const cancel = $('#setupCancelContinuation');
   if (cancel) cancel.hidden = !waiting;
   const detail = $('#setupContinueStatus');
-  if (detail) detail.textContent = state.setupContinuationMessage || 'Thêm thư mục và xác nhận một lần để MCP đọc, sửa và chạy lệnh. Kiểm tra Sandbox là thao tác riêng.';
+  if (detail) detail.textContent = state.setupContinuationMessage || (isLocalExecution()
+    ? 'Thêm thư mục và xác nhận một lần để MCP đọc, sửa và chạy lệnh trực tiếp trên máy.'
+    : 'Thêm thư mục và xác nhận một lần để MCP đọc, sửa và chạy lệnh. Kiểm tra Sandbox là thao tác riêng.');
   renderWorkspaceTarget();
   const summary = $('#executionAccessSummary');
   if (summary) summary.textContent = central
@@ -1109,6 +1123,10 @@ async function openControlPlaneConsole() {
   catch (error) { toast('Không thể mở trang quản trị Ubuntu', error.message, 'error'); }
 }
 
+function isLocalExecution() {
+  return state.snapshot?.settings?.executionMode !== 'sandboxed';
+}
+
 function controlPlaneExecSandboxReason(reason) {
   const code = String(reason || '').trim();
   const messages = {
@@ -1220,12 +1238,15 @@ function renderCentralWorkspaceRegistrations(central) {
     const execPolicyLabel = capabilities.exec !== true
       ? 'chạy chưa đăng ký'
       : !execObservation
-        ? 'sandbox/chạy chưa kiểm tra'
+        ? 'quyền chạy chưa kiểm tra'
         : matchingExecPolicy
-          ? execPolicy.execution_mode === 'isolated' ? 'chạy lệnh đã bật · ưu tiên cách ly'
+          ? isLocalExecution() ? 'chạy lệnh đã bật · trực tiếp trên máy'
+            : execPolicy.execution_mode === 'isolated' ? 'chạy lệnh đã bật · ưu tiên cách ly'
             : execPolicy.execution_mode === 'native_only' ? 'chạy lệnh đã bật · chỉ native có kiểm soát'
               : 'chạy lệnh đã bật · native trước theo policy'
-          : sandbox?.state !== 'available'
+          : sandbox?.state === 'not_required'
+            ? 'chạy trực tiếp · quyền chạy chưa bật'
+            : sandbox?.state !== 'available'
             ? controlPlaneExecSandboxReason(sandbox?.reason)
             : 'sandbox sẵn sàng · chạy chưa bật';
     detail.textContent = `${targetLabel} · Đã đăng ký: ${centralWorkspaceCapabilityLabel(capabilities)}`;
@@ -1266,6 +1287,7 @@ function renderCentralWorkspaceRegistrations(central) {
       inspectExec.type = 'button';
       inspectExec.className = 'secondary-button';
       inspectExec.textContent = 'Kiểm tra Sandbox';
+      inspectExec.hidden = isLocalExecution();
       inspectExec.title = 'Mở Windows Sandbox để kiểm tra process con trên workspace này; không cài policy hay chạy dự án.';
       inspectExec.disabled = state.busy || state.centralWorkspaceBusy
         || state.centralWorkspaceListBusy || permissionBusy;
@@ -1855,6 +1877,7 @@ function navigate(page) {
   $('.content-viewport').scrollTop = 0;
   if (page === 'logs') loadLogs();
   if (page === 'task') loadTaskState();
+  if (page === 'workhub') window.WorkHubUI?.refresh?.();
   if (page === 'build') inspectBuild();
   if (page === 'health') inspectHealth();
   if (section) requestAnimationFrame(() => {
@@ -1992,6 +2015,7 @@ function applyFormValues(snapshot, force = false) {
   $('#keepRunningToggle').checked = settings.keepRunningOnClose;
   $('#autoStartToggle').checked = settings.autoStartServices;
   $('#progressReportSelect').value = String(settings.progressReportSeconds || 90);
+  if ($('#executionModeSelect')) $('#executionModeSelect').value = settings.executionMode === 'sandboxed' ? 'sandboxed' : 'local';
   if ($('#toolModeSelect')) $('#toolModeSelect').value = 'smart';
   $$('input[name="permission"]').forEach((input) => {
     input.checked = input.value === settings.permissionMode;
@@ -2698,6 +2722,7 @@ function collectSettings() {
     keepRunningOnClose: $('#keepRunningToggle').checked,
     autoStartServices: $('#autoStartToggle').checked,
     progressReportSeconds: Number($('#progressReportSelect').value || 90),
+    executionMode: $('#executionModeSelect') ? $('#executionModeSelect').value : 'local',
     guideProgress: collectGuideProgress()
   };
 }
@@ -2725,17 +2750,19 @@ async function savePreference(field, value) {
       startWithWindows: $('#startWithWindowsToggle'),
       autoStartServices: $('#autoStartToggle'),
       keepRunningOnClose: $('#keepRunningToggle'),
-      progressReportSeconds: $('#progressReportSelect')
+      progressReportSeconds: $('#progressReportSelect'),
+      executionMode: $('#executionModeSelect')
     }[field];
     if (control && Object.hasOwn(saved, field)) {
       if (control.type === 'checkbox') control.checked = Boolean(saved[field]);
       else control.value = String(saved[field]);
     }
     if (stateElement) {
-      stateElement.textContent = 'Đã lưu';
+      stateElement.textContent = field === 'executionMode' ? 'Đã lưu · cần khởi động lại runtime' : 'Đã lưu';
       stateElement.dataset.state = 'saved';
     }
-    if (hint) hint.textContent = 'Đã lưu thay đổi';
+    if (hint) hint.textContent = field === 'executionMode'
+      ? 'Đã lưu chế độ thực thi. Khởi động lại runtime để áp dụng.' : 'Đã lưu thay đổi';
     return saved;
   } catch (error) {
     if (stateElement) {
@@ -2993,6 +3020,7 @@ function centralExecObservationKey(workspace) {
 }
 
 async function inspectControlPlaneExecPolicy(workspace, { probeSandbox = false, quiet = false, executionMode } = {}) {
+  probeSandbox = probeSandbox && !isLocalExecution();
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Kiểm tra sandbox exec chỉ khả dụng cho central executor.');
   }
@@ -3019,7 +3047,9 @@ async function inspectControlPlaneExecPolicy(workspace, { probeSandbox = false, 
     state.centralExecObservations[key] = observation;
     restoreControlPlaneExecutionMode(workspace, observation?.policy);
     const sandbox = observation?.sandbox;
-    if (!quiet && sandbox?.state === 'available' && sandbox.capability_verified === true
+    if (!quiet && sandbox?.state === 'not_required') {
+      toast('Chạy trực tiếp trên máy', 'Chế độ hiện tại không cần kiểm tra Sandbox. Chưa chạy lệnh kiểm chứng.', 'success');
+    } else if (!quiet && sandbox?.state === 'available' && sandbox.capability_verified === true
       && sandbox.execution_verified === false) {
       toast('Đã kiểm tra capability native', `ProcessContainer được hỗ trợ cho “${workspace.display_name}”. Chưa chứng minh lệnh hoặc process con đã chạy.`, 'success');
     } else if (!quiet && sandbox?.state === 'available') {
@@ -3045,6 +3075,8 @@ async function inspectControlPlaneExecPolicy(workspace, { probeSandbox = false, 
 
 async function installControlPlaneExecPolicy(workspace, { confirmationAccepted = false, isCurrent = () => true,
   probeSandbox = false, executionMode } = {}) {
+  const localExecution = isLocalExecution();
+  probeSandbox = probeSandbox && !localExecution;
   if (!isCentralExecutor(state.snapshot?.settings)) {
     throw new Error('Cài quyền chạy lệnh chỉ khả dụng cho central executor.');
   }
@@ -3080,11 +3112,12 @@ async function installControlPlaneExecPolicy(workspace, { confirmationAccepted =
       `Bật chạy lệnh tự động cho toàn bộ workspace “${workspace.display_name}” trên máy này? `
         + 'Sau lần xác nhận cài policy này, các lệnh được phép sẽ không hỏi duyệt từng lần. '
         + 'Mọi lời gọi được cấp quyền vào workspace này đều dùng cùng policy của node; service principal của tunnel không phân biệt người ChatGPT gọi. '
-        + (probeSandbox ? 'Ứng dụng sẽ mở Windows Sandbox để kiểm tra trước khi cài policy; cửa sổ có thể xuất hiện vài phút. ' : 'Sandbox chỉ mở khi chạy lệnh hoặc kiểm tra riêng. ')
+        + (localExecution ? 'Lệnh chạy trực tiếp bằng user Windows hiện tại, có quyền truy cập file và mạng của user đó. '
+          : (probeSandbox ? 'Ứng dụng sẽ mở Windows Sandbox để kiểm tra trước khi cài policy; cửa sổ có thể xuất hiện vài phút. ' : 'Sandbox chỉ mở khi chạy lệnh hoặc kiểm tra riêng. ')
         + (executionMode === 'isolated' ? 'Ưu tiên Windows Sandbox cho lệnh thực thi. '
           : executionMode === 'native_only' ? 'Chỉ dùng native ProcessContainer; lệnh không đủ quyền sẽ bị chặn, không mở VM. '
-            : 'Native ProcessContainer xử lý metadata Git và phiên bản CLI. Lệnh chạy mã dự án cần allowlist native riêng; các lệnh còn lại dùng cách ly nếu được phép. ')
-        + 'Chỉ cho phép git, node, npm, npx, python, python3 và dotnet; process bị giới hạn trong workspace, không có network, tối đa 5 phút/64 KiB. '
+            : 'Native ProcessContainer xử lý metadata Git và phiên bản CLI. Lệnh chạy mã dự án cần allowlist native riêng; các lệnh còn lại dùng cách ly nếu được phép. '))
+        + 'Chỉ cho phép git, node, npm, npx, python, python3 và dotnet; tối đa 5 phút/64 KiB. '
         + 'Policy đứng không hết hạn và sẽ cập nhật policy exec local của đúng workspace này.'
     );
     if (!accepted || !isCurrent()) return null;
@@ -3752,6 +3785,7 @@ function bindEvents() {
   $('#keepRunningToggle').addEventListener('change', () => savePreference('keepRunningOnClose', $('#keepRunningToggle').checked));
   $('#autoStartToggle').addEventListener('change', () => savePreference('autoStartServices', $('#autoStartToggle').checked));
   $('#progressReportSelect').addEventListener('change', () => savePreference('progressReportSeconds', Number($('#progressReportSelect').value || 90)));
+  if ($('#executionModeSelect')) $('#executionModeSelect').addEventListener('change', () => savePreference('executionMode', $('#executionModeSelect').value));
 
   $$('[data-guide-check]').forEach((input) => input.addEventListener('change', async () => {
     renderGuideProgress();
@@ -3803,6 +3837,15 @@ function bindEvents() {
 async function initialize() {
   try {
     bindEvents();
+    // Streamlined UI: move token analytics dashboard from overview to the
+    // dedicated Usage page. Keeps Command Center focused on 3 core blocks.
+    try {
+      const daSection = document.querySelector('.page[data-page-view="overview"] .da-section');
+      const usageContainer = document.getElementById('usageAnalyticsContainer');
+      if (daSection && usageContainer) {
+        usageContainer.appendChild(daSection);
+      }
+    } catch (_) { /* non-fatal: dashboard stays on overview */ }
     api.onProgress(updateProgress);
     api.onLog((entry) => {
       state.logs.push(entry);

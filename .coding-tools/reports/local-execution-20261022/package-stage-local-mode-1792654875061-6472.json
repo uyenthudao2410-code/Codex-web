@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "stage_id": "local-mode-1792654875061-6472",
+  "observed_at": "2026-10-22T07:41:15.061Z",
+  "staged": [],
+  "settings_saved": false,
+  "ok": false,
+  "error_code": "EXECUTE_FLAG_REQUIRED"
+}

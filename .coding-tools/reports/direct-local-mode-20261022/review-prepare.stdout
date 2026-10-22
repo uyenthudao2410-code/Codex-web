@@ -1,0 +1,2 @@
+
+{"ok":false,"code":"-32602","details":{"error":{"code":-32602,"data":{"code":"INVALID_ARGUMENT","reason":"invalid_arguments","task_context_id":"ctx_fe8b942d69fe9e353b66241c142e7536"},"message":"arguments.include_diff is not a recognized argument."},"id":"direct-local-mode-prepare-1792653268371","jsonrpc":"2.0"}}

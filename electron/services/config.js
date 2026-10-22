@@ -8,6 +8,8 @@ const DEFAULTS = Object.freeze({
   executionRole: 'direct_legacy',
   workspace: '',
   permissionMode: 'safe',
+  // The operator chooses direct host execution or an isolated runner.
+  executionMode: 'local',
   toolMode: 'smart',
   mcpPort: 18766,
   healthPort: 18082,
@@ -99,6 +101,7 @@ function normalize(input = {}) {
     ? merged.executionRole
     : 'direct_legacy';
   merged.permissionMode = ['safe', 'trusted'].includes(merged.permissionMode) ? merged.permissionMode : 'safe';
+  merged.executionMode = ['local', 'sandboxed'].includes(merged.executionMode) ? merged.executionMode : 'local';
   merged.toolMode = 'smart';
   merged.proxyMode = ['auto', 'system', 'manual', 'direct'].includes(merged.proxyMode) ? merged.proxyMode : 'auto';
   merged.mcpPort = Number.isInteger(Number(merged.mcpPort)) ? Number(merged.mcpPort) : 18766;

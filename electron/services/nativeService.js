@@ -116,6 +116,7 @@ function buildNativeMcpEnv({
     [AUTH_HANDLE_ENV]: MCP_AUTH_HANDLE,
     CODING_TOOLS_MCP_TELEMETRY: 'off',
     CODING_TOOLS_MCP_TOOL_MODE: 'smart',
+    CODING_TOOLS_MCP_EXECUTION_MODE: (settings.executionMode === 'sandboxed' ? 'sandboxed' : 'local'),
     CODING_TOOLS_MCP_AUTHORIZED_ROOTS: JSON.stringify(settings.authorizedRoots || []),
     CODING_TOOLS_MCP_LONG_TOOL_HANDOFF_SECONDS: String(settings.progressReportSeconds || 90),
     CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: supervisorRequestFile,
@@ -278,6 +279,7 @@ function runtimeFingerprint(settings) {
     authorizedRoots: (settings.authorizedRoots || []).map((item) => path.resolve(String(item)).toLowerCase()).sort(),
     port: Number(settings.mcpPort),
     permissionMode: settings.permissionMode || 'safe',
+    executionMode: settings.executionMode === 'sandboxed' ? 'sandboxed' : 'local',
     toolMode: 'smart'
   })).digest('hex');
 }

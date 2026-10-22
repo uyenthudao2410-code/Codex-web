@@ -1,0 +1,13 @@
+{
+  "action": "transfer_controller",
+  "expires_at": 1792653520.1641803,
+  "fencing_token": 3,
+  "lease_id": "client:codex-desktop",
+  "ok": true,
+  "owner_client_id": "codex-desktop",
+  "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+  "status": "active",
+  "target_client_id": "codex-desktop",
+  "transferred": true,
+  "updated_at": "2026-10-22T07:17:40.167Z"
+}

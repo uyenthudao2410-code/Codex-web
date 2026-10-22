@@ -243,7 +243,8 @@ class ApprovedPatchInitialVerificationTests(unittest.TestCase):
             runtime.landlock_enabled = MagicMock(return_value=False)
             invocation = SimpleNamespace(argv=["mxc_fixture", "structured_request"], environment={})
             try:
-                with patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False), \
+                with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True), \
+                     patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False), \
                      patch("coding_tools_mcp.exec_tools.build_mxc_invocation", return_value=invocation) as mxc, \
                      patch("coding_tools_mcp.exec_tools.cleanup_mxc_invocation"), \
                      patch("coding_tools_mcp.exec_tools.spawn_process", side_effect=RuntimeError("test stops before process creation")) as spawn:

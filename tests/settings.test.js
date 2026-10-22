@@ -32,6 +32,14 @@ test('trusted values are preserved', () => {
   assert.equal(result.mcpPort, 9000);
 });
 
+test('direct local execution is the persistent default and sandboxing is explicit', () => {
+  assert.equal(normalize({}).executionMode, 'local');
+  assert.equal(normalize({ executionMode: 'invalid' }).executionMode, 'local');
+  assert.equal(normalize({ executionMode: 'sandboxed' }).executionMode, 'sandboxed');
+  const saved = normalize({ executionMode: 'local' });
+  assert.equal(normalize(JSON.parse(JSON.stringify(saved))).executionMode, 'local');
+});
+
 test('legacy default port pair migrates without overwriting custom ports', () => {
   const migrated = normalize({ configVersion: 5, mcpPort: 18765, healthPort: 18081 });
   assert.equal(migrated.configVersion, 7);

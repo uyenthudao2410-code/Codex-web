@@ -1,6 +1,18 @@
 # Native-First Hybrid Agent — triển khai Windows / Ubuntu Control Plane
 
-## Checkpoint vận hành hiện hành — 13-10-2026
+## Chế độ thực thi hiện tại — 22-10-2026
+
+Source mặc định lưu `executionMode=local`: lệnh chạy trực tiếp bằng user
+Windows, không qua MXC ProcessContainer hoặc Windows Sandbox. Chế độ này giữ
+Job, output, timeout/cancellation và các kiểm tra quyền/workspace/argv; không
+cung cấp ranh giới cách ly OS. Receipt ghi `local / host_user / operator_local`.
+Đổi chế độ trong Cài đặt cần restart runtime. Trạng thái package và activation
+thực tế được ghi tại [`CURRENT_STATE.md`](CURRENT_STATE.md).
+
+Routing `native_first`, `native_only`, `isolated` trong tài liệu này áp dụng
+khi chọn `executionMode=sandboxed`. `native_only` vẫn dùng ProcessContainer.
+
+## Checkpoint vận hành lịch sử — 13-10-2026
 
 Candidate r4-timefix đang phục vụ production với activation epoch
 `activation-mv5gbzeq-7ac98611bf3a96aa444fcf8e14d3ea1c`, Ubuntu node `ready` và

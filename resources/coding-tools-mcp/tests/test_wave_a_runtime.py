@@ -186,7 +186,8 @@ class CommandHandleMigrationTests(unittest.TestCase):
                     "client_type": "electron",
                     "attestation_verified": True,
                 }
-                with patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False):
+                with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True), \
+                     patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False):
                     payload = runtime.exec_command({
                         "cmd": "node",
                         "argv": ["node", "-e", "console.log('bridge-argv-ok')"],
@@ -232,6 +233,7 @@ class CommandHandleMigrationTests(unittest.TestCase):
                 }
                 with (
                     patch("coding_tools_mcp.exec_tools.os.name", "nt"),
+                    patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True),
                     patch("coding_tools_mcp.exec_tools.windows_sandbox_feature_enabled", return_value=False),
                     patch("coding_tools_mcp.exec_tools.build_mxc_invocation", side_effect=ToolFailure(
                         "SANDBOX_UNAVAILABLE",

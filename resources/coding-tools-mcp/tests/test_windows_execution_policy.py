@@ -110,6 +110,11 @@ class WindowsExecutionPolicyTests(unittest.TestCase):
 
 @unittest.skipUnless(os.name == "nt", "Windows native ProcessContainer integration")
 class WindowsNativeExecutionIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        mode = patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True)
+        mode.start()
+        self.addCleanup(mode.stop)
+
     @classmethod
     def setUpClass(cls):
         try:

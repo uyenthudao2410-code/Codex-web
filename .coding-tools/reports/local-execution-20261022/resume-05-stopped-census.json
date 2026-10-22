@@ -1,0 +1,285 @@
+{
+  "ok": true,
+  "evidence_kind": "stopped_runtime_canonical_ledger_census",
+  "operation_id": "full-clean-cli-direct-local-20261022-05",
+  "verified_at_unix_ms": 1792656222890,
+  "checkpoint": {
+    "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+    "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+    "wave_id": "3b42877879354c97b7b87d69bdb7a9c8",
+    "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+    "git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609"
+  },
+  "authority": {
+    "expected_disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+    "recovery_host": {
+      "pid": 42168,
+      "instance_id": "77ffb14ade98d7d7083ec013911f075a"
+    }
+  },
+  "runtime_observation": {
+    "stopped": true,
+    "busy": false,
+    "recovering": false,
+    "manually_stopped": false,
+    "runtime_running": false,
+    "tunnel_running": false,
+    "native_alive": false,
+    "workspace": "E:\\DEV\\Codex-web",
+    "observed_at": "2026-10-22T08:03:34.216Z"
+  },
+  "canonical_ledger_census": {
+    "schema_version": 1,
+    "safe": true,
+    "code": "READY",
+    "reason": "canonical_ledger_quiescent",
+    "workspace": "E:\\DEV\\Codex-web",
+    "ledger_path": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+    "snapshot": {
+      "backup_api_copy": true,
+      "foreign_key_check_rows": 0,
+      "immutable": true,
+      "integrity_check": [
+        "ok"
+      ],
+      "logical_sha256": "f8d80444e786b28c4075251bf281e8ac2aca1fac03e73dad110482ef287a1157",
+      "query_only": true,
+      "schema_version": 12,
+      "sha256": "a65ca71d5f0a1ca237294f77c41b91f2708de7fce1f70fdc1556b6ae461778d8",
+      "size_bytes": 101404672,
+      "snapshot_at": "2026-10-22T08:03:39.762Z"
+    },
+    "counts": {
+      "active_tool_calls": 0,
+      "active_commands": 0,
+      "starting_commands": 0,
+      "active_background_operations": 0,
+      "active_managed_processes": 0,
+      "foreign_heavy_processes": 0,
+      "active_agent_lanes": 0,
+      "threshold_sensitive_stale_candidates": 18,
+      "owned_codex_sidecar_residues": 0
+    },
+    "lifecycle": {
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0,
+      "projection_drift": false,
+      "ordinary_active_runs": 45,
+      "awaiting_acceptance_runs": [
+        "0d4f567d1e5c4f90b174bad40d9e3efa",
+        "0dfb72d0c6944d2d87ecb741dc439267",
+        "28a5f750466048438307b96872e24f01",
+        "2cc8555d10fa4739b07ef55ec715f79c",
+        "351a78fd610d4f0baa15faa62f1aa39b",
+        "372352c060a34387bf1641e355fbc775",
+        "3d9a3ad822054c49a0ebf2ec857bad2e",
+        "435e64ffe1b041eea2cab17bb36ae994",
+        "490900eb8d37453baa8fb5bfb9eb72e6",
+        "4967dd953ce74b5d97cbf01aad827139",
+        "4a80ae60c2e441d8896c1ace8710c384",
+        "598f9c7aafaa4e1aa764a8392fdf7a3e",
+        "631c9d4ebee141c49471cad7d1d69366",
+        "6664f948cfb14a75958518548352896e",
+        "69f3491b6b7c45249af33903bb3221a5",
+        "6c0b08fa765b423584a42213d7f62024",
+        "7563451dc47742b39de3e3fa40ad3810",
+        "79f51b49525c459c864e94a662682759",
+        "95e909f0040a448faa9f1f3257e2ee2c",
+        "98513cec254841d4b2a2a3cabb854925",
+        "9dcd730aca3641feb460d06e9c63f21b",
+        "a8d2132df3474d85939cf0df30b4c91e",
+        "e478c0fb1ad24b428bfcab79bd3532b1",
+        "e8cef362cfe94b0ba733b73a75fbe09d",
+        "ea155e531cca4ce89f77d81bd688072b",
+        "fbaf4b0700d04794af4062671c1bcd2b",
+        "fc90e0d41d3847e2ab16961739d4df38"
+      ],
+      "live_owned_runs": [],
+      "active_p5_runs": [],
+      "blockers": []
+    },
+    "source_checkpoint_verified": true,
+    "content_free": true,
+    "mutated_canonical_ledger": false,
+    "observed_at_unix_seconds": 1792656220.899142,
+    "census_fingerprint": "8cd0e6c22ddde6ed4eb2732e26aad1c88bcafe63daf625c49fd4bdc5533ec92c"
+  },
+  "source_verification": {
+    "verified": true,
+    "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+    "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+    "wave_id": "3b42877879354c97b7b87d69bdb7a9c8",
+    "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+    "current_git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+    "current_worktree_fp": "8c6cd24145bde5b549d468cd5d9ea17d8af62f714d98c04ecb7b905a92ab5d4e",
+    "accepted_worktree_fp": "8c6cd24145bde5b549d468cd5d9ea17d8af62f714d98c04ecb7b905a92ab5d4e",
+    "whole_worktree_fp_verified": true,
+    "accepted_receipts_checked": true,
+    "receipt_count": 26,
+    "receipts": [
+      {
+        "path": "electron/main.js",
+        "state": "file",
+        "sha256": "ffeea577641a66ab396c93822583af56a2374aba8e2a5aba2fdf3601ed0e89ce",
+        "size_bytes": 69023
+      },
+      {
+        "path": "electron/services/config.js",
+        "state": "file",
+        "sha256": "39d1ae1822864d9a158f1dc0b85d8ef520db2e4b416190ecd4fef84bfb5b5005",
+        "size_bytes": 10398
+      },
+      {
+        "path": "electron/services/nativeService.js",
+        "state": "file",
+        "sha256": "05d9cea77d7a1cdee24c20e5a0e428a7fd7e29ba6c5ec93df228335e0151df2e",
+        "size_bytes": 35432
+      },
+      {
+        "path": "electron/services/controlPlaneExecBridge.js",
+        "state": "file",
+        "sha256": "5003024b1d6a7b7c21fbcb1b5b199e6442bce47e66b003626fd4fec966d1a399",
+        "size_bytes": 26782
+      },
+      {
+        "path": "electron/services/controlPlaneEnrollment.js",
+        "state": "file",
+        "sha256": "a2040f91bcf31be7eed867811bfd59d4bfe98c5e3a4d5ec8c23a84a0c47ce917",
+        "size_bytes": 120882
+      },
+      {
+        "path": "renderer/app.js",
+        "state": "file",
+        "sha256": "c5e292d3dfb549439d3bddc67eaa606325f7631761d9905b018c70de2375d772",
+        "size_bytes": 232614
+      },
+      {
+        "path": "renderer/index.html",
+        "state": "file",
+        "sha256": "bebc7fe63b0ba9207ab8b9da2582f0a055c46f4f59b913fa44faad643d504bc5",
+        "size_bytes": 103425
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+        "state": "file",
+        "sha256": "baeaa8d4b25cdd87c6d5a2af9e0b673f376993cf2ae8a10f0b3ce6cc7ef41378",
+        "size_bytes": 52649
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+        "state": "file",
+        "sha256": "6cbbd5bb43671a17aa6f933f4172746e1191638ecf7dc627fc8249a06a702478",
+        "size_bytes": 10122
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "state": "file",
+        "sha256": "091b92d7ef165d7136f59ebcb4305fdfa434c4e94788890b0bdf98ea37f16ab2",
+        "size_bytes": 157560
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+        "state": "file",
+        "sha256": "14c6125d767dc86fe375ff4f5d7578a8b38e2e7d760df2beb078f51d6835c98a",
+        "size_bytes": 10995
+      },
+      {
+        "path": "control-plane/control_plane/node_agent.py",
+        "state": "file",
+        "sha256": "4ceeff50f3436043da3a8ee6d3344743d8b9ee59db95ca7b8cbfdabdd16c838c",
+        "size_bytes": 490575
+      },
+      {
+        "path": "control-plane/tests/test_exec_node_agent.py",
+        "state": "file",
+        "sha256": "1566526b01924ed3afd56b6531003099305216321bf78e63961091b518c88823",
+        "size_bytes": 74820
+      },
+      {
+        "path": "tests/settings.test.js",
+        "state": "file",
+        "sha256": "d04d188a587a068b64287cc01f34f469733fa7dd247e0f0ffba4ff323e817444",
+        "size_bytes": 6355
+      },
+      {
+        "path": "tests/native-service-activation-gate.test.js",
+        "state": "file",
+        "sha256": "134198e46acf2798c2108b869f01656dba422e2e2b95fe7f32549bf641f2af9a",
+        "size_bytes": 3370
+      },
+      {
+        "path": "tests/control-plane-exec-bridge.test.js",
+        "state": "file",
+        "sha256": "24a0c34050922ab2b046bf902f39098b502c9f45828c906a6080e2d192e29dc5",
+        "size_bytes": 13868
+      },
+      {
+        "path": "tests/control-plane-exec-sandbox.test.js",
+        "state": "file",
+        "sha256": "5116a4fcbbe512a4798f58418f862ca406e8ac44346ad8ced232f65f48b27607",
+        "size_bytes": 40079
+      },
+      {
+        "path": "tests/folder-permission-editor.test.js",
+        "state": "file",
+        "sha256": "d8a385e3056c892bb4d3e922d1e8eebde72e918cccd32eb9684c5af9ccb0c046",
+        "size_bytes": 83569
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_local_execution_mode.py",
+        "state": "file",
+        "sha256": "6bf72b2359922694ab3db0b82a51e86fbd2f44b1144c1d10df3122b575dbd2fd",
+        "size_bytes": 8542
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_windows_execution_policy.py",
+        "state": "file",
+        "sha256": "d43b78f7a6fbf76256853a5bc0f0af91f465abf2aab9a478f280b4fbec89eb58",
+        "size_bytes": 17949
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_exec_spawn_failure.py",
+        "state": "file",
+        "sha256": "95c5b0cc70c1c38a62f22cbee606603461528cd33e2b84003c2cfac93eefce5e",
+        "size_bytes": 4408
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_wave_a_runtime.py",
+        "state": "file",
+        "sha256": "8d534036609a987a5d8bfc0e14358cfa866b0de38e94dd638d3f9975a379c4a1",
+        "size_bytes": 16315
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_approved_patch_initial_verification.py",
+        "state": "file",
+        "sha256": "dfaaa2568ae1d006cab4dce5b29e4d27832b47defab24e2e9c48b24a252456ed",
+        "size_bytes": 21372
+      },
+      {
+        "path": "docs/CURRENT_STATE.md",
+        "state": "file",
+        "sha256": "c6189507006f400ed53cf98881826928b2cf9f51f91b617a8268d938c2db2ea0",
+        "size_bytes": 397148
+      },
+      {
+        "path": "docs/MCP_WEB_OPERATIONS.md",
+        "state": "file",
+        "sha256": "2505c24436576d9162f30d99e2f8d7f6544d71e18a82d5ab3c4e522ff6ff1b48",
+        "size_bytes": 18761
+      },
+      {
+        "path": "docs/NATIVE_FIRST_EXECUTION.md",
+        "state": "file",
+        "sha256": "8a43bcf1108677912776851784cfeaa32f9485c7890f26f4ccaa63d67e0c38a6",
+        "size_bytes": 22145
+      }
+    ],
+    "automatic_component_eligibility": {
+      "eligible": false,
+      "code": "COMPONENT_MAPPING_UNMAPPED",
+      "details": {
+        "path": "electron/services/controlPlaneExecBridge.js"
+      }
+    }
+  }
+}

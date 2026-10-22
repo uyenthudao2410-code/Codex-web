@@ -8790,6 +8790,8 @@ def _safe_exec_metadata(value: dict[str, Any]) -> dict[str, str]:
         and value["policy_decision"] in ("native_safe_command", "native_explicit_approval")
         or value["execution_backend"] == "isolated" and value["isolation_level"] == "hypervisor"
         and value["policy_decision"] in ("isolated_unapproved_command", "isolated_preferred")
+        or value["execution_backend"] == "local" and value["isolation_level"] == "host_user"
+        and value["policy_decision"] == "operator_local"
     ):
         raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID")
     return {key: value[key] for key in keys}

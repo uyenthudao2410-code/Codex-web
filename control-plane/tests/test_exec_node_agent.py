@@ -679,6 +679,34 @@ class ExecNodeReceiptTests(unittest.TestCase):
             with self.subTest(metadata=metadata_drift), self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID$"):
                 _safe_exec_bridge_result({**result, **metadata_drift}, request, policy_sha256)
 
+    def test_local_host_metadata_is_verified_and_preserved_in_durable_receipts(self) -> None:
+        policy = self.install_policy()
+        request = _exec_bridge_request(self.action(), self.config)
+        policy_sha256 = _policy_digest(policy)
+        result = self.bridge_result(
+            request, status="exited", local_handle="cp_exec_" + "b" * 48,
+            command_id="command-local-node-0001", job_id="job-local-node-0001", policy_sha256=policy_sha256,
+        )
+        metadata = {"execution_backend": "local", "isolation_level": "host_user", "policy_decision": "operator_local"}
+        output_keys = ("status", "exit_code", "stdout", "stderr", "truncated", "timed_out",
+                       "command_id", "job_id", "run_id", "wave_id", "output_refs")
+        output = {key: result[key] for key in output_keys}
+        updated = {**result, **metadata, "response_sha256": __import__("hashlib").sha256(json.dumps(
+            {**output, **metadata}, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")).hexdigest()}
+        safe = _safe_exec_bridge_result(updated, request, policy_sha256)
+        journal_path = self.config_path.with_name(self.config_path.name + ".exec-journal.json")
+        _record_exec_receipt(journal_path, {"schema_version": 1, "entries": {}}, state="completed",
+                             action_id=request["action_id"], attempt_id=request["attempt_id"], receipt_state="completed",
+                             local_handle=safe["local_handle"], payload=safe)
+        saved = _read_exec_journal(journal_path)["entries"][_exec_journal_key(request["action_id"], request["attempt_id"])]
+        self.assertEqual(saved["receipt"]["payload"]["isolation_level"], "host_user")
+        for drift in ({"isolation_level": "process_container"}, {"policy_decision": "native_explicit_approval"}):
+            with self.subTest(metadata=drift), self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_METADATA_INVALID$"):
+                _safe_exec_bridge_result({**updated, **drift}, request, policy_sha256)
+        with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID$"):
+            _safe_exec_bridge_result({**updated, "response_sha256": result["response_sha256"]}, request, policy_sha256)
+
     def test_valid_exec_submission_uses_nested_receipt_shape(self) -> None:
         policy = self.install_policy()
         action = self.action()

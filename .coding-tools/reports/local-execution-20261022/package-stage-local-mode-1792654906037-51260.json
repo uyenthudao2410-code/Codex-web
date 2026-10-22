@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "stage_id": "local-mode-1792654906037-51260",
+  "observed_at": "2026-10-22T07:41:46.037Z",
+  "staged": [],
+  "settings_saved": false,
+  "backup_directory": "E:\\DEV\\Codex-web\\.coding-tools\\reports\\local-execution-20261022\\package-backup\\local-mode-1792654906037-51260",
+  "settings_backup_directory": "C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\backups\\local-mode-1792654906037-51260",
+  "checkpoint": {
+    "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+    "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+    "wave_id": "3b42877879354c97b7b87d69bdb7a9c8",
+    "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+    "git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609"
+  },
+  "ok": false,
+  "error_code": "EPERM",
+  "error_path": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked\\resources\\app.asar.local-mode-1792654906037-51260.tmp"
+}

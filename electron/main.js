@@ -64,6 +64,7 @@ const log = new LogService(runtimePaths);
 const environment = new EnvironmentService(runtimePaths);
 const controlPlaneEnrollment = new ControlPlaneEnrollmentService({
   paths: runtimePaths,
+  getExecutionMode: () => settings.load().executionMode,
   experimentalWindowsSandbox: runtimePaths.runtimeMode() === 'packaged'
 });
 const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
@@ -254,6 +255,36 @@ function requestUiSingleInstanceLock() {
     });
   } finally {
     app.setPath('userData', sharedUserDataPath);
+    // Definitive fix: if a previous run accidentally wrote config to the
+    // lock path (instead of the shared profile), migrate those files back.
+    // This prevents "empty setup" when builds use different userData dirs.
+    try {
+      migrateLockPathConfig(lockPath, sharedUserDataPath);
+    } catch (_) { /* non-fatal */ }
+  }
+}
+
+// Copies config files from the single-instance lock directory back to the
+// shared profile. Only copies files that don't exist in the shared profile,
+// never overwrites. Prevents config fragmentation across builds.
+function migrateLockPathConfig(lockPath, sharedPath) {
+  const fs = require('fs');
+  const path = require('path');
+  if (!lockPath || !sharedPath || lockPath === sharedPath) return;
+  let entries;
+  try {
+    entries = fs.readdirSync(lockPath, { withFileTypes: true });
+  } catch (_) { return; } // lock path doesn't exist, nothing to migrate
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    // Skip Electron/Chromium internal files, only migrate app config
+    if (entry.name === 'lockfile' || entry.name.startsWith('Singleton')) continue;
+    const src = path.join(lockPath, entry.name);
+    const dest = path.join(sharedPath, entry.name);
+    try {
+      if (fs.existsSync(dest)) continue; // don't overwrite
+      fs.copyFileSync(src, dest);
+    } catch (_) { /* skip on error */ }
   }
 }
 
@@ -1288,7 +1319,7 @@ function registerIpc() {
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
     // Recovery settings stay explicitly operator-controlled and separate from the primary runtime failure domain.
-    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'controlPlaneServerUrl', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
+    const allowed = ['permissionMode', 'executionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'controlPlaneServerUrl', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
     const clean = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => allowed.includes(key)));
     const saved = settings.save(clean);
     if (Object.hasOwn(clean, 'startWithWindows')) {

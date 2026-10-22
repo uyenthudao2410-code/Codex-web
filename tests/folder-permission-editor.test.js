@@ -7,14 +7,14 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'app.js'), 'utf8');
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
-function fixture({ write = true, exec = true, accepted = true } = {}) {
+function fixture({ write = true, exec = true, accepted = true, executionMode = 'sandboxed' } = {}) {
   const workspace = {
     workspace_id: 'workspace-selected', workspace_generation: 'generation-current',
     display_name: 'Tools-Codex-web', capabilities: { read: true, write, exec }
   };
   const state = {
     snapshot: {
-      settings: { executionRole: 'central_executor', workspace: 'E:\\legacy-root', controlPlaneServerUrl: 'https://control.example.test/' },
+      settings: { executionRole: 'central_executor', executionMode, workspace: 'E:\\legacy-root', controlPlaneServerUrl: 'https://control.example.test/' },
       device: { device_id: 'device-current', display_name: 'Máy hiện tại' },
       status: { signalStale: false, telemetryAvailable: true }
     },
@@ -92,6 +92,9 @@ function fixture({ write = true, exec = true, accepted = true } = {}) {
         calls.push(['probe-sandbox']);
         sandboxProbed = sandbox.state === 'available';
       }
+      if (state.snapshot.settings.executionMode === 'local') {
+        return { policy: execPolicy, sandbox: { state: 'not_required', backend: 'host_user', reason: 'OPERATOR_LOCAL_EXECUTION' } };
+      }
       return { policy: execPolicy, sandbox: sandboxProbed || request.probeSandbox === true
         ? sandbox : { state: 'not_checked', reason: 'SANDBOX_PROBE_REQUIRED' } };
     },
@@ -99,7 +102,9 @@ function fixture({ write = true, exec = true, accepted = true } = {}) {
       calls.push(['install-exec', plain(request)]);
       execPolicy = { ...policy(hashes.exec), execution_mode: request.executionMode || 'native_first',
         native_argv_prefixes: plain(request.nativeArgvPrefixes || []) };
-      return { ...execPolicy, sandbox: request.probeSandbox === false
+      return { ...execPolicy, sandbox: state.snapshot.settings.executionMode === 'local'
+        ? { state: 'not_required', backend: 'host_user', reason: 'OPERATOR_LOCAL_EXECUTION' }
+        : request.probeSandbox === false
         ? { state: 'not_checked', reason: 'SANDBOX_PROBE_REQUIRED' } : sandbox };
     },
     installControlPlaneReadOnlyPolicyAssignment: async (request) => {
@@ -117,10 +122,13 @@ function fixture({ write = true, exec = true, accepted = true } = {}) {
     setTimeout: (callback, delay) => { const id = nextTimer++; timers.set(id, { callback, delay }); return id; },
     clearTimeout: (id) => timers.delete(id),
     $: (selector) => {
-      if (!elements.has(selector)) elements.set(selector, {
+      if (!elements.has(selector)) {
+        const label = { hidden: false };
+        elements.set(selector, {
         checked: false, dataset: {}, style: {}, classList: { remove() {}, add() {}, toggle() {} },
-        querySelector: () => ({ textContent: '' }), scrollIntoView() {}, focus() {}
-      });
+          querySelector: () => ({ textContent: '' }), closest: () => label, scrollIntoView() {}, focus() {}
+        });
+      }
       return elements.get(selector);
     },
     isCentralExecutor: (settings) => settings?.executionRole === 'central_executor',
@@ -144,6 +152,7 @@ function fixture({ write = true, exec = true, accepted = true } = {}) {
     controlPlaneExecSandboxReason: (reason) => reason
   });
   for (const [start, end] of [
+    ['function isLocalExecution()', 'function controlPlaneExecSandboxReason('],
     ['const CENTRAL_WORKSPACE_PRESETS', '// Central workspaces are deliberately separate'],
     ['function centralWorkspaceEntries', 'function centralWorkspaceSummary'],
     ['function centralWorkspaceCapabilitiesFromUi', 'function centralRoutePresentation'],
@@ -761,6 +770,47 @@ test('ordinary folder permission setup verifies read write and exec policy witho
   assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
   assert.equal(f.state.setupContinuation, null);
   assert.equal(f.timers.size, 0);
+});
+
+test('local folder setup confirms host-user access once and hides sandbox controls without probing', async () => {
+  const f = fixture({ executionMode: 'local' });
+  f.context.selectCentralWorkspace(f.workspace);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(f.confirmations.length, 1);
+  assert.match(f.confirmations[0], /trực tiếp.*user Windows hiện tại/);
+  assert.match(f.confirmations[0], /file và mạng của user/);
+  assert.doesNotMatch(f.confirmations[0], /mở Windows Sandbox|ProcessContainer|lệnh không có mạng/);
+  assert.equal(access.exec, true);
+  assert.equal(access.sandbox.state, 'not_required');
+  assert.equal(f.calls.some(([name]) => name === 'probe-sandbox'), false);
+  assert.ok(f.calls.filter(([name]) => name === 'inspect-exec' || name === 'install-exec')
+    .every(([, request]) => request.probeSandbox === false));
+  enableTargetRendering(f);
+  f.context.renderSetupExecution();
+  assert.equal(f.context.$('#setupPrepareExecAction').hidden, true);
+  assert.equal(f.context.$('#controlPlaneExecutionMode').closest('label').hidden, true);
+  assert.match(f.context.$('#controlPlaneRunnerState').textContent, /trực tiếp bằng user Windows hiện tại/);
+  assert.doesNotMatch(f.context.$('#controlPlaneRunnerState').textContent, /đã kiểm tra|lệnh đã chạy/);
+});
+
+test('local advanced execution consent describes host access and ignores sandbox diagnostic requests', async () => {
+  const f = fixture({ executionMode: 'local' });
+  f.context.selectCentralWorkspace(f.workspace);
+  const receipt = await f.context.installControlPlaneExecPolicy(f.workspace, { probeSandbox: true });
+  assert.equal(f.confirmations.length, 1);
+  assert.match(f.confirmations[0], /trực tiếp bằng user Windows hiện tại/);
+  assert.match(f.confirmations[0], /file và mạng của user/);
+  assert.doesNotMatch(f.confirmations[0], /Sandbox|ProcessContainer|không có network/);
+  assert.equal(receipt.sandbox.state, 'not_required');
+  assert.equal(f.calls.some(([name]) => name === 'probe-sandbox'), false);
+  assert.equal(f.calls.find(([name]) => name === 'install-exec')[1].probeSandbox, false);
+  const confirmationCount = f.confirmations.length;
+  const observed = await f.context.inspectControlPlaneExecPolicy(f.workspace, { probeSandbox: true });
+  assert.equal(observed.sandbox.state, 'not_required');
+  assert.equal(f.confirmations.length, confirmationCount);
+  assert.equal(f.calls.some(([name]) => name === 'probe-sandbox'), false);
+  assert.ok(f.messages.some(([title, detail]) => title === 'Chạy trực tiếp trên máy'
+    && detail.includes('Chưa chạy lệnh kiểm chứng')));
 });
 
 test('execution mode is included in the single folder consent and installed without a VM probe', async () => {

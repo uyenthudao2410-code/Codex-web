@@ -1,0 +1,32 @@
+{
+  "recorded_at_utc": "2026-10-22T08:06:07Z",
+  "source": "User Ubuntu terminal output",
+  "source_transport": "Activation result relayed by parent agent /root; essential fields summarized rather than a verbatim terminal transcript",
+  "evidence_kind": "user_reported_live_activation",
+  "direct_remote_execution_by_codex": false,
+  "ok": true,
+  "stage": "complete",
+  "service": "codex-control-plane.service",
+  "service_scope": "user",
+  "user": "svhome",
+  "new_pid": 2104520,
+  "candidate": "/home/svhome/.local/lib/codex-control-plane/releases/codex-control-plane-local-metadata-20261022-5af9fe034347",
+  "node_agent_sha256": "5af9fe034347c35ce77bfe5742546e3656daaa1cbf3cc17bc35bb111bcee27c7",
+  "package_fingerprint": "sha256:a96208eb770ef62cc58566bf7ebd7202b56a7c0f2713521d943fb0cfc49e1734",
+  "all_three_binding_ids_unchanged": true,
+  "pilots_and_admission_unchanged": true,
+  "admission_state": "scoped_pilot",
+  "active_actions": 0,
+  "live_tasks": 0,
+  "writers": 0,
+  "existing_causal_rows_preserved": true,
+  "baseline_generated_caches_preserved": true,
+  "backup_directory": "/home/svhome/.local/lib/codex-control-plane/backups/local-metadata-20261022T080422Z-2104479",
+  "timers_restored": 3,
+  "tunnel_service_or_credentials_changed": false,
+  "paste_command_sha256": "6f875f2dd3f24ad6ceb5c8fcc7193eea23d5ba2e721d30d27df0b9dc1faf40bc",
+  "limitations": [
+    "This record summarizes the activation result supplied by the user; Codex did not execute or independently re-query the Ubuntu host.",
+    "Ubuntu activation alone does not prove successful Windows command execution or end-to-end completion."
+  ]
+}

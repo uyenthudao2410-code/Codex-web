@@ -1,0 +1,26 @@
+{
+  "evidence_kind": "user_reported_chatgpt_ubuntu_windows_execution",
+  "source": "User supplied ChatGPT web Ubuntu Control Plane result",
+  "direct_remote_query_by_codex": false,
+  "observed_date": "2026-10-22",
+  "ok": true,
+  "device": "DESKTOP-63643J4",
+  "binding_id": "bind_71661b1046884174b01c99af5f8546aa",
+  "workspace_name": "Codex-web",
+  "command": "node --version",
+  "action_id": "act_64bd95ef8e8b43c79755e3dcafd5629d",
+  "process_state": "completed",
+  "exit_code": 0,
+  "stdout": "v24.19.0",
+  "stderr": "",
+  "execution_backend": "local",
+  "isolation_level": "host_user",
+  "policy_decision": "operator_local",
+  "single_execution_reported": true,
+  "absolute_workspace_path_independently_proven_by_remote_receipt": false,
+  "limitations": [
+    "Remote result was supplied by the user; this agent did not directly query the ChatGPT connector.",
+    "The remote receipt identifies the workspace binding, but does not independently attest the absolute path.",
+    "The separate local public MCP smoke and installed settings independently verify the configured E:\\DEV\\Codex-web workspace."
+  ]
+}

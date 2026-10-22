@@ -36,10 +36,10 @@ from .landlock_exec import (
     open_landlock_ruleset,
 )
 from . import processes
-from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var
+from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var, is_sandboxed_execution
 from .task_state import command_payload_succeeded
 from .windows_mxc_sandbox import build_mxc_invocation, cleanup_mxc_invocation
-from .windows_execution_policy import decide_windows_execution
+from .windows_execution_policy import WindowsExecutionDecision, decide_windows_execution
 from .windows_mxc_state_aware import (
     MxcWindowsSandboxManager,
     build_mxc_windows_sandbox_invocation,
@@ -327,11 +327,22 @@ class ExecToolsMixin:
         popen_cmd: Any = structured_argv if structured_argv is not None else cmd
         popen_shell = structured_argv is None
         popen_extra = process_group_popen_kwargs()
-        windows_mxc = os.name == "nt" and structured_argv is not None
-        windows_decision = decide_windows_execution(
-            structured_argv, args, attested_bridge=bridge_argv is not None,
-            approved_internal_argv=raw_argv is not None,
-        ) if windows_mxc else None
+        # The operator's local mode runs as the host user. Keep its evidence
+        # distinct from the native ProcessContainer and isolated VM backends.
+        windows_local = os.name == "nt" and not is_sandboxed_execution()
+        windows_mxc = (
+            os.name == "nt"
+            and structured_argv is not None
+            and not windows_local
+        )
+        windows_decision = None
+        if windows_local:
+            windows_decision = WindowsExecutionDecision("local", "host_user", "operator_local", tuple(structured_argv or ()))
+        elif windows_mxc:
+            windows_decision = decide_windows_execution(
+                structured_argv, args, attested_bridge=bridge_argv is not None,
+                approved_internal_argv=raw_argv is not None,
+            )
         windows_mxc_invocation = None
         windows_mxc_stateful = False
         windows_mxc_session_holder: dict[str, ExecSession | None] = {"session": None}
@@ -531,7 +542,7 @@ class ExecToolsMixin:
                 tty=tty,
                 popen_kwargs=popen_extra,
                 **({"windows_job_limits": processes.WindowsJobLimits(cpu_time_ms=timeout_ms)}
-                   if windows_decision is not None and windows_decision.execution_backend == "native" else {}),
+                   if windows_decision is not None and windows_decision.execution_backend in {"native", "local"} else {}),
             )
             self.execution_resource_governor.bind_process(admission, process)
             session_warnings = [landlock_warning] if landlock_warning else []

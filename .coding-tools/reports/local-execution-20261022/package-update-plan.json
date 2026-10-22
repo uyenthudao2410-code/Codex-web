@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "observed_at": "2026-10-22T07:13:21.687Z",
+  "target": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-r4-timefix-bfix\\win-unpacked",
+  "candidate": "E:\\DEV\\Codex-web\\dist\\windows-candidate-mxc-wsb-cbe1774-local-1022b\\win-unpacked",
+  "code_sections_equal": true,
+  "asar_integrity_validation": false,
+  "retained_executable_sha256": "94f36ad726297bb2c4451ba9931b1532569f14f9f46526223e39fe75bc08e145",
+  "changes": [
+    {
+      "path": "resources/app.asar",
+      "before_sha256": "b3607da70af1df36a0aa1eb50f5771ba110069e33d08f256da542faca5f7b922",
+      "after_sha256": "b032027dcb71aecd19cc9118f0fdccc44eb0b29df93c7c0d85e5ad5879f343a9",
+      "bytes": 7379850
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "before_sha256": "0e241227147ff30314ed730c9b685c147b9aff973f8c6dd6018dab43d4d1448c",
+      "after_sha256": "baeaa8d4b25cdd87c6d5a2af9e0b673f376993cf2ae8a10f0b3ce6cc7ef41378",
+      "bytes": 52649
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+      "before_sha256": "ba481eb36df1e339d26233b2c3f1fdf23ad919dbec092bb28b09a7a2da6d2f77",
+      "after_sha256": "6cbbd5bb43671a17aa6f933f4172746e1191638ecf7dc627fc8249a06a702478",
+      "bytes": 10122
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "before_sha256": "01840da72f3dc79cc67ff75e3c2dceb92c19652d982aad9c5a43fba86890b7a1",
+      "after_sha256": "091b92d7ef165d7136f59ebcb4305fdfa434c4e94788890b0bdf98ea37f16ab2",
+      "bytes": 157560
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+      "before_sha256": "40b8f32ff1d961735b0b6d3d04f623871b12bea0ef354d84c9407077a2dd2f1b",
+      "after_sha256": "14c6125d767dc86fe375ff4f5d7578a8b38e2e7d760df2beb078f51d6835c98a",
+      "bytes": 10995
+    },
+    {
+      "path": "resources/resources/control-plane/node_agent.py",
+      "before_sha256": "63ff1d1e22e55935231f45d0c323f687aa441449aaa07afbb0a130205ab64820",
+      "after_sha256": "4ceeff50f3436043da3a8ee6d3344743d8b9ee59db95ca7b8cbfdabdd16c838c",
+      "bytes": 490575
+    }
+  ]
+}

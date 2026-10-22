@@ -1,0 +1,52 @@
+{
+  "candidate_release": "codex-control-plane-5c5e207265f56a69b72f16dd78c4d2951f382609",
+  "metadata_tuple_accepted": {
+    "execution_backend": "local",
+    "isolation_level": "host_user",
+    "policy_decision": "operator_local"
+  },
+  "mixed_tuple_rejected": true,
+  "node_agent_sha256": "4ceeff50f3436043da3a8ee6d3344743d8b9ee59db95ca7b8cbfdabdd16c838c",
+  "baseline_release": "codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+  "baseline_fingerprint": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+  "changed_release_files": [
+    "DEPLOYMENT.md",
+    "control-plane/control_plane/__init__.py",
+    "control-plane/control_plane/__main__.py",
+    "control-plane/control_plane/deployment_verifier.py",
+    "control-plane/control_plane/http_api.py",
+    "control-plane/control_plane/maintenance.py",
+    "control-plane/control_plane/mcp_facade.py",
+    "control-plane/control_plane/mcp_oauth.py",
+    "control-plane/control_plane/mcp_status.py",
+    "control-plane/control_plane/node-agent.cmd",
+    "control-plane/control_plane/node_agent.py",
+    "control-plane/control_plane/recovery_approved_patch_bridge.cjs",
+    "control-plane/control_plane/recovery_document_write_bridge.cjs",
+    "control-plane/control_plane/recovery_exec_bridge.cjs",
+    "control-plane/control_plane/recovery_file_read_bridge.cjs",
+    "control-plane/control_plane/recovery_identity_observer.cjs",
+    "control-plane/control_plane/recovery_read_only_bridge.cjs",
+    "control-plane/control_plane/recovery_runtime_adapter.cjs",
+    "control-plane/control_plane/store.py",
+    "deploy/codex-control-plane-backup.service.example",
+    "deploy/codex-control-plane-backup.timer.example",
+    "deploy/codex-control-plane-healthcheck.service.example",
+    "deploy/codex-control-plane-healthcheck.timer.example",
+    "deploy/codex-control-plane-mcp-tunnel.service.example",
+    "deploy/codex-control-plane.service.example",
+    "deploy/control-plane-mcp-tunnel.env.example",
+    "deploy/control-plane-verify-release.py",
+    "deploy/control-plane.env.example",
+    "deploy/prepare-control-plane-activation.py"
+  ],
+  "release_manifest_verification": {
+    "ok": true,
+    "file_count": 39,
+    "schema_version": 29,
+    "package_source_sha256": "sha256:0617c835dfc5842211924d836ce384ba95f5a61435f3340f7cb7b64d63e3642b"
+  },
+  "remote_mutations_performed": false,
+  "deployment_performed": false,
+  "source_classification": "working_tree_candidate"
+}

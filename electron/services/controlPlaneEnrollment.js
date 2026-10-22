@@ -1045,7 +1045,8 @@ function parseWorkspaceReplacementResult(stdout) {
 }
 
 class ControlPlaneEnrollmentService {
-  constructor({ paths, runner = run, environment = process.env, experimentalWindowsSandbox = false } = {}) {
+  constructor({ paths, runner = run, environment = process.env, experimentalWindowsSandbox = false,
+    getExecutionMode = () => 'sandboxed' } = {}) {
     if (!paths || typeof paths.runtimeMode !== 'function' || typeof paths.portablePython !== 'function'
       || typeof paths.controlPlaneNodeAgent !== 'function' || typeof paths.controlPlaneNodeConfigFile !== 'function'
       || typeof paths.controlPlaneWorkspaceRegistryFile !== 'function'
@@ -1056,6 +1057,8 @@ class ControlPlaneEnrollmentService {
     this.runner = runner;
     this.environment = environment;
     this.experimentalWindowsSandbox = experimentalWindowsSandbox === true;
+    if (typeof getExecutionMode !== 'function') throw new TypeError('getExecutionMode must be a function.');
+    this.getExecutionMode = getExecutionMode;
     // Electron's packaged appRoot is app.asar, a file. Child processes need
     // the physical installation directory for both cwd and --project-root.
     this.agentProjectRoot = paths.runtimeMode() === 'packaged'
@@ -1696,11 +1699,20 @@ class ControlPlaneEnrollmentService {
     );
     const mode = executionMode || policyResult.execution_mode || 'native_first';
     if (!EXECUTION_MODES.has(mode)) throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_REQUEST_INVALID', 'Chế độ chạy không hợp lệ.');
-    const observedSandbox = await this.inspectMxcSandbox({ workspaceRoot, probeSandbox: probeSandbox === true,
-      backend: mode === 'isolated' ? 'auto' : 'process_container', capabilityOnly: mode !== 'isolated' });
-    const sandbox = Object.freeze({ backend: mode === 'isolated' ? 'windows_sandbox' : 'process_container',
-      ...observedSandbox,
-      ...(mode !== 'isolated' && observedSandbox.state === 'not_checked' ? { reason: 'NATIVE_CAPABILITY_NOT_CHECKED' } : {}) });
+    const runtimeMode = this.getExecutionMode();
+    if (!['local', 'sandboxed'].includes(runtimeMode)) {
+      throw enrollmentError('CONTROL_PLANE_EXECUTION_MODE_INVALID', 'Chế độ thực thi local hoặc sandboxed không hợp lệ.');
+    }
+    let sandbox;
+    if (runtimeMode === 'local') {
+      sandbox = Object.freeze({ state: 'not_required', backend: 'host_user', reason: 'OPERATOR_LOCAL_EXECUTION' });
+    } else {
+      const observedSandbox = await this.inspectMxcSandbox({ workspaceRoot, probeSandbox: probeSandbox === true,
+        backend: mode === 'isolated' ? 'auto' : 'process_container', capabilityOnly: mode !== 'isolated' });
+      sandbox = Object.freeze({ backend: mode === 'isolated' ? 'windows_sandbox' : 'process_container',
+        ...observedSandbox,
+        ...(mode !== 'isolated' && observedSandbox.state === 'not_checked' ? { reason: 'NATIVE_CAPABILITY_NOT_CHECKED' } : {}) });
+    }
     let policy = policyResult;
     if (policy.state === 'enabled') {
       try {
@@ -1709,7 +1721,7 @@ class ControlPlaneEnrollmentService {
         }
         const authority = await this.inspectCurrentPolicyAuthority(policy);
         if (authority.exec_enabled !== true || authority.exec_binding_count < 1) {
-          throw enrollmentError('CONTROL_PLANE_EXEC_NOT_ADMITTED', 'Ubuntu chưa bật sandboxed exec cho binding này.');
+          throw enrollmentError('CONTROL_PLANE_EXEC_NOT_ADMITTED', 'Ubuntu chưa bật quyền chạy lệnh cho binding này.');
         }
         policy = Object.freeze({ ...policy, current_facade_contract: authority.facade_contract,
           authority_observed_at_ms: authority.observed_at_ms });
@@ -1732,6 +1744,10 @@ class ControlPlaneEnrollmentService {
       throw enrollmentError('CONTROL_PLANE_EXEC_POLICY_REQUEST_INVALID', 'Lựa chọn cài exec policy không hợp lệ.');
     }
     const selection = executionPolicySelection(executionMode, nativeArgvPrefixes);
+    const runtimeMode = this.getExecutionMode();
+    if (!['local', 'sandboxed'].includes(runtimeMode)) {
+      throw enrollmentError('CONTROL_PLANE_EXECUTION_MODE_INVALID', 'Chế độ thực thi local hoặc sandboxed không hợp lệ.');
+    }
     const workspace = (await this.listWorkspaces()).find((item) =>
       item.workspace_id === normalizedWorkspaceId && item.workspace_generation === normalizedWorkspaceGeneration);
     if (!workspace || workspace.capabilities.read !== true || workspace.capabilities.exec !== true) {
@@ -1757,27 +1773,29 @@ class ControlPlaneEnrollmentService {
       throw enrollmentError('CONTROL_PLANE_POLICY_AUTHORITY_STALE', 'Chưa xác minh facade contract hiện hành của Ubuntu.');
     }
     if (authority.exec_enabled !== true || authority.exec_binding_count < 1) {
-      throw enrollmentError('CONTROL_PLANE_EXEC_NOT_ADMITTED', 'Ubuntu chưa bật sandboxed exec cho binding này.');
+      throw enrollmentError('CONTROL_PLANE_EXEC_NOT_ADMITTED', 'Ubuntu chưa bật quyền chạy lệnh cho binding này.');
     }
     const native = executionMode !== 'isolated';
     // The pinned ProcessContainer capability probe only inspects OS support.
     // It starts no workspace program or Windows Sandbox VM.
-    let sandbox = await this.inspectMxcSandbox({ workspaceRoot, probeSandbox: native ? true : probeSandbox,
-      backend: native ? 'process_container' : 'auto', capabilityOnly: native });
-    if (sandbox.state === 'unavailable' || (probeSandbox && sandbox.state !== 'available')) {
+    let sandbox = runtimeMode === 'local'
+      ? Object.freeze({ state: 'not_required', backend: 'host_user', reason: 'OPERATOR_LOCAL_EXECUTION' })
+      : await this.inspectMxcSandbox({ workspaceRoot, probeSandbox: native ? true : probeSandbox,
+        backend: native ? 'process_container' : 'auto', capabilityOnly: native });
+    if (runtimeMode === 'sandboxed' && (sandbox.state === 'unavailable' || (probeSandbox && sandbox.state !== 'available'))) {
       throw enrollmentError(
         sandbox.reason || 'SANDBOX_UNAVAILABLE',
         'Backend chạy lệnh chưa được xác minh; exec policy chưa được cài.'
       );
     }
-    if (native && (sandbox.state !== 'available' || sandbox.backend !== 'process_container'
+    if (runtimeMode === 'sandboxed' && native && (sandbox.state !== 'available' || sandbox.backend !== 'process_container'
       || sandbox.capability_verified !== true)) {
       throw enrollmentError('WINDOWS_NATIVE_RUNNER_UNAVAILABLE', 'ProcessContainer chưa xác minh capability; quyền native chưa được cài.');
     }
-    if (!native && probeSandbox && sandbox.backend !== 'windows_sandbox') {
+    if (runtimeMode === 'sandboxed' && !native && probeSandbox && sandbox.backend !== 'windows_sandbox') {
       throw enrollmentError('WINDOWS_SANDBOX_REQUIRED', 'Chế độ cách ly cần backend Windows Sandbox đã xác minh.');
     }
-    if (!native && !probeSandbox) {
+    if (runtimeMode === 'sandboxed' && !native && !probeSandbox) {
       const windowsSandboxExecutable = path.join(
         String(this.environment.SystemRoot || this.environment.WINDIR || 'C:\\Windows'),
         'System32',

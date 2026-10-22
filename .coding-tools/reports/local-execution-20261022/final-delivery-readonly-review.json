@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-22T08:08:01.171492+00:00",
+  "read_only_review": true,
+  "package_file_count": 6,
+  "package_files": [
+    {
+      "path": "resources/app.asar",
+      "installed_matches_candidate": true,
+      "backup_matches_original": true
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "installed_matches_candidate": true,
+      "backup_matches_original": true
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+      "installed_matches_candidate": true,
+      "backup_matches_original": true
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "installed_matches_candidate": true,
+      "backup_matches_original": true
+    },
+    {
+      "path": "resources/resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+      "installed_matches_candidate": true,
+      "backup_matches_original": true
+    },
+    {
+      "path": "resources/resources/control-plane/node_agent.py",
+      "installed_matches_candidate": true,
+      "backup_matches_original": true
+    }
+  ],
+  "retained_executable_matches_original": true,
+  "settings": {
+    "executionMode": "local",
+    "executionRole": "central_executor",
+    "workspace_matches_repository": true
+  },
+  "supervisor": {
+    "mode": "packaged",
+    "executable_matches_target": true,
+    "app_root_matches_target": true,
+    "node_agent_path_matches_target": true,
+    "node_agent_sha_matches_installed": true,
+    "node_runtime_sha_matches_exe": true,
+    "python_sha_matches_installed": true,
+    "supervisor_status_manifest_sha_matches": true,
+    "supervisor_state": "healthy",
+    "supervisor_last_error_code": null
+  },
+  "source": {
+    "branch": "main",
+    "head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+    "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+    "checkpoint_status": "accepted",
+    "accepted_file_count": 26,
+    "accepted_file_drifts": [],
+    "current_worktree_fp": "8c6cd24145bde5b549d468cd5d9ea17d8af62f714d98c04ecb7b905a92ab5d4e",
+    "accepted_worktree_fp": "8c6cd24145bde5b549d468cd5d9ea17d8af62f714d98c04ecb7b905a92ab5d4e",
+    "whole_worktree_fp_matches": true
+  },
+  "live_local_job": {
+    "job_id": "f3e1357f680c46c580bd8a9602d32fa0",
+    "lifecycle_state": "exited",
+    "finished_at": "2026-10-22T08:06:00.996Z"
+  },
+  "ubuntu_evidence_kind": "user_reported_live_activation",
+  "runtime_operations_performed_by_review": false,
+  "run_projection": {
+    "source": "read_only_canonical_ledger_query_at_observed_at",
+    "current_window_start": "2026-10-22T00:00:00Z",
+    "current_nonterminal_runs": [],
+    "historic_row_counts_by_status": {
+      "stale": 84,
+      "active": 45
+    },
+    "historic_first_started_at": "2026-09-03T02:19:49.105Z",
+    "historic_last_started_at": "2026-10-12T18:22:07.700Z",
+    "historic_status_rows_are_not_live_process_claims": true
+  },
+  "report_finalized_at": "2026-10-22T08:10:33.712610+00:00"
+}

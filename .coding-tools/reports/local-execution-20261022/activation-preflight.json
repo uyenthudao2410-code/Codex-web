@@ -1,0 +1,264 @@
+{
+  "ok": true,
+  "verified_at_unix_ms": 1792655473487,
+  "request": {
+    "operation_id": "full-clean-cli-direct-local-20261022-04",
+    "component": "recovery_host",
+    "full_clean_required": true,
+    "activation_mode": "full_clean_activation",
+    "requested_at_unix_ms": 1792655450682,
+    "expires_at_unix_ms": 1792655505682,
+    "expected_disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+    "allow_acceptance_pending": true,
+    "source_checkpoint": {
+      "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+      "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+      "wave_id": "3b42877879354c97b7b87d69bdb7a9c8",
+      "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+      "git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609"
+    }
+  },
+  "preflight": {
+    "safe": true,
+    "code": "ALREADY_CURRENT",
+    "component": "recovery_host",
+    "revision": {
+      "running_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+      "update_pending": false,
+      "state": "current",
+      "checked_at": "2026-10-22T07:50:50.689Z",
+      "file_count": 40
+    },
+    "runtime": {
+      "acceptance_pending": true,
+      "code": "READY",
+      "counts": {
+        "active_agent_lanes": 0,
+        "active_background_operations": 0,
+        "active_commands": 0,
+        "active_managed_processes": 0,
+        "active_tool_calls": 0,
+        "foreign_heavy_processes": 0,
+        "owned_codex_sidecar_residues": 0,
+        "self_controller_leases_discounted": 0,
+        "starting_commands": 0,
+        "threshold_sensitive_stale_candidates": 18
+      },
+      "fence_operation_id": null,
+      "fenced": false,
+      "lifecycle": {
+        "classification_counts": {
+          "AWAITING_ACCEPTANCE": 27,
+          "P5_EXPERIMENT_ANCHOR": 6,
+          "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 18
+        },
+        "live_owned_runs": [],
+        "p5_lifecycles": [
+          "EPOCH_CLOSED",
+          "EPOCH_HARD_STOPPED"
+        ],
+        "projection": {
+          "available": true,
+          "bound_relevant_run_count": 27,
+          "classification": "CONTEXTUAL_PROJECTIONS",
+          "conflicting_run_count": 0,
+          "context_count": 1190,
+          "contextual_sha256": "8bd7d97fd1a0dd7fddde1866f019fdb81781055ab7972d20b2a4a584f8a711b5",
+          "malformed_context_projection": false,
+          "missing_run_count": 0,
+          "mode": "contextual",
+          "orchestration_state": "",
+          "relevant_run_count": 27,
+          "run_id": "",
+          "unprojected_historical_acceptance_count": 0,
+          "wave_id": ""
+        },
+        "projection_classification": "CONTEXTUAL_PROJECTIONS",
+        "projection_rebuild": {
+          "current": true,
+          "receipt": {
+            "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+            "completed_at": "2026-10-22T07:51:12.603Z",
+            "completed_at_unix_ms": 1792655472603,
+            "integrity_sha256": "385c8c73e503bf082f2127698629b73cc36b5edff7636f313275126cc3ca8c10",
+            "kind": "coding_tools_mcp_projection_rebuild",
+            "ledger_integrity": {
+              "backup_api_copy": true,
+              "foreign_key_check_rows": 0,
+              "immutable": true,
+              "integrity_check": [
+                "ok"
+              ],
+              "query_only": true
+            },
+            "ledger_logical_sha256": "f8d80444e786b28c4075251bf281e8ac2aca1fac03e73dad110482ef287a1157",
+            "ledger_snapshot_sha256": "a65ca71d5f0a1ca237294f77c41b91f2708de7fce1f70fdc1556b6ae461778d8",
+            "process_instance_id": "iP5VK8z9t2lNqsBV",
+            "projection": {
+              "context_count": 1190,
+              "contextual_sha256": "8bd7d97fd1a0dd7fddde1866f019fdb81781055ab7972d20b2a4a584f8a711b5",
+              "mode": "contextual",
+              "orchestration_state": "",
+              "run_id": "",
+              "wave_id": ""
+            },
+            "projection_classification": "CONTEXTUAL_PROJECTIONS",
+            "reconciled": true,
+            "schema_version": 2,
+            "server_instance_id": "YmyE2H10Z7fmkF04",
+            "workspace": "E:\\DEV\\Codex-web"
+          },
+          "validation": {
+            "code": "READY",
+            "projection_classification": "CONTEXTUAL_PROJECTIONS",
+            "reasons": [],
+            "valid": true
+          }
+        },
+        "projection_rebuild_receipt": {
+          "activation_epoch_id": "activation-mvj6igzh-464a072be929a5ff8735927696250ad9",
+          "completed_at": "2026-10-22T07:51:12.603Z",
+          "completed_at_unix_ms": 1792655472603,
+          "integrity_sha256": "385c8c73e503bf082f2127698629b73cc36b5edff7636f313275126cc3ca8c10",
+          "kind": "coding_tools_mcp_projection_rebuild",
+          "ledger_integrity": {
+            "backup_api_copy": true,
+            "foreign_key_check_rows": 0,
+            "immutable": true,
+            "integrity_check": [
+              "ok"
+            ],
+            "query_only": true
+          },
+          "ledger_logical_sha256": "f8d80444e786b28c4075251bf281e8ac2aca1fac03e73dad110482ef287a1157",
+          "ledger_snapshot_sha256": "a65ca71d5f0a1ca237294f77c41b91f2708de7fce1f70fdc1556b6ae461778d8",
+          "process_instance_id": "iP5VK8z9t2lNqsBV",
+          "projection": {
+            "context_count": 1190,
+            "contextual_sha256": "8bd7d97fd1a0dd7fddde1866f019fdb81781055ab7972d20b2a4a584f8a711b5",
+            "mode": "contextual",
+            "orchestration_state": "",
+            "run_id": "",
+            "wave_id": ""
+          },
+          "projection_classification": "CONTEXTUAL_PROJECTIONS",
+          "reconciled": true,
+          "schema_version": 2,
+          "server_instance_id": "YmyE2H10Z7fmkF04",
+          "workspace": "E:\\DEV\\Codex-web"
+        },
+        "run_ids_by_class": {
+          "AWAITING_ACCEPTANCE": [
+            "0d4f567d1e5c4f90b174bad40d9e3efa",
+            "0dfb72d0c6944d2d87ecb741dc439267",
+            "28a5f750466048438307b96872e24f01",
+            "2cc8555d10fa4739b07ef55ec715f79c",
+            "351a78fd610d4f0baa15faa62f1aa39b",
+            "372352c060a34387bf1641e355fbc775",
+            "3d9a3ad822054c49a0ebf2ec857bad2e",
+            "435e64ffe1b041eea2cab17bb36ae994",
+            "490900eb8d37453baa8fb5bfb9eb72e6",
+            "4967dd953ce74b5d97cbf01aad827139",
+            "4a80ae60c2e441d8896c1ace8710c384",
+            "598f9c7aafaa4e1aa764a8392fdf7a3e",
+            "631c9d4ebee141c49471cad7d1d69366",
+            "6664f948cfb14a75958518548352896e",
+            "69f3491b6b7c45249af33903bb3221a5",
+            "6c0b08fa765b423584a42213d7f62024",
+            "7563451dc47742b39de3e3fa40ad3810",
+            "79f51b49525c459c864e94a662682759",
+            "95e909f0040a448faa9f1f3257e2ee2c",
+            "98513cec254841d4b2a2a3cabb854925"
+          ],
+          "P5_EXPERIMENT_ANCHOR": [
+            "p5-210b508d30894c55a15303a76c80982b",
+            "p5-3401fec450fe463d839bd7b2ddc6d5f6",
+            "p5-6e995b1e3242412e9cc907e71c9f19c5",
+            "p5-98d70e8f24c544588ab28367ec5ce81f",
+            "p5-9c0473d4777e4b73996dfd30af727b6b",
+            "p5-f923270b9e1d405184b100144af08f0d"
+          ],
+          "THRESHOLD_SENSITIVE_STALE_CANDIDATE": [
+            "2375a022574e497eaebdc49a519ee537",
+            "2d7809721eda458e855950c53ed4c0f1",
+            "4ea601f3f7154ecda879a6986a5d7f41",
+            "5a5bee6d76c049e1876006a65ec7bdd5",
+            "6247675bd8c84a4691cb102d49e44e59",
+            "729dbb850fa04352b4f950d47319ffc9",
+            "8bb3700b2f3c44fb9c11e90b5f9028a2",
+            "935b494b20d842249b6cafb33064fdd1",
+            "9b6d90d2151e4b959ca13da6b31327ee",
+            "aa9a593805a345ad833797185876ba5d",
+            "b65f16b4359d459cb5c8c7fab563735b",
+            "bf9a29e7393c41e8afa3fcc57d1ea883",
+            "c939fa550f344c94b4f30352fe2cefe4",
+            "ca3ad1e41ed74e628227d39e9ca6c607",
+            "ca939345575948449e97c8d85705bd0d",
+            "d24346d2665847c2abe9d95238474af3",
+            "d41f26ae1c5949aa9d8e993179a0e994",
+            "e22c0974d9a64f6499269044e93d485b"
+          ]
+        },
+        "snapshot": {
+          "backup_api_copy": true,
+          "foreign_key_check_rows": 0,
+          "immutable": true,
+          "integrity_check": [
+            "ok"
+          ],
+          "logical_sha256": "f8d80444e786b28c4075251bf281e8ac2aca1fac03e73dad110482ef287a1157",
+          "query_only": true,
+          "schema_version": 12,
+          "sha256": "a65ca71d5f0a1ca237294f77c41b91f2708de7fce1f70fdc1556b6ae461778d8",
+          "size_bytes": 101404672,
+          "snapshot_at": "2026-10-22T07:51:11.282Z"
+        },
+        "unbound_live_resource_residues": 0,
+        "unbound_live_resources": [],
+        "unexplained_active_runs": 0
+      },
+      "operation_id": "full-clean-cli-direct-local-20261022-04",
+      "orchestration_state": "QUIESCENT_WITH_THRESHOLD_CANDIDATES",
+      "process_instance_id": "iP5VK8z9t2lNqsBV",
+      "reason": "acceptance_state_is_durable",
+      "run_id": "",
+      "safe": true,
+      "server_instance_id": "YmyE2H10Z7fmkF04",
+      "source_checkpoint": {
+        "accepted_file_count": 26,
+        "checkpoint_id": "4ff71d93937e4562b47fd993368ccba5",
+        "code": "ACTIVATABLE",
+        "git_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+        "ok": true,
+        "proof_fingerprint": "894a318ebe642d097cf5c9db4755cc17f02546d837d63a268b7e2e34315b9a14",
+        "run_id": "82307be5688940b3ae3a8ceb6d45258c",
+        "wave_id": "3b42877879354c97b7b87d69bdb7a9c8"
+      },
+      "workspace": "E:\\DEV\\Codex-web"
+    },
+    "lifecycle_decision": {
+      "schema_version": 1,
+      "clean": false,
+      "code": "READY",
+      "reason": "acceptance_state_is_durable",
+      "observed_at": "2026-10-22T07:51:13.485Z",
+      "canonical_lifecycle_observed": true,
+      "source_checkpoint_verified": true,
+      "fence_released": true,
+      "fenced": false,
+      "fence_operation_id": null,
+      "operation_id": "full-clean-cli-direct-local-20261022-04",
+      "counts": {},
+      "unexplained_active_runs": 0,
+      "unbound_live_resource_residues": 0
+    }
+  },
+  "authority": {
+    "expected_disk_revision": "ce07ea636a1ea88cbf540387e81e4f2850a4b8f4f7f48a28b28c83047e776865",
+    "recovery_host": {
+      "pid": 42168,
+      "instance_id": "77ffb14ade98d7d7083ec013911f075a"
+    }
+  }
+}

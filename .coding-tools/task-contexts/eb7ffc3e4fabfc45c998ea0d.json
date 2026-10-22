@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "c733f448332743ae89d65344d8547ef7",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "N3sFdbNOujqBHh_F3VXYx9av",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 422,
+    "finished_at": "2026-10-22T08:06:01.151Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-22T08:06:00.553Z",
+  "updated_at": "2026-10-22T08:06:01.151Z",
+  "events": [
+    {
+      "time": "2026-10-22T08:06:00.553Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-22T08:06:00.991Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --version",
+        "session_id": "N3sFdbNOujqBHh_F3VXYx9av"
+      }
+    },
+    {
+      "time": "2026-10-22T08:06:01.151Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --version",
+        "status": "passed"
+      }
+    }
+  ]
+}

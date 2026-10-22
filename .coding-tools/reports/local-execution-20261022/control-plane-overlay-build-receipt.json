@@ -1,0 +1,37 @@
+{
+  "archive": "E:\\DEV\\Codex-web\\dist\\local-execution-20261022-control-plane-overlay\\codex-control-plane-509b637f3fde2428a62c66ba4f71c8b2ae10b72341f67bb82b8752d1b0bced59.tar.gz",
+  "archive_sha256": "46667522ae604df717ba631541dc8d04b8800b0de06b8ce33812f1998dc5092d",
+  "baseline_manifest_sha256": "c65439e1de52b741483debfd0600b52e7d969a8641818c554071990d4b3b1a3d",
+  "baseline_node_agent_sha256": "e368fd239446c8313c871dd41e4b35356e40bef83fff0bff80debff528f92f96",
+  "baseline_package_source_sha256": "sha256:eb8c83abf44aca6c73ae5760813cda91d76187605cc53bbf1ae92cf6bb85f22d",
+  "baseline_release": "codex-control-plane-parallel-native-1012-f7acd9ec4ba1",
+  "candidate_manifest_sha256": "ac5bbc99ca8768b12b9038da79b4644336ff5e62905e266fc98176580e08b7ab",
+  "candidate_node_agent_sha256": "5af9fe034347c35ce77bfe5742546e3656daaa1cbf3cc17bc35bb111bcee27c7",
+  "captured_at_utc": "2026-10-22T07:20:20.345640+00:00",
+  "changed_release_files": [
+    "DEPLOYMENT.md",
+    "control-plane/control_plane/node_agent.py"
+  ],
+  "changed_runtime_files": [
+    "control-plane/control_plane/node_agent.py"
+  ],
+  "control_plane_schema_version": 29,
+  "metadata_cases_passed": 4,
+  "operation": "control_plane_versioned_release_build",
+  "package_source_sha256": "sha256:a96208eb770ef62cc58566bf7ebd7202b56a7c0f2713521d943fb0cfc49e1734",
+  "release_directory": "E:\\DEV\\Codex-web\\dist\\local-execution-20261022-control-plane-overlay\\codex-control-plane-509b637f3fde2428a62c66ba4f71c8b2ae10b72341f67bb82b8752d1b0bced59",
+  "release_name": "codex-control-plane-509b637f3fde2428a62c66ba4f71c8b2ae10b72341f67bb82b8752d1b0bced59",
+  "remote_mutations_performed": false,
+  "runtime_bytes_preserved_except_two_inserted_lines": true,
+  "source_kind": "single_purpose_baseline_overlay",
+  "source_revision": "509b637f3fde2428a62c66ba4f71c8b2ae10b72341f67bb82b8752d1b0bced59",
+  "source_revision_kind": "content_derived_overlay_identity_not_git_commit",
+  "verification": {
+    "control_plane_schema_version": 29,
+    "file_count": 39,
+    "operation": "control_plane_release_verification",
+    "package_source_sha256": "sha256:a96208eb770ef62cc58566bf7ebd7202b56a7c0f2713521d943fb0cfc49e1734",
+    "release_name": "codex-control-plane-509b637f3fde2428a62c66ba4f71c8b2ae10b72341f67bb82b8752d1b0bced59",
+    "source_revision": "509b637f3fde2428a62c66ba4f71c8b2ae10b72341f67bb82b8752d1b0bced59"
+  }
+}

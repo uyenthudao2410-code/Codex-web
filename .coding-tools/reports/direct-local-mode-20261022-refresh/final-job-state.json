@@ -1,0 +1,23 @@
+{
+  "jobs": [
+    {
+      "job_id": "bec1bc9d28c74d778e2485088e2cb5a5",
+      "command_id": "VtPgBpW733zYnQTQW1mkzfep",
+      "lifecycle_state": "exited",
+      "finished_at": "2026-10-22T07:34:22.468Z"
+    },
+    {
+      "job_id": "82a46e30855e4e4eb778658d62eb2d91",
+      "command_id": "GhZuinTKx6v4-iS8LRRNIMO_",
+      "lifecycle_state": "exited",
+      "finished_at": "2026-10-22T07:37:28.404Z"
+    }
+  ],
+  "controller_leases": [
+    {
+      "lease_id": "client:codex-desktop",
+      "status": "released",
+      "expires_at": 1792654764.0460737
+    }
+  ]
+}

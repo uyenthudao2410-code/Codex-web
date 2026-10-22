@@ -1,0 +1,595 @@
+{
+  "version": 2,
+  "task_id": "879261902e1745eea28ea3e7b8e8d89c",
+  "orchestration": {
+    "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+    "wave_id": "83b682db38b34808bcc71053e5a7a932",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+    "worktree_fp": "6eeba1272308f652a518446ab5c3b32c73df3ac2cee04b63bccc404bc5c64fac",
+    "contract_fp": ""
+  },
+  "objective": "Validate and accept the exact completed source for permanent direct Windows host execution without ProcessContainer or Windows Sandbox, preserving permission controls, existing workspace/node identity and unrelated work.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-10-22T07:17:49.501Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-10-22T07:17:49.501Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-10-22T07:17:49.501Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "hPCo7Dj1HonHQVnknQRBGIPu",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-10-22T07:17:49.044Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/main.js",
+          "state": "file",
+          "sha256": "ffeea577641a66ab396c93822583af56a2374aba8e2a5aba2fdf3601ed0e89ce",
+          "size_bytes": 69023,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "electron/services/config.js",
+          "state": "file",
+          "sha256": "39d1ae1822864d9a158f1dc0b85d8ef520db2e4b416190ecd4fef84bfb5b5005",
+          "size_bytes": 10398,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "electron/services/nativeService.js",
+          "state": "file",
+          "sha256": "05d9cea77d7a1cdee24c20e5a0e428a7fd7e29ba6c5ec93df228335e0151df2e",
+          "size_bytes": 35432,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "electron/services/controlPlaneExecBridge.js",
+          "state": "file",
+          "sha256": "5003024b1d6a7b7c21fbcb1b5b199e6442bce47e66b003626fd4fec966d1a399",
+          "size_bytes": 26782,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "electron/services/controlPlaneEnrollment.js",
+          "state": "file",
+          "sha256": "a2040f91bcf31be7eed867811bfd59d4bfe98c5e3a4d5ec8c23a84a0c47ce917",
+          "size_bytes": 120882,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "renderer/app.js",
+          "state": "file",
+          "sha256": "c5e292d3dfb549439d3bddc67eaa606325f7631761d9905b018c70de2375d772",
+          "size_bytes": 232614,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "renderer/index.html",
+          "state": "file",
+          "sha256": "bebc7fe63b0ba9207ab8b9da2582f0a055c46f4f59b913fa44faad643d504bc5",
+          "size_bytes": 103425,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+          "state": "file",
+          "sha256": "baeaa8d4b25cdd87c6d5a2af9e0b673f376993cf2ae8a10f0b3ce6cc7ef41378",
+          "size_bytes": 52649,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/runtime_config.py",
+          "state": "file",
+          "sha256": "6cbbd5bb43671a17aa6f933f4172746e1191638ecf7dc627fc8249a06a702478",
+          "size_bytes": 10122,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "state": "file",
+          "sha256": "091b92d7ef165d7136f59ebcb4305fdfa434c4e94788890b0bdf98ea37f16ab2",
+          "size_bytes": 157560,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+          "state": "file",
+          "sha256": "14c6125d767dc86fe375ff4f5d7578a8b38e2e7d760df2beb078f51d6835c98a",
+          "size_bytes": 10995,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "control-plane/control_plane/node_agent.py",
+          "state": "file",
+          "sha256": "4ceeff50f3436043da3a8ee6d3344743d8b9ee59db95ca7b8cbfdabdd16c838c",
+          "size_bytes": 490575,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "control-plane/tests/test_exec_node_agent.py",
+          "state": "file",
+          "sha256": "1566526b01924ed3afd56b6531003099305216321bf78e63961091b518c88823",
+          "size_bytes": 74820,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "tests/settings.test.js",
+          "state": "file",
+          "sha256": "d04d188a587a068b64287cc01f34f469733fa7dd247e0f0ffba4ff323e817444",
+          "size_bytes": 6355,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "tests/native-service-activation-gate.test.js",
+          "state": "file",
+          "sha256": "134198e46acf2798c2108b869f01656dba422e2e2b95fe7f32549bf641f2af9a",
+          "size_bytes": 3370,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "tests/control-plane-exec-bridge.test.js",
+          "state": "file",
+          "sha256": "24a0c34050922ab2b046bf902f39098b502c9f45828c906a6080e2d192e29dc5",
+          "size_bytes": 13868,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "tests/control-plane-exec-sandbox.test.js",
+          "state": "file",
+          "sha256": "5116a4fcbbe512a4798f58418f862ca406e8ac44346ad8ced232f65f48b27607",
+          "size_bytes": 40079,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "tests/folder-permission-editor.test.js",
+          "state": "file",
+          "sha256": "d8a385e3056c892bb4d3e922d1e8eebde72e918cccd32eb9684c5af9ccb0c046",
+          "size_bytes": 83569,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_local_execution_mode.py",
+          "state": "file",
+          "sha256": "6bf72b2359922694ab3db0b82a51e86fbd2f44b1144c1d10df3122b575dbd2fd",
+          "size_bytes": 8542,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_windows_execution_policy.py",
+          "state": "file",
+          "sha256": "d43b78f7a6fbf76256853a5bc0f0af91f465abf2aab9a478f280b4fbec89eb58",
+          "size_bytes": 17949,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_exec_spawn_failure.py",
+          "state": "file",
+          "sha256": "95c5b0cc70c1c38a62f22cbee606603461528cd33e2b84003c2cfac93eefce5e",
+          "size_bytes": 4408,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_wave_a_runtime.py",
+          "state": "file",
+          "sha256": "8d534036609a987a5d8bfc0e14358cfa866b0de38e94dd638d3f9975a379c4a1",
+          "size_bytes": 16315,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_approved_patch_initial_verification.py",
+          "state": "file",
+          "sha256": "dfaaa2568ae1d006cab4dce5b29e4d27832b47defab24e2e9c48b24a252456ed",
+          "size_bytes": 21372,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+          "wave_id": "83b682db38b34808bcc71053e5a7a932"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 40,
+        "head_hash": "4954f4b413b2cae8e0d13e9f6b688d1dd453d84aa837a78c78fae98f6c70cd7b"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2d02657290524fc0b8da686e4b0ed7b9\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2d02657290524fc0b8da686e4b0ed7b9\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2d02657290524fc0b8da686e4b0ed7b9\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "2d02657290524fc0b8da686e4b0ed7b9",
+      "wave_id": "83b682db38b34808bcc71053e5a7a932",
+      "checkpoint_id": "43775b875a4a4d84b37aedce671f9d57",
+      "base_head": "5c5e207265f56a69b72f16dd78c4d2951f382609",
+      "worktree_fp": "6eeba1272308f652a518446ab5c3b32c73df3ac2cee04b63bccc404bc5c64fac",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Validate and accept the exact completed source for permanent direct Windows host execution without ProcessContainer or Windows Sandbox, preserving permission controls, existing workspace/node identity and unrelated work.",
+        "objective_revision": 1,
+        "objective_sha256": "6600e4dfcbc503504f05e4750077f016ba4dc14a54cb86e1950e65da3387a626",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "76e2217300df4d65b13eebdbd7b15e67",
+          "stage_id": "check:fb6fb0468975e705",
+          "status": "passed",
+          "duration_ms": 1770,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "aef6a8e0a14b3d4586d9ce258e8dced8dc101f8eda59daa459147e383d58f997",
+  "completion_report_acknowledged_id": "aef6a8e0a14b3d4586d9ce258e8dced8dc101f8eda59daa459147e383d58f997",
+  "completion_report_acknowledged_at": "2026-10-22T07:30:25.058Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-10-22T07:15:06.495Z",
+  "updated_at": "2026-10-22T07:30:29.313Z",
+  "events": [
+    {
+      "time": "2026-10-22T07:15:06.495Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Validate and accept the exact completed source for permanent direct Windows host execution without ProcessContainer or Windows Sandbox, preserving permission controls, existing workspace/node identity and unrelated work."
+      }
+    },
+    {
+      "time": "2026-10-22T07:15:07.701Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-10-22T07:15:09.375Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-10-22T07:15:09.382Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-10-22T07:15:32.168Z",
+      "event": "orchestration_drift_detected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-10-22T07:15:32.334Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:10.070Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:11.394Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:42.505Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:43.885Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:45.156Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:45.163Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:46.738Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:47.054Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:48.182Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/settings.test.js tests/native-service-activation-gate.test.js tests/control-plane-exec-bridge.test.js tests/folder-permission-editor.test.js tests/control-plane-exec-sandbox.test.js",
+        "session_id": "hPCo7Dj1HonHQVnknQRBGIPu"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:49.044Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/settings.test.js tests/native-service-activation-gate.test.js tests/control-plane-exec-bridge.test.js tests/folder-permission-editor.test.js tests/control-plane-exec-sandbox.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:49.494Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:49.501Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:50.233Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:50.233Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:50.423Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "bd3ede428c70c543a62755de376b491ca8422e4718df5b2ee05c3605b7c501ae"
+      }
+    },
+    {
+      "time": "2026-10-22T07:17:50.593Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-10-22T07:18:35.732Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:18:40.303Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-10-22T07:18:40.306Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:18:40.547Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "aef6a8e0a14b3d4586d9ce258e8dced8dc101f8eda59daa459147e383d58f997"
+      }
+    },
+    {
+      "time": "2026-10-22T07:20:39.398Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-10-22T07:30:25.058Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "aef6a8e0a14b3d4586d9ce258e8dced8dc101f8eda59daa459147e383d58f997"
+      }
+    }
+  ]
+}
