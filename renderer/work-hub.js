@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context' };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -548,9 +548,22 @@
     const data = unwrap(await window.mcpAssistant.workhubGitStatus(scope.workspace).catch(() => null));
     if (!scope.current()) return;
     if (!data) { box.replaceChildren(el('span', 'task-muted', 'Không lấy được trạng thái Git (dự án chưa phải git repo?).')); return; }
-    if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
+    if (!data.length) { ui.commitSelection.clear(); renderCommitBar(); box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
+    const present = new Set(data.map((item) => item.path));
+    for (const path of [...ui.commitSelection]) if (!present.has(path)) ui.commitSelection.delete(path);
     box.replaceChildren(...data.map((item) => {
       const row = el('div', 'wh-row');
+      const check = document.createElement('input');
+      check.type = 'checkbox';
+      check.className = 'wh-commit-check';
+      check.dataset.path = item.path;
+      check.checked = ui.commitSelection.has(item.path);
+      check.setAttribute('aria-label', `Chọn commit: ${item.path}`);
+      check.addEventListener('change', () => {
+        if (check.checked) ui.commitSelection.add(item.path); else ui.commitSelection.delete(item.path);
+        renderCommitBar();
+      });
+      row.append(check);
       const main = el('div', 'wh-row-main');
       const label = item.origPath ? `${item.origPath} → ${item.path}` : item.path;
       const untracked = item.status === '??';
@@ -561,7 +574,53 @@
       row.append(view);
       return row;
     }));
+    renderCommitBar();
     renderTaskFileChanges();
+  }
+
+  function renderCommitBar() {
+    const all = $('#whCommitAll');
+    const button = $('#whCommitSelected');
+    const boxes = [...document.querySelectorAll('.wh-commit-check')];
+    if (all) {
+      all.checked = boxes.length > 0 && boxes.every((box) => box.checked);
+      all.indeterminate = boxes.some((box) => box.checked) && !all.checked;
+    }
+    if (button) {
+      button.disabled = ui.commitBusy || ui.commitSelection.size === 0;
+      button.textContent = ui.commitSelection.size
+        ? `Commit ${ui.commitSelection.size} tệp đã chọn`
+        : 'Commit tệp đã chọn';
+    }
+  }
+
+  async function commitSelectedFiles() {
+    if (ui.commitBusy) return;
+    const message = $('#whCommitMessage')?.value.trim() || '';
+    const result = $('#whCommitResult');
+    if (!message) { if (result) result.textContent = 'Nhập nội dung commit trước.'; return; }
+    if (!ui.commitSelection.size) { if (result) result.textContent = 'Chưa chọn tệp nào.'; return; }
+    const scope = requestScope('gitcommit');
+    ui.commitBusy = true;
+    renderCommitBar();
+    try {
+      const data = unwrap(await window.mcpAssistant.workhubGitCommit({
+        files: [...ui.commitSelection], message, expectedWorkspace: scope.workspace,
+      }));
+      if (!scope.current()) return;
+      ui.commitSelection.clear();
+      const input = $('#whCommitMessage');
+      if (input) input.value = '';
+      if (result) result.textContent = data?.hash
+        ? `Đã commit ${data.files} tệp: ${String(data.hash).slice(0, 10)}`
+        : 'Đã commit.';
+      await Promise.allSettled([renderGit(), renderGitLog()]);
+    } catch (error) {
+      if (result) result.textContent = `Commit thất bại: ${error.message}`;
+    } finally {
+      ui.commitBusy = false;
+      renderCommitBar();
+    }
   }
 
   async function renderGitLog() {
@@ -591,6 +650,57 @@
       row.append(view);
       return row;
     }));
+  }
+
+  async function renderWorktrees() {
+    const box = $('#whWorktreeList');
+    if (!box || !window.mcpAssistant?.workhubWorktreeList) return;
+    const scope = requestScope('worktrees');
+    const data = unwrap(await window.mcpAssistant.workhubWorktreeList(scope.workspace).catch(() => null));
+    if (!scope.current()) return;
+    if (!data) { box.replaceChildren(el('span', 'task-muted', 'Không lấy được danh sách worktree.')); return; }
+    if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có worktree nào.')); return; }
+    box.replaceChildren(...data.map((item) => {
+      const row = el('div', 'wh-row');
+      const main = el('div', 'wh-row-main');
+      main.append(
+        el('b', '', item.path),
+        el('small', '', `${item.branch || '(detached)'}${item.managed ? ' · được quản lý' : ''}`),
+      );
+      row.append(main);
+      if (item.managed) {
+        const remove = smallButton('Gỡ');
+        remove.addEventListener('click', async () => {
+          if (!window.confirm(`Gỡ worktree ${item.path}? Worktree còn thay đổi chưa commit sẽ không gỡ được.`)) return;
+          const resultBox = $('#whWorktreeResult');
+          try {
+            unwrap(await window.mcpAssistant.workhubWorktreeRemove({ path: item.path, expectedWorkspace: scope.workspace }));
+            if (resultBox) resultBox.textContent = `Đã gỡ ${item.path}`;
+          } catch (error) {
+            if (resultBox) resultBox.textContent = `Không gỡ được: ${error.message}`;
+          }
+          renderWorktrees();
+        });
+        row.append(remove);
+      }
+      return row;
+    }));
+  }
+
+  async function addWorktree() {
+    const resultBox = $('#whWorktreeResult');
+    const name = $('#whWorktreeName')?.value.trim() || '';
+    const branch = $('#whWorktreeBranch')?.value.trim() || '';
+    const scope = requestScope('worktrees');
+    try {
+      const data = unwrap(await window.mcpAssistant.workhubWorktreeAdd({ name, branch, expectedWorkspace: scope.workspace }));
+      if (resultBox) resultBox.textContent = data?.path ? `Đã tạo: ${data.path} (nhánh ${data.branch})` : 'Đã tạo worktree.';
+      const nameInput = $('#whWorktreeName');
+      if (nameInput) nameInput.value = '';
+    } catch (error) {
+      if (resultBox) resultBox.textContent = `Không tạo được: ${error.message}`;
+    }
+    renderWorktrees();
   }
 
   function renderTaskFileChanges() {
@@ -888,6 +998,18 @@
     $('#whCodeSearch')?.addEventListener('click', renderCodeSearch);
     $('#whCodeQuery')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderCodeSearch(); });
     $('#whGitRefresh')?.addEventListener('click', renderGit);
+    $('#whCommitAll')?.addEventListener('change', (event) => {
+      document.querySelectorAll('.wh-commit-check').forEach((box) => {
+        box.checked = event.target.checked;
+        if (box.dataset.path) {
+          if (event.target.checked) ui.commitSelection.add(box.dataset.path);
+          else ui.commitSelection.delete(box.dataset.path);
+        }
+      });
+      renderCommitBar();
+    });
+    $('#whCommitSelected')?.addEventListener('click', commitSelectedFiles);
+    $('#whCommitMessage')?.addEventListener('keydown', (event) => { if (event.key === 'Enter') commitSelectedFiles(); });
     $('#whViewerAddBasket')?.addEventListener('click', () => {
       if (!ui.viewerRel) return;
       try { store.addToBasket(currentProject(), { path: ui.viewerRel }); renderBasket(); }
@@ -943,7 +1065,7 @@
     renderProjects();
     renderBasket();
     renderRecipes();
-    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog()]);
+    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees()]);
     if (request !== ui.refreshRequest) return;
     renderExtended();
     renderGoal();
@@ -1576,6 +1698,8 @@
       if (viewer) viewer.textContent = data ? data.lines.map((l) => `${l.line} · ${l.author} · ${l.text}`).join('\n') : 'Không lấy được blame.';
     });
     $('#whGitLogRefresh')?.addEventListener('click', renderGitLog);
+    $('#whWorktreeRefresh')?.addEventListener('click', renderWorktrees);
+    $('#whWorktreeAdd')?.addEventListener('click', addWorktree);
     $('#whChooseImport')?.addEventListener('click', async () => {
       const scope = requestScope('importChooser');
       const files = unwrap(await window.mcpAssistant.chooseFiles().catch(() => null)) || [];

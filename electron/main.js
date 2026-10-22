@@ -973,6 +973,13 @@ function registerIpc() {
     if (typeof text === 'string') { try { return JSON.parse(text); } catch { return { raw: text }; } }
     return result && typeof result === 'object' ? result : { capsule: null };
   }));
+  secureHandle('workhub:git-commit', (_event, payload) => invokeSafely(async () => workHubFiles.gitCommitFiles(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.files, payload?.message)));
+  secureHandle('workhub:worktree-list', (_event, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitWorktreeList(scopedWorkHubRoot(expectedWorkspace))));
+  secureHandle('workhub:worktree-add', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeAdd(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.name, payload?.branch)));
+  secureHandle('workhub:worktree-remove', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeRemove(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.path)));
   secureHandle('workhub:job-control', (_event, payload) => invokeSafely(async () => {
     const action = String(payload?.action || 'poll');
     if (!['poll', 'write', 'kill', 'read'].includes(action)) throw new Error('Thao tác Job không hợp lệ.');

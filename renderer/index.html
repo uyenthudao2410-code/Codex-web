@@ -682,11 +682,25 @@
 <section id="whPanelChanges" class="wh-tab-panel" role="tabpanel" data-wh-panel="changes" aria-labelledby="whTabChanges" hidden><div class="wh-section-intro"><div><h3>Xem lại thay đổi</h3><p>Các thay đổi trong thư mục hiện tại; tệp do công việc ghi nhận có nhãn riêng.</p></div></div><article class="panel"><div class="panel-title"><h3>Thay đổi Git</h3><span class="soft-badge neutral">So sánh &amp; lịch sử</span></div>
               <button class="secondary-button" id="whGitRefresh" type="button">Tải tệp đã thay đổi</button>
               <div class="wh-list" id="whGitList"></div>
+              <div class="wh-commit-bar">
+                <label class="wh-commit-all"><input type="checkbox" id="whCommitAll"> Chọn tất cả tệp đã thay đổi</label>
+                <input type="text" id="whCommitMessage" placeholder="Nội dung commit cho các tệp đã chọn" maxlength="200">
+                <button class="primary-button" id="whCommitSelected" type="button">Commit tệp đã chọn</button>
+                <span class="task-muted" id="whCommitResult"></span>
+              </div>
               <div class="wh-list" id="whTaskFiles"></div>
               <pre class="task-command wh-viewer" id="whDiff">Chưa chọn tệp.</pre>
               <div class="inline-actions" id="whPatchApproval"></div>
               <div class="panel-title"><h4>Lịch sử commit</h4><button class="secondary-button wh-small" id="whGitLogRefresh" type="button">Tải lịch sử</button></div>
               <div class="wh-list" id="whGitLog"></div>
+              <div class="panel-title"><h4>Worktree được quản lý</h4><button class="secondary-button wh-small" id="whWorktreeRefresh" type="button">Tải danh sách</button></div>
+              <div class="wh-commit-bar">
+                <input type="text" id="whWorktreeName" placeholder="Tên worktree, ví dụ: sua-loi-dang-nhap" maxlength="60">
+                <input type="text" id="whWorktreeBranch" placeholder="Nhánh (trống = work/<tên>)" maxlength="120">
+                <button class="secondary-button" id="whWorktreeAdd" type="button">Tạo worktree</button>
+                <span class="task-muted" id="whWorktreeResult"></span>
+              </div>
+              <div class="wh-list" id="whWorktreeList"></div>
             </article></section>
 <section id="whPanelVerify" class="wh-tab-panel" role="tabpanel" data-wh-panel="verify" aria-labelledby="whTabVerify" hidden><div class="wh-section-intro"><div><h3>Chạy kiểm tra phù hợp</h3><p>Lưu lệnh thường dùng, chạy một lần và theo dõi kết quả.</p></div><button class="secondary-button" type="button" data-nav="build">Kiểm tra &amp; build</button></div><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Lệnh dự án đã lưu</h3><span class="soft-badge neutral">Theo dự án</span></div>
               <div class="wh-list" id="whRecipeList"></div>

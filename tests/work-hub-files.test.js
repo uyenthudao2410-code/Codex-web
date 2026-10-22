@@ -4,9 +4,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const {
   resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace,
-  searchText, gitStatus, gitFileDiff, gitLog, gitBlame,
+  searchText, gitStatus, gitFileDiff, gitLog, gitBlame, gitCommitFiles,
+  gitWorktreeList, gitWorktreeAdd, gitWorktreeRemove,
 } = require('../electron/services/workHubFiles');
 
 function fixture() {
@@ -139,4 +141,51 @@ test('F25 gitLog and gitBlame read real history', async () => {
   const blame = await gitBlame(root, 'src/login.js');
   assert.ok(blame.lines.length >= 3);
   assert.equal(blame.lines[0].author, 'Test');
+});
+
+test('M1.2 gitCommitFiles commits only the selected paths', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'changed\n');
+  fs.writeFileSync(path.join(root, 'README.md'), 'changed too\n');
+  fs.writeFileSync(path.join(root, 'new.txt'), 'brand new\n');
+  const result = await gitCommitFiles(root, ['src/login.js', 'new.txt'], 'feat: selected only');
+  assert.equal(result.files, 2);
+  assert.match(result.hash, /^[0-9a-f]{40}$/);
+  const committed = git('show', '--pretty=format:', '--name-only', 'HEAD').trim().split('\n').sort();
+  assert.deepEqual(committed, ['new.txt', 'src/login.js']);
+  const status = await gitStatus(root);
+  assert.deepEqual(status.map((item) => item.path), ['README.md']);
+  await assert.rejects(() => gitCommitFiles(root, [], 'x'), /Chưa chọn tệp/);
+  await assert.rejects(() => gitCommitFiles(root, ['README.md'], '  '), /nội dung commit/);
+  await assert.rejects(() => gitCommitFiles(root, ['../outside.txt'], 'x'), /ngoài thư mục/);
+});
+
+test('M1.3 managed worktrees: add, list, remove inside the sibling folder only', async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'workhub-wt-'));
+  const root = path.join(parent, 'proj');
+  fs.mkdirSync(root);
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  fs.writeFileSync(path.join(root, 'a.txt'), 'a\n');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  const added = await gitWorktreeAdd(root, 'Fix Login!', '');
+  assert.equal(added.branch, 'work/fix-login');
+  assert.ok(added.path.includes(`${path.sep}proj.worktrees${path.sep}fix-login`));
+  assert.ok(fs.existsSync(path.join(added.path, 'a.txt')));
+  const list = await gitWorktreeList(root);
+  assert.equal(list.length, 2);
+  assert.equal(list.find((item) => item.managed)?.branch, 'work/fix-login');
+  await assert.rejects(() => gitWorktreeRemove(root, root), /Chỉ gỡ được worktree do ứng dụng quản lý/);
+  const removed = await gitWorktreeRemove(root, added.path);
+  assert.equal(removed.removed, added.path);
+  assert.equal((await gitWorktreeList(root)).length, 1);
 });

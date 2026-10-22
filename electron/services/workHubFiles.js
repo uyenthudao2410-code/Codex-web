@@ -283,6 +283,77 @@ async function gitFileDiff(root, rel, options = {}) {
   return { rel: relOut, diff: combined.slice(0, maxChars), truncated: combined.length > maxChars };
 }
 
+async function gitCommitFiles(root, files, message) {
+  // M1.2/B07: commit exactly the files the user selected in the Changes tab.
+  // The commit is pathspec-limited, so staged or unstaged changes in other
+  // files are never swept in.
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  const cleanMessage = String(message || '').trim().slice(0, 4000);
+  if (!cleanMessage) throw new Error('Cần nhập nội dung commit.');
+  const list = [...new Set((Array.isArray(files) ? files : [])
+    .map((file) => String(file || '').trim()).filter(Boolean))];
+  if (!list.length) throw new Error('Chưa chọn tệp nào để commit.');
+  if (list.length > 200) throw new Error('Quá nhiều tệp trong một commit (tối đa 200).');
+  for (const rel of list) resolveInsideRoot(rootResolved, rel);
+  const before = (await runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => '')).trim();
+  await runGit(rootResolved, ['add', '--', ...list], { timeout: 30000 });
+  await runGit(rootResolved, ['commit', '-m', cleanMessage, '--', ...list], { timeout: 30000 });
+  const hash = (await runGit(rootResolved, ['rev-parse', 'HEAD'])).trim();
+  if (!hash || hash === before) throw new Error('Commit không tạo được — có thể các tệp đã chọn không còn thay đổi.');
+  return { hash, files: list.length };
+}
+
+function managedWorktreeBase(rootResolved) {
+  return path.join(path.dirname(rootResolved), `${path.basename(rootResolved)}.worktrees`);
+}
+
+async function gitWorktreeList(root) {
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  const out = await runGit(rootResolved, ['worktree', 'list', '--porcelain']);
+  const items = [];
+  let current = null;
+  for (const line of out.split(/\r?\n/)) {
+    if (line.startsWith('worktree ')) {
+      if (current) items.push(current);
+      current = { path: line.slice(9), head: '', branch: '', managed: false };
+    } else if (current && line.startsWith('HEAD ')) current.head = line.slice(5);
+    else if (current && line.startsWith('branch ')) current.branch = line.slice(7).replace('refs/heads/', '');
+  }
+  if (current) items.push(current);
+  const base = managedWorktreeBase(rootResolved).toLowerCase();
+  for (const item of items) item.managed = item.path.toLowerCase().startsWith(base);
+  return items;
+}
+
+async function gitWorktreeAdd(root, name, branch) {
+  // M1.3/B06: managed worktrees live in a sibling "<project>.worktrees"
+  // folder so they are easy to inventory and can never escape the project
+  // neighbourhood. The branch is created when it does not exist yet.
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  const slug = String(name || '').trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  if (!slug) throw new Error('Cần tên cho worktree (chữ, số, dấu - hoặc _).');
+  const cleanBranch = String(branch || `work/${slug}`).trim().slice(0, 120);
+  if (!/^[\w./-]+$/.test(cleanBranch) || cleanBranch.includes('..')) throw new Error('Tên nhánh không hợp lệ.');
+  const target = path.join(managedWorktreeBase(rootResolved), slug);
+  if (fs.existsSync(target)) throw new Error('Worktree này đã tồn tại.');
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const branches = await runGit(rootResolved, ['branch', '--list', cleanBranch]);
+  if (branches.trim()) await runGit(rootResolved, ['worktree', 'add', target, cleanBranch], { timeout: 60000 });
+  else await runGit(rootResolved, ['worktree', 'add', '-b', cleanBranch, target], { timeout: 60000 });
+  return { path: target, branch: cleanBranch };
+}
+
+async function gitWorktreeRemove(root, worktreePath) {
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  const target = path.resolve(String(worktreePath || ''));
+  const base = managedWorktreeBase(rootResolved);
+  if (!target.toLowerCase().startsWith(base.toLowerCase()) || target.toLowerCase() === rootResolved.toLowerCase()) {
+    throw new Error('Chỉ gỡ được worktree do ứng dụng quản lý (trong thư mục .worktrees cạnh dự án).');
+  }
+  await runGit(rootResolved, ['worktree', 'remove', target], { timeout: 30000 });
+  return { removed: target };
+}
+
 const IMAGE_MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.bmp': 'image/bmp' };
 
 function readImageData(root, rel, options = {}) {
@@ -298,5 +369,6 @@ function readImageData(root, rel, options = {}) {
 module.exports = {
   SKIP_DIRS, DEFAULTS,
   resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace, readImageData,
-  searchText, gitStatus, gitFileDiff, gitLog, gitShow, gitBlame,
+  searchText, gitStatus, gitFileDiff, gitLog, gitShow, gitBlame, gitCommitFiles,
+  gitWorktreeList, gitWorktreeAdd, gitWorktreeRemove,
 };

@@ -183,3 +183,9 @@ body .page.wh-workspace { max-width: 1440px !important; }
   .wh-task-header { margin-top: 3px; }
   .app-tools-popover { position: fixed; top: 60px; right: 12px; width: min(320px,calc(100vw - 24px)); }
 }
+
+/* M1.2: selective commit bar in the Changes tab */
+.wh-commit-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.wh-commit-bar input[type="text"] { flex: 1 1 220px; }
+.wh-commit-all { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.wh-commit-check { width: 16px; height: 16px; flex: 0 0 auto; align-self: center; }
