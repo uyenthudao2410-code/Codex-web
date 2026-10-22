@@ -557,6 +557,47 @@ function canonicalTaskStateFromControl(control) {
   };
 }
 
+async function callMcpTool(name, toolArguments, timeoutMs = 30000) {
+  const current = settings.load();
+  const token = secrets.get('mcpAuthToken');
+  if (!token) throw new Error('MCP chưa sẵn sàng để chạy lệnh.');
+  const request = {
+    jsonrpc: '2.0',
+    id: `panel-tool-${name}-${Date.now()}`,
+    method: 'tools/call',
+    params: {
+      name,
+      arguments: toolArguments,
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-panel', version: app.getVersion() }
+      }
+    }
+  };
+  const response = await httpRequestJson({
+    port: current.mcpPort,
+    path: '/mcp',
+    method: 'POST',
+    token,
+    body: request,
+    headers: {
+      'MCP-Protocol-Version': '2026-07-28',
+      'Mcp-Method': 'tools/call',
+      'Mcp-Name': name,
+      'X-Coding-Tools-Client-Id': 'electron-panel',
+      'X-Coding-Tools-Client-Type': 'electron'
+    },
+    timeout: timeoutMs
+  });
+  if (response && response.error) throw new Error(response.error.message || `MCP từ chối ${name}.`);
+  if (response?.result?.isError) {
+    const message = response.result?.structuredContent?.error?.message || response.result?.content?.[0]?.text || `MCP từ chối ${name}.`;
+    throw new Error(String(message).slice(0, 400));
+  }
+  return structuredMcpResult(response?.result) || null;
+}
+
 async function panelTaskControl(action) {
   const allowed = new Set(['pause', 'resume', 'stop', 'clear']);
   if (!allowed.has(action)) throw new Error('Thao tác nhiệm vụ từ bảng điều khiển không hợp lệ.');
@@ -870,8 +911,78 @@ function registerIpc() {
   secureHandle('workhub:list', (_event, rel) => invokeSafely(async () => workHubFiles.listDir(workHubRoot(), rel)));
   secureHandle('workhub:read', (_event, rel) => invokeSafely(async () => workHubFiles.readTextFile(workHubRoot(), rel)));
   secureHandle('workhub:search', (_event, query) => invokeSafely(async () => workHubFiles.searchText(workHubRoot(), query)));
+  secureHandle('workhub:write', (_event, rel, content, expectedHash) => invokeSafely(async () => workHubFiles.writeTextFile(workHubRoot(), rel, content, expectedHash)));
+  secureHandle('workhub:copy-in', (_event, sourceAbsolute, destDirRel) => invokeSafely(async () => workHubFiles.copyIntoWorkspace(workHubRoot(), sourceAbsolute, destDirRel)));
   secureHandle('workhub:git-status', () => invokeSafely(async () => workHubFiles.gitStatus(workHubRoot())));
   secureHandle('workhub:git-diff', (_event, rel) => invokeSafely(async () => workHubFiles.gitFileDiff(workHubRoot(), rel)));
+  secureHandle('workhub:git-log', (_event, limit) => invokeSafely(async () => workHubFiles.gitLog(workHubRoot(), limit)));
+  secureHandle('workhub:git-show', (_event, hash) => invokeSafely(async () => workHubFiles.gitShow(workHubRoot(), hash)));
+  secureHandle('workhub:git-blame', (_event, rel) => invokeSafely(async () => workHubFiles.gitBlame(workHubRoot(), rel)));
+  secureHandle('workhub:read-image', (_event, rel) => invokeSafely(async () => workHubFiles.readImageData(workHubRoot(), rel)));
+  secureHandle('workhub:open-path', (_event, rel, reveal) => invokeSafely(async () => {
+    const { target } = workHubFiles.resolveInsideRoot(workHubRoot(), rel);
+    if (reveal) { shell.showItemInFolder(target); return { opened: false, revealed: true }; }
+    const failure = await shell.openPath(target);
+    if (failure) throw new Error(failure);
+    return { opened: true };
+  }));
+  // A3: recipes run through the runtime's own Job lifecycle (exec_command /
+  // command_control), never through a second executor.
+  secureHandle('workhub:job-run', (_event, payload) => invokeSafely(async () => {
+    const command = String(payload?.command || '').trim();
+    if (!command) throw new Error('Lệnh không được trống.');
+    const cwd = String(payload?.cwd || '').trim() || workHubRoot();
+    return callMcpTool('exec_command', {
+      cmd: command,
+      cwd,
+      yield_time_ms: 8000,
+      timeout_ms: 600000,
+      verbosity: 'full',
+      principal_id: 'workhub',
+    }, 30000);
+  }));
+  secureHandle('workhub:job-control', (_event, payload) => invokeSafely(async () => {
+    const action = String(payload?.action || 'poll');
+    if (!['poll', 'write', 'kill', 'read'].includes(action)) throw new Error('Thao tác Job không hợp lệ.');
+    return callMcpTool('command_control', {
+      action,
+      command_id: String(payload?.commandId || ''),
+      chars: action === 'write' ? String(payload?.chars || '') : undefined,
+      signal: payload?.signal === 'KILL' ? 'KILL' : 'TERM',
+      consumer_id: 'workhub-panel',
+      yield_time_ms: 3000,
+      verbosity: 'full',
+    }, 20000);
+  }));
+  secureHandle('workhub:check-url', (_event, url) => invokeSafely(async () => {
+    const target = new URL(String(url || ''));
+    if (!['http:', 'https:'].includes(target.protocol)) throw new Error('Chỉ kiểm tra URL http/https.');
+    const started = Date.now();
+    const response = await fetch(target, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(6000) });
+    const text = await response.text().catch(() => '');
+    const title = (text.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '';
+    return { url: target.href, status: response.status, ok: response.ok, ms: Date.now() - started, title: title.trim().slice(0, 200) };
+  }));
+  let workHubAwakeId = null;
+  secureHandle('workhub:keep-awake', (_event, on) => invokeSafely(async () => {
+    const { powerSaveBlocker } = require('electron');
+    if (on && workHubAwakeId === null) workHubAwakeId = powerSaveBlocker.start('prevent-app-suspension');
+    if (!on && workHubAwakeId !== null) { powerSaveBlocker.stop(workHubAwakeId); workHubAwakeId = null; }
+    return { active: workHubAwakeId !== null };
+  }));
+  secureHandle('workhub:list-windows', () => invokeSafely(async () => {
+    if (process.platform !== 'win32') return { supported: false, windows: [] };
+    const { execFile } = require('child_process');
+    const script = "Get-Process | Where-Object { $_.MainWindowTitle } | Select-Object ProcessName, Id, MainWindowTitle | ConvertTo-Json -Compress";
+    const stdout = await new Promise((resolve, reject) => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 10000, windowsHide: true, maxBuffer: 1024 * 1024 },
+        (error, out) => (error ? reject(error) : resolve(String(out || ''))));
+    });
+    let parsed = [];
+    try { parsed = JSON.parse(stdout || '[]'); } catch { parsed = []; }
+    if (!Array.isArray(parsed)) parsed = [parsed];
+    return { supported: true, windows: parsed.map((w) => ({ process: String(w.ProcessName || ''), pid: Number(w.Id) || 0, title: String(w.MainWindowTitle || '') })).filter((w) => w.title) };
+  }));
   secureHandle('control-plane:open-console', (event, serverUrl) => invokeSafely(async () => {
     assertManagerIpc(event);
     // Navigation only: no pairing, credentials, settings writes or runtime
@@ -1329,6 +1440,10 @@ function registerIpc() {
   secureHandle('dialog:workspace', () => invokeSafely(async () => {
     const result = await dialog.showOpenDialog(chatWindow, { properties: ['openDirectory', 'createDirectory'] });
     return result.canceled ? '' : result.filePaths[0];
+  }));
+  secureHandle('dialog:files', () => invokeSafely(async () => {
+    const result = await dialog.showOpenDialog(chatWindow, { properties: ['openFile', 'multiSelections'] });
+    return result.canceled ? [] : result.filePaths;
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
     // Recovery settings stay explicitly operator-controlled and separate from the primary runtime failure domain.

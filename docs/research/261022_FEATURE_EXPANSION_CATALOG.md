@@ -191,3 +191,18 @@ Bổ sung lớp đọc tệp thật cho Work Hub, vẫn giữ ranh giới an to�
 Kiểm chứng increment 2: `tests/work-hub-files.test.js` 5/5 đạt (gồm test chặn thoát thư mục, test git status/diff trên repo tạm thật); tổng suite liên quan 29/29 (work-hub-store 9 + work-hub-files 5 + settings 15); `node --check` đạt cho main/preload/service/renderer; HTML hợp lệ. Chưa kiểm chứng: GUI Electron thật trên Windows (làm ở mốc build bản thử).
 
 Tệp thay đổi: `electron/services/workHubFiles.js` (mới), `electron/main.js`, `electron/preload.js`, `renderer/work-hub.js`, `renderer/index.html`, `renderer/styles.css`, `tests/work-hub-files.test.js` (mới), tài liệu này.
+
+### 2026-10-22 — Hoàn thiện theo tài liệu quyết định tiếp nhận (261022_FEATURE_ADOPTION_DECISIONS)
+
+Sau increment 2, tài liệu quyết định tiếp nhận đã chốt lại phạm vi: không làm đều 40 mục mà đóng các điểm đứt của luồng hiện có trước (D0), rồi hoàn thiện A1–A8 theo đợt. Trạng thái sau đợt này (suite liên quan 45/45 đạt trên VM):
+
+- **D0 (trước nghiệm thu) — xong:** sửa ánh xạ handoff theo canonical projection (`steps[].text`, `test_results`, `modified_files`, `details_available`; có fixture test từ projection thật); request gắn project/generation (phản hồi cũ bị loại); containment vật lý bằng realpath (test symlink); đọc tệp bounded qua fd (không nạp toàn tệp), tìm nội dung async có nhãn hết ngân sách quét, mở kết quả đúng dòng; Git status bằng `porcelain -z` (rename/untracked/tên Unicode — có test); thông báo gắn `task_id/run_id/status`, chỉ ghi đã báo sau khi đã hiện, poll nền 30 giây, click mở đúng trang.
+- **A1 — xong ở mức Hub:** gói ngữ cảnh có nội dung thật kèm hash phiên bản từng tệp và nhãn bị cắt; chọn đoạn qua viewer đúng dòng.
+- **A2 — xong ở mức Hub:** diff cho tệp do task ghi nhận (ghi nhãn rõ là diff cây làm việc), history/blame UI, tệp mới xem nội dung thay vì diff rỗng; F08 sửa nhanh có hash-guard chống ghi đè khi tệp đổi bên ngoài; F10 duyệt patch gắn đúng hash của diff (diff đổi → phải duyệt lại).
+- **A3 — xong ở mức Hub:** recipe lọc theo dự án, có URL preview + kiểm tra HTTP; "Chạy (Job)" qua `exec_command`/`command_control` của runtime (không tạo executor thứ hai), console theo từng lần chạy với output/exit, poll bằng `consumer_id` riêng, gửi input có ghi rõ giới hạn không có input_id, dừng Job, keep-awake khi Job đang chạy.
+- **A4 — xong ở mức Hub:** mở tệp/mở thư mục sản phẩm, preview ảnh trong Hub, xuất báo cáo tác vụ Markdown từ dữ liệu task/proof thật.
+- **A5 — xong:** nháp tự lưu theo dự án và khôi phục; chuyển dự án trực tiếp từ danh sách và từ Ctrl+K; Ctrl+K thêm task/báo cáo/ghi chú/hội thoại/tệp ngữ cảnh; ghi chú dự án chọn đưa vào yêu cầu.
+- **A6 — xong ở mức Hub:** xem D0 (sự kiện từ poll nền của app, click route về Work Hub).
+- **A7 — xong mức quan sát/chuẩn bị:** bảng task từ ledger (task hiện tại + lịch sử), client/delegation lanes từ orchestration, kế hoạch + blocker từ projection, điều chỉnh ba mức saved/copied/acknowledged, hàng đợi việc theo dự án (dispatch = chuẩn bị yêu cầu, không tự gửi cho model), chuẩn bị mục tiêu có giới hạn (chỉ tạo yêu cầu, không tự lặp), lịch recipe xét khi app mở.
+- **A8 — một phần:** preview đã đúng schema + nút kiểm tra lại tệp/Git; đọc capsule đã ghi nhận riêng chưa có IPC phía Hub (ghi nhận trung thực, làm khi có đường đọc capsule được hỗ trợ).
+- **Đợt 3 (bản đầu theo điều kiện):** Skills = thư viện hướng dẫn bật theo dự án (không marketplace); F35 voice-to-draft khi engine có mặt; F37 ở mức kiểm tra HTTP cơ bản; F38 chỉ liệt kê cửa sổ Windows; F33 liệt kê workspace Control Plane; F36 inventory tích hợp từ snapshot. F13 LSP, F26/F27 commit/worktree qua UI, F28 checkpoint: chưa làm — theo tài liệu quyết định chỉ làm khi có nhu cầu/guard tương ứng.

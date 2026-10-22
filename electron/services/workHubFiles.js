@@ -7,6 +7,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.coding-tools', 'dist', 'target', '.next', 'coverage']);
@@ -19,17 +20,39 @@ const DEFAULTS = {
   diffMaxChars: 200 * 1024,
 };
 
+function isInside(rootPath, targetPath) {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 function resolveInsideRoot(root, rel) {
   const rootResolved = path.resolve(String(root || ''));
   const requested = String(rel || '').trim();
   const target = requested
     ? (path.isAbsolute(requested) ? path.resolve(requested) : path.resolve(rootResolved, requested))
     : rootResolved;
-  const relative = path.relative(rootResolved, target);
-  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (!isInside(rootResolved, target)) {
     throw new Error('Đường dẫn nằm ngoài thư mục làm việc.');
   }
-  return { root: rootResolved, target, rel: relative.split(path.sep).join('/') };
+  // Physical containment: a symlink/junction inside the workspace must not
+  // lead reads or searches outside it. Verify with real paths when the
+  // target (or its nearest existing ancestor) can be resolved.
+  let realRoot = rootResolved;
+  try { realRoot = fs.realpathSync(rootResolved); } catch { /* root itself missing: callers surface ENOENT */ }
+  let probe = target;
+  while (true) {
+    try {
+      const realTarget = fs.realpathSync(probe);
+      if (!isInside(realRoot, realTarget)) throw new Error('Đường dẫn nằm ngoài thư mục làm việc.');
+      break;
+    } catch (error) {
+      if (error && error.message === 'Đường dẫn nằm ngoài thư mục làm việc.') throw error;
+      const parent = path.dirname(probe);
+      if (parent === probe) break;
+      probe = parent;
+    }
+  }
+  return { root: rootResolved, target, rel: path.relative(rootResolved, target).split(path.sep).join('/') };
 }
 
 function toRel(root, target) {
@@ -68,19 +91,68 @@ function readTextFile(root, rel, options = {}) {
   const { target, rel: relOut } = resolveInsideRoot(root, rel);
   const stat = fs.statSync(target);
   if (!stat.isFile()) throw new Error('Đường dẫn không phải tệp.');
-  const buffer = fs.readFileSync(target);
-  if (looksBinary(buffer)) return { rel: relOut, size: stat.size, binary: true, content: '', truncated: false };
-  const truncated = buffer.length > maxBytes;
+  // Bounded read: never load more than maxBytes (+1 to detect truncation)
+  // into memory, however large the file is.
+  const fd = fs.openSync(target, 'r');
+  let buffer;
+  try {
+    buffer = Buffer.alloc(Math.min(stat.size, maxBytes + 1));
+    const read = fs.readSync(fd, buffer, 0, buffer.length, 0);
+    buffer = buffer.subarray(0, read);
+  } finally { fs.closeSync(fd); }
+  const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+  if (looksBinary(buffer)) return { rel: relOut, size: stat.size, binary: true, content: '', truncated: false, hash };
+  const truncated = stat.size > maxBytes;
   return {
     rel: relOut,
     size: stat.size,
     binary: false,
     content: buffer.subarray(0, maxBytes).toString('utf8'),
     truncated,
+    hash,
   };
 }
 
-function searchText(root, query, options = {}) {
+function writeTextFile(root, rel, content, expectedHash, options = {}) {
+  const maxBytes = options.writeMaxBytes || 1024 * 1024;
+  const text = String(content ?? '');
+  if (Buffer.byteLength(text, 'utf8') > maxBytes) throw new Error('Nội dung vượt quá giới hạn ghi 1MB.');
+  const { target, rel: relOut } = resolveInsideRoot(root, rel);
+  const exists = fs.existsSync(target);
+  if (expectedHash === null || expectedHash === undefined) {
+    if (exists) throw new Error('Tệp đã tồn tại — cần xác nhận ghi đè với phiên bản hiện tại.');
+  } else {
+    if (!exists) throw new Error('Tệp không còn tồn tại.');
+    const current = readTextFile(root, relOut, { readMaxBytes: maxBytes });
+    if (current.truncated) throw new Error('Tệp quá lớn để kiểm tra phiên bản trước khi ghi.');
+    if (current.hash !== expectedHash) throw new Error('Tệp đã thay đổi bên ngoài kể từ khi mở — không ghi đè.');
+  }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.workhub-tmp-${process.pid}`;
+  fs.writeFileSync(tmp, text, 'utf8');
+  fs.renameSync(tmp, target);
+  const after = readTextFile(root, relOut, { readMaxBytes: maxBytes });
+  return { rel: relOut, size: after.size, hash: after.hash };
+}
+
+function copyIntoWorkspace(root, sourceAbsolute, destDirRel) {
+  const source = path.resolve(String(sourceAbsolute || ''));
+  if (!fs.existsSync(source) || !fs.statSync(source).isFile()) throw new Error('Tệp nguồn không tồn tại.');
+  const { target: destDir } = resolveInsideRoot(root, destDirRel || '');
+  fs.mkdirSync(destDir, { recursive: true });
+  const ext = path.extname(source);
+  const base = path.basename(source, ext);
+  let candidate = path.join(destDir, path.basename(source));
+  let counter = 2;
+  while (fs.existsSync(candidate)) {
+    candidate = path.join(destDir, `${base} (${counter})${ext}`);
+    counter += 1;
+  }
+  fs.copyFileSync(source, candidate);
+  return { rel: toRel(path.resolve(String(root)), candidate), size: fs.statSync(candidate).size };
+}
+
+async function searchText(root, query, options = {}) {
   const needle = String(query || '').trim().toLowerCase();
   if (needle.length < 2) throw new Error('Từ khóa tìm kiếm cần ít nhất 2 ký tự.');
   const maxResults = options.searchMaxResults || DEFAULTS.searchMaxResults;
@@ -89,25 +161,30 @@ function searchText(root, query, options = {}) {
   const { root: rootResolved } = resolveInsideRoot(root, '');
   const results = [];
   let scanned = 0;
+  let budgetExhausted = false;
   const stack = [rootResolved];
-  while (stack.length && results.length < maxResults && scanned < maxFiles) {
+  const yieldToEventLoop = () => new Promise((resolve) => setImmediate(resolve));
+  while (stack.length && results.length < maxResults) {
+    if (scanned >= maxFiles) { budgetExhausted = stack.length > 0; break; }
     const dir = stack.pop();
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch { continue; }
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (!SKIP_DIRS.has(entry.name)) stack.push(full);
         continue;
       }
-      if (!entry.isFile() || scanned >= maxFiles || results.length >= maxResults) continue;
+      if (!entry.isFile() || results.length >= maxResults) continue;
+      if (scanned >= maxFiles) { budgetExhausted = true; break; }
       let stat;
-      try { stat = fs.statSync(full); } catch { continue; }
+      try { stat = await fs.promises.stat(full); } catch { continue; }
       if (stat.size > maxFileBytes) continue;
       scanned += 1;
+      if (scanned % 100 === 0) await yieldToEventLoop();
       let content;
       try {
-        const buffer = fs.readFileSync(full);
+        const buffer = await fs.promises.readFile(full);
         if (looksBinary(buffer)) continue;
         content = buffer.toString('utf8');
       } catch { continue; }
@@ -119,7 +196,7 @@ function searchText(root, query, options = {}) {
       }
     }
   }
-  return { query: String(query), results, scannedFiles: scanned, truncated: results.length >= maxResults };
+  return { query: String(query), results, scannedFiles: scanned, truncated: results.length >= maxResults, budgetExhausted };
 }
 
 function runGit(root, args, options = {}) {
@@ -138,11 +215,60 @@ function runGit(root, args, options = {}) {
 
 async function gitStatus(root) {
   const { root: rootResolved } = resolveInsideRoot(root, '');
-  const out = await runGit(rootResolved, ['status', '--porcelain', '--untracked-files=normal']);
-  return out.split(/\r?\n/).filter(Boolean).map((line) => ({
-    status: line.slice(0, 2),
-    path: line.slice(3).trim(),
-  })).filter((item) => item.path);
+  // -z keeps filenames byte-exact (spaces, quotes, Unicode) and reports a
+  // rename as two NUL-separated paths: the new path, then the original.
+  const out = await runGit(rootResolved, ['status', '--porcelain', '-z', '--untracked-files=normal']);
+  const fields = out.split('\0');
+  const items = [];
+  for (let i = 0; i < fields.length; i += 1) {
+    const field = fields[i];
+    if (!field || field.length < 4) continue;
+    const status = field.slice(0, 2);
+    const itemPath = field.slice(3);
+    if (!itemPath) continue;
+    const item = { status, path: itemPath };
+    if (status.includes('R') || status.includes('C')) {
+      const original = fields[i + 1];
+      if (original) { item.origPath = original; i += 1; }
+    }
+    items.push(item);
+  }
+  return items;
+}
+
+async function gitLog(root, limit = 20) {
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  const count = Math.max(1, Math.min(100, Number(limit) || 20));
+  const out = await runGit(rootResolved, ['log', `--max-count=${count}`, '--pretty=format:%H%x1f%h%x1f%s%x1f%an%x1f%aI', '-z']);
+  return out.split('\0').filter(Boolean).map((record) => {
+    const [hash, short, subject, author, date] = record.split('\x1f');
+    return { hash: hash || '', short: short || '', subject: subject || '', author: author || '', date: date || '' };
+  }).filter((item) => item.hash);
+}
+
+async function gitShow(root, hash) {
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  const clean = String(hash || '').trim();
+  if (!/^[0-9a-fA-F]{7,64}$/.test(clean)) throw new Error('Mã commit không hợp lệ.');
+  const out = await runGit(rootResolved, ['show', '--stat', '--pretty=format:%H %s', clean]);
+  return { hash: clean, text: out.slice(0, DEFAULTS.diffMaxChars), truncated: out.length > DEFAULTS.diffMaxChars };
+}
+
+async function gitBlame(root, rel) {
+  const { root: rootResolved, rel: relOut } = resolveInsideRoot(root, rel);
+  const out = await runGit(rootResolved, ['blame', '--line-porcelain', '--', relOut]);
+  const lines = [];
+  let current = null;
+  for (const line of out.split(/\r?\n/)) {
+    if (/^[0-9a-f]{40} \d+ \d+/.test(line)) {
+      if (current) lines.push(current);
+      const parts = line.split(' ');
+      current = { hash: parts[0], line: Number(parts[2]) || lines.length + 1, author: '', text: '' };
+    } else if (current && line.startsWith('author ')) current.author = line.slice(7);
+    else if (current && line.startsWith('\t')) current.text = line.slice(1);
+  }
+  if (current) lines.push(current);
+  return { rel: relOut, lines: lines.slice(0, 2000) };
 }
 
 async function gitFileDiff(root, rel, options = {}) {
@@ -157,7 +283,20 @@ async function gitFileDiff(root, rel, options = {}) {
   return { rel: relOut, diff: combined.slice(0, maxChars), truncated: combined.length > maxChars };
 }
 
+const IMAGE_MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.bmp': 'image/bmp' };
+
+function readImageData(root, rel, options = {}) {
+  const maxBytes = options.imageMaxBytes || 5 * 1024 * 1024;
+  const { target, rel: relOut } = resolveInsideRoot(root, rel);
+  const mime = IMAGE_MIME[path.extname(target).toLowerCase()];
+  if (!mime) throw new Error('Định dạng ảnh chưa hỗ trợ xem trước.');
+  const stat = fs.statSync(target);
+  if (stat.size > maxBytes) throw new Error('Ảnh vượt quá giới hạn xem trước 5MB.');
+  return { rel: relOut, mime, size: stat.size, base64: fs.readFileSync(target).toString('base64') };
+}
+
 module.exports = {
   SKIP_DIRS, DEFAULTS,
-  resolveInsideRoot, listDir, readTextFile, searchText, gitStatus, gitFileDiff,
+  resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace, readImageData,
+  searchText, gitStatus, gitFileDiff, gitLog, gitShow, gitBlame,
 };

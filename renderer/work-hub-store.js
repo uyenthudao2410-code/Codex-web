@@ -11,7 +11,7 @@
  */
 (function (global) {
   const VERSION = 1;
-  const LIMITS = { prompts: 100, recipes: 100, basketPerProject: 200, notified: 500, pins: 100 };
+  const LIMITS = { prompts: 100, recipes: 100, basketPerProject: 200, notified: 500, pins: 100, drafts: 50, notesPerProject: 200, skills: 100, chatsPerProject: 100, sshTargets: 50, queuePerProject: 100, feedbackPerProject: 100, schedules: 50 };
 
   const TASK_TYPES = {
     bugfix: {
@@ -105,6 +105,16 @@
       baskets: {},
       notified: [],
       notificationsEnabled: true,
+      drafts: {},
+      patchApprovals: {},
+      queues: {},
+      feedback: {},
+      goalPreps: {},
+      schedules: [],
+      notes: {},
+      skills: [],
+      chats: {},
+      sshTargets: [],
     };
   }
 
@@ -129,7 +139,7 @@
       data.recipes = raw.recipes
         .filter((r) => r && typeof r.name === 'string' && typeof r.command === 'string')
         .slice(0, LIMITS.recipes)
-        .map((r) => ({ id: String(r.id || ''), name: r.name.slice(0, 120), command: r.command.slice(0, 2000), cwd: String(r.cwd || '').slice(0, 500) }));
+        .map((r) => ({ id: String(r.id || ''), name: r.name.slice(0, 120), command: r.command.slice(0, 2000), cwd: String(r.cwd || '').slice(0, 500), url: String(r.url || '').slice(0, 500) }));
     }
     if (raw.baskets && typeof raw.baskets === 'object') {
       for (const [key, items] of Object.entries(raw.baskets)) {
@@ -144,6 +154,66 @@
     }
     if (Array.isArray(raw.notified)) data.notified = raw.notified.filter((x) => typeof x === 'string').slice(-LIMITS.notified);
     data.notificationsEnabled = raw.notificationsEnabled !== false;
+    if (raw.drafts && typeof raw.drafts === 'object') {
+      for (const [key, value] of Object.entries(raw.drafts).slice(0, LIMITS.drafts)) {
+        if (value && typeof value.text === 'string') data.drafts[key] = { text: value.text.slice(0, 20000), updatedAt: Number(value.updatedAt) || 0 };
+      }
+    }
+    if (raw.patchApprovals && typeof raw.patchApprovals === 'object') {
+      for (const [key, value] of Object.entries(raw.patchApprovals).slice(0, 500)) {
+        if (value && typeof value.hash === 'string') data.patchApprovals[key] = { hash: value.hash.slice(0, 64), at: Number(value.at) || 0 };
+      }
+    }
+    if (raw.queues && typeof raw.queues === 'object') {
+      for (const [key, value] of Object.entries(raw.queues)) {
+        if (!value || !Array.isArray(value.items)) continue;
+        data.queues[key] = {
+          paused: Boolean(value.paused),
+          items: value.items.filter((i) => i && typeof i.title === 'string').slice(0, LIMITS.queuePerProject)
+            .map((i) => ({ id: String(i.id || ''), title: i.title.slice(0, 200), text: String(i.text || '').slice(0, 20000), status: ['queued', 'running', 'done', 'skipped'].includes(i.status) ? i.status : 'queued', createdAt: Number(i.createdAt) || 0 })),
+        };
+      }
+    }
+    if (raw.feedback && typeof raw.feedback === 'object') {
+      for (const [key, items] of Object.entries(raw.feedback)) {
+        if (!Array.isArray(items)) continue;
+        data.feedback[key] = items.filter((i) => i && typeof i.text === 'string').slice(-LIMITS.feedbackPerProject)
+          .map((i) => ({ id: String(i.id || ''), text: i.text.slice(0, 4000), state: ['saved', 'copied', 'acknowledged'].includes(i.state) ? i.state : 'saved', at: Number(i.at) || 0 }));
+      }
+    }
+    if (raw.goalPreps && typeof raw.goalPreps === 'object') {
+      for (const [key, value] of Object.entries(raw.goalPreps)) {
+        if (value && typeof value.criteria === 'string') {
+          data.goalPreps[key] = { criteria: value.criteria.slice(0, 4000), maxTurns: Math.max(1, Math.min(50, Number(value.maxTurns) || 5)), maxMinutes: Math.max(1, Math.min(1440, Number(value.maxMinutes) || 60)), updatedAt: Number(value.updatedAt) || 0 };
+        }
+      }
+    }
+    if (Array.isArray(raw.schedules)) {
+      data.schedules = raw.schedules.filter((s) => s && typeof s.name === 'string' && typeof s.recipeId === 'string').slice(0, LIMITS.schedules)
+        .map((s) => ({ id: String(s.id || ''), name: s.name.slice(0, 120), recipeId: s.recipeId, intervalHours: Math.max(0.25, Math.min(24 * 30, Number(s.intervalHours) || 24)), enabled: s.enabled !== false, lastRunAt: Number(s.lastRunAt) || 0, createdAt: Number(s.createdAt) || 0 }));
+    }
+    if (raw.notes && typeof raw.notes === 'object') {
+      for (const [key, items] of Object.entries(raw.notes)) {
+        if (!Array.isArray(items)) continue;
+        data.notes[key] = items.filter((n) => n && typeof n.title === 'string').slice(0, LIMITS.notesPerProject)
+          .map((n) => ({ id: String(n.id || ''), title: n.title.slice(0, 200), body: String(n.body || '').slice(0, 8000), pinned: Boolean(n.pinned), updatedAt: Number(n.updatedAt) || 0 }));
+      }
+    }
+    if (Array.isArray(raw.skills)) {
+      data.skills = raw.skills.filter((s) => s && typeof s.name === 'string' && typeof s.content === 'string').slice(0, LIMITS.skills)
+        .map((s) => ({ id: String(s.id || ''), name: s.name.slice(0, 120), content: s.content.slice(0, 20000), source: String(s.source || 'local').slice(0, 500), projects: Array.isArray(s.projects) ? s.projects.filter((p) => typeof p === 'string').slice(0, 100) : [], updatedAt: Number(s.updatedAt) || 0 }));
+    }
+    if (raw.chats && typeof raw.chats === 'object') {
+      for (const [key, items] of Object.entries(raw.chats)) {
+        if (!Array.isArray(items)) continue;
+        data.chats[key] = items.filter((c) => c && typeof c.label === 'string').slice(0, LIMITS.chatsPerProject)
+          .map((c) => ({ id: String(c.id || ''), label: c.label.slice(0, 200), url: String(c.url || '').slice(0, 1000), note: String(c.note || '').slice(0, 1000), pinned: Boolean(c.pinned), updatedAt: Number(c.updatedAt) || 0 }));
+      }
+    }
+    if (Array.isArray(raw.sshTargets)) {
+      data.sshTargets = raw.sshTargets.filter((t) => t && typeof t.name === 'string' && typeof t.host === 'string').slice(0, LIMITS.sshTargets)
+        .map((t) => ({ id: String(t.id || ''), name: t.name.slice(0, 120), host: t.host.slice(0, 255), user: String(t.user || '').slice(0, 80), port: Math.max(1, Math.min(65535, Number(t.port) || 22)), remoteDir: String(t.remoteDir || '').slice(0, 500) }));
+    }
     return data;
   }
 
@@ -244,16 +314,17 @@
 
       // ---- F20 saved recipes ----
       listRecipes() { return data.recipes.slice(); },
-      upsertRecipe({ id, name, command, cwd }) {
+      upsertRecipe({ id, name, command, cwd, url }) {
         const cleanName = String(name || '').trim();
         const cleanCommand = String(command || '').trim();
         if (!cleanName) throw new Error('Tên lệnh không được trống.');
         if (!cleanCommand) throw new Error('Lệnh không được trống.');
+        const cleanUrl = String(url || '').trim().slice(0, 500);
         const existing = id ? data.recipes.find((r) => r.id === id) : null;
-        if (existing) { existing.name = cleanName.slice(0, 120); existing.command = cleanCommand.slice(0, 2000); existing.cwd = String(cwd || '').slice(0, 500); }
+        if (existing) { existing.name = cleanName.slice(0, 120); existing.command = cleanCommand.slice(0, 2000); existing.cwd = String(cwd || '').slice(0, 500); existing.url = cleanUrl; }
         else {
           if (data.recipes.length >= LIMITS.recipes) throw new Error('Danh sách lệnh đã lưu đã đầy.');
-          data.recipes.push({ id: nextId('recipe'), name: cleanName.slice(0, 120), command: cleanCommand.slice(0, 2000), cwd: String(cwd || '').slice(0, 500) });
+          data.recipes.push({ id: nextId('recipe'), name: cleanName.slice(0, 120), command: cleanCommand.slice(0, 2000), cwd: String(cwd || '').slice(0, 500), url: cleanUrl });
         }
         persist();
         return existing || data.recipes[data.recipes.length - 1];
@@ -272,6 +343,260 @@
         persist();
         return true;
       },
+      hasNotified(eventId) { return data.notified.includes(String(eventId || '').trim()); },
+
+      // ---- F02 per-project drafts ----
+      getDraft(workspace) { return data.drafts[workspaceKeyOf(workspace)] || null; },
+      saveDraft(workspace, text) {
+        const key = workspaceKeyOf(workspace);
+        if (!key) throw new Error('Chưa chọn dự án.');
+        const clean = String(text || '').slice(0, 20000);
+        if (!clean.trim()) { delete data.drafts[key]; persist(); return null; }
+        if (!data.drafts[key] && Object.keys(data.drafts).length >= LIMITS.drafts) throw new Error('Kho nháp đã đầy.');
+        data.drafts[key] = { text: clean, updatedAt: Date.now() };
+        persist();
+        return data.drafts[key];
+      },
+      clearDraft(workspace) { delete data.drafts[workspaceKeyOf(workspace)]; persist(); },
+
+      // ---- F10 patch approvals bound to the exact diff content ----
+      approvePatch(rel, diffHash) {
+        const key = String(rel || '').replace(/\\/g, '/');
+        if (!key || !diffHash) throw new Error('Thiếu tệp hoặc phiên bản diff để duyệt.');
+        data.patchApprovals[key] = { hash: String(diffHash), at: Date.now() };
+        persist();
+        return data.patchApprovals[key];
+      },
+      patchApproval(rel) { return data.patchApprovals[String(rel || '').replace(/\\/g, '/')] || null; },
+      isPatchApproved(rel, diffHash) {
+        const approval = this.patchApproval(rel);
+        return Boolean(approval && diffHash && approval.hash === diffHash);
+      },
+      revokePatchApproval(rel) { delete data.patchApprovals[String(rel || '').replace(/\\/g, '/')]; persist(); },
+
+      // ---- F15 bounded work queue per project ----
+      queueFor(workspace) {
+        const queue = data.queues[workspaceKeyOf(workspace)];
+        return queue ? { paused: queue.paused, items: queue.items.slice() } : { paused: false, items: [] };
+      },
+      enqueue(workspace, { title, text }) {
+        const key = workspaceKeyOf(workspace);
+        if (!key) throw new Error('Chưa chọn dự án.');
+        const cleanTitle = String(title || '').trim();
+        if (!cleanTitle) throw new Error('Tên việc trong hàng đợi không được trống.');
+        const queue = data.queues[key] || (data.queues[key] = { paused: false, items: [] });
+        if (queue.items.length >= LIMITS.queuePerProject) throw new Error('Hàng đợi đã đầy.');
+        const item = { id: nextId('queue'), title: cleanTitle.slice(0, 200), text: String(text || '').slice(0, 20000), status: 'queued', createdAt: Date.now() };
+        queue.items.push(item);
+        persist();
+        return item;
+      },
+      moveQueueItem(workspace, id, direction) {
+        const queue = data.queues[workspaceKeyOf(workspace)];
+        if (!queue) return;
+        const index = queue.items.findIndex((i) => i.id === id);
+        const target = index + (direction < 0 ? -1 : 1);
+        if (index < 0 || target < 0 || target >= queue.items.length) return;
+        [queue.items[index], queue.items[target]] = [queue.items[target], queue.items[index]];
+        persist();
+      },
+      setQueueItemStatus(workspace, id, status) {
+        const queue = data.queues[workspaceKeyOf(workspace)];
+        const item = queue?.items.find((i) => i.id === id);
+        if (item && ['queued', 'running', 'done', 'skipped'].includes(status)) { item.status = status; persist(); }
+      },
+      removeQueueItem(workspace, id) {
+        const queue = data.queues[workspaceKeyOf(workspace)];
+        if (queue) { queue.items = queue.items.filter((i) => i.id !== id); persist(); }
+      },
+      setQueuePaused(workspace, paused) {
+        const key = workspaceKeyOf(workspace);
+        const queue = data.queues[key] || (data.queues[key] = { paused: false, items: [] });
+        queue.paused = Boolean(paused);
+        persist();
+      },
+      nextQueuedItem(workspace) {
+        const queue = data.queues[workspaceKeyOf(workspace)];
+        if (!queue || queue.paused) return null;
+        return queue.items.find((i) => i.status === 'queued') || null;
+      },
+
+      // ---- F18 steering notes with saved/copied/acknowledged states ----
+      listFeedback(workspace) { return (data.feedback[workspaceKeyOf(workspace)] || []).slice(); },
+      addFeedback(workspace, text) {
+        const key = workspaceKeyOf(workspace);
+        if (!key) throw new Error('Chưa chọn dự án.');
+        const clean = String(text || '').trim();
+        if (!clean) throw new Error('Nội dung điều chỉnh không được trống.');
+        const items = data.feedback[key] || (data.feedback[key] = []);
+        const item = { id: nextId('feedback'), text: clean.slice(0, 4000), state: 'saved', at: Date.now() };
+        items.push(item);
+        if (items.length > LIMITS.feedbackPerProject) data.feedback[key] = items.slice(-LIMITS.feedbackPerProject);
+        persist();
+        return item;
+      },
+      setFeedbackState(workspace, id, state) {
+        const item = (data.feedback[workspaceKeyOf(workspace)] || []).find((i) => i.id === id);
+        if (item && ['saved', 'copied', 'acknowledged'].includes(state)) { item.state = state; persist(); }
+      },
+
+      // ---- F23 bounded goal preparation (preparation only, no loop) ----
+      goalPrepFor(workspace) { return data.goalPreps[workspaceKeyOf(workspace)] || null; },
+      setGoalPrep(workspace, { criteria, maxTurns, maxMinutes }) {
+        const key = workspaceKeyOf(workspace);
+        if (!key) throw new Error('Chưa chọn dự án.');
+        const clean = String(criteria || '').trim();
+        if (!clean) throw new Error('Tiêu chí mục tiêu không được trống.');
+        data.goalPreps[key] = {
+          criteria: clean.slice(0, 4000),
+          maxTurns: Math.max(1, Math.min(50, Number(maxTurns) || 5)),
+          maxMinutes: Math.max(1, Math.min(1440, Number(maxMinutes) || 60)),
+          updatedAt: Date.now(),
+        };
+        persist();
+        return data.goalPreps[key];
+      },
+      clearGoalPrep(workspace) { delete data.goalPreps[workspaceKeyOf(workspace)]; persist(); },
+
+      // ---- F24 schedules for saved recipes (evaluated while the app runs) ----
+      listSchedules() { return data.schedules.slice(); },
+      upsertSchedule({ id, name, recipeId, intervalHours, enabled }) {
+        const cleanName = String(name || '').trim();
+        if (!cleanName) throw new Error('Tên lịch không được trống.');
+        if (!data.recipes.some((r) => r.id === recipeId)) throw new Error('Lịch phải gắn với một lệnh đã lưu.');
+        const existing = id ? data.schedules.find((s) => s.id === id) : null;
+        if (existing) {
+          existing.name = cleanName.slice(0, 120); existing.recipeId = recipeId;
+          existing.intervalHours = Math.max(0.25, Math.min(24 * 30, Number(intervalHours) || 24));
+          existing.enabled = enabled !== false;
+        } else {
+          if (data.schedules.length >= LIMITS.schedules) throw new Error('Danh sách lịch đã đầy.');
+          data.schedules.push({ id: nextId('schedule'), name: cleanName.slice(0, 120), recipeId, intervalHours: Math.max(0.25, Math.min(24 * 30, Number(intervalHours) || 24)), enabled: enabled !== false, lastRunAt: 0, createdAt: Date.now() });
+        }
+        persist();
+        return existing || data.schedules[data.schedules.length - 1];
+      },
+      removeSchedule(id) { data.schedules = data.schedules.filter((s) => s.id !== id); persist(); },
+      markScheduleRun(id, at = Date.now()) {
+        const schedule = data.schedules.find((s) => s.id === id);
+        if (schedule) { schedule.lastRunAt = at; persist(); }
+      },
+      dueSchedules(now = Date.now()) {
+        return data.schedules.filter((s) => s.enabled && now - (s.lastRunAt || s.createdAt || 0) >= s.intervalHours * 3600 * 1000);
+      },
+      nextRunAt(schedule) {
+        if (!schedule) return null;
+        return (schedule.lastRunAt || schedule.createdAt || 0) + schedule.intervalHours * 3600 * 1000;
+      },
+
+      // ---- F32 project notes ----
+      listNotes(workspace) {
+        return (data.notes[workspaceKeyOf(workspace)] || []).slice()
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+      },
+      upsertNote(workspace, { id, title, body, pinned }) {
+        const key = workspaceKeyOf(workspace);
+        if (!key) throw new Error('Chưa chọn dự án.');
+        const cleanTitle = String(title || '').trim();
+        if (!cleanTitle) throw new Error('Tiêu đề ghi chú không được trống.');
+        const items = data.notes[key] || (data.notes[key] = []);
+        const existing = id ? items.find((n) => n.id === id) : null;
+        if (existing) {
+          existing.title = cleanTitle.slice(0, 200); existing.body = String(body || '').slice(0, 8000);
+          existing.pinned = Boolean(pinned); existing.updatedAt = Date.now();
+        } else {
+          if (items.length >= LIMITS.notesPerProject) throw new Error('Ghi chú dự án đã đầy.');
+          items.push({ id: nextId('note'), title: cleanTitle.slice(0, 200), body: String(body || '').slice(0, 8000), pinned: Boolean(pinned), updatedAt: Date.now() });
+        }
+        persist();
+        return existing || items[items.length - 1];
+      },
+      removeNote(workspace, id) {
+        const key = workspaceKeyOf(workspace);
+        if (data.notes[key]) { data.notes[key] = data.notes[key].filter((n) => n.id !== id); persist(); }
+      },
+
+      // ---- F34 skills library (instructions only, per-project enable) ----
+      listSkills() { return data.skills.slice(); },
+      upsertSkill({ id, name, content, source }) {
+        const cleanName = String(name || '').trim();
+        const cleanContent = String(content || '');
+        if (!cleanName) throw new Error('Tên skill không được trống.');
+        if (!cleanContent.trim()) throw new Error('Nội dung hướng dẫn skill không được trống.');
+        const existing = id ? data.skills.find((s) => s.id === id) : null;
+        if (existing) {
+          existing.name = cleanName.slice(0, 120); existing.content = cleanContent.slice(0, 20000);
+          existing.source = String(source || 'local').slice(0, 500); existing.updatedAt = Date.now();
+        } else {
+          if (data.skills.length >= LIMITS.skills) throw new Error('Thư viện skills đã đầy.');
+          data.skills.push({ id: nextId('skill'), name: cleanName.slice(0, 120), content: cleanContent.slice(0, 20000), source: String(source || 'local').slice(0, 500), projects: [], updatedAt: Date.now() });
+        }
+        persist();
+        return existing || data.skills[data.skills.length - 1];
+      },
+      removeSkill(id) { data.skills = data.skills.filter((s) => s.id !== id); persist(); },
+      setSkillForProject(id, workspace, enabled) {
+        const skill = data.skills.find((s) => s.id === id);
+        if (!skill) return;
+        const key = workspaceKeyOf(workspace);
+        skill.projects = enabled ? [...new Set([...skill.projects, key])] : skill.projects.filter((p) => p !== key);
+        persist();
+      },
+      skillsForProject(workspace) {
+        const key = workspaceKeyOf(workspace);
+        return data.skills.filter((s) => s.projects.includes(key));
+      },
+
+      // ---- F39 conversation registry (user-supplied labels/URLs only) ----
+      listChats(workspace) {
+        return (data.chats[workspaceKeyOf(workspace)] || []).slice()
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+      },
+      upsertChat(workspace, { id, label, url, note, pinned }) {
+        const key = workspaceKeyOf(workspace);
+        if (!key) throw new Error('Chưa chọn dự án.');
+        const cleanLabel = String(label || '').trim();
+        if (!cleanLabel) throw new Error('Nhãn hội thoại không được trống.');
+        const items = data.chats[key] || (data.chats[key] = []);
+        const existing = id ? items.find((c) => c.id === id) : null;
+        if (existing) {
+          existing.label = cleanLabel.slice(0, 200); existing.url = String(url || '').slice(0, 1000);
+          existing.note = String(note || '').slice(0, 1000); existing.pinned = Boolean(pinned); existing.updatedAt = Date.now();
+        } else {
+          if (items.length >= LIMITS.chatsPerProject) throw new Error('Danh sách hội thoại đã đầy.');
+          items.push({ id: nextId('chat'), label: cleanLabel.slice(0, 200), url: String(url || '').slice(0, 1000), note: String(note || '').slice(0, 1000), pinned: Boolean(pinned), updatedAt: Date.now() });
+        }
+        persist();
+        return existing || items[items.length - 1];
+      },
+      removeChat(workspace, id) {
+        const key = workspaceKeyOf(workspace);
+        if (data.chats[key]) { data.chats[key] = data.chats[key].filter((c) => c.id !== id); persist(); }
+      },
+
+      // ---- F40 named SSH targets ----
+      listSshTargets() { return data.sshTargets.slice(); },
+      upsertSshTarget({ id, name, host, user, port, remoteDir }) {
+        const cleanName = String(name || '').trim();
+        const cleanHost = String(host || '').trim();
+        if (!cleanName) throw new Error('Tên máy SSH không được trống.');
+        if (!cleanHost) throw new Error('Host SSH không được trống.');
+        const existing = id ? data.sshTargets.find((t) => t.id === id) : null;
+        const value = {
+          name: cleanName.slice(0, 120), host: cleanHost.slice(0, 255),
+          user: String(user || '').trim().slice(0, 80),
+          port: Math.max(1, Math.min(65535, Number(port) || 22)),
+          remoteDir: String(remoteDir || '').trim().slice(0, 500),
+        };
+        if (existing) Object.assign(existing, value);
+        else {
+          if (data.sshTargets.length >= LIMITS.sshTargets) throw new Error('Danh sách máy SSH đã đầy.');
+          data.sshTargets.push({ id: nextId('ssh'), ...value });
+        }
+        persist();
+        return existing || data.sshTargets[data.sshTargets.length - 1];
+      },
+      removeSshTarget(id) { data.sshTargets = data.sshTargets.filter((t) => t.id !== id); persist(); },
     };
   }
 
@@ -296,37 +621,181 @@
   }
 
   // ---- F29 handoff preview ----
+  // Canonical task projection (task_snapshot_projection.py + main.js
+  // canonicalTaskStateFromControl): steps[].text, test_results[],
+  // modified_files[]. Legacy names are accepted as fallback only.
+  const DONE_STEP_STATUSES = ['done', 'completed', 'complete', 'passed', 'success'];
+  function taskSteps(task) { return Array.isArray(task?.steps) ? task.steps : []; }
+  function stepText(step) { return String(step?.text || step?.title || step?.name || step?.step || ''); }
+  function taskTests(task) {
+    if (Array.isArray(task?.test_results)) return task.test_results;
+    return Array.isArray(task?.tests) ? task.tests : [];
+  }
+  function testFailed(test) {
+    const status = String(test?.status || '').toLowerCase();
+    if (['failed', 'fail', 'error'].includes(status)) return true;
+    return typeof test?.exit_code === 'number' && test.exit_code !== 0 && status !== 'passed';
+  }
+  function testLabel(test) { return String(test?.command || test?.name || test?.title || 'kiểm thử'); }
+  function taskFiles(task) {
+    const raw = Array.isArray(task?.modified_files) ? task.modified_files
+      : (Array.isArray(task?.files) ? task.files : (Array.isArray(task?.changed_files) ? task.changed_files : []));
+    return raw.map((f) => (typeof f === 'string' ? f : String(f?.path || f?.file || ''))).filter(Boolean);
+  }
+
   function handoffPreview(task) {
     if (!task || typeof task !== 'object') return null;
-    const steps = Array.isArray(task.steps) ? task.steps : [];
-    const done = steps.filter((s) => ['done', 'completed', 'complete', 'passed', 'success'].includes(String(s?.status || '').toLowerCase()));
-    const pending = steps.filter((s) => !['done', 'completed', 'complete', 'passed', 'success'].includes(String(s?.status || '').toLowerCase()));
-    const tests = Array.isArray(task.tests) ? task.tests : [];
-    const failedTests = tests.filter((t) => ['failed', 'fail', 'error'].includes(String(t?.status || '').toLowerCase()));
-    const files = Array.isArray(task.files) ? task.files : (Array.isArray(task.changed_files) ? task.changed_files : []);
+    const steps = taskSteps(task);
+    const done = steps.filter((s) => DONE_STEP_STATUSES.includes(String(s?.status || '').toLowerCase()));
+    const pending = steps.filter((s) => !DONE_STEP_STATUSES.includes(String(s?.status || '').toLowerCase()));
+    const tests = taskTests(task);
+    const failedTests = tests.filter(testFailed);
+    const detailsAvailable = task.details_available !== false;
     return {
+      taskId: String(task.task_id || task.id || ''),
+      runId: String(task.orchestration?.run_id || task.run_id || ''),
+      detailsAvailable,
       objective: String(task.objective || task.title || ''),
       status: String(task.status || ''),
-      doneSteps: done.map((s) => String(s?.title || s?.name || s?.step || '')).filter(Boolean),
+      doneSteps: done.map(stepText).filter(Boolean),
       unverified: [
-        ...pending.map((s) => `Bước chưa xong: ${String(s?.title || s?.name || s?.step || '')}`),
-        ...failedTests.map((t) => `Test lỗi: ${String(t?.name || t?.title || '')}`),
-        ...(tests.length === 0 ? ['Chưa có kết quả kiểm thử nào được ghi nhận.'] : []),
+        ...pending.map((s) => `Bước chưa xong: ${stepText(s)}`),
+        ...failedTests.map((t) => `Test lỗi: ${testLabel(t)}`),
+        ...(detailsAvailable && tests.length === 0 ? ['Chưa có kết quả kiểm thử nào được ghi nhận.'] : []),
       ].filter(Boolean),
       nextStep: String(task.next_step || task.nextStep || ''),
       currentStep: String(task.current_step || task.currentStep || ''),
-      files: files.map((f) => (typeof f === 'string' ? f : String(f?.path || f?.file || ''))).filter(Boolean),
+      files: taskFiles(task),
     };
   }
 
   function formatHandoffText(preview) {
     if (!preview) return '';
-    const lines = [`Mục tiêu: ${preview.objective || '—'}`];
+    const lines = [];
+    if (!preview.detailsAvailable) {
+      lines.push('Chưa lấy được chi tiết task (details_available=false) — dưới đây chỉ có mục tiêu và trạng thái tổng, không suy ra test/tệp.');
+    }
+    lines.push(`Mục tiêu: ${preview.objective || '—'}`);
     lines.push(`Đã làm: ${preview.doneSteps.length ? preview.doneSteps.join('; ') : 'chưa ghi nhận bước hoàn thành'}`);
     lines.push(`Chưa kiểm chứng: ${preview.unverified.length ? preview.unverified.join('; ') : 'không có'}`);
     lines.push(`Bước tiếp theo: ${preview.nextStep || preview.currentStep || '—'}`);
     if (preview.files.length) lines.push(`Tệp liên quan: ${preview.files.join(', ')}`);
     return lines.join('\n');
+  }
+
+  // ---- small content hash (binds a local record to exact text, e.g. a diff) ----
+  function hashText(text) {
+    const source = String(text || '');
+    let h1 = 0x811c9dc5;
+    for (let i = 0; i < source.length; i += 1) {
+      h1 ^= source.charCodeAt(i);
+      h1 = Math.imul(h1, 0x01000193) >>> 0;
+    }
+    return `fnv1a-${h1.toString(16).padStart(8, '0')}-${source.length}`;
+  }
+
+  // ---- A1 context package with real content + version labels ----
+  // parts: [{ path, size, content|null, truncated, hash }]
+  function contextContentText(workspace, parts) {
+    const lines = [`Ngữ cảnh cho dự án ${workspace}:`];
+    for (const part of Array.isArray(parts) ? parts : []) {
+      lines.push('');
+      lines.push(`### ${part.path}${part.size != null ? ` (${part.size} bytes)` : ''}${part.hash ? ` · rev ${part.hash}` : ''}`);
+      if (part.content == null) lines.push('[Không đọc được nội dung — chỉ có đường dẫn]');
+      else {
+        lines.push(part.content);
+        if (part.truncated) lines.push('[Nội dung đã bị cắt theo hạn mức đọc]');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  // ---- F17 plan view over the canonical task projection ----
+  function planView(task) {
+    if (!task || typeof task !== 'object') return null;
+    const steps = taskSteps(task).map((s) => ({
+      text: stepText(s),
+      status: String(s?.status || 'pending'),
+      done: DONE_STEP_STATUSES.includes(String(s?.status || '').toLowerCase()),
+    }));
+    const tests = taskTests(task);
+    const blockers = [
+      ...(task.failure ? [`Lỗi: ${String(task.failure)}`] : []),
+      ...tests.filter(testFailed).map((t) => `Test lỗi: ${testLabel(t)}`),
+      ...steps.filter((s) => s.status === 'blocked' || s.status === 'failed').map((s) => `Bước ${s.status}: ${s.text}`),
+    ];
+    return {
+      objective: String(task.objective || ''),
+      status: String(task.status || ''),
+      steps,
+      doneCount: steps.filter((s) => s.done).length,
+      testsRun: tests.length,
+      testsFailed: tests.filter(testFailed).length,
+      blockers,
+      detailsAvailable: task.details_available !== false,
+    };
+  }
+
+  // ---- F23 bounded goal continuation request (text preparation only) ----
+  function goalRequestText(workspace, prep) {
+    if (!prep) return '';
+    return [
+      `Tiếp tục theo mục tiêu cho dự án ${workspace}.`,
+      `Tiêu chí hoàn thành: ${prep.criteria}`,
+      `Giới hạn: tối đa ${prep.maxTurns} lượt và ${prep.maxMinutes} phút; dừng ngay khi đạt tiêu chí, khi gặp blocker cần người dùng quyết định, hoặc khi hết giới hạn.`,
+      'Báo cáo rõ phần đã kiểm chứng và phần chưa kiểm chứng trước khi dừng.',
+    ].join('\n');
+  }
+
+  // ---- F30 task report export (Markdown/plain text from real task data) ----
+  function buildReportText(task, { generatedAt } = {}) {
+    const preview = handoffPreview(task);
+    if (!preview) return '';
+    const plan = planView(task);
+    const report = task?.last_build_report || null;
+    const lines = [
+      '# Báo cáo tác vụ',
+      '',
+      `- Mục tiêu: ${preview.objective || '—'}`,
+      `- Trạng thái: ${preview.status || '—'}`,
+      `- Task: ${preview.taskId || '—'}${preview.runId ? ` · Run: ${preview.runId}` : ''}`,
+      `- Thời điểm xuất: ${generatedAt || new Date().toISOString()}`,
+      '',
+      '## Đã làm',
+      ...(plan?.steps.length ? plan.steps.map((s) => `- [${s.done ? 'x' : ' '}] ${s.text} (${s.status})`) : ['- Chưa ghi nhận bước nào.']),
+      '',
+      '## Kiểm chứng',
+      ...(taskTests(task).length
+        ? taskTests(task).map((t) => `- ${testFailed(t) ? 'LỖI' : 'ĐẠT'} · ${testLabel(t)}${t.duration_ms != null ? ` · ${t.duration_ms} ms` : ''}`)
+        : ['- Chưa có kết quả kiểm thử được ghi nhận.']),
+      '',
+      '## Tệp đã thay đổi',
+      ...(preview.files.length ? preview.files.map((f) => `- ${f}`) : ['- Chưa ghi nhận tệp thay đổi.']),
+      '',
+      '## Sản phẩm build',
+      ...(report
+        ? [`- Trạng thái: ${report.overall_status || '—'} · ${report.project?.type || ''} v${report.project?.version || '?'}`,
+          ...(report.artifacts || []).map((a) => `- ${a.path}${a.sha256 ? ` · sha256 ${String(a.sha256).slice(0, 16)}…` : ''}`)]
+        : ['- Chưa có báo cáo build.']),
+      '',
+      '## Chưa kiểm chứng / còn lại',
+      ...(preview.unverified.length ? preview.unverified.map((u) => `- ${u}`) : ['- Không có mục chưa kiểm chứng được ghi nhận.']),
+      '',
+      `Bước tiếp theo: ${preview.nextStep || preview.currentStep || '—'}`,
+    ];
+    return lines.join('\n');
+  }
+
+  // ---- F40 ssh argv builder (no shell string interpolation) ----
+  function sshArgs(target, remoteCommand) {
+    if (!target || !target.host) throw new Error('Thiếu máy SSH đích.');
+    const destination = target.user ? `${target.user}@${target.host}` : String(target.host);
+    const args = ['-p', String(target.port || 22), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', destination];
+    const dir = String(target.remoteDir || '').trim();
+    const command = String(remoteCommand || '').trim();
+    const remote = dir ? `cd ${dir} && ${command}` : command;
+    if (remote) args.push(remote);
+    return args;
   }
 
   // ---- F31 unified search ----
@@ -354,6 +823,8 @@
     normalizeText, workspaceKeyOf, fillTemplate,
     emptyData, sanitizeData, createStore,
     buildRequest, handoffPreview, formatHandoffText, searchAll,
+    taskSteps, stepText, taskTests, testFailed, testLabel, taskFiles,
+    hashText, contextContentText, planView, goalRequestText, buildReportText, sshArgs,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

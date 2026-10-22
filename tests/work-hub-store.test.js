@@ -1,10 +1,15 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const storeApi = require('../renderer/work-hub-store');
 const {
   normalizeText, fillTemplate, createStore, buildRequest,
   handoffPreview, formatHandoffText, searchAll, TASK_TYPES,
-} = require('../renderer/work-hub-store');
+} = storeApi;
+const store = storeApi;
+function freshStore() { return createStore(memoryAdapter()); }
+const PROJECT_A = 'E:\\DEV\\Alpha';
+const PROJECT_B = 'E:\\DEV\\Beta';
 
 function memoryAdapter() {
   let saved = null;
@@ -125,4 +130,122 @@ test('F31 searchAll matches without diacritics and ranks title hits first', () =
   assert.equal(byDetail[0].kind, 'recipe');
   assert.deepEqual(searchAll(entries, ''), []);
   assert.deepEqual(searchAll(entries, 'khong-co-dau-nay'), []);
+});
+
+test('D0 handoff uses the canonical projection schema (steps.text/test_results/modified_files)', () => {
+  const task = {
+    task_id: 'task-1',
+    objective: 'Sửa đăng nhập',
+    status: 'in_progress',
+    details_available: true,
+    orchestration: { run_id: 'run-9' },
+    steps: [
+      { id: 's1', text: 'Đọc mã đăng nhập', status: 'completed' },
+      { id: 's2', text: 'Viết test', status: 'in_progress' },
+    ],
+    test_results: [
+      { command: 'npm test', status: 'failed', exit_code: 1, duration_ms: 42 },
+      { command: 'npm run lint', status: 'passed', exit_code: 0 },
+    ],
+    modified_files: [{ path: 'src/login.js', operation: 'update' }],
+    last_build_report: null,
+  };
+  const preview = store.handoffPreview(task);
+  assert.deepEqual(preview.doneSteps, ['Đọc mã đăng nhập']);
+  assert.ok(preview.unverified.some((u) => u.includes('Viết test')));
+  assert.ok(preview.unverified.some((u) => u.includes('npm test')));
+  assert.deepEqual(preview.files, ['src/login.js']);
+  assert.equal(preview.taskId, 'task-1');
+  assert.equal(preview.runId, 'run-9');
+  const report = store.buildReportText(task, { generatedAt: '2026-10-22T00:00:00Z' });
+  assert.match(report, /Đọc mã đăng nhập/);
+  assert.match(report, /LỖI · npm test/);
+});
+
+test('D0 handoff marks missing detail instead of inventing results', () => {
+  const preview = store.handoffPreview({ objective: 'X', status: 'running', details_available: false });
+  assert.equal(preview.detailsAvailable, false);
+  assert.ok(!preview.unverified.some((u) => u.includes('Chưa có kết quả kiểm thử')));
+  assert.match(store.formatHandoffText(preview), /details_available=false/);
+});
+
+test('F02 drafts are per project and survive a store reload', () => {
+  const s = freshStore();
+  s.saveDraft(PROJECT_A, 'yêu cầu đang soạn');
+  assert.equal(s.getDraft(PROJECT_A).text, 'yêu cầu đang soạn');
+  assert.equal(s.getDraft(PROJECT_B), null);
+  s.saveDraft(PROJECT_A, '');
+  assert.equal(s.getDraft(PROJECT_A), null);
+});
+
+test('F10 patch approval is bound to the exact diff hash', () => {
+  const s = freshStore();
+  const hash = store.hashText('diff --git a/x b/x\n+line');
+  assert.equal(s.isPatchApproved('src/x.js', hash), false);
+  s.approvePatch('src/x.js', hash);
+  assert.equal(s.isPatchApproved('src/x.js', hash), true);
+  assert.equal(s.isPatchApproved('src/x.js', store.hashText('diff khác')), false);
+});
+
+test('F15 queue orders, pauses and dispatches one item at a time', () => {
+  const s = freshStore();
+  const a = s.enqueue(PROJECT_A, { title: 'Việc 1', text: '...' });
+  const b = s.enqueue(PROJECT_A, { title: 'Việc 2', text: '...' });
+  s.moveQueueItem(PROJECT_A, b.id, -1);
+  assert.equal(s.nextQueuedItem(PROJECT_A).id, b.id);
+  s.setQueuePaused(PROJECT_A, true);
+  assert.equal(s.nextQueuedItem(PROJECT_A), null);
+  s.setQueuePaused(PROJECT_A, false);
+  s.setQueueItemStatus(PROJECT_A, b.id, 'running');
+  assert.equal(s.nextQueuedItem(PROJECT_A).id, a.id);
+});
+
+test('F18 feedback tracks saved/copied/acknowledged separately', () => {
+  const s = freshStore();
+  const item = s.addFeedback(PROJECT_A, 'chỉ sửa module A');
+  assert.equal(item.state, 'saved');
+  s.setFeedbackState(PROJECT_A, item.id, 'copied');
+  assert.equal(s.listFeedback(PROJECT_A)[0].state, 'copied');
+  s.setFeedbackState(PROJECT_A, item.id, 'acknowledged');
+  assert.equal(s.listFeedback(PROJECT_A)[0].state, 'acknowledged');
+});
+
+test('F23 goal prep builds a bounded continuation request', () => {
+  const s = freshStore();
+  s.setGoalPrep(PROJECT_A, { criteria: 'test đạt', maxTurns: 3, maxMinutes: 30 });
+  const text = store.goalRequestText(PROJECT_A, s.goalPrepFor(PROJECT_A));
+  assert.match(text, /tối đa 3 lượt và 30 phút/);
+  assert.match(text, /test đạt/);
+});
+
+test('F24 schedules become due by interval and record runs', () => {
+  const s = freshStore();
+  const recipe = s.upsertRecipe({ name: 'Test', command: 'npm test', cwd: PROJECT_A });
+  const schedule = s.upsertSchedule({ name: 'Test hằng ngày', recipeId: recipe.id, intervalHours: 24 });
+  const day = 24 * 3600 * 1000;
+  assert.equal(s.dueSchedules(schedule.createdAt + day + 1).length, 1);
+  s.markScheduleRun(schedule.id, schedule.createdAt + day + 1);
+  assert.equal(s.dueSchedules(schedule.createdAt + day + 2).length, 0);
+  assert.throws(() => s.upsertSchedule({ name: 'X', recipeId: 'missing' }), /lệnh đã lưu/);
+});
+
+test('F32 notes and F34 skills are per project', () => {
+  const s = freshStore();
+  s.upsertNote(PROJECT_A, { title: 'Quy ước', body: 'Dùng npm test', pinned: true });
+  assert.equal(s.listNotes(PROJECT_A).length, 1);
+  assert.equal(s.listNotes(PROJECT_B).length, 0);
+  const skill = s.upsertSkill({ name: 'Review', content: 'Các bước review' });
+  assert.equal(s.skillsForProject(PROJECT_A).length, 0);
+  s.setSkillForProject(skill.id, PROJECT_A, true);
+  assert.equal(s.skillsForProject(PROJECT_A).length, 1);
+});
+
+test('F39 chats and F40 ssh targets are stored with validation', () => {
+  const s = freshStore();
+  s.upsertChat(PROJECT_A, { label: 'Chat sửa lỗi', url: 'https://example.com/chat' });
+  assert.equal(s.listChats(PROJECT_A)[0].label, 'Chat sửa lỗi');
+  const target = s.upsertSshTarget({ name: 'svhome', host: '100.116.112.22', user: 'svhome', remoteDir: '~/Codex-web' });
+  assert.deepEqual(store.sshArgs(target, 'git status'), ['-p', '22', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', 'svhome@100.116.112.22', 'cd ~/Codex-web && git status']);
+  const pkg = store.contextContentText(PROJECT_A, [{ path: 'a.js', size: 3, content: 'x=1', truncated: true, hash: 'abc' }]);
+  assert.match(pkg, /đã bị cắt/);
 });

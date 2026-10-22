@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {
-  resolveInsideRoot, listDir, readTextFile, searchText, gitStatus, gitFileDiff,
+  resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace,
+  searchText, gitStatus, gitFileDiff, gitLog, gitBlame,
 } = require('../electron/services/workHubFiles');
 
 function fixture() {
@@ -47,25 +48,95 @@ test('F06 readTextFile returns text and flags binary files', () => {
   assert.equal(bin.content, '');
 });
 
-test('F06 searchText finds content lines and skips dependency dirs', () => {
+test('F06 searchText finds content lines and skips dependency dirs', async () => {
   const root = fixture();
-  const { results } = searchText(root, 'checkPassword');
+  const { results } = await searchText(root, 'checkPassword');
   assert.ok(results.some((r) => r.rel === 'src/login.js' && r.line === 2));
   assert.ok(!results.some((r) => r.rel.includes('node_modules')));
-  assert.throws(() => searchText(root, 'x'), /ít nhất 2 ký tự/);
+  await assert.rejects(() => searchText(root, 'x'), /ít nhất 2 ký tự/);
 });
 
-test('F09 git status and diff report working-tree changes', async () => {
+test('D0 containment: symlink inside the workspace cannot escape it', () => {
+  const root = fixture();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'workhub-outside-'));
+  fs.writeFileSync(path.join(outside, 'secret.txt'), 'top secret');
+  try {
+    fs.symlinkSync(outside, path.join(root, 'link-out'), 'junction');
+  } catch { return; /* symlink not permitted on this platform */ }
+  assert.throws(() => readTextFile(root, 'link-out/secret.txt'), /ngoài thư mục/);
+  assert.throws(() => listDir(root, 'link-out'), /ngoài thư mục/);
+});
+
+test('D0 readTextFile is bounded and returns a content hash', () => {
+  const root = fixture();
+  const big = path.join(root, 'big.txt');
+  fs.writeFileSync(big, 'a'.repeat(5000));
+  const out = readTextFile(root, 'big.txt', { readMaxBytes: 1024 });
+  assert.equal(out.truncated, true);
+  assert.equal(out.content.length, 1024);
+  assert.match(out.hash, /^[0-9a-f]{64}$/);
+});
+
+test('F08 writeTextFile honors the expected-hash guard', () => {
+  const root = fixture();
+  const before = readTextFile(root, 'src/login.js');
+  const written = writeTextFile(root, 'src/login.js', `${before.content}// edited\n`, before.hash);
+  assert.notEqual(written.hash, before.hash);
+  assert.throws(() => writeTextFile(root, 'src/login.js', 'stale write', before.hash), /đã thay đổi bên ngoài/);
+  assert.throws(() => writeTextFile(root, 'README.md', 'overwrite', null), /đã tồn tại/);
+  const created = writeTextFile(root, 'notes/new.txt', 'hello', null);
+  assert.equal(created.rel, 'notes/new.txt');
+});
+
+test('F07 copyIntoWorkspace renames on collision', () => {
+  const root = fixture();
+  const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'workhub-src-'));
+  const source = path.join(sourceDir, 'README.md');
+  fs.writeFileSync(source, 'imported');
+  const first = copyIntoWorkspace(root, source, 'imports');
+  assert.equal(first.rel, 'imports/README.md');
+  const second = copyIntoWorkspace(root, source, 'imports');
+  assert.equal(second.rel, 'imports/README (2).md');
+});
+
+function gitRepo() {
   const root = fixture();
   const { execFileSync } = require('node:child_process');
-  execFileSync('git', ['init', '-q'], { cwd: root });
-  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: root });
-  execFileSync('git', ['config', 'user.name', 'Test'], { cwd: root });
-  execFileSync('git', ['add', '.'], { cwd: root });
-  execFileSync('git', ['commit', '-qm', 'init'], { cwd: root });
+  const git = (...args) => execFileSync('git', args, { cwd: root });
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '.');
+  git('commit', '-qm', 'init');
+  return { root, git };
+}
+
+test('F09 git status and diff report working-tree changes', async () => {
+  const { root } = gitRepo();
   fs.appendFileSync(path.join(root, 'src', 'login.js'), '// changed\n');
   const status = await gitStatus(root);
   assert.ok(status.some((item) => item.path === 'src/login.js'));
   const { diff } = await gitFileDiff(root, 'src/login.js');
   assert.match(diff, /\+.. changed/);
+});
+
+test('D0 git status -z keeps renames, untracked and unicode names exact', async () => {
+  const { root, git } = gitRepo();
+  git('mv', 'src/login.js', 'src/login-renamed.js');
+  fs.writeFileSync(path.join(root, 'tệp mới.txt'), 'noi dung');
+  const status = await gitStatus(root);
+  const rename = status.find((item) => item.path === 'src/login-renamed.js');
+  assert.ok(rename, 'rename entry exists');
+  assert.equal(rename.origPath, 'src/login.js');
+  assert.ok(status.some((item) => item.path === 'tệp mới.txt' && item.status === '??'));
+});
+
+test('F25 gitLog and gitBlame read real history', async () => {
+  const { root } = gitRepo();
+  const log = await gitLog(root, 5);
+  assert.equal(log.length, 1);
+  assert.equal(log[0].subject, 'init');
+  const blame = await gitBlame(root, 'src/login.js');
+  assert.ok(blame.lines.length >= 3);
+  assert.equal(blame.lines[0].author, 'Test');
 });

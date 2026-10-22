@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "a8a5d24c50ec44ef97e9d532b803a5d7",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "bAIVIzjElCYA3t9XabdxS4DK",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 319,
+    "finished_at": "2026-10-22T08:50:26.504Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-22T08:50:26.012Z",
+  "updated_at": "2026-10-22T08:50:26.504Z",
+  "events": [
+    {
+      "time": "2026-10-22T08:50:26.012Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-22T08:50:26.337Z",
+      "event": "command_started",
+      "details": {
+        "command": "git",
+        "session_id": "bAIVIzjElCYA3t9XabdxS4DK"
+      }
+    },
+    {
+      "time": "2026-10-22T08:50:26.504Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git",
+        "status": "passed"
+      }
+    }
+  ]
+}

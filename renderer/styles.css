@@ -628,3 +628,6 @@ html,body{background:transparent!important}.manager-window-bar{position:fixed;z-
 .wh-search-box{width:min(640px,100%);max-height:70vh;overflow:auto}
 .wh-search-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);cursor:pointer}
 .wh-viewer{max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.wh-line{display:block}
+.wh-line-hit{background:rgba(250, 204, 21, .25);outline:1px solid rgba(250, 204, 21, .5)}
+.wh-artifact-img{max-width:100%;border:1px solid var(--border);border-radius:10px;margin-top:8px}
