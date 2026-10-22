@@ -14,7 +14,7 @@ function policyReuseFixture({ before, after = before } = {}) {
     api: { inspectControlPlaneExecPolicy: async () => {
       calls.push('inspect'); return { policy: calls.filter(value => value === 'inspect').length === 1 ? before : after, sandbox: { state: 'available' } };
     }, installControlPlaneExecPolicy: async () => { calls.push('install'); return { policy_sha256: after.policy_sha256 }; } },
-    isCentralExecutor: () => true, assertPackagedCentralSetup: () => {},
+    isCentralExecutor: () => true, isLocalExecution: () => false, assertPackagedCentralSetup: () => {},
     centralExecObservationKey: value => value.workspace_id + ':' + value.workspace_generation,
     unwrap: value => value, toast: () => {}, renderCentralExecutorMode: () => {},
     refreshSnapshot: async () => {}, controlPlaneExecSandboxReason: value => value || '',
@@ -74,6 +74,7 @@ test('setup refreshes file contract evidence after a long exec probe and refuses
       centralExecObservationKey: () => 'selected', refreshSnapshot: async () => {},
       refreshControlPlaneStandingFilePolicies: async () => { calls.push('refresh-file-contract'); fileEvidenceCurrent = freshAfterRefresh; },
       renderSetupExecution: () => {}, renderSetupState: () => {}, controlPlaneExecSandboxReason: () => '',
+      isLocalExecution: () => false,
       cancelSetupContinuation: message => { calls.push(message); context.state.setupContinuation = null; }
     };
     vm.runInNewContext(source.slice(source.indexOf('async function continueSetup('), source.indexOf('\nfunction renderSetupExecution(')), context);

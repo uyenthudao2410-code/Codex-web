@@ -96,6 +96,21 @@
     });
   }
 
+  function sanitizeDraft(value) {
+    const raw = typeof value === 'string' ? { text: value } : value;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const hasType = Object.prototype.hasOwnProperty.call(TASK_TYPES, raw.type);
+    const type = hasType ? raw.type : 'bugfix';
+    const fields = {};
+    for (const field of TASK_TYPES[type].fields) {
+      fields[field.key] = typeof raw.fields?.[field.key] === 'string' ? raw.fields[field.key].slice(0, 4000) : '';
+    }
+    const text = typeof raw.text === 'string' ? raw.text.slice(0, 20000) : '';
+    const promptId = typeof raw.promptId === 'string' ? raw.promptId.slice(0, 200) : '';
+    if (!text.trim() && !hasType && !promptId && !Object.values(fields).some((field) => field.trim())) return null;
+    return { text, type, fields, promptId, updatedAt: Number(raw.updatedAt) || 0 };
+  }
+
   function emptyData() {
     return {
       version: VERSION,
@@ -156,7 +171,8 @@
     data.notificationsEnabled = raw.notificationsEnabled !== false;
     if (raw.drafts && typeof raw.drafts === 'object') {
       for (const [key, value] of Object.entries(raw.drafts).slice(0, LIMITS.drafts)) {
-        if (value && typeof value.text === 'string') data.drafts[key] = { text: value.text.slice(0, 20000), updatedAt: Number(value.updatedAt) || 0 };
+        const draft = sanitizeDraft(value);
+        if (draft) data.drafts[key] = draft;
       }
     }
     if (raw.patchApprovals && typeof raw.patchApprovals === 'object') {
@@ -313,7 +329,15 @@
       },
 
       // ---- F20 saved recipes ----
-      listRecipes() { return data.recipes.slice(); },
+      listRecipes(workspace) {
+        if (workspace === undefined) return data.recipes.slice();
+        const key = workspaceKeyOf(workspace);
+        if (!key) return [];
+        return data.recipes.filter((recipe) => {
+          const cwd = workspaceKeyOf(recipe.cwd);
+          return !cwd || cwd === key || cwd.startsWith(`${key}/`);
+        });
+      },
       upsertRecipe({ id, name, command, cwd, url }) {
         const cleanName = String(name || '').trim();
         const cleanCommand = String(command || '').trim();
@@ -346,16 +370,21 @@
       hasNotified(eventId) { return data.notified.includes(String(eventId || '').trim()); },
 
       // ---- F02 per-project drafts ----
-      getDraft(workspace) { return data.drafts[workspaceKeyOf(workspace)] || null; },
-      saveDraft(workspace, text) {
+      getDraft(workspace) {
+        const draft = data.drafts[workspaceKeyOf(workspace)];
+        return draft ? { ...draft, fields: { ...draft.fields } } : null;
+      },
+      saveDraft(workspace, value) {
         const key = workspaceKeyOf(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
-        const clean = String(text || '').slice(0, 20000);
-        if (!clean.trim()) { delete data.drafts[key]; persist(); return null; }
+        const draft = sanitizeDraft(typeof value === 'string' && value.trim()
+          ? { ...data.drafts[key], text: value }
+          : value);
+        if (!draft) { delete data.drafts[key]; persist(); return null; }
         if (!data.drafts[key] && Object.keys(data.drafts).length >= LIMITS.drafts) throw new Error('Kho nháp đã đầy.');
-        data.drafts[key] = { text: clean, updatedAt: Date.now() };
+        data.drafts[key] = { ...draft, updatedAt: Date.now() };
         persist();
-        return data.drafts[key];
+        return { ...data.drafts[key], fields: { ...data.drafts[key].fields } };
       },
       clearDraft(workspace) { delete data.drafts[workspaceKeyOf(workspace)]; persist(); },
 

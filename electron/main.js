@@ -903,24 +903,32 @@ function registerIpc() {
   secureHandle('workspace:hub', () => invokeSafely(async () => { const current = settings.load(); return { activeWorkspace: current.workspace, recentWorkspaces: current.recentWorkspaces || [] }; }));
   // Work Hub (catalog 261022, F06/F09/F12): read-only file browsing, content
   // search and git views, strictly inside the active workspace.
-  const workHubRoot = () => {
+  const workHubRoot = (expectedWorkspace) => {
     const workspace = String(settings.load().workspace || '').trim();
     if (!workspace) throw new Error('Vui lòng chọn thư mục làm việc trước.');
-    return path.resolve(workspace);
+    const root = path.resolve(workspace);
+    if (expectedWorkspace !== undefined && expectedWorkspace !== null) {
+      const expected = String(expectedWorkspace).trim();
+      const normalize = (value) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+      if (!expected || normalize(expected) !== normalize(root)) {
+        throw new Error('Dự án đã thay đổi. Tải lại Work Hub trước khi thực hiện thao tác.');
+      }
+    }
+    return root;
   };
-  secureHandle('workhub:list', (_event, rel) => invokeSafely(async () => workHubFiles.listDir(workHubRoot(), rel)));
-  secureHandle('workhub:read', (_event, rel) => invokeSafely(async () => workHubFiles.readTextFile(workHubRoot(), rel)));
-  secureHandle('workhub:search', (_event, query) => invokeSafely(async () => workHubFiles.searchText(workHubRoot(), query)));
-  secureHandle('workhub:write', (_event, rel, content, expectedHash) => invokeSafely(async () => workHubFiles.writeTextFile(workHubRoot(), rel, content, expectedHash)));
-  secureHandle('workhub:copy-in', (_event, sourceAbsolute, destDirRel) => invokeSafely(async () => workHubFiles.copyIntoWorkspace(workHubRoot(), sourceAbsolute, destDirRel)));
-  secureHandle('workhub:git-status', () => invokeSafely(async () => workHubFiles.gitStatus(workHubRoot())));
-  secureHandle('workhub:git-diff', (_event, rel) => invokeSafely(async () => workHubFiles.gitFileDiff(workHubRoot(), rel)));
-  secureHandle('workhub:git-log', (_event, limit) => invokeSafely(async () => workHubFiles.gitLog(workHubRoot(), limit)));
-  secureHandle('workhub:git-show', (_event, hash) => invokeSafely(async () => workHubFiles.gitShow(workHubRoot(), hash)));
-  secureHandle('workhub:git-blame', (_event, rel) => invokeSafely(async () => workHubFiles.gitBlame(workHubRoot(), rel)));
-  secureHandle('workhub:read-image', (_event, rel) => invokeSafely(async () => workHubFiles.readImageData(workHubRoot(), rel)));
-  secureHandle('workhub:open-path', (_event, rel, reveal) => invokeSafely(async () => {
-    const { target } = workHubFiles.resolveInsideRoot(workHubRoot(), rel);
+  secureHandle('workhub:list', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.listDir(workHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:read', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readTextFile(workHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:search', (_event, query, expectedWorkspace) => invokeSafely(async () => workHubFiles.searchText(workHubRoot(expectedWorkspace), query)));
+  secureHandle('workhub:write', (_event, rel, content, expectedHash, expectedWorkspace) => invokeSafely(async () => workHubFiles.writeTextFile(workHubRoot(expectedWorkspace), rel, content, expectedHash)));
+  secureHandle('workhub:copy-in', (_event, sourceAbsolute, destDirRel, expectedWorkspace) => invokeSafely(async () => workHubFiles.copyIntoWorkspace(workHubRoot(expectedWorkspace), sourceAbsolute, destDirRel)));
+  secureHandle('workhub:git-status', (_event, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitStatus(workHubRoot(expectedWorkspace))));
+  secureHandle('workhub:git-diff', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitFileDiff(workHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:git-log', (_event, limit, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitLog(workHubRoot(expectedWorkspace), limit)));
+  secureHandle('workhub:git-show', (_event, hash, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitShow(workHubRoot(expectedWorkspace), hash)));
+  secureHandle('workhub:git-blame', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitBlame(workHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:read-image', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readImageData(workHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:open-path', (_event, rel, reveal, expectedWorkspace) => invokeSafely(async () => {
+    const { target } = workHubFiles.resolveInsideRoot(workHubRoot(expectedWorkspace), rel);
     if (reveal) { shell.showItemInFolder(target); return { opened: false, revealed: true }; }
     const failure = await shell.openPath(target);
     if (failure) throw new Error(failure);
@@ -929,9 +937,10 @@ function registerIpc() {
   // A3: recipes run through the runtime's own Job lifecycle (exec_command /
   // command_control), never through a second executor.
   secureHandle('workhub:job-run', (_event, payload) => invokeSafely(async () => {
+    const root = workHubRoot(payload?.expectedWorkspace);
     const command = String(payload?.command || '').trim();
     if (!command) throw new Error('Lệnh không được trống.');
-    const cwd = String(payload?.cwd || '').trim() || workHubRoot();
+    const cwd = String(payload?.cwd || '').trim() || root;
     return callMcpTool('exec_command', {
       cmd: command,
       cwd,
@@ -940,6 +949,20 @@ function registerIpc() {
       verbosity: 'full',
       principal_id: 'workhub',
     }, 30000);
+  }));
+  secureHandle('workhub:handoff-get', (_event, payload) => invokeSafely(async () => {
+    // A8: read the recorded handoff capsule for a run through the runtime's
+    // own task_control surface (handoff_action "get" is read-only).
+    const result = await callMcpTool('task_control', {
+      action: 'handoff',
+      handoff_action: 'get',
+      run_id: String(payload?.runId || ''),
+    }, 15000);
+    const structured = result?.structuredContent || result?.structured_content;
+    if (structured && typeof structured === 'object') return structured;
+    const text = result?.content?.find?.((item) => item?.type === 'text')?.text;
+    if (typeof text === 'string') { try { return JSON.parse(text); } catch { return { raw: text }; } }
+    return result && typeof result === 'object' ? result : { capsule: null };
   }));
   secureHandle('workhub:job-control', (_event, payload) => invokeSafely(async () => {
     const action = String(payload?.action || 'poll');

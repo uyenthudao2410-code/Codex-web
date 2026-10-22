@@ -12,17 +12,115 @@
   if (!S) return;
   const $ = (sel) => document.querySelector(sel);
 
+  let persistenceError = '';
   const adapter = {
     load() {
       try { const raw = localStorage.getItem('coding-tools-work-hub-v1'); return raw ? JSON.parse(raw) : null; }
       catch { return null; }
     },
     save(data) {
-      try { localStorage.setItem('coding-tools-work-hub-v1', JSON.stringify(data)); } catch { /* keep in-memory */ }
+      try { localStorage.setItem('coding-tools-work-hub-v1', JSON.stringify(data)); persistenceError = ''; }
+      catch { persistenceError = 'Không lưu được trên máy. Hãy sao chép yêu cầu trước khi đóng ứng dụng.'; setStatus(persistenceError, 'error'); }
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', gen: 0, job: null, pendingImports: [] };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context' };
+
+  function setStatus(message, kind = 'info') {
+    const box = $('#whStatus');
+    if (!box) return;
+    box.textContent = message;
+    box.dataset.kind = kind;
+    box.hidden = !message;
+  }
+
+  function activateTab(name, { focus = false } = {}) {
+    const tabs = Array.from(document.querySelectorAll('[data-wh-tab]'));
+    if (!tabs.some((tab) => tab.dataset.whTab === name)) return;
+    ui.activeTab = name;
+    for (const tab of tabs) {
+      const selected = tab.dataset.whTab === name;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.setAttribute('tabindex', selected ? '0' : '-1');
+      if (selected && focus) tab.focus();
+    }
+    for (const panel of document.querySelectorAll('[data-wh-panel]')) panel.hidden = panel.dataset.whPanel !== name;
+  }
+
+  function requestScope(name) {
+    const id = (ui.requests[name] || 0) + 1;
+    ui.requests[name] = id;
+    const gen = ui.gen;
+    const workspace = currentProject();
+    return { workspace, current: () => gen === ui.gen && workspace === currentProject() && id === ui.requests[name] };
+  }
+
+  function saveCurrentDraft(workspace = currentProject()) {
+    if (!workspace) return;
+    store.saveDraft(workspace, { text: $('#whPreview')?.value || '', type: ui.selectedType, fields: fieldValues(), promptId: ui.selectedPromptId });
+    renderDraftState();
+  }
+
+  const fileDrafts = new Map();
+  function fileDraftKey(workspace, rel) { return `${S.workspaceKeyOf(workspace)}\n${rel}`; }
+  function rememberFileEdit(workspace = currentProject()) {
+    const editor = $('#whEditor');
+    if (!editor || editor.hidden || !ui.viewerRel || editor.value === ui.viewerContent) return;
+    fileDrafts.set(fileDraftKey(workspace, ui.viewerRel), { content: editor.value, hash: ui.viewerHash });
+  }
+  function canLeaveFileEdit() {
+    if (ui.savingFile) { setStatus('Đang lưu tệp. Chờ xác nhận trước khi đổi tệp hoặc dự án.'); return false; }
+    const editor = $('#whEditor');
+    if (editor && !editor.hidden && editor.value !== ui.viewerContent) {
+      setStatus('Tệp có thay đổi chưa lưu. Chọn Lưu tệp hoặc Hủy sửa trước khi mở tệp hay chuyển dự án.', 'error');
+      editor.focus();
+      return false;
+    }
+    return true;
+  }
+
+  function resetProjectView() {
+    ui.gen += 1;
+    ui.dirRel = '';
+    ui.viewerRel = '';
+    ui.viewerHash = '';
+    ui.viewerContent = null;
+    ui.viewerEditable = false;
+    ui.diffRel = '';
+    ui.diffText = '';
+    ui.taskPayload = null;
+    ui.pendingImports = [];
+    ui.importResults = [];
+    for (const id of ['whCodeResults', 'whGitList', 'whGitLog', 'whTaskFiles', 'whArtifactImage', 'whCapsuleView', 'whImportList', 'whPatchApproval']) $(`#${id}`)?.replaceChildren();
+    for (const id of ['whCodeQuery', 'whEditor', 'whPreview', 'whFilePath', 'whFileSize', 'whImportDest', 'whSnippetName', 'whSnippetBody', 'whFeedbackText', 'whQueueTitle', 'whNoteTitle', 'whNoteBody', 'whChatLabel', 'whChatUrl']) { const input = $(`#${id}`); if (input) input.value = ''; }
+    for (const id of ['whViewerAddBasket', 'whEditFile', 'whSaveFile', 'whBlame']) { const button = $(`#${id}`); if (button) button.disabled = true; }
+    if ($('#whEditor')) $('#whEditor').hidden = true;
+    if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = true;
+    if ($('#whViewer')) { $('#whViewer').hidden = false; $('#whViewer').textContent = 'Chọn một tệp để xem nội dung.'; }
+    if ($('#whViewerTitle')) $('#whViewerTitle').textContent = 'Chưa chọn tệp';
+    if ($('#whDiff')) $('#whDiff').textContent = 'Chọn một tệp để xem thay đổi.';
+    setStatus('');
+  }
+
+  function renderWorkspace() {
+    const project = currentProject();
+    if ($('#whWorkspaceName')) $('#whWorkspaceName').textContent = project ? store.projectLabel(project) : 'Chưa chọn dự án';
+    if ($('#whWorkspacePath')) $('#whWorkspacePath').textContent = project || 'Chọn thư mục để bắt đầu.';
+  }
+
+  async function switchProject(project) {
+    if (S.workspaceKeyOf(project) === S.workspaceKeyOf(currentProject())) return true;
+    if (!canLeaveFileEdit()) return false;
+    saveCurrentDraft();
+    try {
+      const result = await window.mcpAssistant.switchWorkspace(project);
+      if (result?.ok === false) throw new Error(result.error?.message || result.error || 'Không chuyển được dự án.');
+      await refresh();
+      const menu = document.querySelector('.wh-project-menu');
+      if (menu) menu.open = false;
+      return true;
+    } catch (error) { setStatus(error.message || 'Không chuyển được dự án. Cấu hình cũ vẫn đang được dùng.', 'error'); return false; }
+  }
 
   function currentProject() {
     const settings = ui.snapshot?.settings || {};
@@ -73,10 +171,7 @@
       if (isCurrent) row.appendChild(el('span', 'soft-badge', 'Đang dùng'));
       else {
         const useBtn = el('button', 'secondary-button wh-small', 'Chuyển đến');
-        useBtn.addEventListener('click', async () => {
-          const switched = unwrap(await window.mcpAssistant.switchWorkspace(project).catch(() => null));
-          if (switched) { ui.snapshot = switched?.data || switched; ui.dirRel = ''; refresh(); }
-        });
+        useBtn.addEventListener('click', () => switchProject(project));
         row.appendChild(useBtn);
       }
       const pinBtn = el('button', 'secondary-button wh-small', pin.pinned ? 'Bỏ ghim' : 'Ghim');
@@ -84,7 +179,7 @@
       const aliasBtn = el('button', 'secondary-button wh-small', 'Đặt tên');
       aliasBtn.addEventListener('click', () => {
         const alias = window.prompt('Tên dễ nhớ cho dự án:', pin.alias || store.projectLabel(project));
-        if (alias !== null) { store.setPin(project, { alias }); renderProjects(); }
+        if (alias !== null) { store.setPin(project, { alias }); renderProjects(); renderWorkspace(); }
       });
       row.append(pinBtn, aliasBtn);
       box.appendChild(row);
@@ -107,7 +202,7 @@
     const selected = prompts.find((p) => p.id === ui.selectedPromptId);
     if (selected) { $('#whPromptName').value = selected.name; $('#whPromptBody').value = selected.body; }
   }
-  function renderTypeFields() {
+  function renderTypeFields(values = {}) {
     const box = $('#whTypeFields');
     if (!box) return;
     box.replaceChildren();
@@ -118,6 +213,10 @@
       const input = document.createElement('input');
       input.id = `whField-${field.key}`;
       input.placeholder = field.label;
+      input.value = values[field.key] || '';
+      input.required = Boolean(field.required);
+      input.maxLength = 4000;
+      input.addEventListener('input', () => saveCurrentDraft());
       label.appendChild(input);
       box.appendChild(label);
     }
@@ -141,7 +240,9 @@
         project: currentProject(),
         filesText: store.contextPackageText(currentProject()),
       });
-    } catch (error) { preview.value = `Chưa đủ thông tin: ${error.message}`; }
+      saveCurrentDraft();
+      setStatus('Yêu cầu đã sẵn sàng. Bạn có thể chỉnh sửa rồi sao chép.');
+    } catch (error) { setStatus(`Chưa đủ thông tin: ${error.message}`, 'error'); }
   }
   function buildFromPrompt() {
     const prompt = store.listPrompts().find((p) => p.id === ui.selectedPromptId);
@@ -151,6 +252,8 @@
       request: firstFieldValue(),
       files: store.contextPackageText(currentProject()) || '(chưa chọn tệp)',
     });
+    saveCurrentDraft();
+    setStatus('Đã tạo yêu cầu từ mẫu đã chọn.');
   }
 
   // ---------- F05 basket ----------
@@ -161,6 +264,7 @@
     if (!box) return;
     box.replaceChildren();
     const files = store.basketFor(currentProject());
+    if ($('#whBasketCount')) $('#whBasketCount').textContent = String(files.length);
     if (!files.length) { box.appendChild(el('span', 'task-muted', 'Giỏ trống. Thêm đường dẫn tệp hoặc nhập từ tác vụ hiện tại.')); return; }
     for (const file of files) {
       const row = el('div', 'wh-row');
@@ -180,12 +284,10 @@
     const box = $('#whRecipeList');
     if (!box) return;
     box.replaceChildren();
-    const recipes = store.listRecipes();
+    const recipes = store.listRecipes(currentProject());
     if (!recipes.length) { box.appendChild(el('span', 'task-muted', 'Chưa có lệnh nào được lưu.')); return; }
-    const project = currentProject();
-    const keyOf = (p) => S.workspaceKeyOf(p || '');
-    const scoped = recipes.filter((r) => !r.cwd || keyOf(r.cwd) === keyOf(project));
-    const others = recipes.filter((r) => r.cwd && keyOf(r.cwd) !== keyOf(project));
+    const scoped = recipes;
+    const others = [];
     const renderOne = (recipe, inProject) => {
       const row = el('div', 'wh-row');
       const main = el('div', 'wh-row-main');
@@ -193,7 +295,7 @@
       main.appendChild(el('small', '', recipe.command + (recipe.cwd ? `  ·  ${recipe.cwd}` : '')));
       row.appendChild(main);
       const run = el('button', 'secondary-button wh-small', 'Chạy (Job)');
-      run.addEventListener('click', () => runRecipeAsJob(recipe));
+      run.addEventListener('click', () => { activateTab('verify'); return runRecipeAsJob(recipe); });
       const copy = el('button', 'secondary-button wh-small', 'Sao chép lệnh');
       copy.addEventListener('click', () => copyText(recipe.command, copy));
       row.append(run, copy);
@@ -223,12 +325,18 @@
     if (!box) return;
     box.replaceChildren();
     const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+    if ($('#whCurrentTaskTitle')) $('#whCurrentTaskTitle').textContent = task?.objective || 'Chưa có công việc hiện tại';
+    const statusLabels = { running: 'Đang chạy', in_progress: 'Đang thực hiện', completed: 'Hoàn tất', done: 'Hoàn tất', failed: 'Có lỗi', paused: 'Tạm dừng', waiting_approval: 'Chờ bạn duyệt', blocked: 'Đang bị chặn' };
+    if ($('#whCurrentTaskState')) $('#whCurrentTaskState').textContent = task ? (statusLabels[task.status] || task.status || 'Chưa rõ trạng thái') : 'Bắt đầu bằng một yêu cầu bên dưới.';
+    if ($('#whCurrentTask')) $('#whCurrentTask').dataset.state = task?.status || '';
     if (!task) { box.appendChild(el('span', 'task-muted', 'Chưa có trạng thái tác vụ. Mở trang Tác vụ & kết quả để xem chi tiết.')); return; }
+    if (task.details_available === false) { box.appendChild(el('span', 'task-muted', 'Chưa lấy được chi tiết của công việc này. Hãy làm mới khi runtime kết nối lại.')); return; }
     const preview = S.handoffPreview(task);
     const files = preview?.files || [];
     box.appendChild(el('p', '', `Tệp đã sửa đổi (${files.length}): ${files.length ? files.join(', ') : 'chưa ghi nhận'}`));
     const tests = S.taskTests(task);
-    box.appendChild(el('p', '', `Kiểm thử gần đây: ${tests.length ? `${tests.filter((t) => !S.testFailed(t)).length}/${tests.length} đạt` : 'chưa có'}. Xem diff đầy đủ và sản phẩm đầu ra ở trang Tác vụ & kết quả.`));
+    const passed = tests.filter((t) => ['passed', 'pass', 'success', 'completed'].includes(String(t.status).toLowerCase())).length;
+    box.appendChild(el('p', '', `Kiểm chứng gần đây: ${tests.length ? `${passed}/${tests.length} lần kiểm tra đạt` : 'chưa có kết quả'}. Xem sản phẩm đầu ra tại tab Kết quả.`));
     const open = el('button', 'secondary-button wh-small', 'Mở Tác vụ & kết quả');
     open.addEventListener('click', () => window.navigate?.('task'));
     box.appendChild(open);
@@ -283,11 +391,13 @@
 
   async function renderFiles() {
     const box = $('#whFileList');
-    if (!box || !window.mcpAssistant?.workhubList) return;
-    const gen = ui.gen;
-    const project = currentProject();
-    const data = unwrap(await window.mcpAssistant.workhubList(ui.dirRel).catch(() => null));
-    if (gen !== ui.gen || project !== currentProject()) return; // stale response for an old project/generation
+    if (!box) return;
+    if (!window.mcpAssistant?.workhubList) { box.textContent = 'Mở ứng dụng Desktop và chọn dự án để duyệt tệp.'; return; }
+    const scope = requestScope('files');
+    box.setAttribute('aria-busy', 'true');
+    const data = unwrap(await window.mcpAssistant.workhubList(ui.dirRel, scope.workspace).catch(() => null));
+    if (!scope.current()) return;
+    box.setAttribute('aria-busy', 'false');
     $('#whCrumb').textContent = `/${ui.dirRel || ''}`;
     if (!data) { box.replaceChildren(el('span', 'task-muted', 'Chưa chọn thư mục làm việc hoặc không đọc được.')); return; }
     ui.dirRel = data.rel || '';
@@ -320,19 +430,36 @@
   async function openFile(rel, line) {
     const viewer = $('#whViewer');
     if (!viewer || !window.mcpAssistant?.workhubRead) return;
-    const gen = ui.gen;
+    if (!canLeaveFileEdit()) return;
+    const scope = requestScope('viewer');
+    activateTab('context');
     ui.viewerRel = rel;
     ui.viewerHash = '';
+    ui.viewerContent = null;
+    ui.viewerEditable = false;
+    viewer.hidden = false;
+    viewer.textContent = 'Đang đọc tệp…';
+    viewer.setAttribute('aria-busy', 'true');
+    if ($('#whEditor')) $('#whEditor').hidden = true;
+    if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = true;
+    if ($('#whSaveFile')) $('#whSaveFile').disabled = true;
     $('#whViewerTitle').textContent = rel;
     const addBtn = $('#whViewerAddBasket');
-    if (addBtn) addBtn.disabled = false;
+    if (addBtn) addBtn.disabled = true;
     const editBtn = $('#whEditFile');
-    if (editBtn) editBtn.disabled = false;
-    const data = unwrap(await window.mcpAssistant.workhubRead(rel).catch(() => null));
-    if (gen !== ui.gen) return; // a newer navigation superseded this read
+    if (editBtn) editBtn.disabled = true;
+    if ($('#whBlame')) $('#whBlame').disabled = true;
+    const data = unwrap(await window.mcpAssistant.workhubRead(rel, scope.workspace).catch(() => null));
+    if (!scope.current()) return;
+    viewer.setAttribute('aria-busy', 'false');
     if (!data) { viewer.textContent = 'Không đọc được tệp.'; return; }
     ui.viewerHash = data.hash || '';
+    if (addBtn) addBtn.disabled = false;
     if (data.binary) { viewer.textContent = `Tệp nhị phân (${data.size} bytes) — không xem trước nội dung.`; return; }
+    ui.viewerContent = String(data.content || '');
+    ui.viewerEditable = Boolean(data.hash) && !data.truncated;
+    if (editBtn) editBtn.disabled = !ui.viewerEditable;
+    if ($('#whBlame')) $('#whBlame').disabled = false;
     const suffix = data.truncated ? '\n… (đã rút gọn 256KB đầu)' : '';
     if (line && line > 0) {
       // Render per-line so the requested line is highlighted and scrolled to.
@@ -346,15 +473,26 @@
     } else {
       viewer.textContent = data.content + suffix;
     }
+    const draft = fileDrafts.get(fileDraftKey(scope.workspace, rel));
+    if (draft && ui.viewerEditable) {
+      ui.viewerHash = draft.hash;
+      $('#whEditor').value = draft.content;
+      $('#whEditor').hidden = false;
+      viewer.hidden = true;
+      $('#whSaveFile').disabled = false;
+      if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = false;
+      setStatus('Đã khôi phục phần sửa tệp chưa lưu. Nếu tệp đã đổi trên đĩa, thao tác lưu sẽ yêu cầu đối chiếu lại.');
+    }
   }
 
   async function renderCodeSearch() {
     const box = $('#whCodeResults');
     const query = String($('#whCodeQuery')?.value || '').trim();
     if (!box || !query) return;
-    const gen = ui.gen;
-    const data = unwrap(await window.mcpAssistant.workhubSearch(query).catch(() => null));
-    if (gen !== ui.gen) return;
+    const scope = requestScope('search');
+    box.textContent = 'Đang tìm trong dự án…';
+    const data = unwrap(await window.mcpAssistant.workhubSearch(query, scope.workspace).catch(() => null));
+    if (!scope.current()) return;
     if (!data) { box.replaceChildren(el('span', 'task-muted', 'Tìm kiếm thất bại (từ khóa tối thiểu 2 ký tự).')); return; }
     if (!data.results.length) { box.replaceChildren(el('span', 'task-muted', `Không thấy "${query}" trong ${data.scannedFiles} tệp đã quét.`)); return; }
     const rows = data.results.map((hit) => {
@@ -373,7 +511,9 @@
   async function renderGit() {
     const box = $('#whGitList');
     if (!box || !window.mcpAssistant?.workhubGitStatus) return;
-    const data = unwrap(await window.mcpAssistant.workhubGitStatus().catch(() => null));
+    const scope = requestScope('git');
+    const data = unwrap(await window.mcpAssistant.workhubGitStatus(scope.workspace).catch(() => null));
+    if (!scope.current()) return;
     if (!data) { box.replaceChildren(el('span', 'task-muted', 'Không lấy được trạng thái Git (dự án chưa phải git repo?).')); return; }
     if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
     box.replaceChildren(...data.map((item) => {
@@ -394,7 +534,9 @@
   async function renderGitLog() {
     const box = $('#whGitLog');
     if (!box || !window.mcpAssistant?.workhubGitLog) return;
-    const data = unwrap(await window.mcpAssistant.workhubGitLog(15).catch(() => null));
+    const scope = requestScope('gitlog');
+    const data = unwrap(await window.mcpAssistant.workhubGitLog(15, scope.workspace).catch(() => null));
+    if (!scope.current()) return;
     if (!data) { box.replaceChildren(el('span', 'task-muted', 'Không lấy được lịch sử Git.')); return; }
     if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có commit nào.')); return; }
     box.replaceChildren(...data.map((commit) => {
@@ -405,7 +547,12 @@
       const view = smallButton('Xem');
       view.addEventListener('click', async () => {
         const diffBox = $('#whDiff');
-        const shown = unwrap(await window.mcpAssistant.workhubGitShow(commit.hash).catch(() => null));
+        const request = requestScope('diff');
+        const shown = unwrap(await window.mcpAssistant.workhubGitShow(commit.hash, request.workspace).catch(() => null));
+        if (!request.current()) return;
+        ui.diffRel = '';
+        ui.diffText = '';
+        renderPatchApproval();
         if (diffBox) diffBox.textContent = shown ? shown.text + (shown.truncated ? '\n… (đã rút gọn)' : '') : 'Không đọc được commit.';
       });
       row.append(view);
@@ -434,9 +581,14 @@
   async function renderDiff(rel) {
     const box = $('#whDiff');
     if (!box) return;
-    const gen = ui.gen;
-    const data = unwrap(await window.mcpAssistant.workhubGitDiff(rel).catch(() => null));
-    if (gen !== ui.gen) return;
+    const scope = requestScope('diff');
+    activateTab('changes');
+    box.textContent = 'Đang đọc thay đổi…';
+    ui.diffRel = '';
+    ui.diffText = '';
+    renderPatchApproval();
+    const data = unwrap(await window.mcpAssistant.workhubGitDiff(rel, scope.workspace).catch(() => null));
+    if (!scope.current()) return;
     ui.diffRel = rel;
     ui.diffText = data?.diff || '';
     box.textContent = !data ? 'Không lấy được diff.'
@@ -471,11 +623,14 @@
     const box = $('#whArtifacts');
     if (!box) return;
     const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+    const workspace = currentProject();
     const report = task?.last_build_report || null;
-    if (!report) { box.replaceChildren(el('span', 'task-muted', 'Chưa có báo cáo build (verify_build) trong tác vụ hiện tại.')); return; }
+    if (task?.details_available === false) { box.replaceChildren(el('span', 'task-muted', 'Chưa lấy được chi tiết công việc. Hãy kết nối runtime rồi làm mới để đọc báo cáo.')); return; }
+    if (!report) { box.replaceChildren(el('span', 'task-muted', 'Công việc hiện tại chưa ghi nhận báo cáo build.')); return; }
     const head = el('div', 'wh-row');
     const headMain = el('div', 'wh-row-main');
-    headMain.append(el('b', '', report.overall_status === 'passed' ? 'Xác minh thành công' : 'Xác minh thất bại'),
+    const reportLabels = { passed: 'Kiểm chứng đạt', failed: 'Kiểm chứng có lỗi', skipped: 'Chưa chạy kiểm chứng', unknown: 'Chưa xác định kết quả', running: 'Đang kiểm chứng' };
+    headMain.append(el('b', '', reportLabels[report.overall_status] || 'Chưa xác định kết quả'),
       el('small', '', `${report.project?.type || ''} · v${report.project?.version || '?'}`));
     head.append(headMain);
     const rows = [head];
@@ -494,7 +649,9 @@
       if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'].includes(ext)) {
         const viewImage = smallButton('Xem ảnh');
         viewImage.addEventListener('click', async () => {
-          const data = unwrap(await window.mcpAssistant.workhubReadImage(item.path).catch(() => null));
+          const scope = requestScope('artifactImage');
+          const data = unwrap(await window.mcpAssistant.workhubReadImage(item.path, workspace).catch(() => null));
+          if (!scope.current() || workspace !== currentProject()) return;
           const imgBox = $('#whArtifactImage');
           if (!imgBox) return;
           if (!data) { imgBox.replaceChildren(el('span', 'task-muted', 'Không xem trước được ảnh (quá lớn hoặc đã đổi).')); return; }
@@ -508,12 +665,13 @@
       }
       const open = smallButton('Mở');
       open.addEventListener('click', async () => {
-        const result = unwrap(await window.mcpAssistant.workhubOpenPath(item.path, false).catch(() => null));
+        const result = unwrap(await window.mcpAssistant.workhubOpenPath(item.path, false, workspace).catch(() => null));
+        if (workspace !== currentProject()) return;
         if (!result) window.alert('Không mở được tệp — có thể tệp đã bị di chuyển hoặc đổi sau khi build.');
       });
       row.append(open);
       const reveal = smallButton('Mở thư mục');
-      reveal.addEventListener('click', () => window.mcpAssistant.workhubOpenPath(item.path, true).catch(() => {}));
+      reveal.addEventListener('click', () => window.mcpAssistant.workhubOpenPath(item.path, true, workspace).catch(() => {}));
       row.append(reveal);
       const copy = smallButton('Sao chép đường dẫn');
       copy.addEventListener('click', (e) => copyText(item.path || '', e.currentTarget));
@@ -525,10 +683,13 @@
   }
 
   async function loadTask() {
+    const scope = requestScope('task');
     try {
-      const result = await window.mcpAssistant?.taskState?.();
+      const source = window.mcpAssistant || (typeof api === 'undefined' ? null : api);
+      const result = await source?.taskState?.();
+      if (!scope.current()) return;
       ui.taskPayload = result?.data || result || null;
-    } catch { ui.taskPayload = null; }
+    } catch { if (!scope.current()) return; ui.taskPayload = null; }
     renderTaskSummary();
     renderHandoff();
     renderArtifacts();
@@ -545,31 +706,27 @@
       { kind: 'Trang', title: 'Xác minh & Build', detail: 'chạy test build sản phẩm', run: () => window.navigate?.('build') },
     ];
     for (const p of store.listPrompts()) {
-      entries.push({ kind: 'Lời nhắc', title: p.name, detail: 'mẫu yêu cầu thư viện lời nhắc', run: () => { ui.selectedPromptId = p.id; renderPromptOptions(); window.navigate?.('workhub'); } });
+      entries.push({ kind: 'Lời nhắc', title: p.name, detail: 'mẫu yêu cầu thư viện lời nhắc', run: () => { ui.selectedPromptId = p.id; renderPromptOptions(); saveCurrentDraft(); window.navigate?.('workhub'); activateTab('context'); $('#whPromptSelect')?.focus(); } });
     }
-    for (const r of store.listRecipes()) {
-      entries.push({ kind: 'Lệnh đã lưu', title: r.name, detail: r.command, run: () => copyText(r.command) });
+    for (const r of store.listRecipes(currentProject())) {
+      entries.push({ kind: 'Lệnh đã lưu', title: r.name, detail: r.command, run: () => { window.navigate?.('workhub'); activateTab('verify'); $('#whRecipes')?.scrollIntoView({ block: 'start' }); setStatus(`Lệnh đã lưu: ${r.name} · ${r.command}. Chọn Chạy để thực thi.`); } });
     }
     for (const project of recentProjects()) {
       entries.push({
         kind: 'Dự án', title: store.projectLabel(project), detail: project,
         run: async () => {
-          if (S.workspaceKeyOf(project) !== S.workspaceKeyOf(currentProject())) {
-            const switched = unwrap(await window.mcpAssistant.switchWorkspace(project).catch(() => null));
-            if (switched) { ui.snapshot = switched?.data || switched; ui.dirRel = ''; }
-          }
+          if (!await switchProject(project)) return;
           window.navigate?.('workhub');
-          refresh();
         },
       });
     }
     const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
     if (task?.objective) {
       entries.push({ kind: 'Tác vụ', title: task.objective, detail: `task hiện tại · ${task.status || ''}`, run: () => window.navigate?.('task') });
-      entries.push({ kind: 'Báo cáo', title: `Báo cáo: ${task.objective}`, detail: 'xuất báo cáo tác vụ md', run: () => { window.navigate?.('workhub'); $('#whExportReport')?.click(); } });
+      entries.push({ kind: 'Báo cáo', title: `Báo cáo: ${task.objective}`, detail: 'kết quả và xuất báo cáo', run: () => { window.navigate?.('workhub'); activateTab('results'); } });
     }
     for (const note of store.listNotes(currentProject())) {
-      entries.push({ kind: 'Ghi chú', title: note.title, detail: note.body.slice(0, 80), run: () => window.navigate?.('workhub') });
+      entries.push({ kind: 'Ghi chú', title: note.title, detail: note.body.slice(0, 80), run: () => { window.navigate?.('workhub'); const box = $('#whNotes'); for (let parent = box?.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true; box?.scrollIntoView({ block: 'start' }); } });
     }
     for (const chat of store.listChats(currentProject())) {
       entries.push({ kind: 'Hội thoại', title: chat.label, detail: chat.note || chat.url || '', run: () => { if (chat.url) window.mcpAssistant?.openExternal?.(chat.url); } });
@@ -600,18 +757,36 @@
   function openSearch() {
     const overlay = $('#whSearchOverlay');
     if (!overlay) return;
+    if (overlay.hidden) ui.searchReturnFocus = document.activeElement;
     overlay.hidden = false;
     renderSearchResults();
     setTimeout(() => $('#whSearchInput')?.focus(), 0);
   }
   function closeSearch() {
     const overlay = $('#whSearchOverlay');
-    if (overlay) overlay.hidden = true;
+    if (overlay && !overlay.hidden) { overlay.hidden = true; ui.searchReturnFocus?.focus?.(); }
   }
 
   // ---------- wiring ----------
   function bind() {
-    $('#whPromptSelect')?.addEventListener('change', (e) => { ui.selectedPromptId = e.target.value; renderPromptOptions(); });
+    const tabs = Array.from(document.querySelectorAll('[data-wh-tab]'));
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activateTab(tab.dataset.whTab));
+      tab.addEventListener('keydown', (event) => {
+        const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+        if (next < 0) return;
+        event.preventDefault();
+        activateTab(tabs[next].dataset.whTab, { focus: true });
+      });
+    });
+    $('#whOpenSearch')?.addEventListener('click', openSearch);
+    $('#whRefresh')?.addEventListener('click', async () => {
+      const button = $('#whRefresh');
+      button.disabled = true;
+      try { await refresh(); } finally { button.disabled = false; }
+    });
+    $('#whBrowseFiles')?.addEventListener('click', () => { $('#whFileBrowser')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); $('#whCodeQuery')?.focus(); });
+    $('#whPromptSelect')?.addEventListener('change', (e) => { ui.selectedPromptId = e.target.value; renderPromptOptions(); saveCurrentDraft(); });
     $('#whPromptSave')?.addEventListener('click', () => {
       try {
         const saved = store.upsertPrompt({ id: ui.selectedPromptId, name: $('#whPromptName').value, body: $('#whPromptBody').value });
@@ -625,7 +800,7 @@
       } catch (error) { window.alert(error.message); }
     });
     $('#whPromptDelete')?.addEventListener('click', () => { store.removePrompt(ui.selectedPromptId); ui.selectedPromptId = ''; renderPromptOptions(); });
-    $('#whTaskType')?.addEventListener('change', (e) => { ui.selectedType = e.target.value; renderTypeFields(); });
+    $('#whTaskType')?.addEventListener('change', (e) => { ui.selectedType = e.target.value; renderTypeFields(); saveCurrentDraft(); });
     $('#whBuildBtn')?.addEventListener('click', buildFromType);
     $('#whUsePromptBtn')?.addEventListener('click', buildFromPrompt);
     $('#whCopyBtn')?.addEventListener('click', (e) => copyText($('#whPreview').value, e.currentTarget));
@@ -650,9 +825,10 @@
     });
     $('#whAddRecipe')?.addEventListener('click', () => {
       try {
-        store.upsertRecipe({ name: $('#whRecipeName').value, command: $('#whRecipeCommand').value, cwd: $('#whRecipeCwd').value || currentProject() });
-        $('#whRecipeName').value = ''; $('#whRecipeCommand').value = ''; $('#whRecipeCwd').value = '';
+        store.upsertRecipe({ name: $('#whRecipeName').value, command: $('#whRecipeCommand').value, cwd: $('#whRecipeCwd').value || currentProject(), url: $('#whRecipeUrl')?.value || '' });
+        $('#whRecipeName').value = ''; $('#whRecipeCommand').value = ''; $('#whRecipeCwd').value = ''; if ($('#whRecipeUrl')) $('#whRecipeUrl').value = '';
         renderRecipes();
+        setStatus('Đã lưu lệnh cho dự án này.');
       } catch (error) { window.alert(error.message); }
     });
     $('#whLoadHandoff')?.addEventListener('click', loadTask);
@@ -690,23 +866,52 @@
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
       if (e.key === 'Escape') closeSearch();
+      const overlay = $('#whSearchOverlay');
+      if (!overlay || overlay.hidden) return;
+      const buttons = Array.from(overlay.querySelectorAll('button'));
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const rows = Array.from($('#whSearchResults')?.querySelectorAll('button') || []);
+        if (!rows.length) return;
+        const current = rows.indexOf(document.activeElement);
+        const next = e.key === 'ArrowDown' ? (current + 1) % rows.length : (current - 1 + rows.length) % rows.length;
+        e.preventDefault(); rows[next].focus();
+      }
+      if (e.key === 'Tab') {
+        const controls = [$('#whSearchInput'), ...buttons].filter(Boolean);
+        const index = controls.indexOf(document.activeElement);
+        if ((e.shiftKey && index <= 0) || (!e.shiftKey && index === controls.length - 1)) {
+          e.preventDefault(); controls[e.shiftKey ? controls.length - 1 : 0]?.focus();
+        }
+      }
     });
   }
 
   async function refresh() {
-    ui.gen += 1;
+    const request = ++ui.refreshRequest;
     try {
-      const result = await window.mcpAssistant?.snapshot?.();
-      ui.snapshot = result?.data || result || null;
-    } catch { /* keep last snapshot */ }
+      const source = window.mcpAssistant || (typeof api === 'undefined' ? null : api);
+      const result = await source?.snapshot?.();
+      if (request !== ui.refreshRequest) return;
+      const snapshot = unwrap(result);
+      if (snapshot?.settings) {
+        const project = String(snapshot.settings.workspace || '').trim();
+        const changed = ui.boundProject === null || S.workspaceKeyOf(ui.boundProject) !== S.workspaceKeyOf(project);
+        if (changed && ui.boundProject) { saveCurrentDraft(ui.boundProject); rememberFileEdit(ui.boundProject); }
+        ui.snapshot = snapshot;
+        if (changed) {
+          ui.boundProject = project;
+          resetProjectView();
+          restoreDraft({ force: true });
+        }
+      }
+    } catch { setStatus('Chưa lấy được trạng thái mới. Dữ liệu đang hiển thị chưa được cập nhật.', 'error'); }
+    if (request !== ui.refreshRequest) return;
+    renderWorkspace();
     renderProjects();
-    renderPromptOptions();
     renderBasket();
     renderRecipes();
-    await loadTask();
-    renderFiles();
-    renderGit();
-    renderGitLog();
+    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog()]);
+    if (request !== ui.refreshRequest) return;
     renderExtended();
     renderGoal();
   }
@@ -714,82 +919,225 @@
   // ================= Extended waves (adoption decisions 261022) =================
 
   // ---- A3/F19/F20: run a saved recipe through the runtime Job lifecycle ----
+  const JOB_OUTPUT_LIMIT = 12000;
+  const JOB_TERMINAL_STATUSES = new Set(['exited', 'completed', 'complete', 'done', 'failed', 'error', 'terminated', 'killed', 'stopped', 'timeout', 'cancelled', 'canceled']);
+  let jobUiUnloaded = false;
+  let jobWakeQueue = Promise.resolve();
+
   function jobOutputText(result) {
     if (!result || typeof result !== 'object') return '';
+    if (typeof result.output === 'string') return result.output;
     const parts = [];
-    if (typeof result.output === 'string') parts.push(result.output);
-    if (typeof result.stdout === 'string') parts.push(result.stdout);
-    if (typeof result.stderr === 'string') parts.push(result.stderr);
+    if (typeof result.stdout === 'string' && result.stdout) parts.push(result.stdout);
+    if (typeof result.stderr === 'string' && result.stderr) parts.push(result.stderr);
     if (!parts.length && Array.isArray(result.content)) {
       for (const item of result.content) if (item?.type === 'text') parts.push(item.text);
     }
-    return parts.join('\n').slice(-12000);
+    return parts.join('\n');
   }
   function jobStatusOf(result) {
-    return String(result?.status || result?.state || (result?.running ? 'running' : 'exited'));
+    const status = String(result?.status || result?.state || '').toLowerCase();
+    if (status) return status;
+    if (result?.running === true) return 'running';
+    if (result?.exit_code != null || result?.exitCode != null) return 'exited';
+    return 'unknown';
+  }
+  function jobIsTerminal(job) {
+    return Boolean(job && JOB_TERMINAL_STATUSES.has(job.status));
+  }
+  function setJobAwake(on) {
+    // Keep the order of start/stop IPC calls even when their replies arrive late.
+    jobWakeQueue = jobWakeQueue.catch(() => {}).then(async () => {
+      if (typeof window.mcpAssistant?.workhubKeepAwake === 'function') {
+        await window.mcpAssistant.workhubKeepAwake(Boolean(on) && !jobUiUnloaded);
+      }
+    }).catch(() => {});
+    return jobWakeQueue;
+  }
+  function jobResult(response) {
+    if (response?.ok === false) throw new Error(String(response.error || 'Runtime không xác nhận thao tác.'));
+    const result = unwrap(response);
+    if (!result || typeof result !== 'object') throw new Error('Không nhận được trạng thái Job từ runtime.');
+    return result;
+  }
+  function appendJobOutput(job, result) {
+    const parts = [];
+    let hasStreams = false;
+    job.streamEnds ||= {};
+    for (const stream of ['stdout', 'stderr']) {
+      if (typeof result[stream] !== 'string') continue;
+      hasStreams = true;
+      let text = result[stream];
+      const end = result.output_retention?.[stream]?.total_stream_bytes;
+      const previous = job.streamEnds[stream];
+      if (Number.isFinite(end)) {
+        // The first named consumer can replay the initial exec output. Its
+        // stream byte totals let us remove that overlap without dropping later
+        // cursor deltas (or repeated lines that the command actually emitted).
+        if (Number.isFinite(previous)) {
+          if (end <= previous) text = '';
+          else if (text && typeof TextEncoder !== 'undefined' && typeof TextDecoder !== 'undefined') {
+            const bytes = new TextEncoder().encode(text);
+            const overlap = previous - (end - bytes.length);
+            if (overlap > 0) text = new TextDecoder().decode(bytes.subarray(Math.min(overlap, bytes.length)));
+          }
+        }
+        job.streamEnds[stream] = Math.max(previous || 0, end);
+      }
+      if (text) parts.push(text);
+    }
+    const delta = hasStreams ? parts.join('\n') : jobOutputText(result);
+    if (delta) {
+      const combined = `${job.output || ''}${delta}`;
+      job.outputClipped ||= combined.length > JOB_OUTPUT_LIMIT;
+      job.output = combined.slice(-JOB_OUTPUT_LIMIT);
+    }
+    job.outputIncomplete ||= Boolean(result.output_truncated || result.truncated || result.stdout_truncated || result.stderr_truncated);
+  }
+  function applyJobResult(job, result) {
+    const commandId = String(result.command_id || result.session_id || result.commandId || '');
+    if (job.commandId && commandId && commandId !== job.commandId) throw new Error('Runtime trả về một Job khác; đã dừng cập nhật để tránh nhầm lần chạy.');
+    if (commandId) job.commandId = commandId;
+    appendJobOutput(job, result);
+    job.status = jobStatusOf(result);
+    job.exitCode = result.exit_code ?? result.exitCode ?? job.exitCode;
+    job.observationError = '';
+    if (jobIsTerminal(job)) job.stopRequested = false;
+  }
+  async function observeJob(job, action, extra = {}) {
+    // All actions share the runtime cursor. Serializing also prevents a late
+    // poll from overwriting a terminal reply or consuming a write's output.
+    const queued = (job.observationQueue || Promise.resolve()).catch(() => {}).then(async () => {
+      if (ui.job !== job || jobUiUnloaded || !job.commandId) return false;
+      if (action === 'write' && jobIsTerminal(job)) return false;
+      if (action === 'kill' && jobIsTerminal(job)) return true;
+      try {
+        const result = jobResult(await window.mcpAssistant.workhubJobControl({ action, commandId: job.commandId, ...extra }));
+        if (ui.job !== job || jobUiUnloaded) return false;
+        applyJobResult(job, result);
+        renderJob();
+        if (jobIsTerminal(job)) setJobAwake(false);
+        return true;
+      } catch (error) {
+        if (ui.job === job) {
+          job.status = 'unknown';
+          job.observationError = String(error?.message || error).slice(0, 400);
+          renderJob();
+        }
+        setJobAwake(false);
+        return false;
+      }
+    });
+    job.observationQueue = queued;
+    return queued;
   }
   function renderJob() {
     const box = $('#whJobView');
     const meta = $('#whJobMeta');
     if (!box || !meta) return;
-    if (!ui.job) { meta.textContent = 'Chưa chạy lệnh nào trong phiên này.'; box.textContent = 'Chọn "Chạy (Job)" ở một lệnh đã lưu.'; return; }
-    meta.textContent = `${ui.job.name} · ${ui.job.status}${ui.job.commandId ? ` · Job ${ui.job.commandId}` : ''}${ui.job.exitCode != null ? ` · exit ${ui.job.exitCode}` : ''}`;
-    box.textContent = ui.job.output || '(chưa có output)';
+    if (!ui.job) {
+      meta.textContent = 'Chưa chạy lệnh nào trong phiên này.';
+      box.textContent = 'Chọn "Chạy (Job)" ở một lệnh đã lưu.';
+      for (const selector of ['#whJobKill', '#whJobPoll', '#whJobWrite']) { const button = $(selector); if (button) button.disabled = true; }
+      return;
+    }
+    const job = ui.job;
+    const labels = { starting: 'Đang gửi lệnh', running: 'Đang chạy', unknown: 'Chưa xác định trạng thái', exited: 'Đã kết thúc', terminated: 'Đã dừng', stopped: 'Đã dừng', timeout: 'Hết thời gian', error: 'Không chạy được' };
+    const status = job.stopRequested && !jobIsTerminal(job) ? 'Đã yêu cầu dừng · chờ xác nhận' : (labels[job.status] || job.status);
+    meta.textContent = `${job.name} · ${status}${job.commandId ? ` · Job ${job.commandId}` : ''}${job.exitCode != null ? ` · exit ${job.exitCode}` : ''}`;
+    const notices = [];
+    if (job.observationError) notices.push(`Không xác nhận được trạng thái: ${job.observationError}\nLệnh có thể vẫn chạy. Dùng “Lấy output mới” để kiểm tra; không tự chạy lại.`);
+    if (job.inputDeliveryError) notices.push(job.inputDeliveryError);
+    if (job.outputClipped) notices.push('Đang hiển thị 12.000 ký tự output cuối.');
+    if (job.outputIncomplete) notices.push('Runtime đã rút gọn hoặc không còn giữ một phần output.');
+    box.textContent = [job.output || '(chưa có output)', ...notices].join('\n\n');
     const kill = $('#whJobKill');
     const poll = $('#whJobPoll');
-    if (kill) kill.disabled = ui.job.status !== 'running';
-    if (poll) poll.disabled = ui.job.status !== 'running';
+    const write = $('#whJobWrite');
+    if (kill) kill.disabled = !job.commandId || jobIsTerminal(job) || (job.stopRequested && !job.observationError);
+    if (poll) poll.disabled = !job.commandId || job.status === 'starting';
+    if (write) write.disabled = !job.commandId || job.status !== 'running' || job.stopRequested || job.inputPending;
   }
   async function runRecipeAsJob(recipe) {
-    if (ui.job?.status === 'running') { window.alert('Đang có Job chạy — dừng hoặc chờ xong trước khi chạy lệnh khác.'); return; }
-    ui.job = { name: recipe.name, commandId: '', status: 'starting', output: '', exitCode: null };
+    if (ui.job && !jobIsTerminal(ui.job)) { window.alert('Lần chạy trước đang được gửi, đang chạy hoặc chưa xác định trạng thái. Hãy kiểm tra lần chạy đó trước khi chạy lệnh khác.'); return; }
+    const workspace = currentProject();
+    const job = { name: recipe.name, commandId: '', status: 'starting', output: '', exitCode: null };
+    ui.job = job;
     renderJob();
-    const result = unwrap(await window.mcpAssistant.workhubJobRun({ command: recipe.command, cwd: recipe.cwd || currentProject() }).catch(() => null));
-    if (!result) { ui.job.status = 'error'; ui.job.output = 'Không chạy được lệnh qua runtime (MCP chưa sẵn sàng?).'; renderJob(); return; }
-    ui.job.commandId = result.command_id || result.session_id || result.commandId || '';
-    ui.job.status = jobStatusOf(result);
-    ui.job.output = jobOutputText(result);
-    ui.job.exitCode = result.exit_code ?? result.exitCode ?? null;
+    try {
+      const response = await window.mcpAssistant.workhubJobRun({ command: recipe.command, cwd: recipe.cwd || workspace, expectedWorkspace: workspace });
+      if (ui.job !== job || jobUiUnloaded) return;
+      if (response?.ok === false) {
+        // IPC errors can include a timeout after the runtime admitted a
+        // command. Without an explicit pre-dispatch rejection, execution is
+        // unknown and must not be silently retried.
+        job.status = /MCP chưa sẵn sàng|Lệnh không được trống|Dự án đã thay đổi/.test(String(response.error || '')) ? 'error' : 'unknown';
+        job.observationError = String(response.error || 'Runtime từ chối lệnh.').slice(0, 400);
+      } else applyJobResult(job, jobResult(response));
+    } catch (error) {
+      if (ui.job !== job || jobUiUnloaded) return;
+      job.status = 'unknown';
+      job.observationError = String(error?.message || error).slice(0, 400);
+    }
     renderJob();
-    if (ui.job.status === 'running') {
-      window.mcpAssistant.workhubKeepAwake(true).catch(() => {});
-      pollJobLoop();
+    if (job.status === 'running' && job.commandId) { setJobAwake(true); pollJobLoop(job); }
+  }
+  async function pollJobLoop(job = ui.job) {
+    if (!job || job.polling || jobUiUnloaded) return;
+    job.polling = true;
+    try {
+      while (ui.job === job && !jobUiUnloaded && job.status === 'running' && job.commandId) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        if (ui.job !== job || jobUiUnloaded || job.status !== 'running') break;
+        if (!await observeJob(job, 'poll')) break;
+      }
+    } finally {
+      job.polling = false;
+      if (ui.job === job && job.status !== 'running') setJobAwake(false);
     }
   }
-  async function pollJobLoop() {
-    while (ui.job && ui.job.status === 'running' && ui.job.commandId) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      if (!ui.job || ui.job.status !== 'running') break;
-      const result = unwrap(await window.mcpAssistant.workhubJobControl({ action: 'poll', commandId: ui.job.commandId }).catch(() => null));
-      if (!result) break;
-      const text = jobOutputText(result);
-      if (text) ui.job.output = text;
-      ui.job.status = jobStatusOf(result);
-      ui.job.exitCode = result.exit_code ?? result.exitCode ?? ui.job.exitCode;
-      renderJob();
-    }
-    if (ui.job && ui.job.status !== 'running') window.mcpAssistant.workhubKeepAwake(false).catch(() => {});
-  }
+  window.addEventListener('beforeunload', () => { jobUiUnloaded = true; setJobAwake(false); });
 
   // ---- A1: context package with real content + versions ----
   async function buildContextPackage() {
-    const files = store.basketFor(currentProject());
-    if (!files.length) { window.alert('Giỏ ngữ cảnh đang trống.'); return; }
-    const parts = [];
-    let budget = 120 * 1024;
+    const scope = requestScope('contextPackage');
+    const files = store.basketFor(scope.workspace);
+    if (!files.length) { setStatus('Giỏ ngữ cảnh đang trống. Hãy chọn tệp trước.'); return; }
+    if (!window.mcpAssistant?.workhubRead) { setStatus('Đọc nội dung tệp cần ứng dụng Desktop.', 'error'); return; }
+    const preview = $('#whPreview');
+    const request = preview?.value || '';
+    const parts = [request, `${request ? '\n\n' : ''}Ngữ cảnh dự án: ${scope.workspace}`];
+    const limit = 20000;
+    let used = parts.join('\n\n').length;
+    let included = 0;
+    let skipped = 0;
+    let shortened = 0;
+    const button = $('#whBuildContextBtn');
+    if (button) button.disabled = true;
+    try {
     for (const file of files) {
       const rel = String(file.path).replace(/\\/g, '/');
-      const data = unwrap(await window.mcpAssistant.workhubRead(rel).catch(() => null));
-      if (!data || data.binary) { parts.push({ path: rel, size: file.size, content: null }); continue; }
-      let content = data.content || '';
-      if (content.length > budget) content = content.slice(0, Math.max(0, budget));
-      budget -= content.length;
-      parts.push({ path: rel, size: data.size, content, truncated: Boolean(data.truncated) || content.length < (data.content || '').length, hash: String(data.hash || '').slice(0, 12) });
-      if (budget <= 0) break;
+      const data = unwrap(await window.mcpAssistant.workhubRead(rel, scope.workspace).catch(() => null));
+      if (!scope.current()) return;
+      if (!data || data.binary) { skipped += 1; continue; }
+      const head = `\n\n--- ${rel} · sha ${String(data.hash || '').slice(0, 12) || 'chưa có'} ---\n`;
+      const available = limit - used - head.length - 40;
+      if (available <= 0) { skipped += 1; continue; }
+      const source = String(data.content || '');
+      const content = source.slice(0, available);
+      const cut = Boolean(data.truncated) || content.length < source.length;
+      const section = `${head}${content}${cut ? '\n… (nội dung đã rút gọn)' : ''}`;
+      parts.push(section);
+      used += section.length;
+      included += 1;
+      if (cut) shortened += 1;
     }
-    const text = S.contextContentText(currentProject(), parts);
-    const preview = $('#whPreview');
-    if (preview) { preview.value = text; store.saveDraft(currentProject(), text); renderDraftState(); }
+    if (!scope.current()) return;
+    if (preview?.value !== request) { setStatus('Yêu cầu đã được sửa trong lúc đọc tệp. Bấm tạo gói lần nữa để dùng nội dung mới.'); return; }
+    if (!included) { setStatus('Chưa thêm được nội dung: tệp không đọc được, là tệp nhị phân hoặc yêu cầu đã hết chỗ.', 'error'); return; }
+    if (preview) { preview.value = parts.join(''); saveCurrentDraft(); }
+    setStatus(`Đã thêm ${included} tệp vào yêu cầu · ${shortened} tệp rút gọn · ${skipped} tệp bỏ qua. Tối đa 20.000 ký tự.`);
+    } finally { if (button) button.disabled = false; }
   }
 
   // ---- F17 plan + F18 steering ----
@@ -834,12 +1182,19 @@
     const box = $('#whDraftState');
     if (!box) return;
     const draft = store.getDraft(currentProject());
-    box.textContent = draft ? `Có nháp đã lưu lúc ${new Date(draft.updatedAt).toLocaleTimeString('vi-VN')} cho dự án này.` : 'Chưa có nháp cho dự án này.';
+    box.textContent = persistenceError || (draft ? `Đã lưu nháp lúc ${new Date(draft.updatedAt).toLocaleTimeString('vi-VN')} · chỉ trong dự án này.` : 'Yêu cầu đang soạn được tự lưu theo dự án.');
   }
-  function restoreDraft() {
+  function restoreDraft({ force = false } = {}) {
     const draft = store.getDraft(currentProject());
     const preview = $('#whPreview');
-    if (draft && preview && !preview.value) preview.value = draft.text;
+    if (force) {
+      ui.selectedType = S.TASK_TYPES[draft?.type] ? draft.type : 'bugfix';
+      ui.selectedPromptId = draft?.promptId || '';
+      if ($('#whTaskType')) $('#whTaskType').value = ui.selectedType;
+      renderTypeFields(draft?.fields || {});
+      renderPromptOptions();
+      if (preview) preview.value = draft?.text || '';
+    }
     renderDraftState();
   }
 
@@ -995,10 +1350,12 @@
   async function renderTaskBoard() {
     const box = $('#whTaskBoard');
     if (!box) return;
+    const scope = requestScope('taskboard');
     const rows = [];
     const current = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
     if (current) rows.push({ title: current.objective || 'Task hiện tại', status: current.status || '', current: true });
     const history = unwrap(await window.mcpAssistant?.taskHistory?.().catch(() => null));
+    if (!scope.current()) return;
     for (const item of Array.isArray(history) ? history.slice(-12).reverse() : []) {
       rows.push({ title: item.objective || item.task_id || 'Task', status: item.status || '', current: false });
     }
@@ -1019,7 +1376,9 @@
   async function renderWorkers() {
     const box = $('#whWorkerList');
     if (!box) return;
+    const scope = requestScope('workers');
     const data = unwrap(await window.mcpAssistant?.orchestration?.().catch(() => null));
+    if (!scope.current()) return;
     const payload = data?.data || data || {};
     const clients = Array.isArray(payload.clients) ? payload.clients : [];
     const delegations = Array.isArray(payload.delegations) ? payload.delegations : [];
@@ -1034,10 +1393,12 @@
   async function renderTargets() {
     const box = $('#whTargetList');
     if (!box) return;
+    const scope = requestScope('targets');
     const rows = [];
-    const local = currentProject();
+    const local = scope.workspace;
     if (local) rows.push({ label: `Máy này · ${local}`, action: null });
     const workspaces = unwrap(await window.mcpAssistant?.listControlPlaneWorkspaces?.().catch(() => null));
+    if (!scope.current()) return;
     const list = workspaces?.workspaces || workspaces?.items || (Array.isArray(workspaces) ? workspaces : []);
     for (const ws of list) {
       rows.push({ label: `${ws.name || ws.id || 'workspace'} · ${ws.path || ws.workspace || ''} · ${ws.status || ws.state || ''}`, action: null });
@@ -1086,91 +1447,146 @@
 
   function bindExtended() {
     $('#whBuildContextBtn')?.addEventListener('click', buildContextPackage);
-    $('#whPreview')?.addEventListener('input', (e) => { try { store.saveDraft(currentProject(), e.target.value); } catch { /* draft store full */ } renderDraftState(); });
-    $('#whClearDraft')?.addEventListener('click', () => { store.clearDraft(currentProject()); renderDraftState(); });
+    $('#whPreview')?.addEventListener('input', () => saveCurrentDraft());
+    $('#whClearDraft')?.addEventListener('click', () => { store.clearDraft(currentProject()); $('#whPreview').value = ''; renderTypeFields(); renderDraftState(); setStatus('Đã xóa nháp của dự án này.'); });
     $('#whRecipeUrl')?.closest('form')?.addEventListener('submit', (e) => e.preventDefault());
-    const recipeSave = $('#whAddRecipe');
-    if (recipeSave) recipeSave.addEventListener('click', () => {
-      const url = $('#whRecipeUrl')?.value || '';
-      if (url) {
-        const name = $('#whRecipeName').value;
-        const existing = store.listRecipes().find((r) => r.name === name);
-        if (existing) store.upsertRecipe({ id: existing.id, name, command: $('#whRecipeCommand').value, cwd: $('#whRecipeCwd').value || currentProject(), url });
-      }
-    }, true);
     $('#whJobKill')?.addEventListener('click', async () => {
-      if (!ui.job?.commandId) return;
-      await window.mcpAssistant.workhubJobControl({ action: 'kill', commandId: ui.job.commandId }).catch(() => null);
-      ui.job.status = 'killed (đã gửi yêu cầu dừng)';
+      const job = ui.job;
+      if (!job?.commandId || jobIsTerminal(job) || (job.stopRequested && !job.observationError)) return;
+      job.stopRequested = true;
+      job.observationError = '';
       renderJob();
+      const observed = await observeJob(job, 'kill');
+      if (observed && ui.job === job && job.status === 'running') { setJobAwake(true); pollJobLoop(job); }
     });
     $('#whJobPoll')?.addEventListener('click', async () => {
-      if (!ui.job?.commandId) return;
-      const result = unwrap(await window.mcpAssistant.workhubJobControl({ action: 'poll', commandId: ui.job.commandId }).catch(() => null));
-      if (result) { ui.job.output = jobOutputText(result) || ui.job.output; ui.job.status = jobStatusOf(result); renderJob(); }
+      const job = ui.job;
+      if (!job?.commandId || job.status === 'starting') return;
+      const observed = await observeJob(job, 'poll');
+      if (observed && ui.job === job && job.status === 'running') { setJobAwake(true); pollJobLoop(job); }
     });
     $('#whJobWrite')?.addEventListener('click', async () => {
-      const chars = $('#whJobInput')?.value || '';
-      if (!ui.job?.commandId || !chars) return;
+      const input = $('#whJobInput');
+      const chars = input?.value || '';
+      const job = ui.job;
+      if (!job?.commandId || !chars || job.inputPending || job.status !== 'running' || job.stopRequested) return;
       // Local command_control has no input_id: if the ACK is lost we do NOT
-      // auto-resend — the user decides after polling (adoption decision A3).
-      await window.mcpAssistant.workhubJobControl({ action: 'write', commandId: ui.job.commandId, chars }).catch(() => null);
-      $('#whJobInput').value = '';
+      // auto-resend. Preserve the draft so the user can inspect output first.
+      job.inputPending = true;
+      renderJob();
+      const observed = await observeJob(job, 'write', { chars });
+      job.inputPending = false;
+      if (ui.job !== job) return;
+      if (observed) {
+        job.inputDeliveryError = '';
+        if (input.value === chars) input.value = '';
+      } else {
+        job.inputDeliveryError = jobIsTerminal(job)
+          ? 'Job đã kết thúc trước khi gửi input. Nội dung vẫn được giữ.'
+          : 'Chưa xác nhận được input đã tới lệnh. Nội dung vẫn được giữ; hãy lấy output mới trước khi quyết định gửi lại.';
+      }
+      renderJob();
     });
     $('#whEditFile')?.addEventListener('click', () => {
       const viewer = $('#whViewer');
       const editor = $('#whEditor');
-      if (!viewer || !editor || !ui.viewerRel) return;
-      editor.value = viewer.textContent || '';
+      if (!viewer || !editor || !ui.viewerRel || !ui.viewerEditable || ui.viewerContent === null) return;
+      editor.value = ui.viewerContent;
       editor.hidden = false;
+      viewer.hidden = true;
       $('#whSaveFile').disabled = false;
+      if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = false;
+      editor.focus();
+    });
+    $('#whCancelEditFile')?.addEventListener('click', () => {
+      if (ui.savingFile) { setStatus('Đang lưu tệp. Chờ xác nhận trước khi hủy sửa.'); return; }
+      fileDrafts.delete(fileDraftKey(currentProject(), ui.viewerRel));
+      $('#whEditor').hidden = true;
+      $('#whViewer').hidden = false;
+      $('#whSaveFile').disabled = true;
+      $('#whCancelEditFile').hidden = true;
+      setStatus('Đã hủy phần sửa tệp.');
     });
     $('#whSaveFile')?.addEventListener('click', async () => {
       const editor = $('#whEditor');
-      if (!editor || !ui.viewerRel) return;
-      const result = await window.mcpAssistant.workhubWrite(ui.viewerRel, editor.value, ui.viewerHash).catch(() => null);
+      if (!editor || editor.hidden || !ui.viewerRel || !ui.viewerEditable || ui.savingFile) return;
+      const scope = requestScope('viewer');
+      const rel = ui.viewerRel;
+      const content = editor.value;
+      const hash = ui.viewerHash;
+      const save = $('#whSaveFile');
+      ui.savingFile = true;
+      save.disabled = true;
+      let message = '';
+      const result = await window.mcpAssistant.workhubWrite(rel, content, hash, scope.workspace).catch((error) => { message = error.message; return null; });
       const data = unwrap(result);
-      if (!data) { window.alert('Không lưu được — tệp có thể đã thay đổi bên ngoài. Tải lại tệp trước khi sửa tiếp.'); return; }
+      ui.savingFile = false;
+      if (data) fileDrafts.delete(fileDraftKey(scope.workspace, rel));
+      if (!scope.current()) return;
+      save.disabled = false;
+      if (!data) { setStatus(message || 'Không lưu được — tệp có thể đã đổi trên đĩa. Phần sửa vẫn được giữ; sao chép nội dung trước khi tải lại tệp.', 'error'); return; }
       ui.viewerHash = data.hash;
+      ui.viewerContent = content;
+      if (editor.value !== content) { setStatus('Đã lưu. Bạn có phần sửa mới sau lúc bấm lưu; hãy lưu thêm lần nữa.'); return; }
       editor.hidden = true;
-      openFile(ui.viewerRel);
+      await openFile(rel);
+      if (scope.workspace === currentProject()) setStatus('Đã lưu tệp.');
     });
     $('#whBlame')?.addEventListener('click', async () => {
-      if (!ui.viewerRel) return;
-      const data = unwrap(await window.mcpAssistant.workhubGitBlame(ui.viewerRel).catch(() => null));
+      if (!ui.viewerRel || !canLeaveFileEdit()) return;
+      const scope = requestScope('viewer');
+      const data = unwrap(await window.mcpAssistant.workhubGitBlame(ui.viewerRel, scope.workspace).catch(() => null));
+      if (!scope.current()) return;
       const viewer = $('#whViewer');
       if (viewer) viewer.textContent = data ? data.lines.map((l) => `${l.line} · ${l.author} · ${l.text}`).join('\n') : 'Không lấy được blame.';
     });
     $('#whGitLogRefresh')?.addEventListener('click', renderGitLog);
     $('#whChooseImport')?.addEventListener('click', async () => {
+      const scope = requestScope('importChooser');
       const files = unwrap(await window.mcpAssistant.chooseFiles().catch(() => null)) || [];
+      if (!scope.current()) return;
       ui.pendingImports = files;
       renderImports();
     });
     $('#whRunImports')?.addEventListener('click', async () => {
+      if (ui.importing) return;
+      const scope = requestScope('import');
+      const sources = ui.pendingImports.slice();
       const dest = $('#whImportDest')?.value || '';
       const results = [];
-      for (const source of ui.pendingImports) {
+      ui.importing = true;
+      $('#whRunImports').disabled = true;
+      try {
+      for (const source of sources) {
+        if (!scope.current()) return;
         try {
-          const copied = unwrap(await window.mcpAssistant.workhubCopyIn(source, dest));
+          const copied = unwrap(await window.mcpAssistant.workhubCopyIn(source, dest, scope.workspace));
+          if (!copied) throw new Error('Không nhận được xác nhận nhập tệp.');
           results.push({ source, ok: true, dest: copied?.rel || '' });
         } catch (error) {
           results.push({ source, ok: false, error: error?.message || 'không rõ lỗi' });
         }
       }
+      if (!scope.current()) return;
       // Keep only the failures queued so the user can retry them; report
       // every file's outcome instead of clearing the list silently.
       ui.pendingImports = results.filter((r) => !r.ok).map((r) => r.source);
       ui.importResults = results;
       renderImports();
       renderFiles();
+      } finally { ui.importing = false; $('#whRunImports').disabled = false; }
     });
     $('#whSaveSnippet')?.addEventListener('click', async () => {
+      if (ui.savingSnippet) return;
+      const scope = requestScope('snippet');
       const name = String($('#whSnippetName')?.value || '').trim();
       const content = $('#whSnippetBody')?.value || '';
       if (!name) { window.alert('Nhập tên tệp cho đoạn code.'); return; }
       const rel = ui.dirRel ? `${ui.dirRel}/${name}` : name;
-      const result = await window.mcpAssistant.workhubWrite(rel, content, null).catch(() => null);
+      ui.savingSnippet = true;
+      const result = await window.mcpAssistant.workhubWrite(rel, content, null, scope.workspace).catch(() => null);
+      ui.savingSnippet = false;
+      if (!scope.current()) return;
       if (!unwrap(result)) { window.alert('Không tạo được tệp — có thể tệp đã tồn tại (ghi đè cần mở tệp và dùng Sửa nhanh).'); return; }
       renderFiles();
     });
@@ -1244,6 +1660,7 @@
       setTimeout(() => URL.revokeObjectURL(link.href), 5000);
     });
     $('#whReadCapsule')?.addEventListener('click', async () => {
+      const scope = requestScope('capsule');
       const box = $('#whCapsuleView');
       if (!box) return;
       const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
@@ -1257,6 +1674,7 @@
       }
       box.appendChild(el('span', 'task-muted', 'Đang đọc capsule từ ledger…'));
       const result = unwrap(await window.mcpAssistant.workhubHandoffGet({ runId }).catch((error) => ({ error: error.message })));
+      if (!scope.current()) return;
       const view = S.capsuleView(result?.capsule || null);
       box.replaceChildren();
       if (!view) {
@@ -1278,7 +1696,8 @@
       // workhubGitLog takes a numeric limit and returns the commit array.
       const checks = [];
       if (view.baseHead) {
-        const log = unwrap(await window.mcpAssistant.workhubGitLog(1).catch(() => null));
+        const log = unwrap(await window.mcpAssistant.workhubGitLog(1, scope.workspace).catch(() => null));
+        if (!scope.current()) return;
         const currentHead = Array.isArray(log) ? String(log[0]?.hash || '') : '';
         const matched = S.headMatches(view.baseHead, currentHead);
         checks.push(matched === null
@@ -1305,14 +1724,17 @@
       box.appendChild(useBtn);
     });
     $('#whRevalidate')?.addEventListener('click', async () => {
+      const scope = requestScope('revalidate');
       const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
       const files = S.taskFiles(task || {});
       const lines = [];
       for (const path of files) {
-        const data = unwrap(await window.mcpAssistant.workhubRead(path.replace(/\\/g, '/')).catch(() => null));
+        const data = unwrap(await window.mcpAssistant.workhubRead(path.replace(/\\/g, '/'), scope.workspace).catch(() => null));
+        if (!scope.current()) return;
         lines.push(data ? `Còn trên đĩa: ${path} (${data.size} bytes)` : `KHÔNG còn đọc được: ${path}`);
       }
-      const git = unwrap(await window.mcpAssistant.workhubGitStatus().catch(() => null));
+      const git = unwrap(await window.mcpAssistant.workhubGitStatus(scope.workspace).catch(() => null));
+      if (!scope.current()) return;
       lines.push(git ? `Git hiện có ${git.length} thay đổi chưa commit.` : 'Không đọc được trạng thái Git.');
       const viewer = $('#whHandoffView');
       if (viewer) viewer.textContent = `${viewer.textContent}\n\n[Kiểm tra lại ${new Date().toLocaleTimeString('vi-VN')}]\n${lines.join('\n')}`;

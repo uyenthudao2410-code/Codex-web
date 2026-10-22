@@ -206,3 +206,14 @@ Sau increment 2, tài liệu quyết định tiếp nhận đã chốt lại ph�
 - **A7 — xong mức quan sát/chuẩn bị:** bảng task từ ledger (task hiện tại + lịch sử), client/delegation lanes từ orchestration, kế hoạch + blocker từ projection, điều chỉnh ba mức saved/copied/acknowledged, hàng đợi việc theo dự án (dispatch = chuẩn bị yêu cầu, không tự gửi cho model), chuẩn bị mục tiêu có giới hạn (chỉ tạo yêu cầu, không tự lặp), lịch recipe xét khi app mở.
 - **A8 — một phần:** preview đã đúng schema + nút kiểm tra lại tệp/Git; đọc capsule đã ghi nhận riêng chưa có IPC phía Hub (ghi nhận trung thực, làm khi có đường đọc capsule được hỗ trợ).
 - **Đợt 3 (bản đầu theo điều kiện):** Skills = thư viện hướng dẫn bật theo dự án (không marketplace); F35 voice-to-draft khi engine có mặt; F37 ở mức kiểm tra HTTP cơ bản; F38 chỉ liệt kê cửa sổ Windows; F33 liệt kê workspace Control Plane; F36 inventory tích hợp từ snapshot. F13 LSP, F26/F27 commit/worktree qua UI, F28 checkpoint: chưa làm — theo tài liệu quyết định chỉ làm khi có nhu cầu/guard tương ứng.
+
+### 2026-10-22 — Hoàn thiện nghiệm thu (sau r9)
+
+- **A8 hoàn tất nốt phần còn thiếu:** Hub đọc được capsule đã ghi nhận qua đúng bề mặt runtime (`task_control`, `handoff_action: "get"`, theo `run_id`) — hiển thị capsule_id/phiên bản/mục tiêu/tóm tắt/sha256, tái kiểm tra `base_head` của capsule với HEAD hiện tại và trạng thái task, và tạo yêu cầu tiếp tục từ capsule (lưu thành nháp, không tự gửi). Không còn mục nào của A8 bị treo ở mức "chỉ xem trước".
+- **Sửa lỗi test harness có từ bản refresh 22/10:** `tests/system-setup-console.test.js` thiếu stub `isLocalExecution` trong hai fixture (Control Plane setup không chạy local nên stub `false` là đúng ngữ nghĩa) — 2 test fail từ trước đợt adoption nay đạt (20/20).
+- **Bằng chứng kiểm thử phục vụ nghiệm thu:**
+  - Node, toàn bộ suite trên Windows: 1270 test — 1269 đạt; 1 test `activation-ledger-census` timeout do tải song song (chạy riêng đạt 3/3, không liên quan thay đổi đợt này).
+  - Python trên Windows (`test_local_execution_mode`, `test_task_state_and_build`, `test_projection_rebuild`, `test_tg4_result_handoff`): 110/110 OK. (Cùng bộ này chạy trên Linux VM có 6 lỗi môi trường do đường dẫn/native provider — chỉ tính kết quả Windows.)
+  - Suite tập trung Work Hub: 45/45 trên cả 3 máy (VM, Windows, svhome).
+- **Trạng thái Git:** toàn bộ 4 commit của ngày 22/10 (69f6ab81, 278d9727, merge d4213349, b6351d16) đã được người dùng Push — `main` trùng `origin/main`. Bản đóng gói nghiệm thu: `r10b-acceptance` (lần build đầu với tag r10-acceptance lỗi ký số EBUSY thoáng qua; bản r10b build sạch, đã kiểm tra gói chứa tính năng capsule).
+- **Còn lại đúng một việc thuộc về người dùng:** chạy GUI bản r10 theo kịch bản nghiệm thu của tài liệu quyết định (chọn 2 tệp → tạo gói ngữ cảnh → xem diff → chạy recipe qua Job → mở kết quả/báo cáo; đổi dự án giữa chừng) và xác nhận. Các mục có điều kiện ở Đợt 3 giữ nguyên quyết định cũ.

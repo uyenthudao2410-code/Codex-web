@@ -87,6 +87,19 @@ test('F20 recipes CRUD with validation', () => {
   assert.equal(store.listRecipes().length, 0);
 });
 
+test('F20 project recipes include subdirectories and shared commands without sibling projects', () => {
+  const s = freshStore();
+  s.upsertRecipe({ name: 'Root', command: 'npm test', cwd: PROJECT_A });
+  s.upsertRecipe({ name: 'Module', command: 'npm test', cwd: `${PROJECT_A}\\packages\\web` });
+  s.upsertRecipe({ name: 'Other', command: 'npm test', cwd: PROJECT_B });
+  s.upsertRecipe({ name: 'Sibling', command: 'npm test', cwd: `${PROJECT_A}-old` });
+  s.upsertRecipe({ name: 'Shared', command: 'git status', cwd: '' });
+  assert.deepEqual(s.listRecipes('e:/dev/ALPHA/').map((recipe) => recipe.name), ['Root', 'Module', 'Shared']);
+  assert.deepEqual(s.listRecipes(PROJECT_B).map((recipe) => recipe.name), ['Other', 'Shared']);
+  assert.equal(s.listRecipes().length, 5);
+  assert.deepEqual(s.listRecipes(''), []);
+});
+
 test('F22 notification gate fires once per event and honors the toggle', () => {
   const store = createStore(memoryAdapter());
   assert.equal(store.claimNotification('task-1:done'), true);
@@ -170,12 +183,66 @@ test('D0 handoff marks missing detail instead of inventing results', () => {
 });
 
 test('F02 drafts are per project and survive a store reload', () => {
-  const s = freshStore();
+  const adapter = memoryAdapter();
+  const s = createStore(adapter);
   s.saveDraft(PROJECT_A, 'yêu cầu đang soạn');
-  assert.equal(s.getDraft(PROJECT_A).text, 'yêu cầu đang soạn');
-  assert.equal(s.getDraft(PROJECT_B), null);
-  s.saveDraft(PROJECT_A, '');
-  assert.equal(s.getDraft(PROJECT_A), null);
+  const reopened = createStore(adapter);
+  assert.equal(reopened.getDraft(PROJECT_A).text, 'yêu cầu đang soạn');
+  assert.equal(reopened.getDraft(PROJECT_A).type, 'bugfix');
+  assert.equal(reopened.getDraft(PROJECT_B), null);
+  reopened.saveDraft(PROJECT_A, '');
+  assert.equal(createStore(adapter).getDraft(PROJECT_A), null);
+});
+
+test('F02 full request draft restores task fields, prompt and preview per project', () => {
+  const adapter = memoryAdapter();
+  const s = createStore(adapter);
+  s.saveDraft(PROJECT_A, {
+    type: 'feature',
+    fields: { goal: 'Thêm tìm kiếm', behavior: 'Mở đúng tệp', constraints: 'Giữ thay đổi ngoài phạm vi' },
+    promptId: 'seed-docs',
+    text: 'Bản yêu cầu đã chỉnh sửa',
+  });
+  s.saveDraft(PROJECT_B, { type: 'review', fields: { scope: 'module B' }, promptId: 'seed-review', text: '' });
+  const reopened = createStore(adapter);
+  const a = reopened.getDraft('e:/dev/alpha/');
+  assert.equal(a.type, 'feature');
+  assert.deepEqual(a.fields, { goal: 'Thêm tìm kiếm', behavior: 'Mở đúng tệp', constraints: 'Giữ thay đổi ngoài phạm vi' });
+  assert.equal(a.promptId, 'seed-docs');
+  assert.equal(a.text, 'Bản yêu cầu đã chỉnh sửa');
+  assert.ok(a.updatedAt > 0);
+  assert.equal(reopened.getDraft(PROJECT_B).fields.scope, 'module B');
+  a.fields.goal = 'Không được sửa store qua tham chiếu';
+  assert.equal(reopened.getDraft(PROJECT_A).fields.goal, 'Thêm tìm kiếm');
+  reopened.saveDraft(PROJECT_A, 'Bản preview mới');
+  const updated = createStore(adapter).getDraft(PROJECT_A);
+  assert.equal(updated.text, 'Bản preview mới');
+  assert.equal(updated.type, 'feature');
+  assert.equal(updated.fields.goal, 'Thêm tìm kiếm');
+  reopened.clearDraft(PROJECT_A);
+  assert.equal(createStore(adapter).getDraft(PROJECT_A), null);
+  assert.equal(createStore(adapter).getDraft(PROJECT_B).type, 'review');
+});
+
+test('F02 draft reload validates known form fields and enforces content limits', () => {
+  const adapter = memoryAdapter();
+  adapter.save({ drafts: {
+    [store.workspaceKeyOf(PROJECT_A)]: {
+      type: 'feature', text: 'x'.repeat(21000), promptId: 'p'.repeat(250),
+      fields: { goal: 'g'.repeat(5000), unknown: 'not a form field' },
+    },
+    [store.workspaceKeyOf(PROJECT_B)]: { text: 'legacy draft', updatedAt: 17 },
+  } });
+  const s = createStore(adapter);
+  const draft = s.getDraft(PROJECT_A);
+  assert.equal(draft.text.length, 20000);
+  assert.equal(draft.promptId.length, 200);
+  assert.equal(draft.fields.goal.length, 4000);
+  assert.equal(draft.fields.unknown, undefined);
+  assert.equal(s.getDraft(PROJECT_B).text, 'legacy draft');
+  assert.equal(s.getDraft(PROJECT_B).updatedAt, 17);
+  assert.equal(s.getDraft(PROJECT_B).type, 'bugfix');
+  assert.equal(s.saveDraft(PROJECT_B, []), null);
 });
 
 test('F10 patch approval is bound to the exact diff hash', () => {
