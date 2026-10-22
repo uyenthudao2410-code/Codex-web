@@ -22,6 +22,7 @@ const {
   singleInstanceLockPath
 } = require('./services/runtimePaths');
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
+const workHubFiles = require('./services/workHubFiles');
 const {
   ensureRecoveryHost,
   recoveryLoginItemArguments,
@@ -859,6 +860,18 @@ function registerIpc() {
     return uiPerformanceMetrics.report();
   }));
   secureHandle('workspace:hub', () => invokeSafely(async () => { const current = settings.load(); return { activeWorkspace: current.workspace, recentWorkspaces: current.recentWorkspaces || [] }; }));
+  // Work Hub (catalog 261022, F06/F09/F12): read-only file browsing, content
+  // search and git views, strictly inside the active workspace.
+  const workHubRoot = () => {
+    const workspace = String(settings.load().workspace || '').trim();
+    if (!workspace) throw new Error('Vui lòng chọn thư mục làm việc trước.');
+    return path.resolve(workspace);
+  };
+  secureHandle('workhub:list', (_event, rel) => invokeSafely(async () => workHubFiles.listDir(workHubRoot(), rel)));
+  secureHandle('workhub:read', (_event, rel) => invokeSafely(async () => workHubFiles.readTextFile(workHubRoot(), rel)));
+  secureHandle('workhub:search', (_event, query) => invokeSafely(async () => workHubFiles.searchText(workHubRoot(), query)));
+  secureHandle('workhub:git-status', () => invokeSafely(async () => workHubFiles.gitStatus(workHubRoot())));
+  secureHandle('workhub:git-diff', (_event, rel) => invokeSafely(async () => workHubFiles.gitFileDiff(workHubRoot(), rel)));
   secureHandle('control-plane:open-console', (event, serverUrl) => invokeSafely(async () => {
     assertManagerIpc(event);
     // Navigation only: no pairing, credentials, settings writes or runtime

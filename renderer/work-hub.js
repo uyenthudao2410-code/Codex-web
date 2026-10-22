@@ -22,7 +22,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix' };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '' };
 
   function currentProject() {
     const settings = ui.snapshot?.settings || {};
@@ -226,6 +226,136 @@
       }
     } catch { /* notifications unavailable in this context */ }
   }
+  // ---------- F06/F09/F12 increment 2: files, git diff, artifacts ----------
+  const unwrap = (result) => (result && typeof result === 'object' && 'ok' in result)
+    ? (result.ok ? result.data : null) : result;
+  const smallButton = (label) => el('button', 'secondary-button wh-small', label);
+  const PREVIEWABLE = new Set(['.md', '.txt', '.log', '.json', '.csv', '.html', '.xml', '.yml', '.yaml']);
+
+  async function renderFiles() {
+    const box = $('#whFileList');
+    if (!box || !window.mcpAssistant?.workhubList) return;
+    const data = unwrap(await window.mcpAssistant.workhubList(ui.dirRel).catch(() => null));
+    $('#whCrumb').textContent = `/${ui.dirRel || ''}`;
+    if (!data) { box.replaceChildren(el('span', 'task-muted', 'Chưa chọn thư mục làm việc hoặc không đọc được.')); return; }
+    ui.dirRel = data.rel || '';
+    $('#whCrumb').textContent = `/${ui.dirRel}`;
+    box.replaceChildren(...data.entries.map((entry) => {
+      const row = el('div', 'wh-row');
+      const main = el('div', 'wh-row-main');
+      main.append(el('b', '', entry.type === 'dir' ? `📁 ${entry.name}` : entry.name),
+        el('small', '', entry.type === 'dir' ? 'Thư mục' : `${entry.size ?? 0} bytes`));
+      row.append(main);
+      const action = smallButton(entry.type === 'dir' ? 'Mở' : 'Xem');
+      action.addEventListener('click', () => {
+        if (entry.type === 'dir') { ui.dirRel = entry.rel; renderFiles(); }
+        else openFile(entry.rel);
+      });
+      row.append(action);
+      if (entry.type === 'file') {
+        const add = smallButton('Giỏ');
+        add.addEventListener('click', () => {
+          try { store.addToBasket(currentProject(), { path: entry.rel, size: entry.size }); renderBasket(); }
+          catch (error) { window.alert(error.message); }
+        });
+        row.append(add);
+      }
+      return row;
+    }));
+    if (data.truncated) box.append(el('span', 'task-muted', 'Danh sách đã rút gọn ở 300 mục đầu.'));
+  }
+
+  async function openFile(rel) {
+    const viewer = $('#whViewer');
+    if (!viewer || !window.mcpAssistant?.workhubRead) return;
+    ui.viewerRel = rel;
+    $('#whViewerTitle').textContent = rel;
+    const addBtn = $('#whViewerAddBasket');
+    if (addBtn) addBtn.disabled = false;
+    const data = unwrap(await window.mcpAssistant.workhubRead(rel).catch(() => null));
+    if (!data) { viewer.textContent = 'Không đọc được tệp.'; return; }
+    viewer.textContent = data.binary
+      ? `Tệp nhị phân (${data.size} bytes) — không xem trước nội dung.`
+      : data.content + (data.truncated ? '\n… (đã rút gọn 256KB đầu)' : '');
+  }
+
+  async function renderCodeSearch() {
+    const box = $('#whCodeResults');
+    const query = String($('#whCodeQuery')?.value || '').trim();
+    if (!box || !query) return;
+    const data = unwrap(await window.mcpAssistant.workhubSearch(query).catch(() => null));
+    if (!data) { box.replaceChildren(el('span', 'task-muted', 'Tìm kiếm thất bại (từ khóa tối thiểu 2 ký tự).')); return; }
+    if (!data.results.length) { box.replaceChildren(el('span', 'task-muted', `Không thấy "${query}" trong ${data.scannedFiles} tệp đã quét.`)); return; }
+    box.replaceChildren(...data.results.map((hit) => {
+      const row = el('button', 'wh-search-row');
+      const main = el('span', 'wh-row-main');
+      main.append(el('b', '', `${hit.rel}:${hit.line}`), el('small', '', hit.text));
+      row.append(main);
+      row.addEventListener('click', () => openFile(hit.rel));
+      return row;
+    }));
+  }
+
+  async function renderGit() {
+    const box = $('#whGitList');
+    if (!box || !window.mcpAssistant?.workhubGitStatus) return;
+    const data = unwrap(await window.mcpAssistant.workhubGitStatus().catch(() => null));
+    if (!data) { box.replaceChildren(el('span', 'task-muted', 'Không lấy được trạng thái Git (dự án chưa phải git repo?).')); return; }
+    if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
+    box.replaceChildren(...data.map((item) => {
+      const row = el('div', 'wh-row');
+      const main = el('div', 'wh-row-main');
+      main.append(el('b', '', item.path), el('small', '', `Trạng thái: ${item.status.trim() || 'đã sửa'}`));
+      row.append(main);
+      const view = smallButton('Xem diff');
+      view.addEventListener('click', () => renderDiff(item.path));
+      row.append(view);
+      return row;
+    }));
+  }
+
+  async function renderDiff(rel) {
+    const box = $('#whDiff');
+    if (!box) return;
+    const data = unwrap(await window.mcpAssistant.workhubGitDiff(rel).catch(() => null));
+    box.textContent = !data ? 'Không lấy được diff.'
+      : (data.diff || 'Tệp chưa có diff (tệp mới chưa track sẽ không có diff — xem ở trang Tác vụ).')
+        + (data.truncated ? '\n… (diff đã rút gọn)' : '');
+  }
+
+  function renderArtifacts() {
+    const box = $('#whArtifacts');
+    if (!box) return;
+    const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+    const report = task?.last_build_report || null;
+    if (!report) { box.replaceChildren(el('span', 'task-muted', 'Chưa có báo cáo build (verify_build) trong tác vụ hiện tại.')); return; }
+    const head = el('div', 'wh-row');
+    const headMain = el('div', 'wh-row-main');
+    headMain.append(el('b', '', report.overall_status === 'passed' ? 'Xác minh thành công' : 'Xác minh thất bại'),
+      el('small', '', `${report.project?.type || ''} · v${report.project?.version || '?'}`));
+    head.append(headMain);
+    const rows = [head];
+    (report.artifacts || []).slice(0, 12).forEach((item) => {
+      const row = el('div', 'wh-row');
+      const main = el('div', 'wh-row-main');
+      const hash = String(item.sha256 || item.sha384 || item.sha512 || '').slice(0, 16);
+      main.append(el('b', '', item.path || 'sản phẩm'), el('small', '', hash ? `sha ${hash}…` : 'Không có hash'));
+      row.append(main);
+      const ext = String(item.path || '').toLowerCase().match(/\.[a-z0-9]+$/)?.[0] || '';
+      if (PREVIEWABLE.has(ext)) {
+        const view = smallButton('Xem trước');
+        view.addEventListener('click', () => openFile(item.path));
+        row.append(view);
+      }
+      const copy = smallButton('Sao chép đường dẫn');
+      copy.addEventListener('click', (e) => copyText(item.path || '', e.currentTarget));
+      row.append(copy);
+      rows.push(row);
+    });
+    if (report.failure) rows.push(el('span', 'task-muted', `Lỗi: ${report.failure}`));
+    box.replaceChildren(...rows);
+  }
+
   async function loadTask() {
     try {
       const result = await window.mcpAssistant?.taskState?.();
@@ -233,6 +363,7 @@
     } catch { ui.taskPayload = null; }
     renderTaskSummary();
     renderHandoff();
+    renderArtifacts();
     maybeNotify(ui.taskPayload?.state || ui.taskPayload?.data?.state || null);
   }
 
@@ -348,6 +479,19 @@
       if (Notification.permission === 'granted') new Notification('Codex Hub', { body: 'Thông báo thử: kênh thông báo đang hoạt động.' });
       else window.alert('Quyền thông báo chưa được cấp.');
     });
+    $('#whDirUp')?.addEventListener('click', () => {
+      ui.dirRel = ui.dirRel.split('/').slice(0, -1).join('/');
+      renderFiles();
+    });
+    $('#whDirReload')?.addEventListener('click', renderFiles);
+    $('#whCodeSearch')?.addEventListener('click', renderCodeSearch);
+    $('#whCodeQuery')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderCodeSearch(); });
+    $('#whGitRefresh')?.addEventListener('click', renderGit);
+    $('#whViewerAddBasket')?.addEventListener('click', () => {
+      if (!ui.viewerRel) return;
+      try { store.addToBasket(currentProject(), { path: ui.viewerRel }); renderBasket(); }
+      catch (error) { window.alert(error.message); }
+    });
     $('#whSearchInput')?.addEventListener('input', renderSearchResults);
     $('#whSearchClose')?.addEventListener('click', closeSearch);
     $('#whSearchOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'whSearchOverlay') closeSearch(); });
@@ -367,6 +511,8 @@
     renderBasket();
     renderRecipes();
     await loadTask();
+    renderFiles();
+    renderGit();
   }
 
   window.WorkHubUI = { refresh, store };

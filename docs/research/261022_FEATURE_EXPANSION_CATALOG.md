@@ -179,3 +179,15 @@ Nền nguồn trước khi triển khai: đã hợp nhất toàn bộ thay đổ
 Kiểm chứng increment 1: `tests/work-hub-store.test.js` 9/9 đạt; `tests/settings.test.js` 15/15 đạt; `node --check` cho `app.js`, `work-hub.js`, `work-hub-store.js` đạt; cấu trúc HTML hợp lệ. Chưa kiểm chứng: chạy GUI Electron thật trên Windows (làm sau khi đồng bộ + build ở mốc đồng bộ Đợt A).
 
 Tệp thay đổi: `renderer/work-hub-store.js` (mới), `renderer/work-hub.js` (mới), `renderer/index.html`, `renderer/app.js`, `renderer/styles.css`, `tests/work-hub-store.test.js` (mới), tài liệu này.
+
+### 2026-10-22 — Đợt A, increment 2 (Muse triển khai trực tiếp trên VM)
+
+Bổ sung lớp đọc tệp thật cho Work Hub, vẫn giữ ranh giới an toàn của ứng dụng:
+
+- **F06 — đã xong ở mức Work Hub:** service mới `electron/services/workHubFiles.js` (chỉ đọc, khóa chặt trong thư mục làm việc đang dùng: chuẩn hóa đường dẫn, chặn `..` thoát ra ngoài, bỏ qua `.git`/`node_modules`/`.coding-tools`/`dist` khi quét) + 5 kênh IPC `workhub:list|read|search|git-status|git-diff` qua `secureHandle` sẵn có của main + preload tương ứng. Giao diện: cây thư mục điều hướng được, xem nhanh nội dung tệp văn bản (tệp nhị phân báo rõ, không dump), tìm trong mã theo nội dung, thêm tệp đang xem/tệp trong cây vào giỏ ngữ cảnh.
+- **F09 — đã xong ở mức Work Hub:** danh sách tệp thay đổi từ `git status --porcelain` (git chạy bằng `execFile` argv, không qua shell) và diff nội tuyến của từng tệp (gộp staged + unstaged, rút gọn 200KB). Tệp mới chưa track không có diff — giao diện ghi rõ điều này.
+- **F12 — đã xong ở mức Work Hub:** khay sản phẩm từ `last_build_report` của task state: trạng thái xác minh, loại/phiên bản dự án, từng artifact kèm hash rút gọn, nút Xem trước cho định dạng văn bản (md/txt/log/json/csv/html/xml/yml) và Sao chép đường dẫn. Mở thư mục bằng shell chưa làm (chưa có IPC tương ứng, không tự mở rộng).
+
+Kiểm chứng increment 2: `tests/work-hub-files.test.js` 5/5 đạt (gồm test chặn thoát thư mục, test git status/diff trên repo tạm thật); tổng suite liên quan 29/29 (work-hub-store 9 + work-hub-files 5 + settings 15); `node --check` đạt cho main/preload/service/renderer; HTML hợp lệ. Chưa kiểm chứng: GUI Electron thật trên Windows (làm ở mốc build bản thử).
+
+Tệp thay đổi: `electron/services/workHubFiles.js` (mới), `electron/main.js`, `electron/preload.js`, `renderer/work-hub.js`, `renderer/index.html`, `renderer/styles.css`, `tests/work-hub-files.test.js` (mới), tài liệu này.

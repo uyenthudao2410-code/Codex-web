@@ -651,6 +651,29 @@
               <button class="secondary-button" id="whNotifyTest" type="button">Gửi thông báo thử</button>
             </article>
           </div>
+          <div class="task-grid">
+            <article class="panel"><div class="panel-title"><h3>Tệp trong dự án (F06)</h3><span class="soft-badge neutral" id="whCrumb">/</span></div>
+              <div class="inline-actions"><button class="secondary-button" id="whDirUp" type="button">Lên một cấp</button><button class="secondary-button" id="whDirReload" type="button">Tải lại thư mục</button></div>
+              <label class="field"><span>Tìm trong mã nguồn (theo nội dung)</span><input id="whCodeQuery" placeholder="Ví dụ: checkPassword"></label>
+              <button class="secondary-button" id="whCodeSearch" type="button">Tìm trong dự án</button>
+              <div class="wh-list" id="whCodeResults"></div>
+              <div class="wh-list" id="whFileList"><span class="task-muted">Đang tải…</span></div>
+            </article>
+            <article class="panel"><div class="panel-title"><h3>Xem nhanh tệp</h3><span class="soft-badge neutral" id="whViewerTitle">Chưa chọn</span></div>
+              <button class="secondary-button" id="whViewerAddBasket" type="button" disabled>Thêm tệp đang xem vào giỏ</button>
+              <pre class="task-command wh-viewer" id="whViewer">Chọn một tệp ở cột bên để xem nội dung.</pre>
+            </article>
+          </div>
+          <div class="task-grid">
+            <article class="panel"><div class="panel-title"><h3>Thay đổi Git (F09)</h3><span class="soft-badge neutral">Diff nội tuyến</span></div>
+              <button class="secondary-button" id="whGitRefresh" type="button">Tải tệp đã thay đổi</button>
+              <div class="wh-list" id="whGitList"></div>
+              <pre class="task-command wh-viewer" id="whDiff">Chưa chọn tệp.</pre>
+            </article>
+            <article class="panel"><div class="panel-title"><h3>Sản phẩm &amp; báo cáo (F12)</h3><span class="soft-badge neutral">Báo cáo build gần nhất</span></div>
+              <div class="wh-list" id="whArtifacts"><span class="task-muted">Đang tải…</span></div>
+            </article>
+          </div>
         </section>
 
         <section class="page" data-page-view="usage">
