@@ -56,8 +56,9 @@
   }
 
   function saveCurrentDraft(workspace = currentProject()) {
-    if (!workspace) return;
-    store.saveDraft(workspace, { text: $('#whPreview')?.value || '', type: ui.selectedType, fields: fieldValues(), promptId: ui.selectedPromptId });
+    if (!workspace) { renderDraftState(); return; }
+    try { store.saveDraft(workspace, { text: $('#whPreview')?.value || '', type: ui.selectedType, fields: fieldValues(), promptId: ui.selectedPromptId }); }
+    catch (error) { persistenceError = error.message || 'Không lưu được nháp.'; setStatus(persistenceError, 'error'); }
     renderDraftState();
   }
 
@@ -72,6 +73,7 @@
     if (ui.savingFile) { setStatus('Đang lưu tệp. Chờ xác nhận trước khi đổi tệp hoặc dự án.'); return false; }
     const editor = $('#whEditor');
     if (editor && !editor.hidden && editor.value !== ui.viewerContent) {
+      if (document.body.dataset.page !== 'workhub') window.navigate?.('workhub');
       setStatus('Tệp có thay đổi chưa lưu. Chọn Lưu tệp hoặc Hủy sửa trước khi mở tệp hay chuyển dự án.', 'error');
       editor.focus();
       return false;
@@ -110,16 +112,25 @@
 
   async function switchProject(project) {
     if (S.workspaceKeyOf(project) === S.workspaceKeyOf(currentProject())) return true;
+    if (ui.switchingProject) return false;
     if (!canLeaveFileEdit()) return false;
     saveCurrentDraft();
+    const main = document.querySelector('.main-area');
+    ui.switchingProject = true;
+    if (main) main.inert = true;
     try {
-      const result = await window.mcpAssistant.switchWorkspace(project);
+      const source = window.mcpAssistant || (typeof api === 'undefined' ? null : api);
+      if (!source?.switchWorkspace) throw new Error('Chuyển dự án cần ứng dụng Desktop.');
+      const result = await source.switchWorkspace(project);
       if (result?.ok === false) throw new Error(result.error?.message || result.error || 'Không chuyển được dự án.');
+      if (typeof refreshSnapshot === 'function') await refreshSnapshot();
+      window.navigate?.('workhub');
       await refresh();
       const menu = document.querySelector('.wh-project-menu');
       if (menu) menu.open = false;
       return true;
-    } catch (error) { setStatus(error.message || 'Không chuyển được dự án. Cấu hình cũ vẫn đang được dùng.', 'error'); return false; }
+    } catch (error) { if (document.body.dataset.page !== 'workhub') window.navigate?.('workhub'); setStatus(error.message || 'Không chuyển được dự án. Cấu hình cũ vẫn đang được dùng.', 'error'); return false; }
+    finally { ui.switchingProject = false; if (main) main.inert = false; }
   }
 
   function currentProject() {
@@ -231,6 +242,13 @@
     const def = S.TASK_TYPES[ui.selectedType];
     return String(fieldValues()[def.fields[0].key] || '').trim();
   }
+  function showRequestDraft() {
+    activateTab('context');
+    const preparation = $('#whTypeFields')?.closest('details');
+    if (preparation) preparation.open = false;
+    $('#whPreview')?.focus();
+    $('#whPreview')?.scrollIntoView({ block: 'nearest' });
+  }
   function buildFromType() {
     const preview = $('#whPreview');
     try {
@@ -241,6 +259,7 @@
         filesText: store.contextPackageText(currentProject()),
       });
       saveCurrentDraft();
+      showRequestDraft();
       setStatus('Yêu cầu đã sẵn sàng. Bạn có thể chỉnh sửa rồi sao chép.');
     } catch (error) { setStatus(`Chưa đủ thông tin: ${error.message}`, 'error'); }
   }
@@ -253,6 +272,7 @@
       files: store.contextPackageText(currentProject()) || '(chưa chọn tệp)',
     });
     saveCurrentDraft();
+    showRequestDraft();
     setStatus('Đã tạo yêu cầu từ mẫu đã chọn.');
   }
 
@@ -265,6 +285,8 @@
     box.replaceChildren();
     const files = store.basketFor(currentProject());
     if ($('#whBasketCount')) $('#whBasketCount').textContent = String(files.length);
+    const selected = new Set(files.map((file) => String(file.path).replace(/\\/g, '/')));
+    for (const input of document.querySelectorAll('[data-wh-file]')) input.checked = selected.has(input.dataset.whFile);
     if (!files.length) { box.appendChild(el('span', 'task-muted', 'Giỏ trống. Thêm đường dẫn tệp hoặc nhập từ tác vụ hiện tại.')); return; }
     for (const file of files) {
       const row = el('div', 'wh-row');
@@ -294,7 +316,7 @@
       main.appendChild(el('b', '', recipe.name + (inProject ? '' : ' · dự án khác')));
       main.appendChild(el('small', '', recipe.command + (recipe.cwd ? `  ·  ${recipe.cwd}` : '')));
       row.appendChild(main);
-      const run = el('button', 'secondary-button wh-small', 'Chạy (Job)');
+      const run = el('button', 'secondary-button wh-small', 'Chạy lệnh');
       run.addEventListener('click', () => { activateTab('verify'); return runRecipeAsJob(recipe); });
       const copy = el('button', 'secondary-button wh-small', 'Sao chép lệnh');
       copy.addEventListener('click', () => copyText(recipe.command, copy));
@@ -415,12 +437,24 @@
       });
       row.append(action);
       if (entry.type === 'file') {
-        const add = smallButton('Giỏ');
-        add.addEventListener('click', () => {
-          try { store.addToBasket(currentProject(), { path: entry.rel, size: entry.size }); renderBasket(); }
+        const label = el('label', 'wh-file-check');
+        const add = document.createElement('input');
+        add.type = 'checkbox';
+        add.dataset.whFile = entry.rel;
+        add.setAttribute('data-wh-file', entry.rel);
+        add.setAttribute('aria-label', `Chọn tệp ${entry.rel} làm ngữ cảnh`);
+        add.checked = store.basketFor(scope.workspace).some((file) => String(file.path).replace(/\\/g, '/') === entry.rel);
+        add.addEventListener('change', () => {
+          if (!scope.current()) return;
+          try {
+            if (add.checked) store.addToBasket(scope.workspace, { path: entry.rel, size: entry.size });
+            else store.removeFromBasket(scope.workspace, entry.rel);
+            renderBasket();
+          }
           catch (error) { window.alert(error.message); }
         });
-        row.append(add);
+        label.append(add, el('span', '', 'Chọn'));
+        row.append(label);
       }
       return row;
     }));
@@ -432,7 +466,6 @@
     if (!viewer || !window.mcpAssistant?.workhubRead) return;
     if (!canLeaveFileEdit()) return;
     const scope = requestScope('viewer');
-    activateTab('context');
     ui.viewerRel = rel;
     ui.viewerHash = '';
     ui.viewerContent = null;
@@ -706,10 +739,10 @@
       { kind: 'Trang', title: 'Xác minh & Build', detail: 'chạy test build sản phẩm', run: () => window.navigate?.('build') },
     ];
     for (const p of store.listPrompts()) {
-      entries.push({ kind: 'Lời nhắc', title: p.name, detail: 'mẫu yêu cầu thư viện lời nhắc', run: () => { ui.selectedPromptId = p.id; renderPromptOptions(); saveCurrentDraft(); window.navigate?.('workhub'); activateTab('context'); $('#whPromptSelect')?.focus(); } });
+      entries.push({ kind: 'Lời nhắc', title: p.name, detail: 'mẫu yêu cầu thư viện lời nhắc', run: () => { ui.selectedPromptId = p.id; renderPromptOptions(); saveCurrentDraft(); window.navigate?.('workhub'); activateTab('context'); const select = $('#whPromptSelect'); const preparation = select?.closest('details'); if (preparation) preparation.open = true; select?.focus(); } });
     }
     for (const r of store.listRecipes(currentProject())) {
-      entries.push({ kind: 'Lệnh đã lưu', title: r.name, detail: r.command, run: () => { window.navigate?.('workhub'); activateTab('verify'); $('#whRecipes')?.scrollIntoView({ block: 'start' }); setStatus(`Lệnh đã lưu: ${r.name} · ${r.command}. Chọn Chạy để thực thi.`); } });
+      entries.push({ kind: 'Lệnh đã lưu', title: r.name, detail: r.command, run: () => { window.navigate?.('workhub'); activateTab('verify'); $('#whRecipeList')?.scrollIntoView({ block: 'start' }); setStatus(`Lệnh đã lưu: ${r.name} · ${r.command}. Chọn Chạy lệnh để thực thi.`); } });
     }
     for (const project of recentProjects()) {
       entries.push({
@@ -732,7 +765,7 @@
       entries.push({ kind: 'Hội thoại', title: chat.label, detail: chat.note || chat.url || '', run: () => { if (chat.url) window.mcpAssistant?.openExternal?.(chat.url); } });
     }
     for (const file of store.basketFor(currentProject())) {
-      entries.push({ kind: 'Tệp ngữ cảnh', title: file.path, detail: 'trong giỏ ngữ cảnh của dự án hiện tại', run: () => openFile(String(file.path).replace(/\\/g, '/')) });
+      entries.push({ kind: 'Tệp ngữ cảnh', title: file.path, detail: 'trong giỏ ngữ cảnh của dự án hiện tại', run: () => { window.navigate?.('workhub'); return openFile(String(file.path).replace(/\\/g, '/')); } });
     }
     return entries;
   }
@@ -955,9 +988,9 @@
     return jobWakeQueue;
   }
   function jobResult(response) {
-    if (response?.ok === false) throw new Error(String(response.error || 'Runtime không xác nhận thao tác.'));
+    if (response?.ok === false) throw new Error(String(response.error || 'Bộ thực thi không xác nhận thao tác.'));
     const result = unwrap(response);
-    if (!result || typeof result !== 'object') throw new Error('Không nhận được trạng thái Job từ runtime.');
+    if (!result || typeof result !== 'object') throw new Error('Không nhận được trạng thái lệnh từ bộ thực thi.');
     return result;
   }
   function appendJobOutput(job, result) {
@@ -996,7 +1029,7 @@
   }
   function applyJobResult(job, result) {
     const commandId = String(result.command_id || result.session_id || result.commandId || '');
-    if (job.commandId && commandId && commandId !== job.commandId) throw new Error('Runtime trả về một Job khác; đã dừng cập nhật để tránh nhầm lần chạy.');
+    if (job.commandId && commandId && commandId !== job.commandId) throw new Error('Bộ thực thi trả về một lần chạy khác; đã dừng cập nhật để tránh nhầm lần chạy.');
     if (commandId) job.commandId = commandId;
     appendJobOutput(job, result);
     job.status = jobStatusOf(result);
@@ -1037,20 +1070,22 @@
     if (!box || !meta) return;
     if (!ui.job) {
       meta.textContent = 'Chưa chạy lệnh nào trong phiên này.';
-      box.textContent = 'Chọn "Chạy (Job)" ở một lệnh đã lưu.';
+      box.textContent = 'Chọn “Chạy lệnh” ở một lệnh đã lưu.';
       for (const selector of ['#whJobKill', '#whJobPoll', '#whJobWrite']) { const button = $(selector); if (button) button.disabled = true; }
       return;
     }
     const job = ui.job;
     const labels = { starting: 'Đang gửi lệnh', running: 'Đang chạy', unknown: 'Chưa xác định trạng thái', exited: 'Đã kết thúc', terminated: 'Đã dừng', stopped: 'Đã dừng', timeout: 'Hết thời gian', error: 'Không chạy được' };
     const status = job.stopRequested && !jobIsTerminal(job) ? 'Đã yêu cầu dừng · chờ xác nhận' : (labels[job.status] || job.status);
-    meta.textContent = `${job.name} · ${status}${job.commandId ? ` · Job ${job.commandId}` : ''}${job.exitCode != null ? ` · exit ${job.exitCode}` : ''}`;
+    meta.textContent = `${job.name} · ${status}${job.workspace ? ` · Dự án: ${job.workspace}` : ''}${job.commandId ? ` · Mã lần chạy: ${job.commandId}` : ''}${job.exitCode != null ? ` · Mã thoát: ${job.exitCode}` : ''}`;
     const notices = [];
-    if (job.observationError) notices.push(`Không xác nhận được trạng thái: ${job.observationError}\nLệnh có thể vẫn chạy. Dùng “Lấy output mới” để kiểm tra; không tự chạy lại.`);
+    if (job.observationError) notices.push(job.status === 'error'
+      ? `Lệnh chưa được gửi: ${job.observationError}\nBạn có thể chạy lại sau khi khắc phục lỗi.`
+      : `Không xác nhận được trạng thái: ${job.observationError}\nLệnh có thể vẫn chạy. Dùng “Lấy kết quả mới” để kiểm tra; không tự chạy lại.`);
     if (job.inputDeliveryError) notices.push(job.inputDeliveryError);
-    if (job.outputClipped) notices.push('Đang hiển thị 12.000 ký tự output cuối.');
-    if (job.outputIncomplete) notices.push('Runtime đã rút gọn hoặc không còn giữ một phần output.');
-    box.textContent = [job.output || '(chưa có output)', ...notices].join('\n\n');
+    if (job.outputClipped) notices.push('Đang hiển thị 12.000 ký tự kết quả cuối.');
+    if (job.outputIncomplete) notices.push('Bộ thực thi đã rút gọn hoặc không còn giữ một phần kết quả.');
+    box.textContent = [job.output || '(chưa có kết quả)', ...notices].join('\n\n');
     const kill = $('#whJobKill');
     const poll = $('#whJobPoll');
     const write = $('#whJobWrite');
@@ -1061,7 +1096,7 @@
   async function runRecipeAsJob(recipe) {
     if (ui.job && !jobIsTerminal(ui.job)) { window.alert('Lần chạy trước đang được gửi, đang chạy hoặc chưa xác định trạng thái. Hãy kiểm tra lần chạy đó trước khi chạy lệnh khác.'); return; }
     const workspace = currentProject();
-    const job = { name: recipe.name, commandId: '', status: 'starting', output: '', exitCode: null };
+    const job = { name: recipe.name, workspace, commandId: '', status: 'starting', output: '', exitCode: null };
     ui.job = job;
     renderJob();
     try {
@@ -1072,7 +1107,7 @@
         // command. Without an explicit pre-dispatch rejection, execution is
         // unknown and must not be silently retried.
         job.status = /MCP chưa sẵn sàng|Lệnh không được trống|Dự án đã thay đổi/.test(String(response.error || '')) ? 'error' : 'unknown';
-        job.observationError = String(response.error || 'Runtime từ chối lệnh.').slice(0, 400);
+        job.observationError = String(response.error || 'Bộ thực thi từ chối lệnh.').slice(0, 400);
       } else applyJobResult(job, jobResult(response));
     } catch (error) {
       if (ui.job !== job || jobUiUnloaded) return;
@@ -1096,7 +1131,7 @@
       if (ui.job === job && job.status !== 'running') setJobAwake(false);
     }
   }
-  window.addEventListener('beforeunload', () => { jobUiUnloaded = true; setJobAwake(false); });
+  window.addEventListener('pagehide', () => { jobUiUnloaded = true; setJobAwake(false); });
 
   // ---- A1: context package with real content + versions ----
   async function buildContextPackage() {
@@ -1135,7 +1170,7 @@
     if (!scope.current()) return;
     if (preview?.value !== request) { setStatus('Yêu cầu đã được sửa trong lúc đọc tệp. Bấm tạo gói lần nữa để dùng nội dung mới.'); return; }
     if (!included) { setStatus('Chưa thêm được nội dung: tệp không đọc được, là tệp nhị phân hoặc yêu cầu đã hết chỗ.', 'error'); return; }
-    if (preview) { preview.value = parts.join(''); saveCurrentDraft(); }
+    if (preview) { preview.value = parts.join(''); saveCurrentDraft(); showRequestDraft(); }
     setStatus(`Đã thêm ${included} tệp vào yêu cầu · ${shortened} tệp rút gọn · ${skipped} tệp bỏ qua. Tối đa 20.000 ký tự.`);
     } finally { if (button) button.disabled = false; }
   }
@@ -1148,7 +1183,7 @@
     const plan = S.planView(task);
     if (!plan) { box.replaceChildren(el('span', 'task-muted', 'Chưa có task để trình bày kế hoạch.')); return; }
     box.replaceChildren();
-    box.append(el('p', '', `${plan.doneCount}/${plan.steps.length} bước xong · ${plan.testsRun} test đã chạy, ${plan.testsFailed} lỗi${plan.detailsAvailable ? '' : ' · CHƯA lấy được chi tiết (details_available=false)'}`));
+    box.append(el('p', '', `${plan.doneCount}/${plan.steps.length} bước xong · ${plan.testsRun} lần kiểm tra đã ghi nhận, ${plan.testsFailed} lần có lỗi${plan.detailsAvailable ? '' : ' · Chưa lấy được đầy đủ chi tiết'}`));
     for (const step of plan.steps) box.append(el('div', 'wh-row', `${step.done ? '✓' : '•'} ${step.text} (${step.status})`));
     for (const blocker of plan.blockers) box.append(el('div', 'wh-row', `⛔ ${blocker}`));
   }
@@ -1182,7 +1217,7 @@
     const box = $('#whDraftState');
     if (!box) return;
     const draft = store.getDraft(currentProject());
-    box.textContent = persistenceError || (draft ? `Đã lưu nháp lúc ${new Date(draft.updatedAt).toLocaleTimeString('vi-VN')} · chỉ trong dự án này.` : 'Yêu cầu đang soạn được tự lưu theo dự án.');
+    box.textContent = persistenceError || (!currentProject() ? 'Chọn dự án để bật tự lưu nháp.' : draft ? `Đã lưu nháp lúc ${new Date(draft.updatedAt).toLocaleTimeString('vi-VN')} · chỉ trong dự án này.` : 'Yêu cầu đang soạn được tự lưu theo dự án.');
   }
   function restoreDraft({ force = false } = {}) {
     const draft = store.getDraft(currentProject());
@@ -1482,8 +1517,8 @@
         if (input.value === chars) input.value = '';
       } else {
         job.inputDeliveryError = jobIsTerminal(job)
-          ? 'Job đã kết thúc trước khi gửi input. Nội dung vẫn được giữ.'
-          : 'Chưa xác nhận được input đã tới lệnh. Nội dung vẫn được giữ; hãy lấy output mới trước khi quyết định gửi lại.';
+          ? 'Lệnh đã kết thúc trước khi gửi nội dung. Nội dung vẫn được giữ.'
+          : 'Chưa xác nhận được nội dung đã tới lệnh. Nội dung vẫn được giữ; hãy lấy kết quả mới trước khi quyết định gửi lại.';
       }
       renderJob();
     });
@@ -1607,7 +1642,7 @@
       if (!next) { window.alert('Không có việc đang chờ (hoặc hàng đợi đang tạm dừng).'); return; }
       store.setQueueItemStatus(currentProject(), next.id, 'running');
       const preview = $('#whPreview');
-      if (preview) preview.value = next.text || next.title;
+      if (preview) { preview.value = next.text || next.title; saveCurrentDraft(); activateTab('context'); }
       renderQueue();
     });
     $('#whScheduleAdd')?.addEventListener('click', () => {
@@ -1625,7 +1660,7 @@
     $('#whGoalBuild')?.addEventListener('click', () => {
       const prep = store.goalPrepFor(currentProject());
       const preview = $('#whPreview');
-      if (prep && preview) preview.value = S.goalRequestText(currentProject(), prep);
+      if (prep && preview) { preview.value = S.goalRequestText(currentProject(), prep); saveCurrentDraft(); activateTab('context'); }
     });
     $('#whGoalClear')?.addEventListener('click', () => { store.clearGoalPrep(currentProject()); renderGoal(); });
     $('#whNoteAdd')?.addEventListener('click', () => {
@@ -1650,8 +1685,6 @@
       const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
       const text = S.buildReportText(task);
       if (!text) { window.alert('Chưa có task để xuất báo cáo.'); return; }
-      const preview = $('#whPreview');
-      if (preview) preview.value = text;
       const blob = new Blob([text], { type: 'text/markdown' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -1669,24 +1702,24 @@
       // Never query without an exact run id: the runtime falls back to the
       // latest capsule overall, which could belong to another task.
       if (!runId) {
-        box.appendChild(el('p', 'task-muted', 'Chưa xác định được RUN của tác vụ hiện tại nên không đọc capsule — tránh lấy nhầm capsule của tác vụ khác. Hãy mở trang Tác vụ để trạng thái tác vụ được nạp.'));
+        box.appendChild(el('p', 'task-muted', 'Chưa xác định được lần chạy của công việc hiện tại. Hãy mở trang Tác vụ để lấy trạng thái trước khi đọc bản bàn giao.'));
         return;
       }
-      box.appendChild(el('span', 'task-muted', 'Đang đọc capsule từ ledger…'));
+      box.appendChild(el('span', 'task-muted', 'Đang đọc bản bàn giao…'));
       const result = unwrap(await window.mcpAssistant.workhubHandoffGet({ runId }).catch((error) => ({ error: error.message })));
       if (!scope.current()) return;
       const view = S.capsuleView(result?.capsule || null);
       box.replaceChildren();
       if (!view) {
-        box.appendChild(el('p', 'task-muted', result?.recommended_next_action || 'Chưa có capsule nào được ghi cho run này. Hãy ghi capsule từ trang Tác vụ trước khi chuyển hội thoại.'));
+        box.appendChild(el('p', 'task-muted', result?.recommended_next_action || 'Chưa có bản bàn giao cho lần chạy này. Hãy tạo từ trang Tác vụ trước khi chuyển hội thoại.'));
         return;
       }
       if (view.runId && view.runId !== runId) {
-        box.appendChild(el('p', 'task-muted', `Cảnh báo: capsule trả về thuộc run ${view.runId}, khác run đang chọn (${runId}) — không dùng capsule này.`));
+        box.appendChild(el('p', 'task-muted', 'Bản bàn giao trả về thuộc lần chạy khác. Hãy làm mới công việc trước khi tiếp tục.'));
         return;
       }
       const head = el('div', 'wh-row');
-      head.appendChild(el('b', '', `Capsule ${view.capsuleId.slice(0, 12)} · v${view.version ?? '?'}`));
+      head.appendChild(el('b', '', `Bản bàn giao ${view.capsuleId.slice(0, 12)} · v${view.version ?? '?'}`));
       head.appendChild(el('span', 'soft-badge', view.status));
       box.appendChild(head);
       box.appendChild(el('p', '', `Mục tiêu khi ghi: ${view.objective || '—'}`));
@@ -1707,7 +1740,7 @@
       checks.push(`Trạng thái task khi ghi: ${view.taskStatus || '—'}; hiện tại: ${task?.status || '—'}.`);
       for (const line of checks) box.appendChild(el('p', 'task-muted', line));
       if (result?.recommended_next_action) box.appendChild(el('p', 'task-muted', result.recommended_next_action));
-      const useBtn = el('button', 'secondary-button wh-small', 'Tạo yêu cầu tiếp tục từ capsule');
+      const useBtn = el('button', 'secondary-button wh-small', 'Soạn yêu cầu tiếp tục');
       useBtn.addEventListener('click', () => {
         const text = [
           `Tiếp tục từ capsule ${view.capsuleId} (run ${view.runId}).`,
@@ -1718,8 +1751,8 @@
         ].filter(Boolean).join('\n');
         const preview = $('#whPreview');
         if (preview) preview.value = text;
-        try { store.saveDraft(currentProject(), text); } catch { /* draft store full */ }
-        renderDraftState();
+        saveCurrentDraft();
+        activateTab('context');
       });
       box.appendChild(useBtn);
     });
@@ -1740,18 +1773,20 @@
       if (viewer) viewer.textContent = `${viewer.textContent}\n\n[Kiểm tra lại ${new Date().toLocaleTimeString('vi-VN')}]\n${lines.join('\n')}`;
     });
     $('#whVoiceBtn')?.addEventListener('click', () => {
+      const scope = requestScope('voice');
       const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const status = $('#whVoiceStatus');
       if (!Recognition) { if (status) status.textContent = 'Engine giọng nói không có trong môi trường này — nhập bằng bàn phím.'; return; }
       const recognition = new Recognition();
       recognition.lang = 'vi-VN';
       recognition.onresult = (event) => {
+        if (!scope.current()) return;
         const text = event.results?.[0]?.[0]?.transcript || '';
         const preview = $('#whPreview');
-        if (preview && text) { preview.value = `${preview.value ? `${preview.value} ` : ''}${text}`; store.saveDraft(currentProject(), preview.value); }
+        if (preview && text) { preview.value = `${preview.value ? `${preview.value} ` : ''}${text}`; saveCurrentDraft(); }
         if (status) status.textContent = 'Đã chuyển thành chữ — kiểm tra và sửa trước khi dùng.';
       };
-      recognition.onerror = () => { if (status) status.textContent = 'Không ghi âm được (engine từ chối hoặc không có micro).'; };
+      recognition.onerror = () => { if (status && scope.current()) status.textContent = 'Không ghi âm được (engine từ chối hoặc không có micro).'; };
       if (status) status.textContent = 'Đang nghe…';
       recognition.start();
     });
@@ -1793,6 +1828,14 @@
   }
 
   window.WorkHubUI = { refresh, store };
+  document.addEventListener('coding-tools:workspace-changed', () => { refresh(); });
+  window.addEventListener('beforeunload', (event) => {
+    const editor = $('#whEditor');
+    const editing = editor && !editor.hidden && editor.value !== ui.viewerContent;
+    if (!editing && !fileDrafts.size && !ui.savingFile) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
   document.addEventListener('DOMContentLoaded', () => {
     bind();
     bindExtended();
@@ -1801,6 +1844,8 @@
     renderProjects();
     renderBasket();
     renderRecipes();
+    renderJob();
+    refresh();
     startAttentionPolling();
   });
 })();

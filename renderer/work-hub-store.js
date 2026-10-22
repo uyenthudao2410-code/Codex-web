@@ -96,21 +96,6 @@
     });
   }
 
-  function sanitizeDraft(value) {
-    const raw = typeof value === 'string' ? { text: value } : value;
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-    const hasType = Object.prototype.hasOwnProperty.call(TASK_TYPES, raw.type);
-    const type = hasType ? raw.type : 'bugfix';
-    const fields = {};
-    for (const field of TASK_TYPES[type].fields) {
-      fields[field.key] = typeof raw.fields?.[field.key] === 'string' ? raw.fields[field.key].slice(0, 4000) : '';
-    }
-    const text = typeof raw.text === 'string' ? raw.text.slice(0, 20000) : '';
-    const promptId = typeof raw.promptId === 'string' ? raw.promptId.slice(0, 200) : '';
-    if (!text.trim() && !hasType && !promptId && !Object.values(fields).some((field) => field.trim())) return null;
-    return { text, type, fields, promptId, updatedAt: Number(raw.updatedAt) || 0 };
-  }
-
   function emptyData() {
     return {
       version: VERSION,
@@ -130,6 +115,30 @@
       skills: [],
       chats: {},
       sshTargets: [],
+    };
+  }
+
+  const KNOWN_DRAFT_FIELDS = new Set(Object.values(TASK_TYPES).flatMap((type) => type.fields.map((field) => field.key)));
+  function sanitizeDraft(value) {
+    // Drafts carry the whole request-builder state per project: the composed
+    // text plus the task type, form fields and selected prompt, so switching
+    // projects restores exactly where the user left off. A plain string is
+    // accepted for older callers and normalized to the object shape. Only
+    // known form fields survive a reload; unknown keys are dropped.
+    if (typeof value === 'string') value = { text: value };
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const fields = {};
+    if (value.fields && typeof value.fields === 'object') {
+      for (const [name, fieldValue] of Object.entries(value.fields)) {
+        if (KNOWN_DRAFT_FIELDS.has(name) && typeof fieldValue === 'string') fields[name] = fieldValue.slice(0, 4000);
+      }
+    }
+    return {
+      text: typeof value.text === 'string' ? value.text.slice(0, 20000) : '',
+      type: typeof value.type === 'string' && TASK_TYPES[value.type] ? value.type : 'bugfix',
+      fields,
+      promptId: typeof value.promptId === 'string' ? value.promptId.slice(0, 200) : '',
+      updatedAt: Number(value.updatedAt) || 0,
     };
   }
 
@@ -330,12 +339,16 @@
 
       // ---- F20 saved recipes ----
       listRecipes(workspace) {
+        // F20: a project's command list = recipes pinned to the project or
+        // one of its subdirectories, plus shared recipes (no cwd). Sibling
+        // folders that merely share a name prefix do not leak in. No
+        // argument lists everything; an explicitly empty project lists none.
         if (workspace === undefined) return data.recipes.slice();
-        const key = workspaceKeyOf(workspace);
-        if (!key) return [];
+        if (!String(workspace).trim()) return [];
+        const project = String(workspace).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
         return data.recipes.filter((recipe) => {
-          const cwd = workspaceKeyOf(recipe.cwd);
-          return !cwd || cwd === key || cwd.startsWith(`${key}/`);
+          const cwd = String(recipe.cwd || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+          return !cwd || cwd === project || cwd.startsWith(`${project}/`);
         });
       },
       upsertRecipe({ id, name, command, cwd, url }) {
@@ -374,17 +387,29 @@
         const draft = data.drafts[workspaceKeyOf(workspace)];
         return draft ? { ...draft, fields: { ...draft.fields } } : null;
       },
-      saveDraft(workspace, value) {
+      saveDraft(workspace, draft) {
         const key = workspaceKeyOf(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
-        const draft = sanitizeDraft(typeof value === 'string' && value.trim()
-          ? { ...data.drafts[key], text: value }
-          : value);
-        if (!draft) { delete data.drafts[key]; persist(); return null; }
-        if (!data.drafts[key] && Object.keys(data.drafts).length >= LIMITS.drafts) throw new Error('Kho nháp đã đầy.');
-        data.drafts[key] = { ...draft, updatedAt: Date.now() };
+        // A plain empty string clears the draft; any other save MERGES into
+        // the stored draft, so updating just the preview text never loses
+        // the task type, form fields or selected prompt (and vice versa).
+        if (typeof draft === 'string' && !draft.trim()) { delete data.drafts[key]; persist(); return null; }
+        const incoming = sanitizeDraft(draft);
+        if (!incoming) return null;
+        const existing = data.drafts[key];
+        const merged = existing ? {
+          text: typeof draft === 'string' || typeof draft?.text === 'string' ? incoming.text : existing.text,
+          type: draft && typeof draft === 'object' && typeof draft.type === 'string' ? incoming.type : existing.type,
+          fields: draft && typeof draft === 'object' && draft.fields && typeof draft.fields === 'object' ? { ...existing.fields, ...incoming.fields } : existing.fields,
+          promptId: draft && typeof draft === 'object' && typeof draft.promptId === 'string' ? incoming.promptId : existing.promptId,
+        } : incoming;
+        const hasContent = merged.text.trim() || merged.promptId || Object.values(merged.fields).some((value) => value.trim());
+        if (!hasContent) { delete data.drafts[key]; persist(); return null; }
+        if (!existing && Object.keys(data.drafts).length >= LIMITS.drafts) throw new Error('Kho nháp đã đầy.');
+        merged.updatedAt = Date.now();
+        data.drafts[key] = merged;
         persist();
-        return { ...data.drafts[key], fields: { ...data.drafts[key].fields } };
+        return this.getDraft(workspace);
       },
       clearDraft(workspace) { delete data.drafts[workspaceKeyOf(workspace)]; persist(); },
 

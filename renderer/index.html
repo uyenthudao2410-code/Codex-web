@@ -17,49 +17,48 @@
   <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
 
   <div class="app-shell">
-    <aside class="sidebar">
+    <header class="sidebar app-header">
       <div class="brand">
         <div class="brand-mark">
           <img src="app-icon.png" alt="Codex Hub Icon" class="brand-logo-img" width="34" height="34" />
         </div>
-        <div><strong>Codex Hub</strong><small>Control Center</small></div>
+        <div><strong>Codex Hub</strong><small>Không gian làm việc</small></div>
       </div>
 
       <nav class="nav-list" aria-label="Điều hướng chính">
 
-        <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Thực thi mã</span></button>
-        <button class="nav-item" data-page="workhub"><span class="nav-icon">WH</span><span>Làm việc</span></button>
-        <button class="nav-item" data-page="usage"><span class="nav-icon">TK</span><span>Sử dụng</span></button>
-        <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tác vụ & kết quả</span></button>
-        <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Máy này</span></button>
-        <button class="nav-item" data-page="system"><span class="nav-icon">ST</span><span>Cài đặt</span></button>
+        <button class="nav-item active" data-page="workhub"><span>Làm việc</span></button>
+        <button class="nav-item" data-page="task"><span>Lịch sử</span></button>
+        <button class="nav-item" data-page="system"><span>Cài đặt</span></button>
       </nav>
 
-      <div class="sidebar-runtime">
-        <div class="runtime-orbit"><i id="sideRuntimeDot"></i><b id="sideRuntimeText">Đang kiểm tra</b></div>
-        <p id="sideWorkspace">Chưa chọn thư mục làm việc</p>
-        <div class="mini-stats"><span>MCP <b id="sideMcp">--</b></span><span>Tunnel <b id="sideTunnel">--</b></span></div>
+      <div class="wh-workspace-bar"><div class="wh-workspace-copy"><span class="wh-help">DỰ ÁN ĐANG DÙNG</span><strong id="whWorkspaceName">Chưa chọn dự án</strong><span id="whWorkspacePath">Chọn thư mục để bắt đầu.</span></div><div class="wh-workspace-actions"><details class="wh-project-menu"><summary>Đổi dự án</summary><div class="wh-project-popover"><div id="whProjects" class="wh-list"></div><button class="secondary-button" type="button" data-nav="workspace">Chọn thư mục khác…</button></div></details><button class="ghost-button" type="button" data-nav="system">Máy &amp; kết nối</button></div></div>
+      <div class="top-actions">
+        <button class="device-summary-button" id="topDeviceButton" data-nav="device" title="Mở quản lý thiết bị hiện tại"><i></i><span><b id="topDeviceName">Thiết bị hiện tại</b><small id="topDeviceMeta">Local · đang kiểm tra</small></span></button>
+        <button class="icon-button" id="themeToggle" title="Chuyển chủ đề">◐</button>
       </div>
-
-      <div class="sidebar-footer">
-        <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 1.0.7</button>
-        <small>Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.</small>
-      </div>
-    </aside>
+      <details class="app-tools"><summary>Trạng thái &amp; công cụ</summary><div class="app-tools-popover">
+        <div class="inline-actions"><button class="secondary-button" id="refreshButton">Kiểm tra lại</button><button class="primary-button" id="topStartButton">Khởi động nhanh</button></div>
+        <div class="sidebar-runtime">
+          <div class="runtime-orbit"><i id="sideRuntimeDot"></i><b id="sideRuntimeText">Đang kiểm tra</b></div>
+          <p id="sideWorkspace">Chưa chọn thư mục làm việc</p>
+          <div class="mini-stats"><span>MCP <b id="sideMcp">--</b></span><span>Tunnel <b id="sideTunnel">--</b></span></div>
+        </div>
+        <div class="app-tools-links"><button class="ghost-button" type="button" data-nav="overview">Tổng quan thực thi</button><button class="ghost-button" type="button" data-nav="usage">Sử dụng</button><button class="ghost-button" type="button" data-nav="device">Máy này</button><button class="ghost-button" type="button" data-nav="build">Kiểm tra &amp; build</button><button class="ghost-button" type="button" data-nav="logs">Nhật ký</button></div>
+        <div class="sidebar-footer">
+          <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 1.0.7</button>
+          <small>Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.</small>
+        </div>
+      </div></details>
+    </header>
 
     <main class="main-area">
       <header class="topbar">
         <div><p class="eyebrow" id="pageEyebrow">TRUNG TÂM ĐIỀU HÀNH</p><h1 id="pageTitle">Tổng quan Vận hành</h1><p id="pageSubtitle">Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.</p></div>
-        <div class="top-actions">
-          <button class="device-summary-button" id="topDeviceButton" data-nav="device" title="Mở quản lý thiết bị hiện tại"><i></i><span><b id="topDeviceName">Thiết bị hiện tại</b><small id="topDeviceMeta">Local · đang kiểm tra</small></span></button>
-          <button class="icon-button" id="themeToggle" title="Chuyển chủ đề">◐</button>
-          <button class="secondary-button" id="refreshButton">Kiểm tra lại</button>
-          <button class="primary-button" id="topStartButton">Khởi động nhanh</button>
-        </div>
       </header>
 
       <div class="content-viewport">
-        <section class="page active" data-page-view="overview">
+        <section class="page" data-page-view="overview">
           <article class="execution-workspace-strip panel" aria-label="Dự án đang thực thi">
             <div class="execution-workspace-copy"><span class="section-kicker">THƯ MỤC MCP HIỆN TẠI</span><h2 id="executionWorkspaceLabel">Chưa kích hoạt thư mục</h2><p id="executionAccessSummary">Đang kiểm tra kết nối, quyền và trạng thái thực thi.</p></div>
             <div class="execution-workspace-actions"><button class="primary-button" id="executionNextAction" data-nav="system" type="button">Thiết lập máy & thư mục</button><button class="secondary-button" data-nav="task" type="button">Theo dõi thực thi</button></div>
@@ -611,18 +610,47 @@
           </div>
         </section>
 
-        <section class="page wh-workspace" data-page-view="workhub" aria-label="Không gian làm việc">
-          <div class="wh-heading"><div><span class="section-kicker">KHÔNG GIAN LÀM VIỆC</span><h2>Từ yêu cầu đến kết quả</h2><p>Chuẩn bị ngữ cảnh, xem thay đổi và kiểm chứng trong cùng một nơi.</p></div><div class="inline-actions"><button class="secondary-button" id="whOpenSearch" type="button">Tìm nhanh <kbd>Ctrl K</kbd></button><button class="secondary-button" id="whRefresh" type="button">Làm mới</button></div></div>
-          <div class="wh-workspace-bar"><div class="wh-workspace-copy"><span class="wh-help">DỰ ÁN ĐANG DÙNG</span><strong id="whWorkspaceName">Chưa chọn dự án</strong><span id="whWorkspacePath">Chọn thư mục để bắt đầu.</span></div><div class="wh-workspace-actions"><details class="wh-project-menu"><summary>Đổi dự án</summary><div class="wh-project-popover"><div id="whProjects" class="wh-list"></div><button class="secondary-button" type="button" data-nav="workspace">Chọn thư mục khác…</button></div></details><button class="ghost-button" type="button" data-nav="system">Máy &amp; kết nối</button></div></div>
-          <div class="wh-current-task" id="whCurrentTask"><span class="wh-task-dot" aria-hidden="true"></span><div><b id="whCurrentTaskTitle">Chưa có công việc hiện tại</b><span id="whCurrentTaskState">Bắt đầu bằng một yêu cầu bên dưới.</span></div><button class="ghost-button" type="button" data-nav="task">Xem công việc ↗</button></div>
+        <section class="page wh-workspace active" data-page-view="workhub" aria-label="Không gian làm việc">
+          <div class="wh-layout">
+          <aside class="wh-context-rail" aria-label="Tệp và ngữ cảnh">
+            <div id="whFileBrowser" class="wh-file-stack"><article class="panel"><div class="panel-title"><h3>Tệp &amp; ngữ cảnh</h3><span class="soft-badge neutral"><i id="whBasketCount">0</i> tệp đã chọn</span></div><p class="wh-help" id="whCrumb">/</p>
+              <div class="inline-actions"><button class="secondary-button" id="whDirUp" type="button">Lên một cấp</button><button class="secondary-button" id="whDirReload" type="button">Tải lại thư mục</button></div>
+              <label class="field"><span>Tìm trong mã nguồn</span><input id="whCodeQuery" placeholder="Ví dụ: checkPassword"></label>
+              <button class="secondary-button" id="whCodeSearch" type="button">Tìm trong dự án</button>
+              <div class="wh-list" id="whCodeResults"></div>
+              <div class="wh-list" id="whFileList"><span class="task-muted">Đang tải…</span></div>
+            </article><article class="panel"><div class="panel-title"><h3>Xem nhanh tệp</h3><span class="soft-badge neutral" id="whViewerTitle">Chưa chọn</span></div>
+              <div class="inline-actions"><button class="secondary-button" id="whViewerAddBasket" type="button" disabled>Thêm vào ngữ cảnh</button><button class="secondary-button" id="whEditFile" type="button" disabled>Sửa nhanh</button><button class="secondary-button" id="whBlame" type="button">Lịch sử dòng</button></div>
+              <pre class="task-command wh-viewer" id="whViewer">Chọn một tệp để xem nội dung.</pre>
+              <textarea id="whEditor" aria-label="Chỉnh sửa nội dung tệp" rows="10" hidden></textarea>
+              <div class="inline-actions"><button class="primary-button" id="whSaveFile" type="button" disabled>Lưu thay đổi</button><button class="secondary-button" id="whCancelEditFile" type="button" hidden>Hủy sửa</button></div>
+            </article></div>
+            <article class="panel"><div class="panel-title"><h3>Tệp đã chọn</h3><span class="soft-badge neutral" id="whBasketProject">—</span></div>
+              <div class="wh-list" id="whBasketList"></div>
+              <div class="inline-actions"><button class="primary-button" id="whBuildContextBtn" type="button">Đưa nội dung vào yêu cầu</button><button class="secondary-button" id="whClearBasket" type="button">Xóa giỏ</button></div>
+              <details class="wh-disclosure"><summary>Thêm đường dẫn thủ công</summary><div class="wh-disclosure-body">
+                <label class="field"><span>Đường dẫn tệp</span><input id="whFilePath" placeholder="src\login.js"></label>
+                <label class="field"><span>Kích thước (byte, tùy chọn)</span><input id="whFileSize" type="number" min="0" placeholder="1024"></label>
+                <div class="inline-actions"><button class="secondary-button" id="whAddFile" type="button">Thêm vào giỏ</button><button class="secondary-button" id="whImportTaskFiles" type="button">Nhập tệp từ tác vụ</button></div>
+              </div></details>
+            </article>
+          </aside>
+          <div class="wh-task-area">
+          <div class="wh-task-header"><div class="wh-current-task" id="whCurrentTask"><span class="wh-task-dot" aria-hidden="true"></span><div><h2 id="whCurrentTaskTitle">Chưa có công việc hiện tại</h2><span id="whCurrentTaskState">Bắt đầu bằng một yêu cầu bên dưới.</span></div><button class="ghost-button" type="button" data-nav="task">Lịch sử ↗</button></div><div class="inline-actions"><button class="secondary-button" id="whOpenSearch" type="button">Tìm nhanh <kbd>Ctrl K</kbd></button><button class="secondary-button" id="whRefresh" type="button">Làm mới</button></div></div>
           <div class="wh-feedback" id="whStatus" role="status" aria-live="polite" hidden></div>
           <nav class="wh-tabs" role="tablist" aria-label="Các bước làm việc">
-<button id="whTabContext" role="tab" type="button" data-wh-tab="context" aria-selected="true" aria-controls="whPanelContext" tabindex="0"><span>1</span>Ngữ cảnh<i id="whBasketCount">0</i></button>
-<button id="whTabChanges" role="tab" type="button" data-wh-tab="changes" aria-selected="false" aria-controls="whPanelChanges" tabindex="-1"><span>2</span>Thay đổi</button>
-<button id="whTabVerify" role="tab" type="button" data-wh-tab="verify" aria-selected="false" aria-controls="whPanelVerify" tabindex="-1"><span>3</span>Kiểm chứng</button>
-<button id="whTabResults" role="tab" type="button" data-wh-tab="results" aria-selected="false" aria-controls="whPanelResults" tabindex="-1"><span>4</span>Kết quả</button>
+<button id="whTabContext" role="tab" type="button" data-wh-tab="context" aria-selected="true" aria-controls="whPanelContext" tabindex="0">Yêu cầu</button>
+<button id="whTabProgress" role="tab" type="button" data-wh-tab="progress" aria-selected="false" aria-controls="whPanelProgress" tabindex="-1">Tiến trình</button>
+<button id="whTabChanges" role="tab" type="button" data-wh-tab="changes" aria-selected="false" aria-controls="whPanelChanges" tabindex="-1">Thay đổi</button>
+<button id="whTabVerify" role="tab" type="button" data-wh-tab="verify" aria-selected="false" aria-controls="whPanelVerify" tabindex="-1">Kiểm chứng</button>
+<button id="whTabResults" role="tab" type="button" data-wh-tab="results" aria-selected="false" aria-controls="whPanelResults" tabindex="-1">Kết quả</button>
 </nav>
-<section id="whPanelContext" class="wh-tab-panel" role="tabpanel" data-wh-panel="context" aria-labelledby="whTabContext"><div class="wh-section-intro"><div><h3>Chuẩn bị một yêu cầu rõ ràng</h3><p>Mô tả việc cần làm và chọn các tệp liên quan.</p></div><button class="secondary-button" id="whBrowseFiles" type="button">Chọn tệp trong dự án</button></div><div class="wh-grid wh-compose-grid"><article class="panel"><div class="panel-title"><h3>Soạn yêu cầu</h3><span class="soft-badge neutral">Tự lưu theo dự án</span></div>
+<section id="whPanelContext" class="wh-tab-panel" role="tabpanel" data-wh-panel="context" aria-labelledby="whTabContext"><div class="wh-section-intro"><div><h3>Yêu cầu công việc</h3><p>Mô tả việc cần làm và thêm nội dung tệp từ cột bên.</p></div><button class="secondary-button" id="whBrowseFiles" type="button">Chọn tệp</button></div><article class="panel"><div class="panel-title"><h3>Soạn yêu cầu</h3><span class="soft-badge neutral">Tự lưu theo dự án</span></div>
+              <label class="field"><span>Bạn muốn làm gì?</span><textarea id="whPreview" rows="7" placeholder="Ví dụ: Sửa lỗi đăng nhập bị treo, giữ nguyên giao diện và chạy test liên quan."></textarea></label>
+              <div class="inline-actions"><button class="primary-button" id="whCopyBtn" type="button">Sao chép yêu cầu</button><button class="secondary-button" id="whVoiceBtn" type="button">Nhập bằng giọng nói</button></div>
+              <div class="inline-actions"><p class="task-muted" id="whDraftState">Chưa có nháp cho dự án này.</p><button class="ghost-button" id="whClearDraft" type="button">Xóa nháp</button></div>
+              <p class="task-muted" id="whVoiceStatus">Nội dung giọng nói được đưa vào nháp để bạn xem và chỉnh sửa.</p>
+              <details class="wh-disclosure wh-tool-group"><summary>Soạn từ mẫu hoặc loại công việc</summary><div class="wh-disclosure-body">
               <label class="field"><span>Loại công việc</span><select id="whTaskType"><option value="bugfix">Sửa lỗi</option><option value="feature">Thêm tính năng</option><option value="review">Rà soát</option><option value="test">Kiểm thử / chạy test</option><option value="docs">Viết tài liệu</option></select></label>
               <div id="whTypeFields"></div>
               <label class="field"><span>Mẫu yêu cầu</span><select id="whPromptSelect"></select></label>
@@ -631,29 +659,9 @@
               <label class="field"><span>Nội dung mẫu</span><textarea id="whPromptBody" rows="5"></textarea><small>Chèn {{project}} cho dự án, {{request}} cho yêu cầu và {{files}} cho tệp đã chọn.</small></label>
               <div class="inline-actions"><button class="secondary-button" id="whPromptSave" type="button">Lưu mẫu</button><button class="secondary-button" id="whPromptNew" type="button">Mẫu mới</button><button class="secondary-button" id="whPromptDelete" type="button">Xóa mẫu</button></div>
               </div></details>
-              <div class="inline-actions"><button class="primary-button" id="whBuildBtn" type="button">Tạo yêu cầu từ loại việc</button><button class="secondary-button" id="whUsePromptBtn" type="button">Tạo từ mẫu đã chọn</button></div>
-              <label class="field"><span>Yêu cầu đã tạo (xem trước, không tự gửi)</span><textarea id="whPreview" rows="7"></textarea></label>
-              <button class="primary-button" id="whCopyBtn" type="button">Sao chép yêu cầu</button>
-              <p class="task-muted" id="whDraftState">Chưa có nháp cho dự án này.</p>
-              <div class="inline-actions"><button class="secondary-button" id="whClearDraft" type="button">Xóa nháp</button><button class="secondary-button" id="whVoiceBtn" type="button">Nhập bằng giọng nói</button></div>
-              <p class="task-muted" id="whVoiceStatus">Nội dung giọng nói được đưa vào nháp để bạn xem và chỉnh sửa.</p>
-            </article><article class="panel"><div class="panel-title"><h3>Tệp ngữ cảnh</h3><span class="soft-badge neutral" id="whBasketProject">—</span></div>
-              <label class="field"><span>Đường dẫn tệp</span><input id="whFilePath" placeholder="src\login.js"></label>
-              <label class="field"><span>Kích thước (bytes, không bắt buộc)</span><input id="whFileSize" type="number" min="0" placeholder="1024"></label>
-              <div class="inline-actions"><button class="primary-button" id="whAddFile" type="button">Thêm vào giỏ</button><button class="secondary-button" id="whImportTaskFiles" type="button">Nhập tệp từ tác vụ</button><button class="secondary-button" id="whBuildContextBtn" type="button">Tạo gói ngữ cảnh có nội dung</button><button class="secondary-button" id="whClearBasket" type="button">Xóa giỏ</button></div>
-              <div class="wh-list" id="whBasketList"></div>
-            </article></div><div id="whFileBrowser"><div class="wh-grid wh-file-grid"><article class="panel"><div class="panel-title"><h3>Tệp trong dự án</h3><span class="soft-badge neutral" id="whCrumb">/</span></div>
-              <div class="inline-actions"><button class="secondary-button" id="whDirUp" type="button">Lên một cấp</button><button class="secondary-button" id="whDirReload" type="button">Tải lại thư mục</button></div>
-              <label class="field"><span>Tìm trong mã nguồn (theo nội dung)</span><input id="whCodeQuery" placeholder="Ví dụ: checkPassword"></label>
-              <button class="secondary-button" id="whCodeSearch" type="button">Tìm trong dự án</button>
-              <div class="wh-list" id="whCodeResults"></div>
-              <div class="wh-list" id="whFileList"><span class="task-muted">Đang tải…</span></div>
-            </article><article class="panel"><div class="panel-title"><h3>Xem nhanh tệp</h3><span class="soft-badge neutral" id="whViewerTitle">Chưa chọn</span></div>
-              <div class="inline-actions"><button class="secondary-button" id="whViewerAddBasket" type="button" disabled>Thêm tệp đang xem vào giỏ</button><button class="secondary-button" id="whEditFile" type="button" disabled>Sửa nhanh</button><button class="secondary-button" id="whBlame" type="button">Lịch sử dòng</button></div>
-              <pre class="task-command wh-viewer" id="whViewer">Chọn một tệp ở cột bên để xem nội dung.</pre>
-              <textarea id="whEditor" rows="10" hidden></textarea>
-              <div class="inline-actions"><button class="primary-button" id="whSaveFile" type="button" disabled>Lưu thay đổi</button><button class="secondary-button" id="whCancelEditFile" type="button" hidden>Hủy sửa</button></div>
-            </article></div></div><details class="wh-disclosure wh-tool-group"><summary>Nhập tài liệu hoặc tạo tệp mới</summary><div class="wh-disclosure-body"><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Nhập tệp &amp; tài liệu</h3><span class="soft-badge neutral">Có đích và xử lý trùng tên</span></div>
+              <div class="inline-actions"><button class="secondary-button" id="whBuildBtn" type="button">Tạo yêu cầu từ loại việc</button><button class="secondary-button" id="whUsePromptBtn" type="button">Tạo từ mẫu đã chọn</button></div>
+              </div></details>
+            </article><details class="wh-disclosure wh-tool-group"><summary>Nhập tài liệu hoặc tạo tệp mới</summary><div class="wh-disclosure-body"><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Nhập tệp &amp; tài liệu</h3><span class="soft-badge neutral">Có đích và xử lý trùng tên</span></div>
               <div class="inline-actions"><button class="secondary-button" id="whChooseImport" type="button">Chọn tệp…</button></div>
               <label class="field"><span>Thư mục đích trong dự án (trống = gốc)</span><input id="whImportDest" placeholder="imports"></label>
               <div class="wh-list" id="whImportList"></div>
@@ -664,6 +672,13 @@
               <button class="primary-button" id="whSaveSnippet" type="button">Tạo tệp</button>
               <p class="task-muted">Tạo mới không ghi đè: nếu tệp đã tồn tại, mở tệp và dùng Sửa nhanh để ghi có kiểm tra phiên bản.</p>
             </article></div></div></details></section>
+<section id="whPanelProgress" class="wh-tab-panel" role="tabpanel" data-wh-panel="progress" aria-labelledby="whTabProgress" hidden><div class="wh-section-intro"><div><h3>Tiến trình công việc</h3><p>Theo dõi các bước, kết quả gần đây và điều chỉnh cần chuyển cho trợ lý.</p></div></div><div class="wh-grid"><article class="panel"><div class="panel-title"><h3>Tệp &amp; kết quả của tác vụ</h3><span class="soft-badge neutral">Tóm tắt</span></div><div id="whTaskSummary"><span class="task-muted">Đang tải…</span></div></article><article class="panel"><div class="panel-title"><h3>Kế hoạch &amp; điều chỉnh</h3><span class="soft-badge neutral">Theo công việc</span></div>
+              <div id="whPlan"><span class="task-muted">Đang tải…</span></div>
+              <label class="field"><span>Điều chỉnh khi đang làm</span><input id="whFeedbackText" placeholder="Ví dụ: chỉ sửa module A"></label>
+              <button class="secondary-button" id="whFeedbackAdd" type="button">Lưu điều chỉnh</button>
+              <div class="wh-list" id="whFeedbackList"></div>
+              <p class="task-muted">Ba mức riêng biệt: đã lưu (máy này) → đã sao chép để chuyển → đã xác nhận. Lưu ở đây không có nghĩa là agent đã đọc.</p>
+            </article></div></section>
 <section id="whPanelChanges" class="wh-tab-panel" role="tabpanel" data-wh-panel="changes" aria-labelledby="whTabChanges" hidden><div class="wh-section-intro"><div><h3>Xem lại thay đổi</h3><p>Các thay đổi trong thư mục hiện tại; tệp do công việc ghi nhận có nhãn riêng.</p></div></div><article class="panel"><div class="panel-title"><h3>Thay đổi Git</h3><span class="soft-badge neutral">So sánh &amp; lịch sử</span></div>
               <button class="secondary-button" id="whGitRefresh" type="button">Tải tệp đã thay đổi</button>
               <div class="wh-list" id="whGitList"></div>
@@ -674,13 +689,15 @@
               <div class="wh-list" id="whGitLog"></div>
             </article></section>
 <section id="whPanelVerify" class="wh-tab-panel" role="tabpanel" data-wh-panel="verify" aria-labelledby="whTabVerify" hidden><div class="wh-section-intro"><div><h3>Chạy kiểm tra phù hợp</h3><p>Lưu lệnh thường dùng, chạy một lần và theo dõi kết quả.</p></div><button class="secondary-button" type="button" data-nav="build">Kiểm tra &amp; build</button></div><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Lệnh dự án đã lưu</h3><span class="soft-badge neutral">Theo dự án</span></div>
+              <div class="wh-list" id="whRecipeList"></div>
+              <p class="task-muted">Chọn Chạy ở một lệnh đã lưu để theo dõi kết quả tại đây. Kiểm tra thư mục chạy trước khi bắt đầu.</p>
+              <details class="wh-disclosure"><summary>Thêm lệnh kiểm tra</summary><div class="wh-disclosure-body">
               <label class="field"><span>Tên lệnh</span><input id="whRecipeName" placeholder="Test module"></label>
               <label class="field"><span>Lệnh</span><input id="whRecipeCommand" placeholder="npm test"></label>
               <label class="field"><span>Thư mục chạy (mặc định: dự án hiện tại)</span><input id="whRecipeCwd" placeholder="E:\DEV\..."></label>
               <label class="field"><span>Địa chỉ xem trước website (tùy chọn)</span><input id="whRecipeUrl" placeholder="http://localhost:5173"></label>
               <button class="primary-button" id="whAddRecipe" type="button">Lưu lệnh</button>
-              <div class="wh-list" id="whRecipeList"></div>
-              <p class="task-muted">Chọn Chạy ở một lệnh đã lưu để theo dõi kết quả tại đây. Kiểm tra thư mục chạy trước khi bắt đầu.</p>
+              </div></details>
             </article><article class="panel"><div class="panel-title"><h3>Theo dõi lần chạy</h3><span class="soft-badge neutral" id="whJobMeta">Chưa chạy</span></div>
               <pre class="task-command wh-viewer" id="whJobView">Chọn Chạy ở một lệnh đã lưu.</pre>
               <label class="field"><span>Nội dung gửi cho lệnh đang chạy</span><input id="whJobInput" placeholder="Nhập nội dung cần gửi"></label>
@@ -712,12 +729,6 @@
               <pre class="task-command" id="whHandoffView">Chưa tải trạng thái tác vụ.</pre>
               <label class="choice"><input id="whNotifyToggle" type="checkbox"><span><b>Thông báo khi tác vụ cần chú ý</b><small>Báo một lần khi xong, lỗi, chờ duyệt hoặc tạm dừng; bấm vào trang này để xem đúng tác vụ.</small></span></label>
               <button class="secondary-button" id="whNotifyTest" type="button">Gửi thông báo thử</button>
-            </article></div><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Tệp & kết quả của tác vụ</h3><span class="soft-badge neutral">Tóm tắt</span></div><div id="whTaskSummary"><span class="task-muted">Đang tải…</span></div></article><article class="panel"><div class="panel-title"><h3>Kế hoạch &amp; điều chỉnh</h3><span class="soft-badge neutral">Theo công việc</span></div>
-              <div id="whPlan"><span class="task-muted">Đang tải…</span></div>
-              <label class="field"><span>Điều chỉnh khi đang làm</span><input id="whFeedbackText" placeholder="Ví dụ: chỉ sửa module A"></label>
-              <button class="secondary-button" id="whFeedbackAdd" type="button">Lưu điều chỉnh</button>
-              <div class="wh-list" id="whFeedbackList"></div>
-              <p class="task-muted">Ba mức riêng biệt: đã lưu (máy này) → đã sao chép để chuyển → đã xác nhận. Lưu ở đây không có nghĩa là agent đã đọc.</p>
             </article></div></section>
 <details class="wh-disclosure wh-tool-group"><summary>Công việc, kiến thức &amp; tích hợp</summary><div class="wh-disclosure-body"><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Công việc &amp; trợ lý</h3><span class="soft-badge neutral">Trạng thái công việc</span></div>
               <div class="wh-list" id="whTaskBoard"></div>
@@ -750,6 +761,7 @@
               <div class="wh-list" id="whWindowsList"></div>
               <p class="task-muted">Danh sách giúp bạn nhận biết các cửa sổ ứng dụng đang mở.</p>
             </article></div></div></details>
+          </div></div>
         </section>
 
         <section class="page" data-page-view="usage">

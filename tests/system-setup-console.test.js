@@ -422,24 +422,24 @@ function navigationHarness() {
       textContent: ''
     };
   };
-  const navItems = ['overview', 'task', 'device', 'system'].map((page) => makeElement({ page }));
-  const pages = ['overview', 'system', 'deploy', 'workspace', 'settings'].map((page) => makeElement({ pageView: page }));
+  const navItems = ['workhub', 'task', 'system'].map((page) => makeElement({ page }));
+  const pageNames = ['workhub', 'overview', 'task', 'usage', 'device', 'system', 'deploy', 'workspace', 'settings', 'build', 'health', 'guide', 'logs'];
+  const pages = pageNames.map((page) => makeElement({ pageView: page }));
   const setupLinks = ['deploy', 'workspace', 'settings'].map((page) => makeElement({ nav: page }));
   const bySelector = new Map([
     ['#pageEyebrow', makeElement()], ['#pageTitle', makeElement()], ['#pageSubtitle', makeElement()],
     ['.content-viewport', { scrollTop: 0 }]
   ]);
   const context = {
-    pageMeta: {
-      overview: ['OVERVIEW', 'Overview', 'Overview'], task: ['TASK', 'Task', 'Task'], device: ['DEVICE', 'Device', 'Device'],
-      system: ['SYSTEM', 'System', 'System'], deploy: ['DEPLOY', 'Deploy', 'Deploy'], workspace: ['WORKSPACE', 'Workspace', 'Workspace'], settings: ['SETTINGS', 'Settings', 'Settings']
-    },
-    state: { currentPage: 'overview', snapshot: { settings: { executionRole: 'direct_legacy' } } },
+    pageMeta: Object.fromEntries(pageNames.map((page) => [page, [page.toUpperCase(), page, page]])),
+    state: { currentPage: 'workhub', snapshot: { settings: { executionRole: 'direct_legacy' } } },
     isCentralExecutor: () => false,
     document: { body: { dataset: {} } },
     location: { hash: '' },
     history: { replaceState: (_state, _title, value) => { context.location.hash = value.slice(1); } },
     $: (selector) => bySelector.get(selector),
+    window: { WorkHubUI: { refresh() {} } },
+    loadTaskState() {}, loadLogs() {}, inspectBuild() {}, inspectHealth() {},
     requestAnimationFrame: (callback) => callback(),
     $$: (selector) => selector === '.nav-item' ? navItems : selector === '.page' ? pages : setupLinks
   };
@@ -454,9 +454,55 @@ test('system navigation opens the unified setup shell instead of silently redire
   assert.equal(fixture.context.state.currentPage, 'system');
   assert.equal(fixture.context.location.hash, 'system');
   assert.equal(fixture.context.document.body.dataset.setupView, 'system');
+  assert.equal(fixture.context.document.body.dataset.page, 'system');
   const activePages = fixture.pages.filter((page) => page.classList.contains('active')).map((page) => page.dataset.pageView);
   assert.deepEqual(activePages, ['system']);
   assert.equal(fixture.navItems.find((item) => item.dataset.page === 'system').classList.contains('active'), true);
+});
+
+test('compact primary navigation keeps work, history and all settings pages grouped', () => {
+  const fixture = navigationHarness();
+  for (const page of ['workhub', 'task', 'system', 'settings', 'overview', 'usage', 'device', 'build', 'health', 'guide', 'logs']) {
+    fixture.run(page);
+    const expected = ['workhub', 'task'].includes(page) ? page : 'system';
+    assert.deepEqual(fixture.navItems.filter((item) => item.classList.contains('active')).map((item) => item.dataset.page), [expected], page);
+    assert.equal(fixture.context.state.currentPage, page);
+    assert.equal(fixture.context.document.body.dataset.page, page);
+  }
+});
+
+test('startup opens Work Hub for empty or unknown routes and preserves a valid route', () => {
+  const source = read('renderer/app.js');
+  const start = source.indexOf('    const requestedPage = location.hash.slice(1);');
+  const end = source.indexOf('\n\n', start);
+  assert.ok(start >= 0 && end > start, 'initial routing block must exist');
+  for (const [hash, expected] of [['', 'workhub'], ['#not-a-page', 'workhub'], ['#task', 'task'], ['#workspace', 'system']]) {
+    const fixture = navigationHarness();
+    fixture.context.location.hash = hash;
+    fixture.context.focusCentralWorkspaceEditor = () => {};
+    vm.runInContext(source.slice(start, end), fixture.context);
+    assert.equal(fixture.context.state.currentPage, expected, hash);
+  }
+});
+
+test('first-time setup still takes priority over the Work Hub default', async () => {
+  const source = read('renderer/app.js');
+  const start = source.indexOf('    if (firstSnapshot && !firstSnapshot.settings.firstRunCompleted) {');
+  const end = source.indexOf('\n  } finally {', start);
+  assert.ok(start >= 0 && end > start, 'first-time setup block must exist');
+  for (const firstRunCompleted of [false, true]) {
+    const fixture = navigationHarness();
+    const saved = [];
+    Object.assign(fixture.context, {
+      firstSnapshot: { settings: { firstRunCompleted } },
+      api: { saveSettings: async (value) => { saved.push(value); return value; } },
+      unwrap: (value) => value, toast() {},
+    });
+    fixture.run('workhub');
+    await vm.runInContext(`(async () => { ${source.slice(start, end)} })()`, fixture.context);
+    assert.equal(fixture.context.state.currentPage, firstRunCompleted ? 'workhub' : 'system');
+    assert.equal(saved.length, firstRunCompleted ? 0 : 1);
+  }
 });
 
 test('connection and folder aliases stay on the single system page', () => {
@@ -467,6 +513,30 @@ test('connection and folder aliases stay on the single system page', () => {
     assert.equal(fixture.context.location.hash, 'system');
     assert.deepEqual(fixture.pages.filter((page) => page.classList.contains('active')).map((page) => page.dataset.pageView), ['system']);
   }
+});
+
+test('snapshot rendering notifies Work Hub once per normalized workspace change after updating app state', () => {
+  const source = read('renderer/app.js');
+  const start = source.indexOf('function renderSnapshot(snapshot, options = {}) {');
+  const end = source.indexOf('  const { central, route: centralRoute } = renderCentralExecutorMode(snapshot);', start);
+  assert.ok(start >= 0 && end > start, 'workspace sync must precede the rest of snapshot rendering');
+  const events = [];
+  const context = {
+    state: { snapshot: null },
+    applyFormValues() {},
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
+    document: { dispatchEvent: (event) => {
+      assert.equal(event.type, 'coding-tools:workspace-changed');
+      assert.equal(context.state.snapshot.settings.workspace, event.detail.workspace);
+      assert.equal(context.state.selectedWorkspace, event.detail.workspace);
+      events.push(event);
+    } },
+  };
+  vm.runInNewContext(`${source.slice(start, end)}\n}`, context);
+  for (const workspace of ['E:\\Projects\\Alpha', ' e:/projects/ALPHA/ ', 'E:/Projects/Beta', 'E:/Projects/Beta/', '', '']) {
+    context.renderSnapshot({ settings: { workspace } });
+  }
+  assert.deepEqual(events.map((event) => event.detail.workspace), ['E:\\Projects\\Alpha', 'E:/Projects/Beta', '']);
 });
 
 test('development central controls are visibly gated before action handlers run', () => {

@@ -74,7 +74,7 @@ const pageMeta = {
 
 const state = {
   snapshot: null,
-  currentPage: 'overview',
+  currentPage: 'workhub',
   selectedWorkspace: '',
   logFilter: 'all',
   logs: [],
@@ -1845,15 +1845,20 @@ async function handleSetupPrimaryAction() {
 
 function navigate(page) {
   if (!pageMeta[page]) return;
+  const toolsMenu = document.querySelector?.('.app-tools');
+  if (toolsMenu) toolsMenu.open = false;
+  const projectMenu = document.querySelector?.('.wh-project-menu');
+  if (projectMenu) projectMenu.open = false;
   const requestedPage = page;
   const section = page === 'deploy' ? '#setupConnectionSection' : page === 'workspace' ? '#setupFolderSection' : null;
   if (section) page = 'system';
   const setupPages = ['system', 'settings'];
   const inSetup = setupPages.includes(page);
   state.currentPage = page;
+  document.body.dataset.page = page;
   document.body.dataset.setupView = inSetup ? page : '';
   if (location.hash !== `#${page}`) history.replaceState(null, '', `#${page}`);
-  const primaryPage = inSetup || ['build', 'health', 'guide', 'logs'].includes(page) ? 'system' : page;
+  const primaryPage = ['workhub', 'task'].includes(page) ? page : 'system';
   $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.page === primaryPage));
   $$('.page').forEach((item) => item.classList.toggle('active', item.dataset.pageView === page
     || (inSetup && item.dataset.pageView === 'system')));
@@ -2283,10 +2288,15 @@ function renderRuntimeSourceStatus(snapshot) {
 }
 
 function renderSnapshot(snapshot, options = {}) {
+  const workspaceKey = (value) => String(value || '').trim().replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const previousWorkspace = workspaceKey(state.snapshot?.settings?.workspace);
   state.snapshot = snapshot;
   applyFormValues(snapshot, options.forceForms);
   const { settings, secrets, environment, status } = snapshot;
   state.selectedWorkspace = settings.workspace;
+  if (workspaceKey(settings.workspace) !== previousWorkspace) {
+    document.dispatchEvent(new CustomEvent('coding-tools:workspace-changed', { detail: { workspace: settings.workspace } }));
+  }
   const { central, route: centralRoute } = renderCentralExecutorMode(snapshot);
   const localRuntimeReady = status.fullyReady === true;
   const currentTarget = central ? centralDispatchableTargetForLocalWorkspace() : null;
@@ -3619,6 +3629,15 @@ function bindThemePreferenceControl() {
     applyTheme(theme);
     await savePreference('theme', theme);
   });
+  const toggle = $('#themeToggle');
+  toggle?.addEventListener('click', async () => {
+    if (toggle.disabled) return;
+    const theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(theme);
+    toggle.disabled = true;
+    try { await savePreference('theme', theme); }
+    finally { toggle.disabled = false; }
+  });
 }
 
 function bindEvents() {
@@ -3862,11 +3881,11 @@ async function initialize() {
       else if (payload.stage === 'complete') $('#buildStatus').textContent = payload.status === 'passed' ? 'Đã vượt qua' : 'Chưa vượt qua';
     });
     const requestedPage = location.hash.slice(1);
-    if (pageMeta[requestedPage]) navigate(requestedPage);
+    navigate(pageMeta[requestedPage] ? requestedPage : 'workhub');
     if (requestedPage === 'workspace') focusCentralWorkspaceEditor();
 
-    // Show the settings shell immediately. Runtime/network inspection continues
-    // in the background so opening Preferences never feels like a diagnostic run.
+    // Show the app shell immediately while runtime/network inspection continues
+    // in the background.
     document.body.classList.remove('booting');
     document.body.classList.add('booted');
     $('#bootScreen')?.setAttribute('aria-hidden', 'true');

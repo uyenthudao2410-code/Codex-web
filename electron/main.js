@@ -903,32 +903,41 @@ function registerIpc() {
   secureHandle('workspace:hub', () => invokeSafely(async () => { const current = settings.load(); return { activeWorkspace: current.workspace, recentWorkspaces: current.recentWorkspaces || [] }; }));
   // Work Hub (catalog 261022, F06/F09/F12): read-only file browsing, content
   // search and git views, strictly inside the active workspace.
-  const workHubRoot = (expectedWorkspace) => {
+  const workHubRoot = () => {
     const workspace = String(settings.load().workspace || '').trim();
     if (!workspace) throw new Error('Vui lòng chọn thư mục làm việc trước.');
-    const root = path.resolve(workspace);
-    if (expectedWorkspace !== undefined && expectedWorkspace !== null) {
-      const expected = String(expectedWorkspace).trim();
-      const normalize = (value) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
-      if (!expected || normalize(expected) !== normalize(root)) {
-        throw new Error('Dự án đã thay đổi. Tải lại Work Hub trước khi thực hiện thao tác.');
-      }
+    return path.resolve(workspace);
+  };
+  // Project-scope fencing (B04/R08): a caller may pin the workspace it
+  // rendered for; if the active project has since changed, the request is
+  // rejected BEFORE any file, Git or open side effect. Omitting the scope
+  // keeps legacy calls working; an explicitly empty scope is rejected.
+  const normalizeWorkHubScope = (value) => {
+    const resolved = path.resolve(String(value || ''));
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  };
+  const scopedWorkHubRoot = (expectedWorkspace) => {
+    const root = workHubRoot();
+    if (expectedWorkspace === undefined) return root;
+    if (!String(expectedWorkspace || '').trim()
+      || normalizeWorkHubScope(expectedWorkspace) !== normalizeWorkHubScope(root)) {
+      throw new Error('Dự án đã thay đổi so với lúc dữ liệu được mở — thao tác bị từ chối, hãy tải lại trang này.');
     }
     return root;
   };
-  secureHandle('workhub:list', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.listDir(workHubRoot(expectedWorkspace), rel)));
-  secureHandle('workhub:read', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readTextFile(workHubRoot(expectedWorkspace), rel)));
-  secureHandle('workhub:search', (_event, query, expectedWorkspace) => invokeSafely(async () => workHubFiles.searchText(workHubRoot(expectedWorkspace), query)));
-  secureHandle('workhub:write', (_event, rel, content, expectedHash, expectedWorkspace) => invokeSafely(async () => workHubFiles.writeTextFile(workHubRoot(expectedWorkspace), rel, content, expectedHash)));
-  secureHandle('workhub:copy-in', (_event, sourceAbsolute, destDirRel, expectedWorkspace) => invokeSafely(async () => workHubFiles.copyIntoWorkspace(workHubRoot(expectedWorkspace), sourceAbsolute, destDirRel)));
-  secureHandle('workhub:git-status', (_event, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitStatus(workHubRoot(expectedWorkspace))));
-  secureHandle('workhub:git-diff', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitFileDiff(workHubRoot(expectedWorkspace), rel)));
-  secureHandle('workhub:git-log', (_event, limit, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitLog(workHubRoot(expectedWorkspace), limit)));
-  secureHandle('workhub:git-show', (_event, hash, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitShow(workHubRoot(expectedWorkspace), hash)));
-  secureHandle('workhub:git-blame', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitBlame(workHubRoot(expectedWorkspace), rel)));
-  secureHandle('workhub:read-image', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readImageData(workHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:list', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.listDir(scopedWorkHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:read', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readTextFile(scopedWorkHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:search', (_event, query, expectedWorkspace) => invokeSafely(async () => workHubFiles.searchText(scopedWorkHubRoot(expectedWorkspace), query)));
+  secureHandle('workhub:write', (_event, rel, content, expectedHash, expectedWorkspace) => invokeSafely(async () => workHubFiles.writeTextFile(scopedWorkHubRoot(expectedWorkspace), rel, content, expectedHash)));
+  secureHandle('workhub:copy-in', (_event, sourceAbsolute, destDirRel, expectedWorkspace) => invokeSafely(async () => workHubFiles.copyIntoWorkspace(scopedWorkHubRoot(expectedWorkspace), sourceAbsolute, destDirRel)));
+  secureHandle('workhub:git-status', (_event, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitStatus(scopedWorkHubRoot(expectedWorkspace))));
+  secureHandle('workhub:git-diff', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitFileDiff(scopedWorkHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:git-log', (_event, limit, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitLog(scopedWorkHubRoot(expectedWorkspace), limit)));
+  secureHandle('workhub:git-show', (_event, hash, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitShow(scopedWorkHubRoot(expectedWorkspace), hash)));
+  secureHandle('workhub:git-blame', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitBlame(scopedWorkHubRoot(expectedWorkspace), rel)));
+  secureHandle('workhub:read-image', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readImageData(scopedWorkHubRoot(expectedWorkspace), rel)));
   secureHandle('workhub:open-path', (_event, rel, reveal, expectedWorkspace) => invokeSafely(async () => {
-    const { target } = workHubFiles.resolveInsideRoot(workHubRoot(expectedWorkspace), rel);
+    const { target } = workHubFiles.resolveInsideRoot(scopedWorkHubRoot(expectedWorkspace), rel);
     if (reveal) { shell.showItemInFolder(target); return { opened: false, revealed: true }; }
     const failure = await shell.openPath(target);
     if (failure) throw new Error(failure);
@@ -937,9 +946,9 @@ function registerIpc() {
   // A3: recipes run through the runtime's own Job lifecycle (exec_command /
   // command_control), never through a second executor.
   secureHandle('workhub:job-run', (_event, payload) => invokeSafely(async () => {
-    const root = workHubRoot(payload?.expectedWorkspace);
     const command = String(payload?.command || '').trim();
     if (!command) throw new Error('Lệnh không được trống.');
+    const root = scopedWorkHubRoot(payload?.expectedWorkspace);
     const cwd = String(payload?.cwd || '').trim() || root;
     return callMcpTool('exec_command', {
       cmd: command,

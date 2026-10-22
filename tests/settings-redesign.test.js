@@ -158,6 +158,56 @@ test('Changing the theme applies it immediately and saves only the theme prefere
   assert.equal(context.document.documentElement.dataset.theme, 'light');
 });
 
+test('sidebar theme toggle syncs the preference control and recovers after a save failure', async () => {
+  const app = read('renderer/app.js').replace(/\r\n/g, '\n');
+  const extract = (name, next) => app.slice(app.indexOf(name), app.indexOf(next, app.indexOf(name)));
+  const makeControl = (eventName) => ({
+    value: 'light', disabled: false,
+    addEventListener(name, listener) { assert.equal(name, eventName); this.listener = listener; },
+  });
+  const select = makeControl('change');
+  const toggle = makeControl('click');
+  const saves = [], errors = [];
+  let fail = false;
+  const context = {
+    $: (selector) => selector === '#themeSelect' ? select : selector === '#themeToggle' ? toggle : null,
+    document: { body: { dataset: { theme: 'light' } }, documentElement: { dataset: { theme: 'light' } } },
+    state: { snapshot: { settings: { theme: 'light' } } },
+    api: { saveSettings: async (value) => {
+      saves.push(value);
+      if (fail) throw new Error('cannot persist theme');
+      return value;
+    } },
+    unwrap: (value) => value,
+    toast: (...args) => errors.push(args),
+  };
+  vm.runInNewContext([
+    extract('function applyTheme(theme) {', '\nfunction applyFormValues('),
+    extract('async function savePreference(', '\nasync function saveKeyIfPresent('),
+    extract('function bindThemePreferenceControl() {', '\nfunction bindEvents('),
+  ].join('\n'), context);
+  context.bindThemePreferenceControl();
+
+  const pending = toggle.listener();
+  assert.equal(toggle.disabled, true);
+  await pending;
+  assert.equal(context.document.body.dataset.theme, 'dark');
+  assert.equal(select.value, 'dark');
+  assert.equal(context.state.snapshot.settings.theme, 'dark');
+  assert.equal(saves[0].theme, 'dark');
+  assert.deepEqual(Object.keys(saves[0]), ['theme']);
+  assert.equal(toggle.disabled, false);
+
+  fail = true;
+  await toggle.listener();
+  assert.equal(context.document.body.dataset.theme, 'light');
+  assert.equal(select.value, 'light');
+  assert.equal(toggle.disabled, false);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0][2], 'error');
+  assert.match(errors[0][1], /cannot persist theme/);
+});
+
 test('Static preview preserves the theme selected by theme-bootstrap', () => {
   const app = read('renderer/app.js');
   assert.match(app, /theme:\s*document\.body\.dataset\.theme === 'dark' \? 'dark' : 'light'/);
