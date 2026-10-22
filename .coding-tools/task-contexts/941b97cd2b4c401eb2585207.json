@@ -1,0 +1,87 @@
+{
+  "version": 2,
+  "task_id": "c9b44ba34e2242bc8409b040817379a1",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "active",
+  "steps": [],
+  "current_step": "Execute command",
+  "current_command": {
+    "command": "git",
+    "kind": "command",
+    "session_id": "KAay-w083dwhxQaZsB1vy-yT",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-10-22T09:14:36.286Z",
+    "exit_code": null,
+    "elapsed_ms": 1014,
+    "artifact_ref": {
+      "schema_version": 1,
+      "kind": "command_output",
+      "scope": "runtime_retained",
+      "source": "command",
+      "locator": {
+        "command_id": "KAay-w083dwhxQaZsB1vy-yT"
+      },
+      "durability": "process_runtime",
+      "restart_safe": false,
+      "content_addressed": false,
+      "retrieval": {
+        "tool": "command_control",
+        "action": "read"
+      },
+      "size_bytes": 0,
+      "command_id": "KAay-w083dwhxQaZsB1vy-yT",
+      "streams": {
+        "stdout": {
+          "output_ref": "command:KAay-w083dwhxQaZsB1vy-yT:stdout",
+          "total_stream_bytes": 0,
+          "total_retained_bytes": 0,
+          "head_retained_bytes": 0,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        },
+        "stderr": {
+          "output_ref": "command:KAay-w083dwhxQaZsB1vy-yT:stderr",
+          "total_stream_bytes": 0,
+          "total_retained_bytes": 0,
+          "head_retained_bytes": 0,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        }
+      }
+    }
+  },
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-22T09:14:35.870Z",
+  "updated_at": "2026-10-22T09:14:36.897Z",
+  "events": [
+    {
+      "time": "2026-10-22T09:14:35.870Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-22T09:14:36.286Z",
+      "event": "command_started",
+      "details": {
+        "command": "git",
+        "session_id": "KAay-w083dwhxQaZsB1vy-yT"
+      }
+    }
+  ]
+}

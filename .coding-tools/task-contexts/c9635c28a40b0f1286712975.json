@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "87feaaa1f8a945c2af8a867ae2a593f1",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "GQPi5cw0E1mq2qfPl2hdZ8WP",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 492,
+    "finished_at": "2026-10-22T09:13:26.054Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-22T09:13:25.414Z",
+  "updated_at": "2026-10-22T09:13:26.054Z",
+  "events": [
+    {
+      "time": "2026-10-22T09:13:25.414Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-22T09:13:25.846Z",
+      "event": "command_started",
+      "details": {
+        "command": "python",
+        "session_id": "GQPi5cw0E1mq2qfPl2hdZ8WP"
+      }
+    },
+    {
+      "time": "2026-10-22T09:13:26.054Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python",
+        "status": "failed"
+      }
+    }
+  ]
+}
