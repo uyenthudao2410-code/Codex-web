@@ -177,6 +177,34 @@ class WindowsLocalExecutionTests(unittest.TestCase):
             self.assertEqual(expired.exception.code, "DESTRUCTIVE_CONFIRMATION_INVALID")
             self.assertNotEqual(expired.exception.details["confirmation_token"], expired_token)
 
+            # End to end: a redeemed challenge leaves its approval receipt in
+            # the execution job's durable metadata, bound to the token hash,
+            # the workspace and the issuance/redemption timestamps.
+            with self.assertRaises(ToolFailure) as first_call:
+                self.runtime.exec_command({"cmd": "git reset --hard", "yield_time_ms": 1000})
+            self.assertEqual(first_call.exception.code, "DESTRUCTIVE_CONFIRMATION_REQUIRED")
+            e2e_token = first_call.exception.details["confirmation_token"]
+            e2e_token_sha = first_call.exception.details["confirmation_token_sha256"]
+            result = self.runtime.exec_command({
+                "cmd": "git reset --hard",
+                "confirm_destructive_token": e2e_token,
+                "yield_time_ms": 5000,
+                "verbosity": "full",
+            })
+            job = self._assert_local_job(result)
+            recorded = next(
+                row for row in self.runtime.execution_resource_governor._rows()
+                if row["job_id"] == job["job_id"]
+            )
+            receipt = recorded["metadata"]["destructive_confirmation"]
+            self.assertEqual(receipt["confirmation_token_sha256"], e2e_token_sha)
+            self.assertEqual(
+                receipt["workspace_root"],
+                str(self.runtime._current_request_workspace_root().resolve(strict=False)),
+            )
+            self.assertGreater(receipt["issued_at_ms"], 0)
+            self.assertGreaterEqual(receipt["redeemed_at_ms"], receipt["issued_at_ms"])
+
     def test_explicit_sandboxed_native_failure_never_uses_host(self):
         failure = ToolFailure("SANDBOX_UNAVAILABLE", "fixture unavailable", category="security")
         with (

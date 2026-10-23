@@ -465,6 +465,15 @@ class ExecToolsMixin:
             command_workspace_identity = self._workspace_scope_identity(workdir)
             if owner_run:
                 self._assert_orchestration_workspace_scope(command_workspace_identity, run_id=owner_run)
+            # If this command redeemed a destructive-confirmation challenge
+            # during its policy check, attach the approval receipt to the
+            # job's durable metadata so the execution record itself proves
+            # which challenge authorized it.
+            destructive_receipt = None
+            receipts = getattr(self, "_destructive_receipts", None)
+            if isinstance(receipts, dict) and receipts:
+                compact_digest = hashlib.sha256(" ".join(cmd.split()).lower().encode("utf-8")).hexdigest()
+                destructive_receipt = receipts.pop(compact_digest, None)
             try:
                 admission = self.execution_resource_governor.admit(
                     command=cmd,
@@ -476,6 +485,7 @@ class ExecToolsMixin:
                     metadata={
                         "workspace_identity": command_workspace_identity,
                         **(windows_decision.metadata() if windows_decision is not None else {}),
+                        **({"destructive_confirmation": destructive_receipt} if destructive_receipt else {}),
                     },
                 )
             except ExecutionResourceError as exc:
@@ -890,6 +900,7 @@ class ExecToolsMixin:
         store[token_key] = {
             "command_sha256": hashlib.sha256(command.encode("utf-8")).hexdigest(),
             "workspace_root": workspace_root,
+            "issued_at": now,
             "expires_at": now + DESTRUCTIVE_CONFIRMATION_TTL_SECONDS,
         }
         details = {
@@ -954,6 +965,21 @@ class ExecToolsMixin:
                 and record.get("command_sha256") == hashlib.sha256(command.encode("utf-8")).hexdigest()
                 and record.get("workspace_root") == workspace_root
             ):
+                # Redemption produces the server-side approval receipt: it is
+                # merged into the execution job's durable metadata at admit
+                # time (see exec_command), binding the consumed challenge to
+                # the exact command, workspace and execution record.
+                receipts = getattr(self, "_destructive_receipts", None)
+                if not isinstance(receipts, dict):
+                    receipts = {}
+                    self._destructive_receipts = receipts
+                receipts[record["command_sha256"]] = {
+                    "confirmation_token_sha256": token_key,
+                    "command_sha256": record["command_sha256"],
+                    "workspace_root": workspace_root,
+                    "issued_at_ms": int(float(record.get("issued_at", 0)) * 1000),
+                    "redeemed_at_ms": int(time.time() * 1000),
+                }
                 return
             self._raise_destructive_confirmation(command, workspace_root, invalid_token=True)
         self._raise_destructive_confirmation(command, workspace_root)

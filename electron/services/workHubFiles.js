@@ -335,18 +335,29 @@ async function gitCommitFiles(root, files, message, options = {}) {
     if (unrelated.length) {
       throw new Error(`Repo có chính sách delivery nhưng index đang stage tệp ngoài lựa chọn: ${unrelated.slice(0, 5).join(', ')}. Xử lý các tệp đã stage đó trước khi commit.`);
     }
-    try {
-      await runNpmScript(rootResolved, policy.stage);
-      await runNpmScript(rootResolved, policy.check);
-    } catch (error) {
-      // The stage script stages as it works. If either step fails, unstage
-      // only files this attempt newly staged and leave the working tree and
-      // any pre-existing index entries untouched.
+    // Snapshot the exact index tree before the ritual. On any refusal the
+    // index is restored from this tree, which also restores the previous
+    // staged CONTENT of a path the ritual overwrote — unstaging paths alone
+    // would lose it. The working tree and HEAD are never touched by the
+    // restore. (write-tree fails on an unmerged index; then fall back to
+    // unstaging only the paths this attempt newly staged.)
+    const indexTreeBefore = (await runGit(rootResolved, ['write-tree']).catch(() => '')).trim();
+    const rollbackIndex = async () => {
+      if (indexTreeBefore) {
+        await runGit(rootResolved, ['read-tree', indexTreeBefore]).catch(() => '');
+        return;
+      }
       const stagedNow = await stagedFileList(rootResolved);
       const newlyStaged = stagedNow.filter((file) => !stagedBeforeSet.has(file));
       if (newlyStaged.length) {
         await runGit(rootResolved, ['restore', '--staged', '--', ...newlyStaged]).catch(() => '');
       }
+    };
+    try {
+      await runNpmScript(rootResolved, policy.stage);
+      await runNpmScript(rootResolved, policy.check);
+    } catch (error) {
+      await rollbackIndex();
       throw error;
     }
     const stagedAfterPolicy = await stagedFileList(rootResolved);
@@ -354,11 +365,17 @@ async function gitCommitFiles(root, files, message, options = {}) {
       (file) => !stagedBeforeSet.has(file) && !list.includes(file) && !file.startsWith('.coding-tools/'),
     );
     if (unexpected.length) {
-      const newlyStaged = stagedAfterPolicy.filter((file) => !stagedBeforeSet.has(file));
-      if (newlyStaged.length) {
-        await runGit(rootResolved, ['restore', '--staged', '--', ...newlyStaged]).catch(() => '');
-      }
+      await rollbackIndex();
       throw new Error(`Delivery policy stage đã stage tệp ngoài .coding-tools: ${unexpected.slice(0, 5).join(', ')}. Commit bị từ chối.`);
+    }
+    // Re-verify HEAD immediately before committing: the ritual can run for
+    // minutes, and another writer may have committed meanwhile. The change
+    // selection (and expectedHead, when given) was reviewed against the
+    // HEAD captured at entry, so any drift refuses the commit.
+    const headAfterPolicy = (await runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => '')).trim();
+    if (headAfterPolicy !== before) {
+      await rollbackIndex();
+      throw new Error(`HEAD đã thay đổi trong lúc chạy delivery policy (trước ${before.slice(0, 10) || 'chưa có'}, nay ${headAfterPolicy.slice(0, 10) || 'chưa có'}). Tải lại thay đổi rồi commit.`);
     }
   }
   await runGit(rootResolved, ['add', '--', ...list], { timeout: 30000 });
@@ -376,7 +393,12 @@ async function gitCommitFiles(root, files, message, options = {}) {
     const stagedLeft = await stagedFileList(rootResolved);
     const deliveryFiles = stagedLeft.filter((file) => file.startsWith('.coding-tools/'));
     const otherFiles = stagedLeft.filter((file) => !file.startsWith('.coding-tools/'));
-    if (deliveryFiles.length && !otherFiles.length) {
+    // Only land the snapshot directly on top of the source commit just
+    // made; if another writer moved HEAD in between, leave the verified
+    // delivery set staged and report it as pending instead of stacking it
+    // onto a foreign commit.
+    const headNow = (await runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => '')).trim();
+    if (deliveryFiles.length && !otherFiles.length && headNow === hash) {
       await runGit(rootResolved, ['commit', '-m', 'chore(coding-tools): delivery snapshot'], { timeout: 30000 });
       result.deliverySnapshot = (await runGit(rootResolved, ['rev-parse', 'HEAD'])).trim();
     } else if (stagedLeft.length) {

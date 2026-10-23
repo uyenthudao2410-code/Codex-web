@@ -279,6 +279,67 @@ test('delivery policy: unrelated pre-staged files refuse the commit instead of b
   assert.equal(git('diff', '--cached', '--name-only').trim(), 'README.md');
 });
 
+test('delivery policy: HEAD moving during the ritual refuses the commit', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  fs.mkdirSync(path.join(root, '.coding-tools'));
+  // The "ritual" here simulates a concurrent writer: it stages the delivery
+  // file AND lands its own commit while the policy runs.
+  fs.writeFileSync(path.join(root, 'stage.js'),
+    "const fs=require('fs');const{execFileSync}=require('child_process');fs.writeFileSync('.coding-tools/delivery.txt','snap\\n');fs.appendFileSync('README.md','writer\\n');execFileSync('git',['add','--','.coding-tools/delivery.txt','README.md']);execFileSync('git',['commit','-qm','concurrent writer']);\n");
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+    name: 'fixture', private: true,
+    scripts: {
+      'stage:coding-tools-delivery': 'node stage.js',
+      'check:coding-tools-delivery': "node -e \"process.exit(0)\"",
+    },
+  }));
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v2\n');
+  await assert.rejects(
+    () => gitCommitFiles(root, ['src/login.js'], 'feat: raced'),
+    /HEAD đã thay đổi trong lúc chạy delivery policy/,
+  );
+  // The other writer's commit stands; ours was not created on top of it.
+  assert.equal(git('log', '-1', '--format=%s').trim(), 'concurrent writer');
+  assert.equal(git('log', '--format=%s').trim().split('\n').filter((s) => s === 'feat: raced').length, 0);
+  assert.match(git('status', '--porcelain'), /src\/login\.js/);
+});
+
+test('delivery policy: check failure restores the previous staged content of a pre-staged path', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  fs.mkdirSync(path.join(root, '.coding-tools'));
+  fs.writeFileSync(path.join(root, 'stage.js'),
+    "const fs=require('fs');const{execFileSync}=require('child_process');fs.writeFileSync('.coding-tools/delivery.txt','snap\\n');fs.writeFileSync('.coding-tools/notes.txt','ritual overwrite\\n');execFileSync('git',['add','--','.coding-tools/delivery.txt','.coding-tools/notes.txt']);\n");
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+    name: 'fixture', private: true,
+    scripts: {
+      'stage:coding-tools-delivery': 'node stage.js',
+      'check:coding-tools-delivery': "node -e \"process.exit(1)\"",
+    },
+  }));
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  // Pre-stage a .coding-tools file whose staged content must survive the
+  // refusal (the guard allows pre-staged delivery files; the ritual then
+  // overwrites that path in the index before the check fails).
+  fs.writeFileSync(path.join(root, '.coding-tools', 'notes.txt'), 'staged v1\n');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  fs.writeFileSync(path.join(root, '.coding-tools', 'notes.txt'), 'staged v2\n');
+  git('add', '--', '.coding-tools/notes.txt');
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v2\n');
+  await assert.rejects(() => gitCommitFiles(root, ['src/login.js'], 'feat: blocked'), /Delivery policy/);
+  assert.equal(git('show', ':.coding-tools/notes.txt'), 'staged v2\n');
+  assert.equal(git('diff', '--cached', '--name-only').trim(), '.coding-tools/notes.txt');
+});
+
 test('M1.3 managed worktrees: add, list, remove inside the sibling folder only', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'workhub-wt-'));
   const root = path.join(parent, 'proj');
