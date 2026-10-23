@@ -53,8 +53,29 @@ item behind evidence that does not exist yet.
   assertions + tarfile filter; full control-plane suite 505 tests OK
   locally) and `7e6ffd44` (workflow: `npm ci` before the control-plane
   step; `core.longpaths` before Windows checkout). Re-dispatched
-  2026-10-23 15:36 +07 at HEAD `7e6ffd44`; conclusion recorded when the
-  run finishes.
+  2026-10-23 15:36 +07 at HEAD `7e6ffd44`.
+  **Fourth layer (run `39925799723`, completed FAILURE — correction:
+  this run's conclusion was initially misreported in chat as still
+  running; it had finished).** Both jobs advanced: ubuntu passed MCP,
+  control-plane and frontend, then failed at "Verify workspace
+  boundaries" — the checker scanned an archived verbatim upstream
+  snapshot under `.coding-tools/reports/` and flagged its Rust `#[path]`
+  lines. Windows passed checkout and failed at the MCP step with 8
+  failures sharing one root family: the runner TEMP uses the Windows
+  8.3 short form (`RUNNER~1`) while resolved paths use the long form,
+  and several comparisons mixed the two (bridge workspace containment,
+  runtime-activity projection, artifact relativization, a test's
+  path-equality fault injection), plus one test denied earlier than
+  expected because the runner host is elevated. Fixes in `61d50d0a`:
+  canonical (realpath) comparison in `codex_bridge._norm_path`,
+  `runtime_activity`, and `build_verify.collect_artifacts`; a
+  canonical-path comparison in the restart-ticket test; an
+  elevation-aware expectation in the attested-bridge test; and the
+  boundary checker now prunes the `.coding-tools/reports` evidence
+  subtree (self-test extended). Verified before dispatch: boundary
+  self-tests pass, repo scan clean, affected suites green on the VM
+  (125 passed) and on Windows non-elevated (129 passed). Re-dispatched
+  2026-10-23 16:52 +07 as run `39935048641` at HEAD `61d50d0a`.
 - **P1.4 Rollback drill — DONE 2026-10-23.** r18 → r17 → r18, both legs
   READY/OPEN with `fully_ready=true`; recorded as Addendum 2 of the r18
   release acceptance file. (This renumbers the drill from item 3 above.)
