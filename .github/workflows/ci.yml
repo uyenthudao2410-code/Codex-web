@@ -49,6 +49,12 @@ jobs:
       - name: Test Coding Tools MCP
         working-directory: resources/coding-tools-mcp
         run: python -m pytest tests
+      # The control-plane node E2E fixtures require the root node_modules
+      # (they resolve the electron executable path to drive the recovery
+      # host), which the earlier steps never install. Scripts stay enabled
+      # because electron's postinstall produces the path file they read.
+      - name: Install root dependencies for control-plane E2E fixtures
+        run: npm ci
       - name: Test Ubuntu control plane source
         working-directory: control-plane
         run: python -W error -B -m unittest discover -s tests -v
@@ -112,6 +118,12 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
+      # Archived .coding-tools report overlays contain paths that exceed
+      # the legacy Windows MAX_PATH under the runner's work directory;
+      # git must opt into long paths before checkout writes any file.
+      - name: Allow long paths for checkout
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v4
       - name: Verify checkout identity
         shell: bash
