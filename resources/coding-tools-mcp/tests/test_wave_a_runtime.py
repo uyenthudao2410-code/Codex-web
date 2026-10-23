@@ -177,6 +177,21 @@ class CommandHandleMigrationTests(unittest.TestCase):
                         "argv": ["echo", "must-not-run"],
                         "yield_time_ms": 1000,
                     })
+                if os.name == "nt":
+                    # An elevated/high-integrity host (e.g. the GitHub
+                    # Windows runner) is denied by the native-token guard
+                    # before the bridge-identity check is reached; that
+                    # denial is the correct outcome on such a host, and
+                    # the attested success path below cannot run there.
+                    from coding_tools_mcp.processes import windows_host_token_posture
+
+                    posture = windows_host_token_posture()
+                    if posture["elevated"] or posture["integrity_rid"] > 0x2000:
+                        self.assertEqual(
+                            getattr(denied.exception, "code", ""),
+                            "NATIVE_ELEVATED_HOST_DENIED",
+                        )
+                        return
                 self.assertEqual(
                     getattr(denied.exception, "code", ""),
                     "CONTROL_PLANE_STRUCTURED_ARGV_DENIED",

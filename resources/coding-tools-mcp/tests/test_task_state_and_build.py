@@ -850,7 +850,11 @@ class ToolModeTests(unittest.TestCase):
                 raise OSError("replace completion was not observable")
 
             def transient_confirmation_failure(path_value, *args, **kwargs):
-                if path_value == ticket_path and ticket_path.exists():
+                # The production code may spell the same file through the
+                # resolved long form while the fixture root uses the
+                # Windows 8.3 short form (CI runner TEMP); compare
+                # canonical forms so the injection targets the same file.
+                if Path(path_value).resolve() == ticket_path.resolve() and ticket_path.exists():
                     raise OSError("temporary sharing violation")
                 return original_read_text(path_value, *args, **kwargs)
 

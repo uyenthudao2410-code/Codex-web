@@ -70,6 +70,30 @@ class ParentSourcePathTests(unittest.TestCase):
                 any("tests/integration.rs:1" in item for item in violations)
             )
 
+    def test_archived_report_snapshots_are_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            archived = (
+                root
+                / ".coding-tools"
+                / "reports"
+                / "unified-setup-20261011"
+                / "upstream-source"
+                / "provision"
+            )
+            archived.mkdir(parents=True)
+            (archived / "mod.rs").write_text(
+                '#[path = "../shared.rs"]\nmod shared;\n', encoding="utf-8"
+            )
+            live = root / ".coding-tools" / "tools"
+            live.mkdir(parents=True)
+            (live / "live.rs").write_text(
+                '#[path = "../shared.rs"]\nmod shared;\n', encoding="utf-8"
+            )
+            violations = boundary.check_parent_source_paths(root)
+            self.assertEqual(len(violations), 1)
+            self.assertTrue(any(".coding-tools/tools/live.rs:1" in item for item in violations))
+
     def test_generated_and_non_rust_files_are_excluded(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

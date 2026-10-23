@@ -319,7 +319,11 @@ def _norm_path(value: object) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
-    return os.path.normcase(os.path.abspath(os.path.normpath(text)))
+    # Canonicalize through realpath so equivalent spellings of the same
+    # directory compare equal — most importantly the Windows 8.3 short
+    # form (e.g. C:\Users\RUNNER~1\...) that TEMP and legacy environment
+    # variables hand out, versus the long form Path.resolve() produces.
+    return os.path.normcase(os.path.realpath(os.path.normpath(text)))
 
 
 def _is_within_workspace(path_value: object, workspace: Path) -> bool:

@@ -97,10 +97,14 @@ def runtime_activity_snapshot(
             1 for session in runtime.sessions.values() if session.process.poll() is None
         ) + max(0, int(runtime.starting_sessions))
     with runtime.background_operations_lock:
+        # Compare canonical path forms: a caller may register the same
+        # workspace in its Windows 8.3 short form while the runtime root
+        # is resolved to the long form (or vice versa).
+        runtime_root = os.path.normcase(os.path.realpath(str(runtime.workspace.root)))
         active_background = [
             runtime._background_operation_snapshot(item)
             for item in runtime.background_operations.values()
-            if item.get("workspace") == str(runtime.workspace.root)
+            if os.path.normcase(os.path.realpath(str(item.get("workspace") or ""))) == runtime_root
             and item.get("event") is not None
             and not item["event"].is_set()
         ][:bounded_limit]

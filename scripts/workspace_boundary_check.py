@@ -114,6 +114,16 @@ def check_parent_source_paths(root: Path) -> list[str]:
         directory_names[:] = sorted(
             name for name in directory_names if name not in EXCLUDED_DIRECTORIES
         )
+        # `.coding-tools/reports/**` holds archived evidence snapshots,
+        # including verbatim copies of external upstream source kept for
+        # audit history under the repository retention policy. Those
+        # files are not workspace source and are out of scope here.
+        relative_current = Path(current).relative_to(root).as_posix()
+        if relative_current == ".coding-tools/reports" or relative_current.startswith(
+            ".coding-tools/reports/"
+        ):
+            directory_names[:] = []
+            continue
         current_path = Path(current)
         for file_name in sorted(file_names):
             if not file_name.endswith(".rs"):

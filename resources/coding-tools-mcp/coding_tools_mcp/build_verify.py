@@ -79,10 +79,11 @@ def _hash_file(path: Path, algorithm: str) -> str:
 
 def collect_artifacts(root: Path, patterns: list[str], algorithm: str, started_ns: int) -> list[dict[str, Any]]:
     found: dict[Path, None] = {}
+    resolved_root = root.resolve()
     for raw in patterns:
         candidate = (root / raw).resolve()
         try:
-            candidate.relative_to(root.resolve())
+            candidate.relative_to(resolved_root)
         except ValueError:
             continue
         matches = list(root.glob(raw)) if any(ch in raw for ch in "*?[") else [candidate]
@@ -96,7 +97,14 @@ def collect_artifacts(root: Path, patterns: list[str], algorithm: str, started_n
     artifacts = []
     for path in sorted(found, key=lambda item: item.as_posix())[:500]:
         stat = path.stat()
-        artifacts.append({"path": path.relative_to(root).as_posix(), "size": stat.st_size, "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat().replace("+00:00", "Z"), algorithm: _hash_file(path, algorithm)})
+        # Matched paths may mix the caller's root spelling (e.g. the
+        # Windows 8.3 short form from TEMP) with resolved long forms;
+        # relativize against the resolved root so both forms work.
+        try:
+            relative = path.resolve().relative_to(resolved_root).as_posix()
+        except ValueError:
+            relative = path.relative_to(root).as_posix()
+        artifacts.append({"path": relative, "size": stat.st_size, "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat().replace("+00:00", "Z"), algorithm: _hash_file(path, algorithm)})
     return artifacts
 
 
