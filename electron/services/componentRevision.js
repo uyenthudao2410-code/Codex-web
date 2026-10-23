@@ -90,6 +90,7 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/panelLayout.js',
       'electron/services/uiPerformanceMetrics.js',
       'electron/services/workHubFiles.js',
+      'electron/services/workHubLsp.js',
       'renderer/app-icon.png'
     ]),
     directories: Object.freeze([

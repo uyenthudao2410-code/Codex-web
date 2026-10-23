@@ -23,6 +23,7 @@ const {
 } = require('./services/runtimePaths');
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const workHubFiles = require('./services/workHubFiles');
+const workHubLsp = require('./services/workHubLsp');
 const {
   ensureRecoveryHost,
   recoveryLoginItemArguments,
@@ -980,6 +981,16 @@ function registerIpc() {
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.name, payload?.branch)));
   secureHandle('workhub:worktree-remove', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeRemove(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.path)));
+  secureHandle('workhub:lsp-providers', (_event, expectedWorkspace) => invokeSafely(async () => {
+    scopedWorkHubRoot(expectedWorkspace);
+    return workHubLsp.providers();
+  }));
+  secureHandle('workhub:lsp-definition', (_event, payload) => invokeSafely(async () => workHubLsp.definition(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.rel, Number(payload?.line), Number(payload?.character))));
+  secureHandle('workhub:lsp-references', (_event, payload) => invokeSafely(async () => workHubLsp.references(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.rel, Number(payload?.line), Number(payload?.character))));
+  secureHandle('workhub:lsp-symbols', (_event, payload) => invokeSafely(async () => workHubLsp.symbols(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.rel)));
   secureHandle('workhub:job-control', (_event, payload) => invokeSafely(async () => {
     const action = String(payload?.action || 'poll');
     if (!['poll', 'write', 'kill', 'read'].includes(action)) throw new Error('Thao tác Job không hợp lệ.');

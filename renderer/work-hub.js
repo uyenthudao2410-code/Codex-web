@@ -910,6 +910,75 @@
     if (overlay && !overlay.hidden) { overlay.hidden = true; ui.searchReturnFocus?.focus?.(); }
   }
 
+  // ---------- M1.5: LSP code navigation ----------
+  async function renderLspProviders() {
+    const badge = $('#whLspProvider');
+    if (!badge || !window.mcpAssistant?.workhubLspProviders) return;
+    const scope = requestScope('lsp');
+    const data = unwrap(await window.mcpAssistant.workhubLspProviders(scope.workspace).catch(() => null));
+    if (!scope.current() || !data) return;
+    const ready = data.filter((p) => p.status === 'ready').map((p) => p.id);
+    badge.textContent = ready.length ? ready.join(' + ') : 'fallback';
+    const status = $('#whLspStatus');
+    if (status) status.textContent = data.map((p) => `${p.id}: ${p.status === 'ready' ? 'sẵn sàng' : p.status} — ${p.detail}`).join(' · ');
+  }
+  function lspPayload() {
+    const rel = String($('#whLspFile')?.value || ui.viewerRel || '').trim();
+    return {
+      rel,
+      line: Math.max(1, Number($('#whLspLine')?.value || 1)),
+      character: Math.max(1, Number($('#whLspCol')?.value || 1)),
+    };
+  }
+  async function renderLspNavigate(kind) {
+    const box = $('#whLspResults');
+    if (!box || !window.mcpAssistant?.workhubLspDefinition) return;
+    const payload = lspPayload();
+    if (!payload.rel) { box.replaceChildren(el('span', 'task-muted', 'Hãy mở một tệp hoặc nhập đường dẫn tệp.')); return; }
+    const scope = requestScope('lsp');
+    box.textContent = 'Đang định vị…';
+    const call = kind === 'definition' ? window.mcpAssistant.workhubLspDefinition : window.mcpAssistant.workhubLspReferences;
+    const data = unwrap(await call({ ...payload, expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    if (!data) { box.replaceChildren(el('span', 'task-muted', 'Định vị thất bại.')); return; }
+    const rows = [];
+    rows.push(el('span', 'task-muted', data.fallback
+      ? `Fallback tìm văn bản cho "${data.word || ''}" — KHÔNG phải định vị ngữ nghĩa.`
+      : `Provider: ${data.provider}`));
+    if (!data.results.length) rows.push(el('span', 'task-muted', 'Không có kết quả.'));
+    for (const hit of data.results) {
+      const row = el('button', 'wh-search-row');
+      const main = el('span', 'wh-row-main');
+      main.append(el('b', '', `${hit.path}:${hit.line}:${hit.character}`), el('small', '', hit.kind || hit.text || ''));
+      row.append(main);
+      row.addEventListener('click', () => openFile(hit.path, hit.line));
+      rows.push(row);
+    }
+    box.replaceChildren(...rows);
+  }
+  async function renderLspSymbols() {
+    const box = $('#whLspResults');
+    if (!box || !window.mcpAssistant?.workhubLspSymbols) return;
+    const { rel } = lspPayload();
+    if (!rel) { box.replaceChildren(el('span', 'task-muted', 'Hãy mở một tệp hoặc nhập đường dẫn tệp.')); return; }
+    const scope = requestScope('lsp');
+    box.textContent = 'Đang đọc ký hiệu…';
+    const data = unwrap(await window.mcpAssistant.workhubLspSymbols({ rel, expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    if (!data) { box.replaceChildren(el('span', 'task-muted', 'Đọc ký hiệu thất bại.')); return; }
+    if (data.fallback) { box.replaceChildren(el('span', 'task-muted', 'Tệp này không có language server — không liệt kê ký hiệu theo fallback.')); return; }
+    const rows = [el('span', 'task-muted', `Provider: ${data.provider} — ${data.symbols.length} ký hiệu`)];
+    for (const symbol of data.symbols) {
+      const row = el('button', 'wh-search-row');
+      const main = el('span', 'wh-row-main');
+      main.append(el('b', '', `${'  '.repeat(Math.min(symbol.depth || 0, 6))}${symbol.name}`), el('small', '', `${symbol.kind} · dòng ${symbol.line}`));
+      row.append(main);
+      row.addEventListener('click', () => openFile(rel, symbol.line));
+      rows.push(row);
+    }
+    box.replaceChildren(...rows);
+  }
+
   // ---------- wiring ----------
   function bind() {
     const tabs = Array.from(document.querySelectorAll('[data-wh-tab]'));
@@ -996,6 +1065,9 @@
     });
     $('#whDirReload')?.addEventListener('click', renderFiles);
     $('#whCodeSearch')?.addEventListener('click', renderCodeSearch);
+    $('#whLspDefinition')?.addEventListener('click', () => renderLspNavigate('definition'));
+    $('#whLspReferences')?.addEventListener('click', () => renderLspNavigate('references'));
+    $('#whLspSymbols')?.addEventListener('click', renderLspSymbols);
     $('#whCodeQuery')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderCodeSearch(); });
     $('#whGitRefresh')?.addEventListener('click', renderGit);
     $('#whCommitAll')?.addEventListener('change', (event) => {
@@ -1065,7 +1137,7 @@
     renderProjects();
     renderBasket();
     renderRecipes();
-    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees()]);
+    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders()]);
     if (request !== ui.refreshRequest) return;
     renderExtended();
     renderGoal();

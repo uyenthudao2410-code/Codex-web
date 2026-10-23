@@ -1,0 +1,92 @@
+{
+  "report_date": "2026-10-22",
+  "workspace": "E:/DEV/Codex-web",
+  "assessment_scope": "Read-only source and evidence audit, focused local tests, authenticated GitHub metadata read, and supported local development-status query. No live Ubuntu action, provider dispatch, service restart, product-code edit or deployment.",
+  "source": {
+    "branch": "main",
+    "local_head": "12f3eeeba71db8b9b32de51eb19b30003094280a",
+    "remote_main_observed": "e58f16743bc988fec07662fdafc2ee38318e973a",
+    "remote_commit_time": "2026-10-22T09:42:48Z",
+    "local_only_commits_relative_to_observed_remote": ["61d44c89", "12f3eeeb"],
+    "dirty_worktree": true,
+    "concurrent_change_observed": "tests/settings-redesign.test.js became modified during the audit; no product files were edited by this audit.",
+    "proof_qualification": "Focused tests exercised the contemporaneous dirty worktree, not an immutable release or a clean-HEAD build. Source, loaded runtime, and remote main must not be conflated."
+  },
+  "focused_tests": {
+    "runtime": "Managed Node.js 22.22.2",
+    "files": ["tests/work-hub-store.test.js", "tests/work-hub-files.test.js", "tests/work-hub-scope.test.js", "tests/work-hub-jobs.test.js", "tests/work-hub-render-scope.test.js", "tests/work-hub-ui.test.js"],
+    "passed": 74,
+    "failed": 0,
+    "skipped": 0,
+    "test_runner_duration_ms": 39682.0703,
+    "proof_level": "Focused store, real temporary file/Git service, and mocked IPC/DOM behavior; not native Electron/live MCP end-to-end proof.",
+    "additional_reproduction": "In-memory approval store confirms patchApprovals uses relative path alone and has no workspace parameter.",
+    "backend_test_limitation": "Python backend suite not executed: managed Python has no pytest and importing Runtime fails because PyJWT (jwt) is unavailable. This is an audit-environment dependency gap, not a demonstrated product regression."
+  },
+  "local_runtime_probe": {
+    "command": "scripts/dev-ui-lifecycle.js status",
+    "result": {
+      "state": "MISSING",
+      "host": "available",
+      "installation": "mismatch",
+      "error_code": "DEV_UI_INSTALLATION_MISMATCH",
+      "fully_ready": "unknown",
+      "authority_ready": "unknown",
+      "central_connected": "unknown"
+    },
+    "interpretation": "A Recovery Host is reachable, but this development checkout is not matched to its installation. This does not prove the packaged product or Ubuntu service is down; it prevents a current-source readiness claim."
+  },
+  "canonical_local_ledger": {
+    "path": ".coding-tools/orchestration/ledger.sqlite3",
+    "captured_at": "2026-10-22T11:10:06.107594+00:00",
+    "access": "SQLite mode=ro, query_only=ON, explicit read transaction; no updates or migrations",
+    "problem_states": {"BLOCKED": 2, "OPEN": 7, "PROVISIONALLY_RESOLVED": 30, "RESOLVED_CONFIRMED": 3},
+    "total_problem_threads": 42,
+    "problem_event_count": 307,
+    "problem_event_recorded_window": ["2026-09-01T23:01:25.333Z", "2026-09-15T11:33:43.953Z"],
+    "nonempty_outcome_receipts": {
+      "events": 3,
+      "distinct_problems": 3,
+      "type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+      "authority_label": "RUNTIME_OUTCOME_RECEIPT",
+      "provenance_label": "CONTROLLER_REPORTED_EXPLICIT_USER",
+      "recorded_dates": ["2026-09-12", "2026-09-12", "2026-09-14"],
+      "qualification": "Stored historical records; hash-chain validity, external host-turn authority, natural-cohort eligibility and full causal joins were not independently audited. Receipt events have empty direct run_id/wave_id; inspect other lineage events before judging linkage."
+    },
+    "goal_continuations_rows": 0,
+    "goal_continuation_observations_rows": 0,
+    "run_continuations_rows": 1,
+    "run_continuation_expired_at_observation": true,
+    "run_continuation_created_date": "2026-09-09",
+    "continuation_effects": {"applied": 1},
+    "problem_readbacks": [
+      {"problem_id": "prl-cc728c7fef2ba604633bf5d74ba87a1e", "revision": 1, "state": "OPEN"},
+      {"problem_id": "prl-e918c7d33e70c2d304d0797e11b05fcb", "revision": 2, "state": "OPEN"}
+    ],
+    "qualification": "This is the local ledger only, not all archived or Ubuntu evidence and not necessarily the serving ledger. Three of 42 must not be presented as a Verified Outcome Rate. Empty Goal tables do not prove the feature was never used elsewhere. Historical active RUN labels do not prove live processes."
+  },
+  "historical_remote_execution_evidence": {
+    "path": ".coding-tools/reports/parallel-native-first-20261012/canary/r5/production-final-evidence-20261013-v3.json",
+    "date": "2026-10-13",
+    "recorded_counts": {"reads": 100, "patches": 20, "readbacks": 20, "node_jobs": 10, "git_jobs": 3, "approved_build": 1, "build_readback": 1},
+    "recorded_parallel_overlap_ms": 2078,
+    "qualification": "Retained aggregate receipt inspected, not replayed or fully re-audited against every raw source. It records historical execution on another candidate, not current-HEAD operation or autonomous Goal outcome."
+  },
+  "key_findings": [
+    {"id": "F1", "finding": "Recipe Jobs have real exec_command/command_control IPC plumbing", "source": "electron/main.js:937-978", "level": "source and focused harness proof"},
+    {"id": "F2", "finding": "Work Hub request composer, queue, schedules and Goal preparation are not a runtime AI dispatcher", "source": "renderer/work-hub.js:1236-1300; renderer/work-hub-store.js:799-807", "level": "source"},
+    {"id": "F3", "finding": "Patch-review markers have no workspace identity and are advisory, not runtime grants", "source": "renderer/work-hub-store.js:391-404; renderer/work-hub.js:633-646", "level": "source plus in-memory reproduction"},
+    {"id": "F4", "finding": "Command-output references explicitly have durability=process_runtime and restart_safe=false", "source": "resources/coding-tools-mcp/coding_tools_mcp/artifact_refs.py:96-104", "level": "source contract"},
+    {"id": "F5", "finding": "Existing Goal episode parent and child mechanisms are substantial, but use bounded RUN-like limits rather than the whole planned aggregate parent budget", "source": "resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py:17-24,494-548; goal_continuation_ledger.py:110-222", "level": "source; backend tests not rerun"},
+    {"id": "F6", "finding": "Current default local Windows execution is host-user execution, not OS isolation", "source": "docs/CURRENT_STATE.md:3-23", "level": "maintained source-state contract; loaded mode unverified"}
+  ],
+  "roadmap": [
+    {"milestone": "M0", "goal": "Reconcile source, installation and evidence identity without resetting concurrent work", "gate": "One intended installation and exact target are identified; an authorized read-only canary returns matching workspace/source and receipt; state mismatch is explained."},
+    {"milestone": "M1", "goal": "Complete one supported end-to-end Work Hub workflow", "gate": "Request accepted by a real supported channel with durable ID; scoped edit/diff/proof/artifact and review are traced; local UI markers cannot claim runtime authority; native Electron flow passes."},
+    {"milestone": "M2", "goal": "Prove bounded background continuation using existing modules", "gate": "Response-end survival, FAIL-to-next-action dispatch, STOP/revoke, unknown-effect reconciliation and budget preservation are demonstrated; technical review and user outcome remain separate."},
+    {"milestone": "M3", "goal": "Evaluate one then 5-10 natural Problems", "gate": "Every case retains failures, reopens, oracle/source identity and missingness; baseline comparisons are descriptive, not causal claims from a tiny cohort."},
+    {"milestone": "M4", "goal": "Expand only where measured bottlenecks justify it", "gate": "Multi-Goal, multi-machine or domain adapters improve accepted outcomes under the same safety and quality floors."}
+  ],
+  "external_source": {"url": "https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/", "publication_date_verified": "2026-10-13", "dimensions": ["Speed", "Altitude", "Depth", "Range"]},
+  "changes_performed": "Only audit deliverables and a project work-log entry; no product source, canonical evidence, services, grants, Git commits, pushes, releases or deployments were changed."
+}

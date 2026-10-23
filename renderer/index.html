@@ -624,6 +624,12 @@
               <pre class="task-command wh-viewer" id="whViewer">Chọn một tệp để xem nội dung.</pre>
               <textarea id="whEditor" aria-label="Chỉnh sửa nội dung tệp" rows="10" hidden></textarea>
               <div class="inline-actions"><button class="primary-button" id="whSaveFile" type="button" disabled>Lưu thay đổi</button><button class="secondary-button" id="whCancelEditFile" type="button" hidden>Hủy sửa</button></div>
+            </article><article class="panel"><div class="panel-title"><h3>Định vị mã (LSP)</h3><span class="soft-badge neutral" id="whLspProvider">—</span></div>
+              <p class="wh-help" id="whLspStatus">Định nghĩa/tham chiếu theo ngữ nghĩa khi có language server; nếu không, tìm văn bản sẽ được ghi rõ là fallback.</p>
+              <label class="field"><span>Tệp</span><input id="whLspFile" placeholder="src/app.js"></label>
+              <div class="inline-actions"><label class="field"><span>Dòng</span><input id="whLspLine" type="number" min="1" value="1"></label><label class="field"><span>Cột</span><input id="whLspCol" type="number" min="1" value="1"></label></div>
+              <div class="inline-actions"><button class="secondary-button" id="whLspDefinition" type="button">Tới định nghĩa</button><button class="secondary-button" id="whLspReferences" type="button">Tìm tham chiếu</button><button class="secondary-button" id="whLspSymbols" type="button">Ký hiệu trong tệp</button></div>
+              <div class="wh-list" id="whLspResults"></div>
             </article></div>
             <article class="panel"><div class="panel-title"><h3>Tệp đã chọn</h3><span class="soft-badge neutral" id="whBasketProject">—</span></div>
               <div class="wh-list" id="whBasketList"></div>
