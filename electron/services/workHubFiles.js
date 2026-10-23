@@ -288,6 +288,11 @@ async function gitHead(root) {
   return (await runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => '')).trim();
 }
 
+async function stagedFileList(rootResolved) {
+  const out = await runGit(rootResolved, ['diff', '--cached', '--name-only', '-z']).catch(() => '');
+  return out.split('\0').map((file) => file.trim()).filter(Boolean);
+}
+
 async function gitCommitFiles(root, files, message, options = {}) {
   // M1.2/B07: commit exactly the files the user selected in the Changes tab.
   // The commit is pathspec-limited, so staged or unstaged changes in other
@@ -313,11 +318,104 @@ async function gitCommitFiles(root, files, message, options = {}) {
       throw new Error(`HEAD đã thay đổi kể từ lúc tải danh sách (kỳ vọng ${expectedHead.slice(0, 10)}, hiện tại ${before.slice(0, 10) || 'chưa có'}). Tải lại thay đổi rồi commit.`);
     }
   }
+  // Repository delivery policy (AGENTS.md): when the repo has a
+  // .coding-tools tree and its package.json declares the delivery ritual,
+  // that ritual must run BEFORE any commit into the repo. The stage script
+  // refreshes and stages only the .coding-tools delivery set; the check
+  // verifies it. Refuse up front if the index already contains unrelated
+  // staged files, because the snapshot step must never sweep another
+  // writer's staged work into a delivery commit.
+  const policy = options?.deliveryPolicy === false ? null : detectDeliveryPolicy(rootResolved);
+  if (policy) {
+    const stagedBefore = await stagedFileList(rootResolved);
+    const stagedBeforeSet = new Set(stagedBefore);
+    const unrelated = stagedBefore.filter(
+      (file) => !list.includes(file) && !file.startsWith('.coding-tools/'),
+    );
+    if (unrelated.length) {
+      throw new Error(`Repo có chính sách delivery nhưng index đang stage tệp ngoài lựa chọn: ${unrelated.slice(0, 5).join(', ')}. Xử lý các tệp đã stage đó trước khi commit.`);
+    }
+    try {
+      await runNpmScript(rootResolved, policy.stage);
+      await runNpmScript(rootResolved, policy.check);
+    } catch (error) {
+      // The stage script stages as it works. If either step fails, unstage
+      // only files this attempt newly staged and leave the working tree and
+      // any pre-existing index entries untouched.
+      const stagedNow = await stagedFileList(rootResolved);
+      const newlyStaged = stagedNow.filter((file) => !stagedBeforeSet.has(file));
+      if (newlyStaged.length) {
+        await runGit(rootResolved, ['restore', '--staged', '--', ...newlyStaged]).catch(() => '');
+      }
+      throw error;
+    }
+    const stagedAfterPolicy = await stagedFileList(rootResolved);
+    const unexpected = stagedAfterPolicy.filter(
+      (file) => !stagedBeforeSet.has(file) && !list.includes(file) && !file.startsWith('.coding-tools/'),
+    );
+    if (unexpected.length) {
+      const newlyStaged = stagedAfterPolicy.filter((file) => !stagedBeforeSet.has(file));
+      if (newlyStaged.length) {
+        await runGit(rootResolved, ['restore', '--staged', '--', ...newlyStaged]).catch(() => '');
+      }
+      throw new Error(`Delivery policy stage đã stage tệp ngoài .coding-tools: ${unexpected.slice(0, 5).join(', ')}. Commit bị từ chối.`);
+    }
+  }
   await runGit(rootResolved, ['add', '--', ...list], { timeout: 30000 });
   await runGit(rootResolved, ['commit', '-m', cleanMessage, '--', ...list], { timeout: 30000 });
   const hash = (await runGit(rootResolved, ['rev-parse', 'HEAD'])).trim();
   if (!hash || hash === before) throw new Error('Commit không tạo được — có thể các tệp đã chọn không còn thay đổi.');
-  return { hash, files: list.length };
+  const result = { hash, files: list.length };
+  if (policy) {
+    result.deliveryPolicy = true;
+    // The ritual staged the delivery set into the index; the pathspec
+    // commit above deliberately left it staged. Land only that verified
+    // .coding-tools set as the snapshot commit, mirroring the manual
+    // two-commit delivery flow. Anything unexpected stays staged and is
+    // reported instead of being swept into the snapshot.
+    const stagedLeft = await stagedFileList(rootResolved);
+    const deliveryFiles = stagedLeft.filter((file) => file.startsWith('.coding-tools/'));
+    const otherFiles = stagedLeft.filter((file) => !file.startsWith('.coding-tools/'));
+    if (deliveryFiles.length && !otherFiles.length) {
+      await runGit(rootResolved, ['commit', '-m', 'chore(coding-tools): delivery snapshot'], { timeout: 30000 });
+      result.deliverySnapshot = (await runGit(rootResolved, ['rev-parse', 'HEAD'])).trim();
+    } else if (stagedLeft.length) {
+      result.deliverySnapshotPending = stagedLeft;
+    }
+  }
+  return result;
+}
+
+function detectDeliveryPolicy(rootResolved) {
+  try {
+    if (!fs.statSync(path.join(rootResolved, '.coding-tools')).isDirectory()) return null;
+    const pkg = JSON.parse(fs.readFileSync(path.join(rootResolved, 'package.json'), 'utf8'));
+    const scripts = (pkg && pkg.scripts) || {};
+    if (scripts['stage:coding-tools-delivery'] && scripts['check:coding-tools-delivery']) {
+      return { stage: 'stage:coding-tools-delivery', check: 'check:coding-tools-delivery' };
+    }
+  } catch { /* no .coding-tools tree or package.json: no delivery policy */ }
+  return null;
+}
+
+function runNpmScript(rootResolved, script) {
+  // `script` is always one of the two fixed delivery-policy names returned
+  // by detectDeliveryPolicy — never caller input. On Windows, Node refuses
+  // to spawn npm.cmd directly (EINVAL since the .cmd spawn hardening), so
+  // route through cmd.exe there.
+  const isWin = process.platform === 'win32';
+  const file = isWin ? 'cmd.exe' : 'npm';
+  const args = isWin ? ['/d', '/s', '/c', `npm run ${script}`] : ['run', script];
+  return new Promise((resolve, reject) => {
+    execFile(file, args, { cwd: rootResolved, timeout: 300000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        const tail = String(stderr || stdout || error.message).trim().split('\n').slice(-4).join('\n');
+        reject(new Error(`Delivery policy "${script}" thất bại — commit bị từ chối.\n${tail}`));
+        return;
+      }
+      resolve(String(stdout || ''));
+    });
+  });
 }
 
 function managedWorktreeBase(rootResolved) {

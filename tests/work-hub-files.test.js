@@ -195,6 +195,90 @@ test('gitCommitFiles expected_head guard: matching HEAD commits, stale HEAD refu
   );
 });
 
+test('delivery policy: repo ritual runs before commit and its staged set lands as a snapshot commit', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  // Fixture "ritual": the stage script refreshes + stages a data file; the
+  // check script passes only while a marker exists.
+  fs.mkdirSync(path.join(root, '.coding-tools'));
+  fs.writeFileSync(path.join(root, 'stage.js'),
+    "const fs=require('fs');const{execFileSync}=require('child_process');fs.writeFileSync('.coding-tools/delivery.txt','snap\\n');execFileSync('git',['add','--','.coding-tools/delivery.txt']);\n");
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+    name: 'fixture', private: true,
+    scripts: {
+      'stage:coding-tools-delivery': 'node stage.js',
+      'check:coding-tools-delivery': "node -e \"process.exit(require('fs').existsSync('.coding-tools/delivery.txt')?0:1)\"",
+    },
+  }));
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v2\n');
+  const out = await gitCommitFiles(root, ['src/login.js'], 'feat: with policy');
+  assert.equal(out.deliveryPolicy, true);
+  assert.match(out.deliverySnapshot || '', /^[0-9a-f]{40}$/);
+  const names = git('show', '--name-only', '--format=', 'HEAD').trim();
+  assert.equal(names, '.coding-tools/delivery.txt');
+  const first = git('show', '--name-only', '--format=', 'HEAD~1').trim();
+  assert.equal(first, 'src/login.js');
+});
+
+test('delivery policy: a failing check refuses the commit and unstages only this attempt', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  fs.mkdirSync(path.join(root, '.coding-tools'));
+  fs.writeFileSync(path.join(root, 'stage.js'),
+    "const fs=require('fs');const{execFileSync}=require('child_process');fs.writeFileSync('.coding-tools/delivery.txt','snap\\n');execFileSync('git',['add','--','.coding-tools/delivery.txt']);\n");
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+    name: 'fixture', private: true,
+    scripts: {
+      'stage:coding-tools-delivery': 'node stage.js',
+      'check:coding-tools-delivery': "node -e \"process.exit(1)\"",
+    },
+  }));
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  const head0 = git('rev-parse', 'HEAD').trim();
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v2\n');
+  await assert.rejects(() => gitCommitFiles(root, ['src/login.js'], 'feat: blocked'), /Delivery policy/);
+  assert.equal(git('rev-parse', 'HEAD').trim(), head0);
+  assert.equal(git('diff', '--cached', '--name-only').trim(), '');
+  assert.equal(fs.readFileSync(path.join(root, '.coding-tools', 'delivery.txt'), 'utf8'), 'snap\n');
+});
+
+test('delivery policy: unrelated pre-staged files refuse the commit instead of being swept into a snapshot', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  fs.mkdirSync(path.join(root, '.coding-tools'));
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+    name: 'fixture', private: true,
+    scripts: {
+      'stage:coding-tools-delivery': "node -e \"process.exit(0)\"",
+      'check:coding-tools-delivery': "node -e \"process.exit(0)\"",
+    },
+  }));
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  const head0 = git('rev-parse', 'HEAD').trim();
+  fs.writeFileSync(path.join(root, 'README.md'), '# Changed elsewhere\n');
+  git('add', '--', 'README.md');
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v2\n');
+  await assert.rejects(
+    () => gitCommitFiles(root, ['src/login.js'], 'feat: guarded policy'),
+    /tệp ngoài lựa chọn/,
+  );
+  assert.equal(git('rev-parse', 'HEAD').trim(), head0);
+  assert.equal(git('diff', '--cached', '--name-only').trim(), 'README.md');
+});
+
 test('M1.3 managed worktrees: add, list, remove inside the sibling folder only', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'workhub-wt-'));
   const root = path.join(parent, 'proj');

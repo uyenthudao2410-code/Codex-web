@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import secrets
@@ -57,6 +58,9 @@ from .processes import (
     start_session_watchdog,
     terminate_process_group,
 )
+
+
+DESTRUCTIVE_CONFIRMATION_TTL_SECONDS = 300
 
 
 def exec_output_diagnostics(payload: dict[str, Any]) -> list[dict[str, str]]:
@@ -863,19 +867,72 @@ class ExecToolsMixin:
                 raise ToolFailure("PERMISSION_REQUIRED", "Network access is denied by default.", category="permission")
         self._reject_setuid_executable(argv[0])
 
-    def _require_destructive_confirmation(self, args: dict[str, Any], command: str) -> None:
-        """Gate destructive commands.
+    def _destructive_confirmation_store(self) -> dict[str, dict[str, Any]]:
+        store = getattr(self, "_destructive_confirmation_tokens", None)
+        if not isinstance(store, dict):
+            store = {}
+            self._destructive_confirmation_tokens = store
+        return store
 
-        Local mode (default): like Claude Code — the agent must ask the user
-        in chat for explicit confirmation, then retry with
-        confirm_destructive=true. The confirmation stays auditable in the
-        tool-call history (operator decision 2026-10-13, restored
-        2026-10-23 after the 22/10 refresh replaced it with a hard block).
-        Sandboxed mode: keep the hard fail-closed block for untrusted remote
-        use; the confirmation flag is NOT a shortcut there.
+    def _raise_destructive_confirmation(
+        self,
+        command: str,
+        workspace_root: str,
+        *,
+        invalid_token: bool = False,
+    ) -> None:
+        now = time.time()
+        store = self._destructive_confirmation_store()
+        for key in [key for key, record in store.items() if float(record.get("expires_at", 0)) <= now]:
+            store.pop(key, None)
+        raw_token = f"dct_{secrets.token_urlsafe(32)}"
+        token_key = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        store[token_key] = {
+            "command_sha256": hashlib.sha256(command.encode("utf-8")).hexdigest(),
+            "workspace_root": workspace_root,
+            "expires_at": now + DESTRUCTIVE_CONFIRMATION_TTL_SECONDS,
+        }
+        details = {
+            "permission": "destructive_command",
+            "command": command,
+            "workspace_root": workspace_root,
+            "confirmation_arg": "confirm_destructive_token",
+            "confirmation_token": raw_token,
+            "confirmation_token_sha256": token_key,
+            "expires_at_ms": int((now + DESTRUCTIVE_CONFIRMATION_TTL_SECONDS) * 1000),
+            "expires_in_seconds": DESTRUCTIVE_CONFIRMATION_TTL_SECONDS,
+            "single_use": True,
+        }
+        if invalid_token:
+            raise ToolFailure(
+                "DESTRUCTIVE_CONFIRMATION_INVALID",
+                "The supplied destructive-confirmation token is invalid, expired, already used, "
+                "or bound to a different command or workspace. A new single-use token has been "
+                "issued; reconfirm the exact command with the user before using it.",
+                category="permission",
+                details=details,
+            )
+        raise ToolFailure(
+            "DESTRUCTIVE_CONFIRMATION_REQUIRED",
+            "This command looks destructive. The server issued a single-use confirmation token "
+            "bound to this exact command and workspace. Ask the user in chat for explicit "
+            "confirmation, then retry the same command with confirm_destructive_token set to "
+            "the issued token.",
+            category="permission",
+            details=details,
+        )
+
+    def _require_destructive_confirmation(self, args: dict[str, Any], command: str) -> None:
+        """Gate destructive commands behind a server-issued confirmation token.
+
+        Local mode retains the operator's 2026-10-13 Claude Code-style flow:
+        show the exact command to the user in chat and retry only after they
+        approve it.  A caller-supplied Boolean is not evidence of that chat
+        approval, so the first local call issues a random, single-use token
+        bound to the normalized command and current workspace for five
+        minutes.  Redemption consumes the token.  Sandboxed mode remains a
+        hard fail-closed block; no token can authorize it there.
         """
-        if args.get("confirm_destructive") is True and not is_sandboxed_execution():
-            return
         if is_sandboxed_execution():
             raise ToolFailure(
                 "PERMISSION_REQUIRED",
@@ -883,17 +940,23 @@ class ExecToolsMixin:
                 category="permission",
                 details={"permission": "destructive_command", "command": command},
             )
-        raise ToolFailure(
-            "DESTRUCTIVE_CONFIRMATION_REQUIRED",
-            "This command looks destructive. Ask the user in chat for explicit "
-            "confirmation, then retry with confirm_destructive=true.",
-            category="permission",
-            details={
-                "permission": "destructive_command",
-                "command": command,
-                "confirmation_arg": "confirm_destructive",
-            },
-        )
+        workspace_root = str(self._current_request_workspace_root().resolve(strict=False))
+        supplied = args.get("confirm_destructive_token")
+        if supplied is not None:
+            if not isinstance(supplied, str) or not supplied.strip():
+                self._raise_destructive_confirmation(command, workspace_root, invalid_token=True)
+            token_key = hashlib.sha256(supplied.strip().encode("utf-8")).hexdigest()
+            store = self._destructive_confirmation_store()
+            record = store.pop(token_key, None)
+            if (
+                record is not None
+                and float(record.get("expires_at", 0)) > time.time()
+                and record.get("command_sha256") == hashlib.sha256(command.encode("utf-8")).hexdigest()
+                and record.get("workspace_root") == workspace_root
+            ):
+                return
+            self._raise_destructive_confirmation(command, workspace_root, invalid_token=True)
+        self._raise_destructive_confirmation(command, workspace_root)
 
     def _check_command_policy(self, cmd: str, args: dict[str, Any]) -> None:
         if self.dangerously_skip_all_permissions:
@@ -926,9 +989,11 @@ class ExecToolsMixin:
                 category="permission",
                 details={"permission": "shell_expansion", "command": compact},
             )
-        if re.search(r"(^|[;&|]\s*)rm\s+(-[^\s]*r[^\s]*f|-?[^\s]*f[^\s]*r)\s+/", compact):
-            self._require_destructive_confirmation(args, compact)
-        if DESTRUCTIVE_RE.search(cmd):
+        destructive = bool(
+            re.search(r"(^|[;&|]\s*)rm\s+(-[^\s]*r[^\s]*f|-?[^\s]*f[^\s]*r)\s+/", compact)
+            or DESTRUCTIVE_RE.search(cmd)
+        )
+        if destructive:
             self._require_destructive_confirmation(args, compact)
         if not self.allow_network and NETWORK_RE.search(cmd) and not is_literal_network_reference_command(cmd):
             raise ToolFailure(

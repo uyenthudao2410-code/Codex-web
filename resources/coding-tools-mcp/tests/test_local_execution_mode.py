@@ -94,28 +94,88 @@ class WindowsLocalExecutionTests(unittest.TestCase):
         self.assertNotIn(started["command_id"], self.runtime.sessions)
 
     def test_destructive_command_requires_chat_confirmation_in_local_mode(self):
-        # Operator decision 2026-10-13 (restored 2026-10-23): in local mode a
-        # destructive command is gated by chat confirmation, not a hard block.
-        # The schema accepts the confirmation flag...
-        validate_arguments("exec_command", {"cmd": "git reset --hard", "confirm_destructive": True})
+        # Operator decision 2026-10-13 (restored and hardened 2026-10-23): in
+        # local mode a destructive command is gated by chat confirmation, not
+        # a hard block.  A Boolean assertion is not accepted as evidence: the
+        # server issues a single-use token bound to the exact normalized
+        # command and current workspace, and redemption consumes it.
+        token_shape = "dct_" + "x" * 43
+        validate_arguments("exec_command", {"cmd": "git reset --hard", "confirm_destructive_token": token_shape})
+        with self.assertRaises(JsonRpcError):
+            validate_arguments("exec_command", {"cmd": "git reset --hard", "confirm_destructive": True})
         checks = (
             (self.runtime._check_command_policy, "git reset --hard"),
             (self.runtime._check_structured_argv_policy, ["git", "reset", "--hard"]),
         )
-        # ...local mode: no flag -> DESTRUCTIVE_CONFIRMATION_REQUIRED; with the
-        # flag (after the user confirmed in chat) -> the gate passes.
         with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=False):
+            # A legacy Boolean does not pass the gate.
+            with self.assertRaises(ToolFailure) as boolean_denied:
+                self.runtime._check_command_policy("git reset --hard", {"confirm_destructive": True})
+            self.assertEqual(boolean_denied.exception.code, "DESTRUCTIVE_CONFIRMATION_REQUIRED")
+
             for check, command in checks:
                 with self.assertRaises(ToolFailure) as denied:
                     check(command, {})
                 self.assertEqual(denied.exception.code, "DESTRUCTIVE_CONFIRMATION_REQUIRED")
-                check(command, {"confirm_destructive": True})
-        # ...sandboxed mode: the flag is NOT a shortcut; the hard block stays.
-        with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True):
-            for check, command in checks:
-                with self.assertRaises(ToolFailure) as denied:
-                    check(command, {"confirm_destructive": True})
-                self.assertEqual(denied.exception.code, "PERMISSION_REQUIRED")
+                details = denied.exception.details
+                token = details["confirmation_token"]
+                self.assertTrue(token.startswith("dct_"))
+                self.assertEqual(details["confirmation_arg"], "confirm_destructive_token")
+                self.assertEqual(details["command"], "git reset --hard")
+                self.assertEqual(
+                    details["workspace_root"],
+                    str(self.runtime._current_request_workspace_root().resolve(strict=False)),
+                )
+                self.assertEqual(details["expires_in_seconds"], 300)
+                self.assertTrue(details["single_use"])
+
+                # Sandboxed mode cannot redeem the token and does not consume it.
+                with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True):
+                    with self.assertRaises(ToolFailure) as sandboxed:
+                        check(command, {"confirm_destructive_token": token})
+                    self.assertEqual(sandboxed.exception.code, "PERMISSION_REQUIRED")
+
+                # The exact retry passes once; replaying the token does not.
+                check(command, {"confirm_destructive_token": token})
+                with self.assertRaises(ToolFailure) as replayed:
+                    check(command, {"confirm_destructive_token": token})
+                self.assertEqual(replayed.exception.code, "DESTRUCTIVE_CONFIRMATION_INVALID")
+
+            # A token issued for one command cannot authorize another.
+            with self.assertRaises(ToolFailure) as issued:
+                self.runtime._check_command_policy("git reset --hard", {})
+            reset_token = issued.exception.details["confirmation_token"]
+            with self.assertRaises(ToolFailure) as mismatched:
+                self.runtime._check_command_policy("git clean -fdx", {"confirm_destructive_token": reset_token})
+            self.assertEqual(mismatched.exception.code, "DESTRUCTIVE_CONFIRMATION_INVALID")
+
+            # A token is also bound to the workspace that received the challenge.
+            with self.assertRaises(ToolFailure) as issued:
+                self.runtime._check_command_policy("git reset --hard", {})
+            workspace_token = issued.exception.details["confirmation_token"]
+            with patch.object(
+                self.runtime,
+                "_current_request_workspace_root",
+                return_value=self.root / "another-workspace",
+            ):
+                with self.assertRaises(ToolFailure) as wrong_workspace:
+                    self.runtime._check_command_policy(
+                        "git reset --hard", {"confirm_destructive_token": workspace_token}
+                    )
+                self.assertEqual(wrong_workspace.exception.code, "DESTRUCTIVE_CONFIRMATION_INVALID")
+
+            # An expired token is rejected and replaced with a fresh challenge.
+            with self.assertRaises(ToolFailure) as issued:
+                self.runtime._check_command_policy("git reset --hard", {})
+            expired_token = issued.exception.details["confirmation_token"]
+            token_key = issued.exception.details["confirmation_token_sha256"]
+            self.runtime._destructive_confirmation_tokens[token_key]["expires_at"] = 0
+            with self.assertRaises(ToolFailure) as expired:
+                self.runtime._check_command_policy(
+                    "git reset --hard", {"confirm_destructive_token": expired_token}
+                )
+            self.assertEqual(expired.exception.code, "DESTRUCTIVE_CONFIRMATION_INVALID")
+            self.assertNotEqual(expired.exception.details["confirmation_token"], expired_token)
 
     def test_explicit_sandboxed_native_failure_never_uses_host(self):
         failure = ToolFailure("SANDBOX_UNAVAILABLE", "fixture unavailable", category="security")

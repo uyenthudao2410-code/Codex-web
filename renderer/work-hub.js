@@ -607,6 +607,10 @@
     const result = $('#whCommitResult');
     if (!message) { if (result) result.textContent = 'Nhập nội dung commit trước.'; return; }
     if (!ui.commitSelection.size) { if (result) result.textContent = 'Chưa chọn tệp nào.'; return; }
+    // The expected_head guard is only meaningful with the HEAD this list was
+    // rendered against. If it could not be loaded, refuse loudly instead of
+    // silently committing through the legacy unguarded path.
+    if (!ui.gitHead) { if (result) result.textContent = 'Chưa lấy được HEAD hiện tại — hãy tải lại danh sách thay đổi trước khi commit.'; return; }
     const scope = requestScope('gitcommit');
     ui.commitBusy = true;
     renderCommitBar();
@@ -620,7 +624,7 @@
       const input = $('#whCommitMessage');
       if (input) input.value = '';
       if (result) result.textContent = data?.hash
-        ? `Đã commit ${data.files} tệp: ${String(data.hash).slice(0, 10)}`
+        ? `Đã commit ${data.files} tệp: ${String(data.hash).slice(0, 10)}${data.deliverySnapshot ? ` + snapshot dữ liệu ${String(data.deliverySnapshot).slice(0, 10)}` : ''}`
         : 'Đã commit.';
       await Promise.allSettled([renderGit(), renderGitLog()]);
     } catch (error) {
