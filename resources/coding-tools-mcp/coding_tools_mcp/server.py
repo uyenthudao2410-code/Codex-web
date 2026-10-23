@@ -2309,6 +2309,10 @@ class Runtime(
             if action in {"poll", "write"}:
                 return self.write_stdin({
                     "command_id": command_id,
+                    # W5 job-input contract: pass a caller-supplied input_id
+                    # through to the receipted write path (internal callers;
+                    # the public facade schema is unchanged).
+                    "input_id": str(args.get("input_id", "") or "") if action == "write" else "",
                     "chars": str(args.get("chars", "")) if action == "write" else "",
                     "yield_time_ms": args.get("yield_time_ms", 10000),
                     "max_output_bytes": args.get("max_output_bytes", 65536),

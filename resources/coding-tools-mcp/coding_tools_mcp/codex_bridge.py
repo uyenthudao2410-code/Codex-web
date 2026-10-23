@@ -203,6 +203,27 @@ _PROFILE_SPECS: dict[str, dict[str, Any]] = {
         ),
         "developer_instructions": "Use inherited history only when it materially answers the question; keep the result concise.",
     },
+    # W3 native chat (Work Hub): the only profile whose base instructions are
+    # conversational rather than reviewer-shaped. The bridge-wide invariants
+    # do not change: approvalPolicy=never, read-only sandbox, no network —
+    # the chat can discuss and inspect, never apply changes.
+    "chat": {
+        "model": "gpt-5.6-terra",
+        "effort": "medium",
+        "recommended_deadline_ms": 30_000,
+        "features": {**_REVIEW_FEATURES, "shell_tool": True},
+        "base_instructions": (
+            "You are the built-in chat assistant of the Codex-web Work Hub, running as a native "
+            "Codex App Server thread for the current workspace. Hold a conversation with the user "
+            "and help with questions about this workspace; you may inspect files read-only when "
+            "that helps. You cannot modify files, run write actions, or use the network: changes "
+            "are executed only through the workspace's own Job/approval flow, never from this chat."
+        ),
+        "developer_instructions": (
+            "Keep answers grounded in the conversation and in workspace evidence you actually read. "
+            "When the user asks for a change, describe the concrete change set instead of claiming it was applied."
+        ),
+    },
 }
 
 

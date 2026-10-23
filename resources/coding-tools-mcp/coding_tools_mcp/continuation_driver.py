@@ -22,6 +22,8 @@ import zlib
 from pathlib import Path
 from typing import Any, Iterable
 
+from .continuation_send_state import SEND_STATE_POSSIBLY_SENT
+from .continuation_wiring import ContinuationWiringMixin
 from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .problem_lineage import ProblemLineageError
@@ -214,7 +216,7 @@ def observe_continuation_effect(root: Path, manifest: dict[str, Any]) -> dict[st
     return {"status": outcome, "backup_complete": not backup_missing, "backup_missing_paths": backup_missing, "states": states}
 
 
-class ContinuationDriverMixin:
+class ContinuationDriverMixin(ContinuationWiringMixin):
     """Driver and recovery methods mixed into the MCP Runtime composition root."""
 
     def _run_continuation_environment_hash(self) -> str:
@@ -1040,6 +1042,19 @@ class ContinuationDriverMixin:
                         "no_progress_count": goal_observation.get("no_progress_count"),
                         "continue_observing": False,
                     }
+                episode_stop = self._run_continuation_episode_stop(
+                    record,
+                    goal_observation=goal_observation if isinstance(goal_observation, dict) else None,
+                )
+                if episode_stop is not None:
+                    self._run_continuation_fail_closed_pause(ctx.run_id, f"goal_signal:{episode_stop['reason']}")
+                    return {
+                        **episode_stop,
+                        "run_id": ctx.run_id,
+                        "proof_ids": proof_ids,
+                        "check_results": results,
+                        "continue_observing": False,
+                    }
                 technical_replan = {
                     "failure": "CHECK_FAILED",
                     "check_id": str(check.get("check_id") or "unknown-check"),
@@ -1255,17 +1270,20 @@ class ContinuationDriverMixin:
                 return {"status": "RECONCILIATION_REQUIRED", "run_id": run_id, "action_id": action_id, "continue_observing": False}
             if str(record.get("pending_dispatch_action_id") or "") != action_id or not str(record.get("thread_id") or "") or not str(record.get("last_turn_id") or ""):
                 self._run_continuation_fail_closed_pause(run_id, "dispatch_identity_unknown")
-                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False}
+                recorded = self._run_continuation_record_dispatch_unknown_checkpoint(run_id=run_id, action_id=action_id, reason="dispatch_identity_unknown")
+                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False, "send_checkpoint": {"state": SEND_STATE_POSSIBLY_SENT, "recorded": recorded}}
             if not self._codex_bridge.owns_thread(str(record["thread_id"])):
                 self._run_continuation_fail_closed_pause(run_id, "bridge_turn_not_owned_after_restart")
-                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False}
+                recorded = self._run_continuation_record_dispatch_unknown_checkpoint(run_id=run_id, action_id=action_id, reason="bridge_turn_not_owned_after_restart")
+                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False, "send_checkpoint": {"state": SEND_STATE_POSSIBLY_SENT, "recorded": recorded}}
             try:
                 observed = self._codex_bridge.observe(
                     thread_id=str(record["thread_id"]), turn_id=str(record["last_turn_id"]), after_cursor=int(record.get("consumed_event_seq") or 0), wait_ms=wait_ms
                 )
             except Exception as exc:
                 self._run_continuation_fail_closed_pause(run_id, f"bridge_observe:{getattr(exc, 'code', type(exc).__name__)}")
-                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False}
+                recorded = self._run_continuation_record_dispatch_unknown_checkpoint(run_id=run_id, action_id=action_id, reason="bridge_observe_failed")
+                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False, "send_checkpoint": {"state": SEND_STATE_POSSIBLY_SENT, "recorded": recorded}}
             if not observed.get("terminal"):
                 return {"status": "PROPOSING", "run_id": run_id, "action_id": action_id, "turn_id": record["last_turn_id"], "continue_observing": True}
             if str(observed.get("status") or "") != "completed":
@@ -1296,6 +1314,10 @@ class ContinuationDriverMixin:
                 raw = self.orchestration_ledger._run_continuation_get_raw(run_id)
                 if raw is None:
                     raise ToolFailure("RUN_CONTINUATION_GRANT_REQUIRED", "Continuation grant disappeared after terminal READ observation.", category="runtime")
+                episode_stop = self._run_continuation_episode_stop(raw)
+                if episode_stop is not None:
+                    self._run_continuation_fail_closed_pause(run_id, f"goal_signal:{episode_stop['reason']}")
+                    return {**episode_stop, "run_id": run_id, "action_id": action_id, "continue_observing": False}
                 return self._run_continuation_dispatch_next(
                     raw,
                     requested_paths=[str(item["path"]) for item in proposal["read_requests"]],
@@ -1328,6 +1350,10 @@ class ContinuationDriverMixin:
             )
             ctx = self.orchestration_control.snapshot(run_id)
             raw = self.orchestration_ledger._run_continuation_get_raw(run_id)
+            episode_stop = self._run_continuation_episode_stop(raw) if raw is not None else None
+            if episode_stop is not None:
+                self._run_continuation_fail_closed_pause(run_id, f"goal_signal:{episode_stop['reason']}")
+                return {**episode_stop, "run_id": run_id, "action_id": action_id, "continue_observing": False}
             if ctx is not None and raw is not None and int(raw.get("remaining_decision_turns") or 0) > 0:
                 technical_replan = {
                     "failure": "MODEL_BLOCKED",
@@ -1370,19 +1396,22 @@ class ContinuationDriverMixin:
             effect = self.orchestration_ledger.get_run_continuation_effect(action_id)
             if effect is None:
                 self._run_continuation_fail_closed_pause(run_id, "pending_dispatch_requires_exact_bridge_observation")
-                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False}
+                recorded = self._run_continuation_record_dispatch_unknown_checkpoint(run_id=run_id, action_id=action_id, reason="pending_dispatch_requires_exact_bridge_observation")
+                return {"status": "DISPATCH_UNKNOWN", "run_id": run_id, "action_id": action_id, "continue_observing": False, "send_checkpoint": {"state": SEND_STATE_POSSIBLY_SENT, "recorded": recorded}}
             terminal_job_id = ""
             pending_job_id = str(record.get("pending_job_id") or "")
             if pending_job_id:
                 managed_job = self.execution_resource_governor.find_exact_job(job_id=pending_job_id)
                 if managed_job is None or managed_job.get("terminal") is not True:
                     self._run_continuation_fail_closed_pause(run_id, "pending_proof_job_outcome_unknown")
+                    recorded = self._run_continuation_record_dispatch_unknown_checkpoint(run_id=run_id, action_id=action_id, reason="pending_proof_job_outcome_unknown")
                     return {
                         "status": "PROOF_OUTCOME_UNKNOWN",
                         "run_id": run_id,
                         "action_id": action_id,
                         "job_id": pending_job_id,
                         "continue_observing": False,
+                        "send_checkpoint": {"state": SEND_STATE_POSSIBLY_SENT, "recorded": recorded},
                         "recommended_next_action": "The exact proof Job is not proven terminal. Keep the continuation paused; do not clear or replay its pending effect.",
                     }
                 terminal_job_id = pending_job_id

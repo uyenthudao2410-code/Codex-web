@@ -25,6 +25,13 @@ const DEFAULTS = Object.freeze({
   // Stored only to restore the operator's last Ubuntu origin in the form;
   // enrollment credentials and authority remain owned by node-agent.
   controlPlaneServerUrl: '',
+  // CoS companion (W1 read-only pilot): OFF by default. When on, the Electron
+  // main process reads the Chat On Steroids Local Control API through
+  // electron/services/cosCompanionAdapter.js. cosCompanionUserDataDir may
+  // override where the CoS userData folder (control-api/endpoint.json) lives;
+  // empty means the standard CoS location / COS_USERDATA_DIR env.
+  cosCompanionEnabled: false,
+  cosCompanionUserDataDir: '',
   startWithWindows: false,
   autoStartServices: false,
   keepRunningOnClose: true,
@@ -118,6 +125,8 @@ function normalize(input = {}) {
   merged.recoveryTunnelId = String(merged.recoveryTunnelId || '').trim();
   merged.recoveryTunnelProfile = 'recovery';
   merged.controlPlaneServerUrl = String(merged.controlPlaneServerUrl || '').trim();
+  merged.cosCompanionEnabled = Boolean(merged.cosCompanionEnabled);
+  merged.cosCompanionUserDataDir = String(merged.cosCompanionUserDataDir || '').trim();
   if (sourceVersion < 5 && merged.theme === 'dark') merged.theme = 'light';
   merged.theme = merged.theme === 'dark' ? 'dark' : 'light';
   merged.progressReportSeconds = [60, 90, 120, 180].includes(Number(merged.progressReportSeconds))

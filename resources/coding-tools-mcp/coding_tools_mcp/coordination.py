@@ -22,6 +22,7 @@ from .acceptance_receipts import (
     validate_passed_proof_source_binding,
 )
 from .codex_bridge import CodexBridgeError
+from .continuation_send_state import handoff_resume_directive, normalize_send_checkpoint
 from .controller_continuity import ControllerContinuityControlMixin
 from .activation_capability import valid_activation_operation_id
 from .activation_lifecycle import ActivationLifecycleMixin
@@ -922,13 +923,40 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             handoff_action = str(args.get("handoff_action") or "get").strip().lower()
             if handoff_action == "get":
                 capsule = self.orchestration_ledger.latest_handoff_capsule(run_id=run_id)
-                return {
-                    "capsule": capsule,
-                    "recommended_next_action": (
+                send_directive = None
+                if capsule and isinstance(capsule.get("payload"), dict) and isinstance(
+                    capsule["payload"].get("send_checkpoint"), dict
+                ):
+                    try:
+                        send_directive = handoff_resume_directive(capsule["payload"]["send_checkpoint"])
+                    except ValueError:
+                        send_directive = None
+                if send_directive is not None and send_directive["directive"] == "RECONCILE_BEFORE_REPLAY":
+                    recommended = (
+                        "Do not replay the handoff prompt or effect: the capsule send_checkpoint is "
+                        "possibly_sent, so its outcome is unknown. Reconcile the destination first, "
+                        "then resume from this capsule."
+                    )
+                elif send_directive is not None and send_directive["directive"] == "ALREADY_CONFIRMED":
+                    recommended = (
+                        "Resume from this capsule and pending messages; the handoff prompt is already "
+                        "confirmed sent, so continue from its result instead of sending it again."
+                    )
+                elif send_directive is not None:
+                    recommended = (
+                        "Resume from this capsule and pending messages; the send_checkpoint proves the "
+                        "handoff prompt was never dispatched, so it may be sent once from the new conversation."
+                    )
+                else:
+                    recommended = (
                         "Resume from this capsule and pending messages; do not replay the previous ChatWeb transcript."
                         if capsule else
                         "Record a bounded handoff capsule before rolling to a new ChatWeb conversation."
-                    ),
+                    )
+                return {
+                    "capsule": capsule,
+                    "send_replay_directive": send_directive,
+                    "recommended_next_action": recommended,
                 }
             if handoff_action != "record":
                 raise ToolFailure("INVALID_HANDOFF_ACTION", f"Unsupported handoff_action: {handoff_action}", category="validation")
@@ -944,6 +972,15 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             hub_identity = self._current_hub_client() or {}
             if hub_identity.get("client_type") == "electron" and hub_identity.get("client_id") == "electron-panel":
                 state, projection, run_id, wave_id = self.panel_handoff_state(args.get("run_id"), args.get("wave_id"))
+            if "send_checkpoint" in payload:
+                try:
+                    payload = {**payload, "send_checkpoint": normalize_send_checkpoint(payload.get("send_checkpoint"))}
+                except ValueError as exc:
+                    raise ToolFailure(
+                        "HANDOFF_SEND_CHECKPOINT_INVALID",
+                        str(exc),
+                        category="validation",
+                    ) from exc
             pending_messages = self.orchestration_ledger.list_coordination_messages(
                 run_id=run_id,
                 status="pending",

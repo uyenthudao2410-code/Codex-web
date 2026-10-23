@@ -274,13 +274,26 @@ async function gitBlame(root, rel) {
 async function gitFileDiff(root, rel, options = {}) {
   const maxChars = options.diffMaxChars || DEFAULTS.diffMaxChars;
   const { root: rootResolved, rel: relOut } = resolveInsideRoot(root, rel);
-  const [unstaged, staged] = await Promise.all([
+  const [unstaged, staged, head] = await Promise.all([
     runGit(rootResolved, ['diff', '--', relOut]),
     runGit(rootResolved, ['diff', '--cached', '--', relOut]),
+    runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => ''),
   ]);
   const combined = [staged ? `# Đã stage\n${staged}` : '', unstaged ? `# Chưa stage\n${unstaged}` : '']
     .filter(Boolean).join('\n');
-  return { rel: relOut, diff: combined.slice(0, maxChars), truncated: combined.length > maxChars };
+  // W2 (§5.1): the diff is only meaningful against the HEAD it was read at.
+  // Return that HEAD plus a sha256 fingerprint of the exact (untruncated)
+  // diff text so the UI can label the data stale when HEAD moves and can
+  // bind patch approval to this exact content server-side, not only to a
+  // renderer-side hash.
+  const fingerprint = crypto.createHash('sha256').update(combined).digest('hex');
+  return {
+    rel: relOut,
+    diff: combined.slice(0, maxChars),
+    truncated: combined.length > maxChars,
+    head: String(head || '').trim(),
+    fingerprint,
+  };
 }
 
 async function gitHead(root) {

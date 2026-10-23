@@ -707,6 +707,7 @@
               </div>
               <div class="wh-list" id="whTaskFiles"></div>
               <pre class="task-command wh-viewer" id="whDiff">Chưa chọn tệp.</pre>
+              <p class="task-muted" id="whDiffMeta"></p>
               <div class="inline-actions" id="whPatchApproval"></div>
               <div class="panel-title"><h4>Lịch sử commit</h4><button class="secondary-button wh-small" id="whGitLogRefresh" type="button">Tải lịch sử</button></div>
               <div class="wh-list" id="whGitLog"></div>
@@ -792,6 +793,21 @@
               <button class="secondary-button" id="whSshAdd" type="button">Lưu máy SSH</button>
               <div class="wh-list" id="whSshList"></div>
               <p class="task-muted" id="whSshOutput">Kiểm tra thư mục và trạng thái Git trên máy từ xa bằng kết nối SSH đã thiết lập.</p>
+            </article><article class="panel"><div class="panel-title"><h3>ChatGPT companion (CoS)</h3><span class="soft-badge neutral">Chỉ đọc · OBSERVED</span></div>
+              <p class="task-muted" id="whCosState">Đang kiểm tra kết nối CoS…</p>
+              <p class="task-muted">Phiên CoS được quan sát không tự liên kết với dự án/RUN hiện tại — chưa có liên kết project cho companion; không suy ra Job hay proof từ hội thoại này.</p>
+              <div class="inline-actions"><button class="secondary-button" id="whCosRefresh" type="button">Làm mới companion</button></div>
+              <div class="wh-list" id="whCosSessions"></div>
+              <pre class="task-command wh-viewer" id="whCosEvents">Chọn một phiên CoS để xem sự kiện (chỉ đọc).</pre>
+            </article><article class="panel"><div class="panel-title"><h3>Chat Codex (native)</h3><span class="soft-badge neutral">Codex App Server · nội bộ Codex-web</span></div>
+              <p class="task-muted" id="whCodexChatState">Chưa kiểm tra Codex App Server. Chat native chạy ngay trong Codex-web, không cần cài hay mở app CoS.</p>
+              <p class="task-muted">Mỗi lượt chat chạy read-only (approvalPolicy=never, không mạng): chat trao đổi và đọc mã nguồn để trả lời, không tự sửa tệp — thay đổi vẫn đi qua Job/duyệt như thường.</p>
+              <div class="wh-chat-log" id="whCodexChatLog"></div>
+              <div class="wh-list" id="whCodexChatEvents"></div>
+              <label class="field"><span>Nội dung chat</span><textarea id="whCodexChatInput" rows="3" placeholder="Hỏi về workspace này…"></textarea></label>
+              <div class="inline-actions"><button class="primary-button" id="whCodexChatSend" type="button">Gửi</button><button class="secondary-button" id="whCodexChatPoll" type="button">Làm mới lượt</button><button class="secondary-button" id="whCodexChatStop" type="button">Dừng lượt</button><button class="ghost-button" id="whCodexChatNew" type="button">Chat mới</button></div>
+              <p class="task-muted" id="whCodexChatLink">Chưa liên kết RUN.</p>
+              <div class="wh-list" id="whCodexChatThreads"></div>
             </article><article class="panel"><div class="panel-title"><h3>Máy đích &amp; tích hợp</h3><span class="soft-badge neutral">Chỉ việc mới bị ảnh hưởng khi đổi đích</span></div>
               <div class="wh-list" id="whTargetList"></div>
               <div class="wh-list" id="whIntegrationList"></div>
@@ -1099,6 +1115,7 @@
   </div>
   <script src="app.js"></script>
   <script src="work-hub-store.js"></script>
+  <script src="diff-view.js"></script>
   <script src="work-hub.js"></script>
   <script src="p5-a0.js"></script>
   <script src="control-center.js"></script>

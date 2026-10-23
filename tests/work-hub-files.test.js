@@ -122,6 +122,22 @@ test('F09 git status and diff report working-tree changes', async () => {
   assert.match(diff, /\+.. changed/);
 });
 
+test('W2 gitFileDiff binds the diff to its HEAD and a sha256 fingerprint', async () => {
+  const { root, git } = gitRepo();
+  const result = await gitFileDiff(root, 'src/login.js');
+  assert.equal(result.head, await gitHead(root));
+  const crypto = require('node:crypto');
+  assert.equal(result.fingerprint, crypto.createHash('sha256').update(result.diff).digest('hex'));
+  // After a new commit the same call reports the new HEAD, so the UI can
+  // prove a previously displayed diff stale instead of guessing.
+  fs.appendFileSync(path.join(root, 'src', 'login.js'), '// second\n');
+  git('add', '.');
+  git('commit', '-qm', 'second');
+  const after = await gitFileDiff(root, 'src/login.js');
+  assert.equal(after.head, await gitHead(root));
+  assert.notEqual(after.head, result.head);
+});
+
 test('D0 git status -z keeps renames, untracked and unicode names exact', async () => {
   const { root, git } = gitRepo();
   git('mv', 'src/login.js', 'src/login-renamed.js');

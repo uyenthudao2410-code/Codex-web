@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '' };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '' };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -90,17 +90,25 @@
     ui.viewerEditable = false;
     ui.diffRel = '';
     ui.diffText = '';
+    ui.diffHead = '';
+    ui.diffFingerprint = '';
+    ui.diffStale = false;
     ui.taskPayload = null;
     ui.pendingImports = [];
     ui.importResults = [];
-    for (const id of ['whCodeResults', 'whGitList', 'whGitLog', 'whTaskFiles', 'whArtifactImage', 'whCapsuleView', 'whImportList', 'whPatchApproval']) $(`#${id}`)?.replaceChildren();
-    for (const id of ['whCodeQuery', 'whEditor', 'whPreview', 'whFilePath', 'whFileSize', 'whImportDest', 'whSnippetName', 'whSnippetBody', 'whFeedbackText', 'whQueueTitle', 'whNoteTitle', 'whNoteBody', 'whChatLabel', 'whChatUrl']) { const input = $(`#${id}`); if (input) input.value = ''; }
+    for (const id of ['whCodeResults', 'whGitList', 'whGitLog', 'whTaskFiles', 'whArtifactImage', 'whCapsuleView', 'whImportList', 'whPatchApproval', 'whCosSessions', 'whCodexChatLog', 'whCodexChatEvents', 'whCodexChatThreads']) $(`#${id}`)?.replaceChildren();
+    for (const id of ['whCodeQuery', 'whEditor', 'whPreview', 'whFilePath', 'whFileSize', 'whImportDest', 'whSnippetName', 'whSnippetBody', 'whFeedbackText', 'whQueueTitle', 'whNoteTitle', 'whNoteBody', 'whChatLabel', 'whChatUrl', 'whCodexChatInput']) { const input = $(`#${id}`); if (input) input.value = ''; }
+    stopCodexChatPolling();
+    if ($('#whCodexChatState')) $('#whCodexChatState').textContent = 'Chưa kiểm tra Codex App Server.';
+    if ($('#whCodexChatLink')) $('#whCodexChatLink').textContent = 'Chưa liên kết RUN.';
     for (const id of ['whViewerAddBasket', 'whEditFile', 'whSaveFile', 'whBlame']) { const button = $(`#${id}`); if (button) button.disabled = true; }
     if ($('#whEditor')) $('#whEditor').hidden = true;
     if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = true;
     if ($('#whViewer')) { $('#whViewer').hidden = false; $('#whViewer').textContent = 'Chọn một tệp để xem nội dung.'; }
     if ($('#whViewerTitle')) $('#whViewerTitle').textContent = 'Chưa chọn tệp';
     if ($('#whDiff')) $('#whDiff').textContent = 'Chọn một tệp để xem thay đổi.';
+    if ($('#whDiffMeta')) $('#whDiffMeta').textContent = '';
+    if ($('#whCosEvents')) $('#whCosEvents').textContent = 'Chọn một phiên CoS để xem sự kiện (chỉ đọc).';
     setStatus('');
   }
 
@@ -555,6 +563,9 @@
       const head = unwrap(await window.mcpAssistant.workhubGitHead(scope.workspace).catch(() => ''));
       if (scope.current() && typeof head === 'string') ui.gitHead = head;
     }
+    // A refreshed HEAD may prove the currently displayed diff stale.
+    if (scope.current() && ui.diffRel) renderDiffMeta();
+    if (scope.current() && ui.diffRel) renderPatchApproval();
     if (!data.length) { ui.commitSelection.clear(); renderCommitBar(); box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
     const present = new Set(data.map((item) => item.path));
     for (const path of [...ui.commitSelection]) if (!present.has(path)) ui.commitSelection.delete(path);
@@ -656,8 +667,11 @@
         if (!request.current()) return;
         ui.diffRel = '';
         ui.diffText = '';
+        ui.diffHead = '';
+        ui.diffFingerprint = '';
         renderPatchApproval();
         if (diffBox) diffBox.textContent = shown ? shown.text + (shown.truncated ? '\n… (đã rút gọn)' : '') : 'Không đọc được commit.';
+        renderDiffMeta(shown ? `Đang xem commit ${commit.hash.slice(0, 10)} — không phải diff cây làm việc` : '');
       });
       row.append(view);
       return row;
@@ -733,6 +747,51 @@
     }));
   }
 
+  // W2 (§5.1): the diff carries the HEAD it was read at plus a sha256
+  // fingerprint of its exact text (electron/services/workHubFiles.js).
+  // ui.diffStale is true when the workspace HEAD observed since (ui.gitHead,
+  // refreshed by renderGit) no longer matches the diff's HEAD.
+  function diffIsStale() {
+    return Boolean(ui.diffHead && ui.gitHead && ui.diffHead !== ui.gitHead);
+  }
+
+  function renderDiffMeta(extra = '') {
+    const meta = $('#whDiffMeta');
+    if (!meta) return;
+    if (!ui.diffRel) { meta.textContent = extra; return; }
+    const parts = [];
+    if (ui.diffHead) parts.push(`HEAD khi đọc diff: ${ui.diffHead.slice(0, 10)}`);
+    if (ui.diffFingerprint) parts.push(`sha256 diff: ${ui.diffFingerprint.slice(0, 12)}…`);
+    ui.diffStale = diffIsStale();
+    if (ui.diffStale) parts.push(`STALE — HEAD hiện tại ${String(ui.gitHead).slice(0, 10)} đã khác; tải lại thay đổi trước khi duyệt/commit`);
+    if (extra) parts.push(extra);
+    meta.textContent = parts.join(' · ');
+  }
+
+  function renderDiffLines(box, text) {
+    // Structured rendering (native port of the CoS unified-diff line
+    // model): dual gutters, per-kind rows, bounded line count. Every line
+    // is a text node — diff content is never injected as HTML. Falls back
+    // to the previous plain-text <pre> when the parser is unavailable.
+    const Diff = window.WorkHubDiff;
+    if (!Diff) { box.textContent = text; return null; }
+    const parsed = Diff.parseUnifiedDiff(text);
+    if (!parsed.lines.length) { box.textContent = text; return parsed; }
+    const rows = parsed.lines.map((line) => {
+      const row = el('span', `wh-diff-line is-${line.kind}`);
+      row.append(
+        el('span', 'wh-diff-gutter', line.old === null ? '' : String(line.old)),
+        el('span', 'wh-diff-gutter', line.next === null ? '' : String(line.next)),
+        el('span', 'wh-diff-sign', line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ' '),
+        el('span', 'wh-diff-code', line.text),
+      );
+      return row;
+    });
+    if (parsed.truncated) rows.push(el('span', 'wh-diff-line is-meta', `… hiển thị tối đa ${Diff.DEFAULT_LIMIT} dòng diff — tệp thay đổi rất lớn; xem đầy đủ bằng git diff ngoài ứng dụng`));
+    box.replaceChildren(...rows);
+    return parsed;
+  }
+
   async function renderDiff(rel) {
     const box = $('#whDiff');
     if (!box) return;
@@ -741,14 +800,27 @@
     box.textContent = 'Đang đọc thay đổi…';
     ui.diffRel = '';
     ui.diffText = '';
+    ui.diffHead = '';
+    ui.diffFingerprint = '';
+    renderDiffMeta();
     renderPatchApproval();
     const data = unwrap(await window.mcpAssistant.workhubGitDiff(rel, scope.workspace).catch(() => null));
     if (!scope.current()) return;
     ui.diffRel = rel;
     ui.diffText = data?.diff || '';
-    box.textContent = !data ? 'Không lấy được diff.'
-      : (data.diff || 'Tệp chưa có diff (tệp mới chưa track sẽ không có diff — xem ở trang Tác vụ).')
-        + (data.truncated ? '\n… (diff đã rút gọn)' : '');
+    ui.diffHead = data?.head || '';
+    ui.diffFingerprint = data?.fingerprint || '';
+    if (!data) {
+      box.textContent = 'Không lấy được diff.';
+      renderDiffMeta();
+    } else if (!data.diff) {
+      box.textContent = 'Tệp chưa có diff (tệp mới chưa track sẽ không có diff — xem ở trang Tác vụ).';
+      renderDiffMeta();
+    } else {
+      const parsed = renderDiffLines(box, data.diff);
+      const counts = parsed ? `+${parsed.added} / −${parsed.removed} dòng` : '';
+      renderDiffMeta([counts, data.truncated ? 'diff đã rút gọn ở 200KB' : ''].filter(Boolean).join(' · '));
+    }
     renderPatchApproval();
   }
 
@@ -763,6 +835,9 @@
     box.append(el('span', 'task-muted', approved
       ? `Đã duyệt đúng bản vá này (${hash}).`
       : previous ? 'Bản vá đã thay đổi kể từ lần duyệt trước — cần duyệt lại.' : 'Chưa duyệt bản vá này.'));
+    if (diffIsStale()) {
+      box.append(el('span', 'task-muted', `Lưu ý STALE: diff này đọc ở HEAD ${ui.diffHead.slice(0, 10)}, HEAD hiện tại là ${String(ui.gitHead).slice(0, 10)} — duyệt ở đây chỉ gắn với đúng nội dung diff đã hiển thị, không tự áp cho cây mới.`));
+    }
     const btn = smallButton(approved ? 'Đã duyệt' : 'Duyệt đúng bản vá này');
     btn.disabled = approved;
     btn.addEventListener('click', () => { store.approvePatch(ui.diffRel, hash); renderPatchApproval(); });
@@ -992,6 +1067,197 @@
   }
 
   // ---------- M2: coordination (runs / workers / steering) ----------
+  // ---------- W1: CoS companion (read-only, OBSERVED) ----------
+  // Sessions come from the CoS Control API through the main-process adapter.
+  // They are external observations: no project binding exists for them, the
+  // panel says so, and nothing here renders CoS text as HTML or offers any
+  // send/stop/resume action.
+  const COS_STATE_LABELS = {
+    DISCONNECTED: 'Chưa kết nối CoS',
+    CONNECTED_READ_ONLY: 'Đã kết nối CoS · chỉ đọc',
+    ACTIONS_AUTHORIZED: 'Đã kết nối CoS · CoS đang bật hành động (adapter vẫn chỉ đọc)',
+    STALE: 'Mất kết nối CoS · dữ liệu cũ (stale)',
+    UNKNOWN: 'Trạng thái CoS không xác định',
+  };
+  async function renderCosCompanion() {
+    const stateBox = $('#whCosState');
+    const listBox = $('#whCosSessions');
+    if (!stateBox || !listBox || typeof window.mcpAssistant?.workhubCosStatus !== 'function') return;
+    const scope = requestScope('cos');
+    const view = unwrap(await window.mcpAssistant.workhubCosStatus().catch(() => null));
+    if (!scope.current()) return;
+    if (!view) { stateBox.textContent = 'Không đọc được trạng thái companion.'; return; }
+    if (view.enabled === false) {
+      stateBox.textContent = 'Companion đang tắt (cosCompanionEnabled=false). Khi tắt, Work Hub không thay đổi gì.';
+      listBox.replaceChildren();
+      return;
+    }
+    const label = COS_STATE_LABELS[view.state] || String(view.state || 'Không xác định');
+    stateBox.textContent = view.error
+      ? `${label} — ${view.error.message || view.error.code || ''}`
+      : `${label}${view.appVersion ? ` · CoS ${view.appVersion}` : ''}. Phiên dưới đây là quan sát OBSERVED, chưa liên kết với dự án/RUN hiện tại. Worker CoS không đọc được ở chế độ chỉ đọc — worker trong Work Hub là worker EOCL.`;
+    if (view.state !== 'CONNECTED_READ_ONLY' && view.state !== 'ACTIONS_AUTHORIZED') {
+      listBox.replaceChildren(el('span', 'task-muted', 'Chưa có dữ liệu phiên.'));
+      return;
+    }
+    const result = unwrap(await window.mcpAssistant.workhubCosSessions({ limit: 20 }).catch(() => null));
+    if (!scope.current()) return;
+    const data = result && result.ok ? result.data : null;
+    if (!data) {
+      listBox.replaceChildren(el('span', 'task-muted', (result && result.error && result.error.message) || 'Không đọc được danh sách phiên CoS.'));
+      return;
+    }
+    if (!data.sessions.length) {
+      listBox.replaceChildren(el('span', 'task-muted', 'CoS chưa ghi phiên nào.'));
+      return;
+    }
+    listBox.replaceChildren(...data.sessions.map((session) => {
+      const row = el('div', 'wh-row');
+      const title = el('span', '', `${session.title || '(không tiêu đề)'} · OBSERVED`);
+      const meta = el('span', 'task-muted', ` ${session.updatedAt ? new Date(session.updatedAt).toLocaleString('vi-VN') : ''}${session.conversationId ? ` · conv ${String(session.conversationId).slice(0, 8)}` : ''}`);
+      const open = el('button', 'secondary-button wh-small', 'Xem sự kiện');
+      open.type = 'button';
+      open.addEventListener('click', () => openCosSession(session.sessionId));
+      row.appendChild(title);
+      row.appendChild(meta);
+      row.appendChild(open);
+      return row;
+    }));
+  }
+
+  async function openCosSession(sessionId) {
+    const box = $('#whCosEvents');
+    if (!box || !sessionId || typeof window.mcpAssistant?.workhubCosSessionEvents !== 'function') return;
+    const scope = requestScope('cos-events');
+    box.textContent = 'Đang tải sự kiện…';
+    const result = unwrap(await window.mcpAssistant.workhubCosSessionEvents({ sessionId, limit: 50 }).catch(() => null));
+    if (!scope.current()) return;
+    const data = result && result.ok ? result.data : null;
+    if (!data) {
+      box.textContent = (result && result.error && result.error.message) || 'Không đọc được sự kiện của phiên.';
+      return;
+    }
+    const lines = data.events.map((event) => {
+      const when = event.time ? new Date(event.time).toLocaleTimeString('vi-VN') : '';
+      const head = `[${when}] ${event.kind}${event.toolName ? ` · ${event.toolName}` : ''}`;
+      const body = event.text || event.detail || '';
+      return body ? `${head}\n${body}` : head;
+    });
+    box.textContent = lines.length ? lines.join('\n\n') : 'Phiên chưa có sự kiện nào được ghi.';
+  }
+
+  // ---------- W3: native Codex chat (Codex App Server via codex_bridge) ----------
+  // The chat lives in Codex-web itself — no CoS app is involved. Session
+  // state is held by the main-process service (workhub:codex-chat-*); this
+  // panel only renders what the bridge reports. A thread is shown as linked
+  // to a RUN only when the service recorded a real run_id captured from the
+  // current task state at creation time — never inferred from chat content.
+  const CODEX_CHAT_STATE_LABELS = {
+    UNKNOWN: 'Chưa kiểm tra Codex App Server',
+    READY: 'Codex App Server sẵn sàng',
+    RUNNING: 'Đang chạy lượt chat…',
+    COMPLETED: 'Lượt chat hoàn tất',
+    FAILED: 'Lượt chat lỗi',
+    INTERRUPTED: 'Đã dừng lượt chat',
+    PROVIDER_UNAVAILABLE: 'Chưa có Codex provider trên máy này',
+    MCP_UNAVAILABLE: 'MCP chưa sẵn sàng',
+    OWNERSHIP_LOST: 'Phiên chat thuộc tiến trình bridge trước (MCP/App Server đã khởi động lại) — không tiếp tục được, hãy tạo chat mới',
+  };
+  const codexChatUi = { timer: null };
+  function stopCodexChatPolling() {
+    if (codexChatUi.timer) { clearInterval(codexChatUi.timer); codexChatUi.timer = null; }
+  }
+  function paintCodexChat(view) {
+    const stateBox = $('#whCodexChatState');
+    if (!stateBox || !view) return;
+    const label = CODEX_CHAT_STATE_LABELS[view.state] || String(view.state || '');
+    const version = view.availability?.codexVersion ? ` · Codex ${view.availability.codexVersion}` : '';
+    const route = view.route ? ` · ${view.route.model || ''}${view.route.effort ? `/${view.route.effort}` : ''}` : '';
+    stateBox.textContent = view.error
+      ? `${label} — ${view.error.message || view.error.code || ''}`
+      : `${label}${version}${route}${view.threadId ? ` · thread ${String(view.threadId).slice(0, 8)}` : ''}.`;
+    const log = $('#whCodexChatLog');
+    if (log) {
+      log.replaceChildren(...view.messages.map((message) => {
+        const row = el('div', `wh-chat-msg ${message.role === 'user' ? 'is-user' : 'is-assistant'}`);
+        const head = el('div', 'wh-chat-head', message.role === 'user'
+          ? 'Bạn'
+          : `Codex${message.status === 'running' ? ' · đang trả lời…' : message.status === 'interrupted' ? ' · đã dừng' : message.status === 'failed' ? ' · lỗi' : ''}`);
+        const body = el('div', 'wh-chat-body', message.text || (message.status === 'running' ? '…' : ''));
+        row.append(head, body);
+        return row;
+      }));
+    }
+    const eventsBox = $('#whCodexChatEvents');
+    if (eventsBox) {
+      const events = (view.events || []).slice(-8);
+      eventsBox.replaceChildren(...events.map((event) => el('div', 'wh-row',
+        `${event.method || ''}${event.itemType ? ` · ${event.itemType}` : ''}${event.status ? ` · ${event.status}` : ''}`)));
+    }
+    const linkBox = $('#whCodexChatLink');
+    if (linkBox) {
+      linkBox.textContent = view.link?.runId
+        ? `Liên kết RUN ${view.link.runId}${view.link.taskId ? ` · task ${view.link.taskId}` : ''} (id thật từ trạng thái tác vụ lúc tạo chat).`
+        : 'Chưa liên kết RUN — liên kết chỉ được ghi khi chat được tạo trong lúc tác vụ hiện tại có RUN thật.';
+    }
+    const sendBtn = $('#whCodexChatSend');
+    if (sendBtn) sendBtn.disabled = view.state === 'RUNNING' || view.state === 'PROVIDER_UNAVAILABLE' || view.state === 'MCP_UNAVAILABLE' || view.state === 'OWNERSHIP_LOST';
+    const stopBtn = $('#whCodexChatStop');
+    if (stopBtn) stopBtn.disabled = view.state !== 'RUNNING';
+  }
+  async function pollCodexChatTurn(scope) {
+    if (typeof window.mcpAssistant?.workhubCodexChatPoll !== 'function') return;
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatPoll({ expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) { stopCodexChatPolling(); return; }
+    const view = result?.data;
+    if (view) paintCodexChat(view);
+    if (!view || view.state !== 'RUNNING') stopCodexChatPolling();
+  }
+  function startCodexChatPolling(scope) {
+    stopCodexChatPolling();
+    codexChatUi.timer = setInterval(() => { pollCodexChatTurn(scope).catch(() => {}); }, 1500);
+  }
+  async function renderCodexChat() {
+    const stateBox = $('#whCodexChatState');
+    if (!stateBox || typeof window.mcpAssistant?.workhubCodexChatProbe !== 'function') return;
+    const scope = requestScope('codex-chat');
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatProbe({ expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    const view = result?.data;
+    if (!view) { stateBox.textContent = 'Không đọc được trạng thái Codex App Server.'; return; }
+    paintCodexChat(view);
+    if (view.state === 'RUNNING') startCodexChatPolling(scope);
+    const threadsBox = $('#whCodexChatThreads');
+    if (threadsBox && result.ok) {
+      const history = unwrap(await window.mcpAssistant.workhubCodexChatHistory({ expectedWorkspace: scope.workspace }).catch(() => null));
+      if (!scope.current()) return;
+      const threads = history?.data?.threads || [];
+      threadsBox.replaceChildren(...(threads.length
+        ? [el('span', 'task-muted', 'Lịch sử Codex của dự án này (chỉ xem — bridge không tiếp tục thread Desktop, muốn dùng phải fork ở bước sau):'),
+          ...threads.map((t) => el('div', 'wh-row', `${t.name || t.preview || t.id.slice(0, 8)}${t.updatedAt ? ` · ${new Date(t.updatedAt).toLocaleString('vi-VN')}` : ''}`))]
+        : [el('span', 'task-muted', 'Chưa có lịch sử Codex nào trong dự án này.')]));
+    }
+  }
+  async function sendCodexChat() {
+    const input = $('#whCodexChatInput');
+    const text = String(input?.value || '').trim();
+    if (!text || typeof window.mcpAssistant?.workhubCodexChatSend !== 'function') return;
+    const scope = requestScope('codex-chat');
+    // Capture the link from the CURRENT task state only: a real run_id the
+    // runtime already recorded. No run -> no link, by design.
+    const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+    const runId = task?.orchestration?.run_id || task?.run_id || '';
+    const link = runId ? { runId, taskId: task?.task_id || '' } : null;
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatSend({ expectedWorkspace: scope.workspace, text, link }).catch(() => null));
+    if (!scope.current()) return;
+    const view = result?.data;
+    if (view) paintCodexChat(view);
+    if (result?.ok) {
+      if (input) input.value = '';
+      startCodexChatPolling(scope);
+    }
+  }
+
   async function renderCoordRuns() {
     const box = $('#whCoordRuns');
     if (!box || !window.mcpAssistant?.workhubCoordRuns) return;
@@ -1026,9 +1292,14 @@
     const head = el('p', 'wh-help', `RUN ${data.run.runId} · ${data.run.status} · task ${data.run.taskId}`);
     parts.push(head);
     const lines = [];
+    // W2 (§5.2): every row carries its source. Workers below are EOCL
+    // delegations from the ledger and lanes are agent lanes of the same
+    // run — neither is a CoS worker (CoS workers are not readable in
+    // read-only mode, W0 S1, and are never mixed into this board).
+    lines.push(`Nguồn: ledger EOCL · dự án ${scope.workspace}`);
     for (const wave of data.waves) lines.push(`Wave ${wave.ordinal}: ${wave.status} · ${wave.mode || ''} · head ${(wave.baseHead || '').slice(0, 8)}`);
-    for (const worker of data.workers) lines.push(`Worker ${worker.owner || ''} · ${worker.model || ''} · effort ${worker.effort || ''} · ${worker.status} · scope ${(worker.scope || []).length} đường dẫn`);
-    for (const lane of data.lanes) lines.push(`Lane ${lane.role} · ${lane.provider || ''} · ${lane.model || ''} · ${lane.lifecycle}`);
+    for (const worker of data.workers) lines.push(`Worker EOCL · ${worker.owner || ''} · ${worker.model || ''} · effort ${worker.effort || ''} · ${worker.status} · scope ${(worker.scope || []).length} đường dẫn${worker.finishedAt ? '' : ' · chưa kết thúc (đang chạy hoặc đang chờ)'}`);
+    for (const lane of data.lanes) lines.push(`Lane (agent lane) · ${lane.role} · ${lane.provider || ''} · ${lane.model || ''} · ${lane.lifecycle}`);
     if (data.lease) lines.push(`Lease: ${data.lease.status} · owner ${data.lease.owner} · hết hạn ${data.lease.expiresAt}`);
     for (const proof of data.proofs.slice(0, 8)) lines.push(`Proof ${proof.stage}: ${proof.status} · exit ${proof.exitCode ?? '—'} · ${proof.durationMs ?? '—'}ms${proof.cacheHit ? ' · cache' : ''}`);
     for (const msg of data.messages) lines.push(`Coord msg ${msg.kind} (${msg.direction}): ${msg.status}${msg.acknowledgedAt ? ` · ack ${msg.acknowledgedAt}` : ' · chưa ack'}`);
@@ -1282,7 +1553,7 @@
     renderProjects();
     renderBasket();
     renderRecipes();
-    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders(), renderCoordRuns(), renderSteering(), renderQaList()]);
+    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders(), renderCoordRuns(), renderSteering(), renderQaList(), renderCosCompanion(), renderCodexChat()]);
     if (request !== ui.refreshRequest) return;
     renderExtended();
     renderGoal();
@@ -1786,8 +2057,11 @@
     const delegations = Array.isArray(payload.delegations) ? payload.delegations : [];
     if (!clients.length && !delegations.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có dữ liệu điều phối (delegation/client) từ runtime.')); return; }
     const rows = [];
-    for (const client of clients) rows.push(`Client ${client.client_id || client.client_type || ''} · ${client.online ? 'online' : 'offline'}`);
-    for (const lane of delegations) rows.push(`Lane ${lane.lane || lane.id || ''} · ${lane.status || ''} · ${lane.objective || lane.summary || ''}`);
+    // W2 (§5.2): label the source explicitly — everything here comes from
+    // the EOCL orchestration runtime of this workspace. CoS-observed
+    // sessions live in the companion panel and are never listed as workers.
+    for (const client of clients) rows.push(`EOCL · Client ${client.client_id || client.client_type || ''} · ${client.online ? 'online' : 'offline'}`);
+    for (const lane of delegations) rows.push(`EOCL · Delegation ${lane.lane || lane.id || ''} · ${lane.status || ''} · ${lane.objective || lane.summary || ''}`);
     box.replaceChildren(...rows.map((text) => el('div', 'wh-row', text)));
   }
 
@@ -2158,6 +2432,22 @@
       recognition.onerror = () => { if (status && scope.current()) status.textContent = 'Không ghi âm được (engine từ chối hoặc không có micro).'; };
       if (status) status.textContent = 'Đang nghe…';
       recognition.start();
+    });
+    $('#whCosRefresh')?.addEventListener('click', () => renderCosCompanion());
+    $('#whCodexChatSend')?.addEventListener('click', () => sendCodexChat());
+    $('#whCodexChatPoll')?.addEventListener('click', () => { const scope = requestScope('codex-chat'); pollCodexChatTurn(scope); });
+    $('#whCodexChatStop')?.addEventListener('click', async () => {
+      stopCodexChatPolling();
+      const scope = requestScope('codex-chat');
+      const result = unwrap(await window.mcpAssistant.workhubCodexChatInterrupt({ expectedWorkspace: scope.workspace }).catch(() => null));
+      if (scope.current() && result?.data) paintCodexChat(result.data);
+    });
+    $('#whCodexChatNew')?.addEventListener('click', async () => {
+      stopCodexChatPolling();
+      const scope = requestScope('codex-chat');
+      const result = unwrap(await window.mcpAssistant.workhubCodexChatReset({ expectedWorkspace: scope.workspace }).catch(() => null));
+      if (scope.current() && result?.data) paintCodexChat(result.data);
+      renderCodexChat();
     });
     $('#whWindowsBtn')?.addEventListener('click', async () => {
       const data = unwrap(await window.mcpAssistant.workhubListWindows().catch(() => null));

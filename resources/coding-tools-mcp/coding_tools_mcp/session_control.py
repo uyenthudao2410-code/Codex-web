@@ -9,6 +9,12 @@ from typing import Any
 
 from . import processes
 from .errors import ToolFailure
+from .job_input import (
+    MAX_INPUT_ID_CHARS,
+    OUTCOME_REJECTED,
+    OUTCOME_UNKNOWN,
+    JobInputLedger,
+)
 from .fs_utils import truncate_bytes
 from .processes import (
     COMPLETED_SESSION_TTL_SECONDS,
@@ -463,6 +469,18 @@ class SessionControlMixin:
             )
         return result
 
+    def _job_input_ledger(self) -> JobInputLedger:
+        ledger = getattr(self, "_job_input_ledger_instance", None)
+        if ledger is None:
+            ledger = JobInputLedger()
+            self._job_input_ledger_instance = ledger
+        return ledger
+
+    def job_input_receipt(self, session_id: str, input_id: str) -> dict[str, Any] | None:
+        """Reconciliation lookup for the W5 job-input contract: returns the
+        stored receipt for (session_id, input_id) without writing anything."""
+        return self._job_input_ledger().receipt_for(session_id, input_id)
+
     def write_stdin(self, args: dict[str, Any]) -> dict[str, Any]:
         session_id = self._command_handle(args)
         session = self._get_session(session_id)
@@ -470,14 +488,51 @@ class SessionControlMixin:
         consumer_id = str(args.get("consumer_id", "") or "").strip()
         if len(consumer_id) > 128:
             raise ToolFailure("INVALID_ARGUMENT", "consumer_id must be at most 128 characters.", category="validation")
+        # W5 job-input contract (WebCodex §8): an optional caller-supplied
+        # input_id turns this write into an exactly-once, receipted input.
+        # Without input_id the legacy fire-and-forget behavior is unchanged.
+        input_id = str(args.get("input_id", "") or "").strip()
+        if len(input_id) > MAX_INPUT_ID_CHARS:
+            raise ToolFailure("INVALID_ARGUMENT", f"input_id must be at most {MAX_INPUT_ID_CHARS} characters.", category="validation")
         chars = str(args.get("chars", ""))
+        input_receipt: dict[str, Any] | None = None
         if session.process.poll() is not None:
             if chars:
+                if input_id:
+                    # Provably never written: a definite outcome, recorded so
+                    # a retry with the same input_id reconciles instead of
+                    # guessing.
+                    self._job_input_ledger().record_rejected(
+                        session_id, input_id, chars.encode("utf-8"), "COMMAND_CLOSED"
+                    )
                 raise ToolFailure("COMMAND_CLOSED", "Command is closed; stdin write blocked.", category="runtime")
             payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)), consumer_id=consumer_id)
             return self._format_session_output(session, payload, args)
         if chars:
-            session.write_input(chars.encode("utf-8"))
+            if input_id:
+                input_receipt = self._job_input_ledger().submit(
+                    session_id,
+                    input_id,
+                    chars.encode("utf-8"),
+                    session.write_input,
+                )
+                if input_receipt["outcome"] == OUTCOME_UNKNOWN:
+                    raise ToolFailure(
+                        "JOB_INPUT_OUTCOME_UNKNOWN",
+                        "The input write failed part-way; the bytes may or may not have reached the command. "
+                        "Do not resend automatically — reconcile with the stored input receipt.",
+                        category="runtime",
+                        details={"input_receipt": input_receipt},
+                    )
+                if input_receipt["outcome"] == OUTCOME_REJECTED:
+                    raise ToolFailure(
+                        "COMMAND_CLOSED",
+                        "Command is closed; stdin write blocked.",
+                        category="runtime",
+                        details={"input_receipt": input_receipt},
+                    )
+            else:
+                session.write_input(chars.encode("utf-8"))
         wait_until = time.time() + (int(args.get("yield_time_ms", 10000)) / 1000.0)
         first_output_at: float | None = None
         while time.time() < wait_until and session.process.poll() is None:
@@ -491,7 +546,10 @@ class SessionControlMixin:
                 payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)), consumer_id=consumer_id)
                 payload["task_control"] = task_status
                 payload["status"] = task_status
-                return self._format_session_output(session, payload, args)
+                formatted = self._format_session_output(session, payload, args)
+                if input_receipt is not None:
+                    formatted["input_receipt"] = input_receipt
+                return formatted
             time.sleep(0.02)
             with session.lock:
                 has_new_output = (
@@ -506,7 +564,10 @@ class SessionControlMixin:
                     if time.time() - first_output_at >= 0.05:
                         break
         payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)), consumer_id=consumer_id)
-        return self._format_session_output(session, payload, args)
+        formatted = self._format_session_output(session, payload, args)
+        if input_receipt is not None:
+            formatted["input_receipt"] = input_receipt
+        return formatted
 
     def _wait_for_session_exit(self, session: ExecSession, wait_seconds: float) -> bool:
         try:

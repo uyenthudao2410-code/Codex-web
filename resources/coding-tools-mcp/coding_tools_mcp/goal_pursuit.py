@@ -8,6 +8,7 @@ import secrets
 import sqlite3
 from typing import Any
 
+from .continuation_send_state import goal_completion_signal
 from .errors import ToolFailure
 from .problem_lineage import PROBLEM_EVENT_SCHEMA_V11, PROBLEM_SCHEMA_VERSION
 
@@ -771,6 +772,14 @@ class GoalPursuitLedgerMixin:
                     else "NONE"
                 ),
                 "missing_reason": fact_window_reason,
+                # Deterministic CoS-style Goal verdict derived from the same
+                # coverage map: complete only when every criterion is proven
+                # or satisfied; reusable by continuation consumers that cannot
+                # run this full live projection. None when the fact window is
+                # unavailable, matching the counts above.
+                "criterion_signal": (
+                    None if fact_window_reason else goal_completion_signal(coverage)
+                ),
             }
             return {
                 "schema_version": GOAL_PURSUIT_SCHEMA_VERSION,

@@ -313,6 +313,44 @@ class CodexBridgeTests(unittest.TestCase):
                 self.assertEqual(route["features"]["shell_tool"], shell_tool)
                 self.assertEqual(route["features"]["multi_agent"], multi_agent)
 
+    def test_chat_profile_is_conversational_but_keeps_bridge_invariants(self) -> None:
+        # W3 native chat: the chat profile resolves to a conversational route,
+        # yet the turn still launches under the bridge-wide invariants
+        # (approvalPolicy=never, read-only sandbox, no network).
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            route = bridge._resolve_route(profile="chat", model=None, effort=None, source_thread_id=None)
+            self.assertEqual(route["model"], "gpt-5.6-terra")
+            self.assertEqual(route["effort"], "medium")
+            self.assertTrue(route["features"]["shell_tool"])
+            self.assertFalse(route["features"]["multi_agent"])
+            self.assertIn("built-in chat assistant", route["base_instructions"])
+
+            bridge._ensure_connected = lambda: None
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "thread/start":
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session"}}
+                if method == "turn/start":
+                    return {"turn": {"id": "chat-turn", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            result = bridge.run("Xin chào, workspace này có gì?", profile="chat")
+            self.assertEqual(result["thread_id"], "chat-thread")
+            self.assertEqual(result["route"]["profile"], "chat")
+            thread_params = next(params for method, params in calls if method == "thread/start")
+            turn_params = next(params for method, params in calls if method == "turn/start")
+            self.assertEqual(thread_params["approvalPolicy"], "never")
+            self.assertEqual(thread_params["sandbox"], "read-only")
+            self.assertIn("built-in chat assistant", thread_params["baseInstructions"])
+            self.assertEqual(turn_params["sandboxPolicy"], {"type": "readOnly", "networkAccess": False})
+            # The new thread is bridge-owned, so the chat panel may continue it.
+            self.assertTrue(bridge.owns_thread("chat-thread"))
+
     def test_continuation_profile_is_fixed_no_tools_and_rejects_custom_launch(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

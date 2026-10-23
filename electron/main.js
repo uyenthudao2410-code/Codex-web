@@ -25,6 +25,8 @@ const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const workHubFiles = require('./services/workHubFiles');
 const workHubLsp = require('./services/workHubLsp');
 const workHubCoordination = require('./services/workHubCoordination');
+const { CosCompanionAdapter, resolveCosUserDataDir } = require('./services/cosCompanionAdapter');
+const { createWorkHubCodexChat } = require('./services/workHubCodexChat');
 const workHubSsh = require('./services/workHubSsh');
 const { createBrowserQa } = require('./services/workHubBrowserQa');
 const browserQa = createBrowserQa({
@@ -1000,6 +1002,43 @@ function registerIpc() {
   secureHandle('workhub:ssh-scan', (_event, payload) => invokeSafely(async () => workHubSsh.scanHostKey(payload)));
   secureHandle('workhub:ssh-test', (_event, payload) => invokeSafely(async () => workHubSsh.testTarget(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload)));
+  // CoS companion (W1, read-only pilot): the adapter lives in the main
+  // process and is the only holder of the CoS Control API token. Handlers
+  // return its result view verbatim; when the feature flag is off the
+  // adapter answers COS_DISABLED without touching the network or disk.
+  let cosCompanionAdapter = null;
+  const getCosCompanionAdapter = () => {
+    const current = settings.load();
+    if (!cosCompanionAdapter) cosCompanionAdapter = new CosCompanionAdapter();
+    cosCompanionAdapter.configure({
+      enabled: Boolean(current.cosCompanionEnabled),
+      userDataDir: resolveCosUserDataDir({ settingDir: current.cosCompanionUserDataDir }),
+    });
+    return cosCompanionAdapter;
+  };
+  secureHandle('workhub:cos-status', () => invokeSafely(async () => {
+    const adapter = getCosCompanionAdapter();
+    if (!adapter.enabled) return { ...adapter.getConnectionView(), status: null, health: null, error: null };
+    const probe = await adapter.probe();
+    if (!probe.ok) return { ...adapter.getConnectionView(), status: null, health: null, error: probe.error };
+    const status = await adapter.getStatus();
+    return {
+      ...adapter.getConnectionView(),
+      health: probe.data.health,
+      status: status.ok ? status.data : null,
+      error: status.ok ? null : status.error,
+    };
+  }));
+  secureHandle('workhub:cos-sessions', (_event, payload) => invokeSafely(async () => {
+    const adapter = getCosCompanionAdapter();
+    if (!adapter.enabled) return { ok: false, state: 'DISCONNECTED', error: { code: 'COS_DISABLED', message: 'Tích hợp CoS companion đang tắt.' } };
+    return adapter.listSessions({ limit: payload?.limit, cursor: payload?.cursor });
+  }));
+  secureHandle('workhub:cos-session-events', (_event, payload) => invokeSafely(async () => {
+    const adapter = getCosCompanionAdapter();
+    if (!adapter.enabled) return { ok: false, state: 'DISCONNECTED', error: { code: 'COS_DISABLED', message: 'Tích hợp CoS companion đang tắt.' } };
+    return adapter.getSessionEvents(payload?.sessionId, { from: payload?.from, limit: payload?.limit, kinds: payload?.kinds });
+  }));
   secureHandle('workhub:coord-runs', (_event, payload) => invokeSafely(async () => workHubCoordination.listRuns(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.limit)));
   secureHandle('workhub:coord-run', (_event, payload) => invokeSafely(async () => workHubCoordination.runDetail(
@@ -1042,6 +1081,29 @@ function registerIpc() {
     const title = (text.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '';
     return { url: target.href, status: response.status, ok: response.ok, ms: Date.now() - started, title: title.trim().slice(0, 200) };
   }));
+  // W3 native chat: Work Hub talks to the local Codex App Server through
+  // the runtime's existing internal codex_bridge tool — the same panel
+  // channel as job-run/handoff-get; the public smart-v3 surface is
+  // unchanged and no CoS app is involved. Session state lives in the
+  // workHubCodexChat service (main process), keyed by scoped workspace.
+  const codexChat = createWorkHubCodexChat({
+    callBridge: (args, timeoutMs) => callMcpTool('codex_bridge', args, timeoutMs || 30000),
+  });
+  secureHandle('workhub:codex-chat-probe', (_event, payload) => invokeSafely(async () => (
+    codexChat.probe(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-history', (_event, payload) => invokeSafely(async () => (
+    codexChat.listHistory(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-send', (_event, payload) => invokeSafely(async () => (
+    codexChat.send(scopedWorkHubRoot(payload?.expectedWorkspace), {
+      text: payload?.text,
+      link: payload?.link && typeof payload.link === 'object' ? { runId: payload.link.runId, taskId: payload.link.taskId } : null,
+    }))));
+  secureHandle('workhub:codex-chat-poll', (_event, payload) => invokeSafely(async () => (
+    codexChat.poll(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-interrupt', (_event, payload) => invokeSafely(async () => (
+    codexChat.interrupt(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-reset', (_event, payload) => invokeSafely(async () => (
+    codexChat.reset(scopedWorkHubRoot(payload?.expectedWorkspace)))));
   let workHubAwakeId = null;
   secureHandle('workhub:keep-awake', (_event, on) => invokeSafely(async () => {
     const { powerSaveBlocker } = require('electron');
@@ -1526,7 +1588,7 @@ function registerIpc() {
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
     // Recovery settings stay explicitly operator-controlled and separate from the primary runtime failure domain.
-    const allowed = ['permissionMode', 'executionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'controlPlaneServerUrl', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
+    const allowed = ['permissionMode', 'executionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'controlPlaneServerUrl', 'cosCompanionEnabled', 'cosCompanionUserDataDir', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
     const clean = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => allowed.includes(key)));
     const saved = settings.save(clean);
     if (Object.hasOwn(clean, 'startWithWindows')) {

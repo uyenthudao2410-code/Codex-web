@@ -189,3 +189,26 @@ body .page.wh-workspace { max-width: 1440px !important; }
 .wh-commit-bar input[type="text"] { flex: 1 1 220px; }
 .wh-commit-all { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
 .wh-commit-check { width: 16px; height: 16px; flex: 0 0 auto; align-self: center; }
+
+/* W2: structured diff rendering (native port of the CoS unified-diff line
+   model — dual gutters, per-kind rows, bounded lines). Rows are spans with
+   text-node content only; colors reuse the app palette variables. */
+.wh-workspace #whDiff:has(.wh-diff-line) { white-space: normal; }
+.wh-diff-line { display: flex; gap: 8px; align-items: baseline; white-space: pre-wrap; overflow-wrap: anywhere; font-family: Consolas, monospace; font-size: 12px; line-height: 1.6; padding: 0 6px; }
+.wh-diff-gutter { flex: 0 0 3.2em; text-align: right; color: var(--muted); user-select: none; }
+.wh-diff-sign { flex: 0 0 1em; text-align: center; user-select: none; }
+.wh-diff-code { flex: 1 1 auto; min-width: 0; }
+.wh-diff-line.is-added { background: rgba(16,185,129,.12); }
+.wh-diff-line.is-added .wh-diff-sign { color: var(--green); }
+.wh-diff-line.is-removed { background: rgba(239,68,68,.10); }
+.wh-diff-line.is-removed .wh-diff-sign { color: var(--red); }
+.wh-diff-line.is-hunk { color: var(--wh-accent); background: var(--wh-soft); margin-top: 6px; }
+.wh-diff-line.is-meta { color: var(--muted); }
+#whDiffMeta { margin-top: 8px; }
+/* W3 native Codex chat */
+.wh-chat-log { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; max-height: 420px; overflow-y: auto; }
+.wh-chat-msg { border: 1px solid var(--wh-soft); border-radius: 8px; padding: 8px 10px; }
+.wh-chat-msg.is-user { background: var(--wh-soft); }
+.wh-chat-head { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.wh-chat-msg.is-assistant .wh-chat-head { color: var(--wh-accent); }
+.wh-chat-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.55; }
