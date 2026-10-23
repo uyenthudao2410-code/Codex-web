@@ -1897,7 +1897,7 @@ impl ToolRuntime {
                     job.exit_code.map(i64::from),
                     &wait.analysis_stdout,
                     &wait.analysis_stderr,
-                    wait.analysis_truncated,
+                    wait.analysis_truncated || wait.stdout_truncated || wait.stderr_truncated,
                 );
                 ToolResult::ok(json!({
                     "job_id": job.job_id,
