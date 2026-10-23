@@ -89,6 +89,61 @@ item behind evidence that does not exist yet.
   continuation exists yet; per B6, that proof requires a real Goal from
   the operator's provider session and is recorded as NOT_RUN, gate open,
   rather than claimed.
+- **CI layers 5–7 (2026-10-23 evening).** Run `39936946988` reached the
+  formatting step and exposed two residuals: one pre-existing rustfmt
+  deviation, and the attested-bridge test hitting a second designed
+  denial because runner posture varies by allocation. Fixed in
+  `d5f0bec6`. Run `39939097645` then cleared every earlier stage in
+  both jobs and failed at the deepest layers: the Rust suite with 19
+  failures (18 sharing one root — see below — plus a Cloudflare
+  tunnel log race) and the Windows MCP step with one failure (the
+  attested half of the bridge test proceeded into a designed elevated
+  denial). The 18-failure root was a half-landed local change
+  (`1db8ea4e`, 2026-08-23) that hid `start_coding_task` from the
+  registry and MCP discovery and adjusted three MCP assertions,
+  without updating the registered-contract suite; the repository's own
+  schema gate documents the hidden set as fixed and deliberate, so
+  the registered contract was restored (`13fff493`: visibility,
+  registry spec, discovery groups, audit intent, the three assertions
+  reverted, the tunnel reader-flush race fixed, and the bridge test
+  gated on host posture itself). Run `39949261296` at `13fff493`:
+  Ubuntu 2310 passed with exactly one failure left (below); Windows
+  attempt 1 hit four stateless-HTTP timeouts on a slow runner
+  allocation (suite 719s vs ~540–670s typical) — a rerun of the failed
+  jobs turned the MCP step green, confirming environmental flake —
+  and the rerun then failed at `audit:prod` because a new advisory
+  (GHSA-2883-xcg3-v3hh) had been published against the locked js-yaml
+  4.1 (fixed by a lockfile-only bump to 4.2, `d84e15e1`).
+- **The last Rust failure — root-caused and fixed (`35c84bd4`).**
+  `partial_agent_job_logs_null_complete_validation_counts_everywhere`
+  failed on the job_LOG assertion, not job_status: the agent job_log
+  path derived the validation `truncated` flag solely from the
+  unbounded analysis stream, so a 200-line page of a 601-line log
+  claimed complete validation counts. The status path (bounded fetch
+  + incompleteness check) and the local job_log path (tail-bounded
+  analysis) both treat a bounded view as partial; the agent job_log
+  path now ORs the page projections' truncated flags in. Module
+  35/35, job clusters 171/171 locally. Fresh full run `39955938797`
+  at `d84e15e1` dispatched 2026-10-23 19:47 +07.
+- **P1.2 update — natural Goal E2E now demonstrated with a real
+  provider.** A Codex provider went live on the Windows node
+  (Codex CLI + the pre-existing account auth), and a fresh
+  non-fixture problem was driven end-to-end unattended: the provider
+  authored the PATCH proposal through the production bridge (locked
+  `continuation_proposal` profile), the production parser validated
+  it, the effect applied inside scope, and the protected oracle
+  passed 8/8 (baseline 3 failed / 5 passed) → ACCEPTING. Full record:
+  `261023_NATURAL_GOAL_E2E_PILOT.md`. Two items remain operator acts
+  by design: the attested ChatWeb grant (consent was bound at the
+  ledger layer, as in the product's own tests) and the B7 final
+  outcome confirmation.
+- **Quantitative Problem→Outcome evaluation — DONE 2026-10-23.**
+  `261023_PROBLEM_OUTCOME_QUANTITATIVE_EVALUATION.md`: lineage
+  mechanics measured sound (exact-revision binding 91.5%,
+  criterion→proof 34/34, zero false closures); effectiveness
+  formally rejected by the pre-registered cohort gate (3/10
+  typed-natural eligible — the blocker is missing typed natural
+  provenance on organic runs; cost/token coverage 0%).
 
 ## P1 — next, in order
 
