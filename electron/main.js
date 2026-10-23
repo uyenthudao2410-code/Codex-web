@@ -26,6 +26,15 @@ const workHubFiles = require('./services/workHubFiles');
 const workHubLsp = require('./services/workHubLsp');
 const workHubCoordination = require('./services/workHubCoordination');
 const workHubSsh = require('./services/workHubSsh');
+const { createBrowserQa } = require('./services/workHubBrowserQa');
+const browserQa = createBrowserQa({
+  createWindow: () => new BrowserWindow({
+    show: false,
+    width: 1280,
+    height: 800,
+    webPreferences: { offscreen: true, sandbox: true, contextIsolation: true },
+  }),
+});
 const {
   ensureRecoveryHost,
   recoveryLoginItemArguments,
@@ -984,6 +993,9 @@ function registerIpc() {
   secureHandle('workhub:worktree-remove', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeRemove(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.path)));
   secureHandle('workhub:sha256', (_event, text) => invokeSafely(async () => require('crypto').createHash('sha256').update(String(text || '')).digest('hex')));
+  secureHandle('workhub:qa-capture', (_event, payload) => invokeSafely(async () => browserQa.capture(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload)));
+  secureHandle('workhub:qa-list', (_event, expectedWorkspace) => invokeSafely(async () => browserQa.listCaptures(scopedWorkHubRoot(expectedWorkspace))));
   secureHandle('workhub:ssh-scan', (_event, payload) => invokeSafely(async () => workHubSsh.scanHostKey(payload)));
   secureHandle('workhub:ssh-test', (_event, payload) => invokeSafely(async () => workHubSsh.testTarget(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload)));

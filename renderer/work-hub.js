@@ -1069,6 +1069,45 @@
     renderSteering();
   }
 
+  // ---------- M3.1: browser QA captures ----------
+  function qaSummary(record) {
+    if (!record) return 'Không có dữ liệu.';
+    const verdict = record.verdict ? ` · kỳ vọng "${record.verdict.expectedText}": ${record.verdict.pass ? 'ĐẠT' : 'KHÔNG ĐẠT'}` : '';
+    const shot = record.screenshot ? ` · ảnh ${record.screenshot.path} sha256 ${record.screenshot.sha256.slice(0, 12)}…` : ' · không có ảnh';
+    return `${record.at} · ${record.status}${record.loadError ? ` (${record.loadError})` : ''} · ${record.finalUrl} · "${record.title}" · console lỗi: ${record.consoleErrors} · request lỗi: ${record.networkErrors.length} · DOM ${record.domChars} ký tự${shot}${verdict}${record.jobId ? ` · Job ${record.jobId}` : ''}`;
+  }
+  async function renderQaList() {
+    const box = $('#whQaList');
+    if (!box || !window.mcpAssistant?.workhubQaList) return;
+    const scope = requestScope('qa');
+    const data = unwrap(await window.mcpAssistant.workhubQaList(scope.workspace).catch(() => null));
+    if (!scope.current() || !Array.isArray(data)) return;
+    if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có bản chụp nào.')); return; }
+    box.replaceChildren(...data.map((record) => {
+      const row = el('div', 'wh-search-row');
+      const main = el('span', 'wh-row-main');
+      main.append(el('b', '', `${record.status} · ${record.title || record.finalUrl}`), el('small', '', qaSummary(record)));
+      row.append(main);
+      return row;
+    }));
+  }
+  async function runQaCapture() {
+    const out = $('#whQaResult');
+    if (!window.mcpAssistant?.workhubQaCapture) return;
+    const scope = requestScope('qa');
+    const payload = {
+      url: String($('#whQaUrl')?.value || '').trim(),
+      expectedText: String($('#whQaExpected')?.value || '').trim(),
+      expectedWorkspace: scope.workspace,
+    };
+    if (out) out.textContent = 'Đang mở trang trong cửa sổ ẩn và chụp bằng chứng…';
+    const data = unwrap(await window.mcpAssistant.workhubQaCapture(payload).catch((error) => ({ error: String(error?.message || error) })));
+    if (!scope.current() || !out) return;
+    if (!data || data.error) { out.textContent = `Chụp thất bại: ${data?.error || 'không có phản hồi'}`; return; }
+    out.textContent = `${qaSummary(data)}\n\n--- Trích DOM ---\n${data.domExcerpt || '(trống)'}`;
+    renderQaList();
+  }
+
   // ---------- wiring ----------
   function bind() {
     const tabs = Array.from(document.querySelectorAll('[data-wh-tab]'));
@@ -1155,6 +1194,8 @@
     });
     $('#whDirReload')?.addEventListener('click', renderFiles);
     $('#whCodeSearch')?.addEventListener('click', renderCodeSearch);
+    $('#whQaCapture')?.addEventListener('click', runQaCapture);
+    $('#whQaReload')?.addEventListener('click', renderQaList);
     $('#whCoordReload')?.addEventListener('click', () => { renderCoordRuns(); renderSteering(); });
     $('#whSteerSave')?.addEventListener('click', saveSteeringFromForm);
     $('#whLspDefinition')?.addEventListener('click', () => renderLspNavigate('definition'));
@@ -1229,7 +1270,7 @@
     renderProjects();
     renderBasket();
     renderRecipes();
-    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders(), renderCoordRuns(), renderSteering()]);
+    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders(), renderCoordRuns(), renderSteering(), renderQaList()]);
     if (request !== ui.refreshRequest) return;
     renderExtended();
     renderGoal();

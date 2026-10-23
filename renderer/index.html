@@ -734,7 +734,14 @@
               <label class="field"><span>Nội dung gửi cho lệnh đang chạy</span><input id="whJobInput" placeholder="Nhập nội dung cần gửi"></label>
               <div class="inline-actions"><button class="secondary-button" id="whJobWrite" type="button">Gửi nội dung</button><button class="secondary-button" id="whJobPoll" type="button">Lấy kết quả mới</button><button class="secondary-button" id="whJobKill" type="button">Dừng lệnh</button></div>
               <p class="task-muted">Nếu chưa nhận phản hồi sau khi gửi nội dung, hãy lấy kết quả mới trước khi gửi lại. Một phần kết quả có thể không còn sau khi khởi động lại.</p>
-            </article></div><details class="wh-disclosure wh-tool-group"><summary>Hàng đợi, lịch kiểm tra &amp; mục tiêu</summary><div class="wh-disclosure-body"><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Hàng đợi việc</h3><span class="soft-badge neutral">Theo dự án</span></div>
+            </article></div><article class="panel"><div class="panel-title"><h3>Browser QA</h3><span class="soft-badge neutral">M3.1 · chụp trang thật</span></div>
+              <label class="field"><span>Địa chỉ trang</span><input id="whQaUrl" placeholder="http://localhost:5173"></label>
+              <label class="field"><span>Nội dung kỳ vọng trong DOM (tùy chọn)</span><input id="whQaExpected" placeholder="Ví dụ: Đăng nhập"></label>
+              <div class="inline-actions"><button class="secondary-button" id="whQaCapture" type="button">Chụp &amp; kiểm chứng</button><button class="secondary-button" id="whQaReload" type="button">Tải lại danh sách</button></div>
+              <pre class="task-command wh-viewer" id="whQaResult">Chưa chụp lần nào.</pre>
+              <div class="wh-list" id="whQaList"></div>
+              <p class="task-muted">Bằng chứng gồm: URL cuối + tiêu đề, console, request lỗi, trích DOM và ảnh chụp PNG (sha256) lưu trong .coding-tools/browser-qa. Computer Use (điều khiển cửa sổ Windows) là adapter riêng — chưa triển khai, không nằm trong bản chụp này.</p>
+            </article><details class="wh-disclosure wh-tool-group"><summary>Hàng đợi, lịch kiểm tra &amp; mục tiêu</summary><div class="wh-disclosure-body"><div class="wh-grid "><article class="panel"><div class="panel-title"><h3>Hàng đợi việc</h3><span class="soft-badge neutral">Theo dự án</span></div>
               <label class="field"><span>Tên việc</span><input id="whQueueTitle" placeholder="Việc tiếp theo"></label>
               <div class="inline-actions"><button class="secondary-button" id="whQueueAdd" type="button">Thêm vào hàng đợi</button><button class="secondary-button" id="whQueueStartNext" type="button">Bắt đầu việc kế tiếp</button></div>
               <label class="choice"><input id="whQueuePaused" type="checkbox"><span><b>Tạm dừng hàng đợi</b><small>Chưa bắt đầu việc mới khi đang bật.</small></span></label>

@@ -134,6 +134,8 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   workhubGitBlame: (rel, expectedWorkspace) => ipcRenderer.invoke('workhub:git-blame', rel, expectedWorkspace),
   workhubReadImage: (rel, expectedWorkspace) => ipcRenderer.invoke('workhub:read-image', rel, expectedWorkspace),
   workhubOpenPath: (rel, reveal, expectedWorkspace) => ipcRenderer.invoke('workhub:open-path', rel, reveal, expectedWorkspace),
+  workhubQaCapture: (payload) => ipcRenderer.invoke('workhub:qa-capture', payload),
+  workhubQaList: (expectedWorkspace) => ipcRenderer.invoke('workhub:qa-list', expectedWorkspace),
   workhubSha256: (text) => ipcRenderer.invoke('workhub:sha256', text),
   workhubSshScan: (payload) => ipcRenderer.invoke('workhub:ssh-scan', payload),
   workhubSshTest: (payload) => ipcRenderer.invoke('workhub:ssh-test', payload),
