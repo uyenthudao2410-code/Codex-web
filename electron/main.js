@@ -24,6 +24,7 @@ const {
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const workHubFiles = require('./services/workHubFiles');
 const workHubLsp = require('./services/workHubLsp');
+const workHubCoordination = require('./services/workHubCoordination');
 const {
   ensureRecoveryHost,
   recoveryLoginItemArguments,
@@ -981,6 +982,16 @@ function registerIpc() {
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.name, payload?.branch)));
   secureHandle('workhub:worktree-remove', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeRemove(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.path)));
+  secureHandle('workhub:coord-runs', (_event, payload) => invokeSafely(async () => workHubCoordination.listRuns(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.limit)));
+  secureHandle('workhub:coord-run', (_event, payload) => invokeSafely(async () => workHubCoordination.runDetail(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.runId)));
+  secureHandle('workhub:steer-list', (_event, expectedWorkspace) => invokeSafely(async () => workHubCoordination.listSteering(
+    scopedWorkHubRoot(expectedWorkspace))));
+  secureHandle('workhub:steer-save', (_event, payload) => invokeSafely(async () => workHubCoordination.saveSteering(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload)));
+  secureHandle('workhub:steer-dispatch', (_event, payload) => invokeSafely(async () => workHubCoordination.dispatchSteering(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.id)));
   secureHandle('workhub:lsp-providers', (_event, expectedWorkspace) => invokeSafely(async () => {
     scopedWorkHubRoot(expectedWorkspace);
     return workHubLsp.providers();

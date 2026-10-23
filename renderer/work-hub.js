@@ -979,6 +979,96 @@
     box.replaceChildren(...rows);
   }
 
+  // ---------- M2: coordination (runs / workers / steering) ----------
+  async function renderCoordRuns() {
+    const box = $('#whCoordRuns');
+    if (!box || !window.mcpAssistant?.workhubCoordRuns) return;
+    const scope = requestScope('coord');
+    const data = unwrap(await window.mcpAssistant.workhubCoordRuns({ limit: 15, expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    if (!data?.available) { box.replaceChildren(el('span', 'task-muted', 'Chưa có ledger orchestration trong dự án này.')); return; }
+    if (!data.runs.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có RUN nào.')); return; }
+    const rows = data.runs.map((run) => {
+      const row = el('button', 'wh-search-row');
+      const main = el('span', 'wh-row-main');
+      main.append(
+        el('b', '', `${run.status} · ${run.runId.slice(0, 8)} · ${run.waveCount} wave · ${run.laneCount} lane`),
+        el('small', '', `${run.startedAt || ''} — ${run.objective || '(không có mô tả)'}`)
+      );
+      row.append(main);
+      row.addEventListener('click', () => renderCoordDetail(run.runId));
+      return row;
+    });
+    box.replaceChildren(...rows);
+  }
+  async function renderCoordDetail(runId) {
+    const box = $('#whCoordDetail');
+    if (!box || !window.mcpAssistant?.workhubCoordRun) return;
+    const scope = requestScope('coord');
+    box.textContent = 'Đang đọc ledger…';
+    const data = unwrap(await window.mcpAssistant.workhubCoordRun({ runId, expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    if (!data?.found) { box.replaceChildren(el('span', 'task-muted', 'Không tìm thấy RUN.')); return; }
+    if ($('#whSteerRun')) $('#whSteerRun').value = runId;
+    const parts = [];
+    const head = el('p', 'wh-help', `RUN ${data.run.runId} · ${data.run.status} · task ${data.run.taskId}`);
+    parts.push(head);
+    const lines = [];
+    for (const wave of data.waves) lines.push(`Wave ${wave.ordinal}: ${wave.status} · ${wave.mode || ''} · head ${(wave.baseHead || '').slice(0, 8)}`);
+    for (const worker of data.workers) lines.push(`Worker ${worker.owner || ''} · ${worker.model || ''} · effort ${worker.effort || ''} · ${worker.status} · scope ${(worker.scope || []).length} đường dẫn`);
+    for (const lane of data.lanes) lines.push(`Lane ${lane.role} · ${lane.provider || ''} · ${lane.model || ''} · ${lane.lifecycle}`);
+    if (data.lease) lines.push(`Lease: ${data.lease.status} · owner ${data.lease.owner} · hết hạn ${data.lease.expiresAt}`);
+    for (const proof of data.proofs.slice(0, 8)) lines.push(`Proof ${proof.stage}: ${proof.status} · exit ${proof.exitCode ?? '—'} · ${proof.durationMs ?? '—'}ms${proof.cacheHit ? ' · cache' : ''}`);
+    for (const msg of data.messages) lines.push(`Coord msg ${msg.kind} (${msg.direction}): ${msg.status}${msg.acknowledgedAt ? ` · ack ${msg.acknowledgedAt}` : ' · chưa ack'}`);
+    for (const event of data.activity.slice(-10)) lines.push(`${event.at} · ${event.type}: ${event.from || ''} → ${event.to || ''}`);
+    const pre = el('pre', 'task-command wh-viewer');
+    pre.textContent = lines.join('\n') || 'Không có dữ liệu chi tiết.';
+    parts.push(pre);
+    box.replaceChildren(...parts);
+  }
+  async function renderSteering() {
+    const box = $('#whSteerList');
+    if (!box || !window.mcpAssistant?.workhubSteerList) return;
+    const scope = requestScope('coord');
+    const data = unwrap(await window.mcpAssistant.workhubSteerList(scope.workspace).catch(() => null));
+    if (!scope.current() || !Array.isArray(data)) return;
+    if (!data.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có điều chỉnh nào.')); return; }
+    const stateLabel = { draft: 'Bản nháp', saved: 'Đã lưu', dispatched: 'Đã dispatch', acknowledged: 'Đã xác nhận', consumed: 'Đã tiêu thụ' };
+    const rows = data.map((record) => {
+      const row = el('div', 'wh-search-row');
+      const main = el('span', 'wh-row-main');
+      main.append(
+        el('b', '', `${stateLabel[record.state] || record.state} · RUN ${String(record.runId).slice(0, 8)} → ${record.recipient}`),
+        el('small', '', `${record.text}${record.capsuleSha256 ? ` · capsule ${record.capsuleSha256.slice(0, 12)}…` : ''}${record.state === 'dispatched' ? ' · chưa có bằng chứng tiếp nhận' : ''}`)
+      );
+      row.append(main);
+      if (record.state === 'saved' || record.state === 'draft') {
+        const btn = el('button', 'secondary-button', 'Dispatch');
+        btn.addEventListener('click', async () => {
+          await window.mcpAssistant.workhubSteerDispatch({ id: record.id, expectedWorkspace: scope.workspace }).catch(() => null);
+          renderSteering();
+        });
+        row.append(btn);
+      }
+      return row;
+    });
+    box.replaceChildren(...rows);
+  }
+  async function saveSteeringFromForm() {
+    if (!window.mcpAssistant?.workhubSteerSave) return;
+    const scope = requestScope('coord');
+    const payload = {
+      runId: String($('#whSteerRun')?.value || '').trim(),
+      text: String($('#whSteerText')?.value || '').trim(),
+      recipient: 'controller',
+      expectedWorkspace: scope.workspace,
+    };
+    const saved = unwrap(await window.mcpAssistant.workhubSteerSave(payload).catch(() => null));
+    if (!scope.current()) return;
+    if (saved && $('#whSteerText')) $('#whSteerText').value = '';
+    renderSteering();
+  }
+
   // ---------- wiring ----------
   function bind() {
     const tabs = Array.from(document.querySelectorAll('[data-wh-tab]'));
@@ -1065,6 +1155,8 @@
     });
     $('#whDirReload')?.addEventListener('click', renderFiles);
     $('#whCodeSearch')?.addEventListener('click', renderCodeSearch);
+    $('#whCoordReload')?.addEventListener('click', () => { renderCoordRuns(); renderSteering(); });
+    $('#whSteerSave')?.addEventListener('click', saveSteeringFromForm);
     $('#whLspDefinition')?.addEventListener('click', () => renderLspNavigate('definition'));
     $('#whLspReferences')?.addEventListener('click', () => renderLspNavigate('references'));
     $('#whLspSymbols')?.addEventListener('click', renderLspSymbols);
@@ -1137,7 +1229,7 @@
     renderProjects();
     renderBasket();
     renderRecipes();
-    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders()]);
+    await Promise.allSettled([loadTask(), renderFiles(), renderGit(), renderGitLog(), renderWorktrees(), renderLspProviders(), renderCoordRuns(), renderSteering()]);
     if (request !== ui.refreshRequest) return;
     renderExtended();
     renderGoal();

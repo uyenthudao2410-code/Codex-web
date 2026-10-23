@@ -89,6 +89,7 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/controlPlaneEnrollment.js',
       'electron/services/panelLayout.js',
       'electron/services/uiPerformanceMetrics.js',
+      'electron/services/workHubCoordination.js',
       'electron/services/workHubFiles.js',
       'electron/services/workHubLsp.js',
       'renderer/app-icon.png'

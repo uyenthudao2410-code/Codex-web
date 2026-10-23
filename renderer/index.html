@@ -684,7 +684,18 @@
               <button class="secondary-button" id="whFeedbackAdd" type="button">Lưu điều chỉnh</button>
               <div class="wh-list" id="whFeedbackList"></div>
               <p class="task-muted">Ba mức riêng biệt: đã lưu (máy này) → đã sao chép để chuyển → đã xác nhận. Lưu ở đây không có nghĩa là agent đã đọc.</p>
-            </article></div></section>
+            </article></div><article class="panel"><div class="panel-title"><h3>Điều phối theo RUN</h3><span class="soft-badge neutral">Ledger orchestration</span></div>
+              <p class="wh-help">Worker/reviewer, wave, lease và proof theo đúng RUN. Chọn một RUN để xem chi tiết.</p>
+              <div class="inline-actions"><button class="secondary-button" id="whCoordReload" type="button">Tải lại danh sách RUN</button></div>
+              <div class="wh-list" id="whCoordRuns"></div>
+              <div id="whCoordDetail"><span class="task-muted">Chưa chọn RUN.</span></div>
+              <div class="panel-title"><h3>Điều chỉnh có trạng thái (steering)</h3><span class="soft-badge neutral">Outbox</span></div>
+              <label class="field"><span>RUN đích</span><input id="whSteerRun" placeholder="run_id"></label>
+              <label class="field"><span>Nội dung điều chỉnh</span><input id="whSteerText" placeholder="Ví dụ: dừng mở rộng phạm vi, chỉ sửa module A"></label>
+              <div class="inline-actions"><button class="secondary-button" id="whSteerSave" type="button">Lưu điều chỉnh</button></div>
+              <div class="wh-list" id="whSteerList"></div>
+              <p class="task-muted">Trạng thái: bản nháp → đã lưu → đã dispatch (capsule có sha256 trong .coding-tools/steering-outbox) → đã xác nhận → đã tiêu thụ. Hai mức cuối chỉ xuất hiện khi ledger có bằng chứng thật; không có bằng chứng thì giữ ở “đã dispatch”.</p>
+            </article></section>
 <section id="whPanelChanges" class="wh-tab-panel" role="tabpanel" data-wh-panel="changes" aria-labelledby="whTabChanges" hidden><div class="wh-section-intro"><div><h3>Xem lại thay đổi</h3><p>Các thay đổi trong thư mục hiện tại; tệp do công việc ghi nhận có nhãn riêng.</p></div></div><article class="panel"><div class="panel-title"><h3>Thay đổi Git</h3><span class="soft-badge neutral">So sánh &amp; lịch sử</span></div>
               <button class="secondary-button" id="whGitRefresh" type="button">Tải tệp đã thay đổi</button>
               <div class="wh-list" id="whGitList"></div>
