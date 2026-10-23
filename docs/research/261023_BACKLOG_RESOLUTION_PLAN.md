@@ -26,6 +26,34 @@ item behind evidence that does not exist yet.
    installation ↔ epoch ↔ component revisions ↔ test logs ↔ runtime
    snapshots ↔ operator acceptance: `261023_R18_RELEASE_ACCEPTANCE.md`.
 
+## Status updates (2026-10-23, full-authority execution)
+
+- **P1.3 CI — in progress, and the premise corrected.** The repository
+  already has a CI workflow; it is `workflow_dispatch`-only by design
+  (zero Actions minutes during ordinary development), which is why HEAD
+  showed 0 check runs. The workflow was dispatched manually on 2026-10-23
+  (run `39918780739`, HEAD `89a164c0`): the ubuntu job failed at the MCP
+  test step with exactly 6 failures (1244 passed). Root causes, all in
+  test code: a stale tool-contract golden hash (left behind by the wave-3
+  schema change), four Windows-only simulations that cannot run on a
+  POSIX host, and one case patching the optional `psutil` dependency that
+  CI does not install. Fixed in commit `e92fd98f` and re-dispatched
+  (2026-10-23 15:07 +07); the re-run's conclusion is recorded when it
+  finishes. The standing trigger policy is unchanged.
+- **P1.4 Rollback drill — DONE 2026-10-23.** r18 → r17 → r18, both legs
+  READY/OPEN with `fully_ready=true`; recorded as Addendum 2 of the r18
+  release acceptance file. (This renumbers the drill from item 3 above.)
+- **P1.2 Goal continuation — machinery verified, live natural proof still
+  NOT_RUN by the plan's own gate.** The continuation suites pass on
+  Windows (36 tests + 8 subtests: consent HTTP, codex bridge, continuity
+  telemetry). The live ledger holds exactly one continuation run — a
+  canary fixture case (`case-g2-clamp-001`) with a chatweb consent
+  receipt, bounded grant (6 turns / 600s / 2 patch attempts) and one
+  patch effect `applied` with pre/post image hashes. No natural-problem
+  continuation exists yet; per B6, that proof requires a real Goal from
+  the operator's provider session and is recorded as NOT_RUN, gate open,
+  rather than claimed.
+
 ## P1 — next, in order
 
 2. **Bounded background Goal continuation proof** (Outcome roadmap M2;
