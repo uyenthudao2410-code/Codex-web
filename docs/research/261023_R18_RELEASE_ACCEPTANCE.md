@@ -59,6 +59,20 @@ operator-preserved logs and are not represented as CI acceptance.
   centrally (`settled / rejected`); receipts retain the original `unknown`
   and the terminal `rejected`.
 
+## Addendum — epoch rotation during the acceptance commit (2026-10-23 07:16Z)
+
+Committing this record required a brief full stop of the packaged stack so
+the delivery check could stage a stable snapshot (the live app rewrites
+`.coding-tools/performance.json` continuously). On restart, the host first
+resumed epoch `activation-mvkkj43q` in an update-incomplete state (MCP
+running but unbound; full-clean census could not acquire its exclusive
+ledger gate while that MCP held the ledger). Terminating the MCP process
+let the restart's stop phase free the gate, and a new full-clean epoch
+`activation-mvkmy4ps-60f9bb927bf7784e10967bd94cbb6ab8` reached READY / OPEN
+with `fully_ready=true` (snapshot 2026-10-23T07:16:46Z). Package,
+installation and source are unchanged; only the activation epoch rotated,
+which is an activation instance, not part of the release identity above.
+
 ## Rollback position
 
 - Previous packaged builds retained on the Windows machine: r17, r16, r15k.
