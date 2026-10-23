@@ -985,8 +985,9 @@ function registerIpc() {
     if (typeof text === 'string') { try { return JSON.parse(text); } catch { return { raw: text }; } }
     return result && typeof result === 'object' ? result : { capsule: null };
   }));
+  secureHandle('workhub:git-head', (_event, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitHead(scopedWorkHubRoot(expectedWorkspace))));
   secureHandle('workhub:git-commit', (_event, payload) => invokeSafely(async () => workHubFiles.gitCommitFiles(
-    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.files, payload?.message)));
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload?.files, payload?.message, { expectedHead: payload?.expectedHead })));
   secureHandle('workhub:worktree-list', (_event, expectedWorkspace) => invokeSafely(async () => workHubFiles.gitWorktreeList(scopedWorkHubRoot(expectedWorkspace))));
   secureHandle('workhub:worktree-add', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeAdd(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.name, payload?.branch)));

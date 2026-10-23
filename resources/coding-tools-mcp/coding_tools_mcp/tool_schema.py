@@ -997,6 +997,11 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "preview_bytes": {**integer, "minimum": 1, "maximum": 1048576, "default": 4096},
                 "stdin": {**string, "default": ""},
                 "tty": {**boolean, "default": False},
+                "confirm_destructive": {
+                    **boolean,
+                    "default": False,
+                    "description": "Local mode only: set true ONLY after the user explicitly confirmed this exact destructive command in chat. A first call without it fails with DESTRUCTIVE_CONFIRMATION_REQUIRED naming the command to show the user. It never authorizes anything in sandboxed mode.",
+                },
                 "env": {"type": "object", "additionalProperties": {"type": "string"}, "default": {}},
                 "principal_id": {
                     **string,

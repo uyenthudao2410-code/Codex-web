@@ -283,7 +283,12 @@ async function gitFileDiff(root, rel, options = {}) {
   return { rel: relOut, diff: combined.slice(0, maxChars), truncated: combined.length > maxChars };
 }
 
-async function gitCommitFiles(root, files, message) {
+async function gitHead(root) {
+  const { root: rootResolved } = resolveInsideRoot(root, '');
+  return (await runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => '')).trim();
+}
+
+async function gitCommitFiles(root, files, message, options = {}) {
   // M1.2/B07: commit exactly the files the user selected in the Changes tab.
   // The commit is pathspec-limited, so staged or unstaged changes in other
   // files are never swept in.
@@ -296,6 +301,18 @@ async function gitCommitFiles(root, files, message) {
   if (list.length > 200) throw new Error('Quá nhiều tệp trong một commit (tối đa 200).');
   for (const rel of list) resolveInsideRoot(rootResolved, rel);
   const before = (await runGit(rootResolved, ['rev-parse', 'HEAD']).catch(() => '')).trim();
+  // expected_head guard (parity report 23/10 §5.3): when the caller passes
+  // the HEAD it observed while the user reviewed the change list, refuse
+  // BEFORE staging anything if HEAD has since moved — another writer may
+  // have committed in between, and the selection was reviewed against the
+  // old tree. Absent expectedHead keeps the legacy behavior.
+  const expectedHead = String(options?.expectedHead || '').trim().toLowerCase();
+  if (expectedHead) {
+    if (!/^[0-9a-f]{40,64}$/.test(expectedHead)) throw new Error('expectedHead không hợp lệ.');
+    if (before.toLowerCase() !== expectedHead) {
+      throw new Error(`HEAD đã thay đổi kể từ lúc tải danh sách (kỳ vọng ${expectedHead.slice(0, 10)}, hiện tại ${before.slice(0, 10) || 'chưa có'}). Tải lại thay đổi rồi commit.`);
+    }
+  }
   await runGit(rootResolved, ['add', '--', ...list], { timeout: 30000 });
   await runGit(rootResolved, ['commit', '-m', cleanMessage, '--', ...list], { timeout: 30000 });
   const hash = (await runGit(rootResolved, ['rev-parse', 'HEAD'])).trim();
@@ -305,6 +322,15 @@ async function gitCommitFiles(root, files, message) {
 
 function managedWorktreeBase(rootResolved) {
   return path.join(path.dirname(rootResolved), `${path.basename(rootResolved)}.worktrees`);
+}
+
+// git reports worktree paths with forward slashes even on Windows, while
+// path.join/path.resolve produce backslashes there. Compare managed-path
+// prefixes separator-insensitively or managed worktrees are never
+// recognized on Windows (found by the M1.3 test on a Windows host).
+function pathHasPrefix(candidate, prefix) {
+  const norm = (value) => String(value || '').replace(/\\/g, '/').toLowerCase();
+  return norm(candidate).startsWith(norm(prefix));
 }
 
 async function gitWorktreeList(root) {
@@ -320,8 +346,8 @@ async function gitWorktreeList(root) {
     else if (current && line.startsWith('branch ')) current.branch = line.slice(7).replace('refs/heads/', '');
   }
   if (current) items.push(current);
-  const base = managedWorktreeBase(rootResolved).toLowerCase();
-  for (const item of items) item.managed = item.path.toLowerCase().startsWith(base);
+  const base = managedWorktreeBase(rootResolved);
+  for (const item of items) item.managed = pathHasPrefix(item.path, base);
   return items;
 }
 
@@ -347,7 +373,7 @@ async function gitWorktreeRemove(root, worktreePath) {
   const { root: rootResolved } = resolveInsideRoot(root, '');
   const target = path.resolve(String(worktreePath || ''));
   const base = managedWorktreeBase(rootResolved);
-  if (!target.toLowerCase().startsWith(base.toLowerCase()) || target.toLowerCase() === rootResolved.toLowerCase()) {
+  if (!pathHasPrefix(target, base) || target.toLowerCase() === rootResolved.toLowerCase()) {
     throw new Error('Chỉ gỡ được worktree do ứng dụng quản lý (trong thư mục .worktrees cạnh dự án).');
   }
   await runGit(rootResolved, ['worktree', 'remove', target], { timeout: 30000 });
@@ -369,6 +395,6 @@ function readImageData(root, rel, options = {}) {
 module.exports = {
   SKIP_DIRS, DEFAULTS,
   resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace, readImageData,
-  searchText, gitStatus, gitFileDiff, gitLog, gitShow, gitBlame, gitCommitFiles,
+  searchText, gitStatus, gitFileDiff, gitLog, gitShow, gitBlame, gitHead, gitCommitFiles,
   gitWorktreeList, gitWorktreeAdd, gitWorktreeRemove,
 };

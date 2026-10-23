@@ -93,18 +93,29 @@ class WindowsLocalExecutionTests(unittest.TestCase):
         self.assertNotEqual(self._assert_local_job(stopped)["lifecycle_state"], "running")
         self.assertNotIn(started["command_id"], self.runtime.sessions)
 
-    def test_destructive_command_has_no_boolean_authorization_shortcut(self):
-        with self.assertRaises(JsonRpcError):
-            validate_arguments("exec_command", {"cmd": "git reset --hard", "confirm_destructive": True})
-        for mode in (False, True):
-            with self.subTest(sandboxed=mode), patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=mode):
-                for check, command in (
-                    (self.runtime._check_command_policy, "git reset --hard"),
-                    (self.runtime._check_structured_argv_policy, ["git", "reset", "--hard"]),
-                ):
-                    with self.assertRaises(ToolFailure) as denied:
-                        check(command, {"confirm_destructive": True})
-                    self.assertEqual(denied.exception.code, "PERMISSION_REQUIRED")
+    def test_destructive_command_requires_chat_confirmation_in_local_mode(self):
+        # Operator decision 2026-10-13 (restored 2026-10-23): in local mode a
+        # destructive command is gated by chat confirmation, not a hard block.
+        # The schema accepts the confirmation flag...
+        validate_arguments("exec_command", {"cmd": "git reset --hard", "confirm_destructive": True})
+        checks = (
+            (self.runtime._check_command_policy, "git reset --hard"),
+            (self.runtime._check_structured_argv_policy, ["git", "reset", "--hard"]),
+        )
+        # ...local mode: no flag -> DESTRUCTIVE_CONFIRMATION_REQUIRED; with the
+        # flag (after the user confirmed in chat) -> the gate passes.
+        with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=False):
+            for check, command in checks:
+                with self.assertRaises(ToolFailure) as denied:
+                    check(command, {})
+                self.assertEqual(denied.exception.code, "DESTRUCTIVE_CONFIRMATION_REQUIRED")
+                check(command, {"confirm_destructive": True})
+        # ...sandboxed mode: the flag is NOT a shortcut; the hard block stays.
+        with patch("coding_tools_mcp.exec_tools.is_sandboxed_execution", return_value=True):
+            for check, command in checks:
+                with self.assertRaises(ToolFailure) as denied:
+                    check(command, {"confirm_destructive": True})
+                self.assertEqual(denied.exception.code, "PERMISSION_REQUIRED")
 
     def test_explicit_sandboxed_native_failure_never_uses_host(self):
         failure = ToolFailure("SANDBOX_UNAVAILABLE", "fixture unavailable", category="security")

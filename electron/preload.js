@@ -128,6 +128,7 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   workhubWrite: (rel, content, expectedHash, expectedWorkspace) => ipcRenderer.invoke('workhub:write', rel, content, expectedHash, expectedWorkspace),
   workhubCopyIn: (sourceAbsolute, destDirRel, expectedWorkspace) => ipcRenderer.invoke('workhub:copy-in', sourceAbsolute, destDirRel, expectedWorkspace),
   workhubGitStatus: (expectedWorkspace) => ipcRenderer.invoke('workhub:git-status', expectedWorkspace),
+  workhubGitHead: (expectedWorkspace) => ipcRenderer.invoke('workhub:git-head', expectedWorkspace),
   workhubGitDiff: (rel, expectedWorkspace) => ipcRenderer.invoke('workhub:git-diff', rel, expectedWorkspace),
   workhubGitLog: (limit, expectedWorkspace) => ipcRenderer.invoke('workhub:git-log', limit, expectedWorkspace),
   workhubGitShow: (hash, expectedWorkspace) => ipcRenderer.invoke('workhub:git-show', hash, expectedWorkspace),

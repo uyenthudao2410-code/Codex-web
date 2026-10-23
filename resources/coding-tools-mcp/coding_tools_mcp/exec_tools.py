@@ -858,10 +858,42 @@ class ExecToolsMixin:
             if isinstance(env, dict) and any(is_filtered_env_var(str(key), str(value)) for key, value in env.items()):
                 raise ToolFailure("PERMISSION_REQUIRED", "Sensitive environment variables require explicit permission.", category="permission")
             if DESTRUCTIVE_RE.search(compact):
-                raise ToolFailure("PERMISSION_REQUIRED", "Destructive commands are blocked without explicit permission.", category="permission")
+                self._require_destructive_confirmation(args, compact)
             if not self.allow_network and NETWORK_RE.search(compact) and not is_literal_network_reference_command(compact):
                 raise ToolFailure("PERMISSION_REQUIRED", "Network access is denied by default.", category="permission")
         self._reject_setuid_executable(argv[0])
+
+    def _require_destructive_confirmation(self, args: dict[str, Any], command: str) -> None:
+        """Gate destructive commands.
+
+        Local mode (default): like Claude Code — the agent must ask the user
+        in chat for explicit confirmation, then retry with
+        confirm_destructive=true. The confirmation stays auditable in the
+        tool-call history (operator decision 2026-10-13, restored
+        2026-10-23 after the 22/10 refresh replaced it with a hard block).
+        Sandboxed mode: keep the hard fail-closed block for untrusted remote
+        use; the confirmation flag is NOT a shortcut there.
+        """
+        if args.get("confirm_destructive") is True and not is_sandboxed_execution():
+            return
+        if is_sandboxed_execution():
+            raise ToolFailure(
+                "PERMISSION_REQUIRED",
+                "Destructive commands are blocked without explicit permission.",
+                category="permission",
+                details={"permission": "destructive_command", "command": command},
+            )
+        raise ToolFailure(
+            "DESTRUCTIVE_CONFIRMATION_REQUIRED",
+            "This command looks destructive. Ask the user in chat for explicit "
+            "confirmation, then retry with confirm_destructive=true.",
+            category="permission",
+            details={
+                "permission": "destructive_command",
+                "command": command,
+                "confirmation_arg": "confirm_destructive",
+            },
+        )
 
     def _check_command_policy(self, cmd: str, args: dict[str, Any]) -> None:
         if self.dangerously_skip_all_permissions:
@@ -895,19 +927,9 @@ class ExecToolsMixin:
                 details={"permission": "shell_expansion", "command": compact},
             )
         if re.search(r"(^|[;&|]\s*)rm\s+(-[^\s]*r[^\s]*f|-?[^\s]*f[^\s]*r)\s+/", compact):
-            raise ToolFailure(
-                "PERMISSION_REQUIRED",
-                "Destructive commands are blocked without explicit permission.",
-                category="permission",
-                details={"permission": "destructive_command", "command": compact},
-            )
+            self._require_destructive_confirmation(args, compact)
         if DESTRUCTIVE_RE.search(cmd):
-            raise ToolFailure(
-                "PERMISSION_REQUIRED",
-                "Destructive commands are blocked without explicit permission.",
-                category="permission",
-                details={"permission": "destructive_command", "command": compact},
-            )
+            self._require_destructive_confirmation(args, compact)
         if not self.allow_network and NETWORK_RE.search(cmd) and not is_literal_network_reference_command(cmd):
             raise ToolFailure(
                 "PERMISSION_REQUIRED",

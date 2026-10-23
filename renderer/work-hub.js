@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '' };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -548,6 +548,13 @@
     const data = unwrap(await window.mcpAssistant.workhubGitStatus(scope.workspace).catch(() => null));
     if (!scope.current()) return;
     if (!data) { box.replaceChildren(el('span', 'task-muted', 'Không lấy được trạng thái Git (dự án chưa phải git repo?).')); return; }
+    // Remember the HEAD this change list was reviewed against; the commit
+    // sends it as expectedHead so a concurrent commit aborts instead of
+    // silently stacking on an unseen tree.
+    if (window.mcpAssistant.workhubGitHead) {
+      const head = unwrap(await window.mcpAssistant.workhubGitHead(scope.workspace).catch(() => ''));
+      if (scope.current() && typeof head === 'string') ui.gitHead = head;
+    }
     if (!data.length) { ui.commitSelection.clear(); renderCommitBar(); box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
     const present = new Set(data.map((item) => item.path));
     for (const path of [...ui.commitSelection]) if (!present.has(path)) ui.commitSelection.delete(path);
@@ -606,6 +613,7 @@
     try {
       const data = unwrap(await window.mcpAssistant.workhubGitCommit({
         files: [...ui.commitSelection], message, expectedWorkspace: scope.workspace,
+        expectedHead: ui.gitHead || undefined,
       }));
       if (!scope.current()) return;
       ui.commitSelection.clear();

@@ -7,7 +7,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const {
   resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace,
-  searchText, gitStatus, gitFileDiff, gitLog, gitBlame, gitCommitFiles,
+  searchText, gitStatus, gitFileDiff, gitLog, gitBlame, gitHead, gitCommitFiles,
   gitWorktreeList, gitWorktreeAdd, gitWorktreeRemove,
 } = require('../electron/services/workHubFiles');
 
@@ -164,6 +164,35 @@ test('M1.2 gitCommitFiles commits only the selected paths', async () => {
   await assert.rejects(() => gitCommitFiles(root, [], 'x'), /Chưa chọn tệp/);
   await assert.rejects(() => gitCommitFiles(root, ['README.md'], '  '), /nội dung commit/);
   await assert.rejects(() => gitCommitFiles(root, ['../outside.txt'], 'x'), /ngoài thư mục/);
+});
+
+test('gitCommitFiles expected_head guard: matching HEAD commits, stale HEAD refuses before staging', async () => {
+  const root = fixture();
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  git('add', '-A');
+  git('commit', '-qm', 'init');
+  const head0 = git('rev-parse', 'HEAD').trim();
+  assert.equal(await gitHead(root), head0);
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v2\n');
+  const ok = await gitCommitFiles(root, ['src/login.js'], 'feat: guarded', { expectedHead: head0 });
+  assert.match(ok.hash, /^[0-9a-f]{40}$/);
+  // A second change reviewed against the now-stale head0 must be refused
+  // before anything is staged, and HEAD must not move.
+  fs.writeFileSync(path.join(root, 'src', 'login.js'), 'v3\n');
+  await assert.rejects(
+    () => gitCommitFiles(root, ['src/login.js'], 'feat: stale', { expectedHead: head0 }),
+    /HEAD đã thay đổi/
+  );
+  assert.equal(git('rev-parse', 'HEAD').trim(), ok.hash);
+  assert.equal(git('diff', '--cached', '--name-only').trim(), '');
+  // Malformed expectedHead is rejected outright.
+  await assert.rejects(
+    () => gitCommitFiles(root, ['src/login.js'], 'feat: bad', { expectedHead: 'xyz' }),
+    /expectedHead không hợp lệ/
+  );
 });
 
 test('M1.3 managed worktrees: add, list, remove inside the sibling folder only', async () => {
