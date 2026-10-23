@@ -23,6 +23,7 @@ pub(crate) const TOOL_DISCOVERY_GROUPS: &[ToolDiscoveryGroup] = &[
             "list_projects",
             "list_agents",
             "runtime_status",
+            "start_coding_task",
             "work_on_project",
             "project_overview",
             "list_project_tracked_files",
@@ -150,6 +151,7 @@ pub(crate) const TOOL_DISCOVERY_GROUPS: &[ToolDiscoveryGroup] = &[
         name: TOOL_DISCOVERY_GROUP_RUNTIME,
         tools: &[
             "list_tools",
+            "start_coding_task",
             "work_on_project",
             "finish_coding_task",
             "session_summary",
@@ -343,6 +345,7 @@ pub(crate) const TOOL_MANIFEST_INTENTS: &[ToolManifestIntent] = &[
         name: "audit",
         purpose: "Read-only review/audit: inspect, git history/diff, hygiene, finish or handoff.",
         tools: &[
+            "start_coding_task",
             "work_on_project",
             "project_overview",
             "list_project_tracked_files",

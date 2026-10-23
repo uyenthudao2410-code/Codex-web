@@ -519,7 +519,7 @@ async fn mcp_tools_list_default_retains_output_schema() {
 }
 
 #[test]
-fn start_coding_task_is_hidden_from_mcp_discovery() {
+fn start_coding_task_is_registered_in_mcp_discovery() {
     let _guard = crate::admin_cli::TEST_ENV_LOCK.lock().unwrap();
     let _full = full_operator_mcp_env_locked();
     std::env::remove_var("WEBCODEX_MCP_COMPACT_SCHEMAS");
@@ -531,15 +531,15 @@ fn start_coding_task_is_hidden_from_mcp_discovery() {
         .map(|tool| tool["name"].as_str().unwrap())
         .collect::<Vec<_>>();
     assert!(
-        !names.contains(&"start_coding_task"),
-        "ordinary model MCP discovery must not advertise the advanced compatibility entry: {names:?}"
+        names.contains(&"start_coding_task"),
+        "the registered coding-session entry must be advertised on the full operator surface: {names:?}"
     );
 
     let call = crate::tool_runtime::ToolCall::from_tool_name(
         "start_coding_task",
         json!({ "project": "agent:compat:demo", "resume_session_id": "wc_sess_compat" }),
     )
-    .expect("direct/API compatibility entry must keep its accepted schema");
+    .expect("the registered entry must keep its accepted schema");
     assert!(matches!(
         call,
         crate::tool_runtime::ToolCall::StartCodingTask { .. }
@@ -641,12 +641,11 @@ async fn session_tools_exposed_in_registry_and_mcp() {
     assert!(registry_names.contains(&"validation_summary"));
     assert!(registry_names.contains(&"current_session"));
     assert!(registry_names.contains(&"unbind_current_session"));
-    // `start_coding_task`, `start_session`, and `bind_current_session` are
-    // ModelHidden. `work_on_project` is the model-facing coding entry and
-    // `current_session` remains the query-only view. The advanced API
-    // compatibility entry therefore has no public ToolSpec and is absent from
-    // ordinary MCP discovery.
-    assert!(!registry_names.contains(&"start_coding_task"));
+    // `start_session` and `bind_current_session` are ModelHidden: they have
+    // no public ToolSpec and are absent from the registry and ordinary MCP
+    // discovery. `start_coding_task` is a registered model-visible tool
+    // like `work_on_project`.
+    assert!(registry_names.contains(&"start_coding_task"));
     assert!(!registry_names.contains(&"start_session"));
     assert!(!registry_names.contains(&"bind_current_session"));
 
@@ -2949,8 +2948,8 @@ async fn mcp_tools_list_exposes_coding_task_and_runtime_status_ux_flags() {
     );
 
     assert!(
-        tools.iter().all(|tool| tool["name"] != "start_coding_task"),
-        "advanced direct/API compatibility entry must not appear in model MCP discovery"
+        tools.iter().any(|tool| tool["name"] == "start_coding_task"),
+        "the registered coding-session entry must appear in model MCP discovery"
     );
 
     let update = tool("update_session_context");

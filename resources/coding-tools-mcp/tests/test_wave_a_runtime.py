@@ -192,8 +192,20 @@ class CommandHandleMigrationTests(unittest.TestCase):
                     getattr(denied.exception, "code", ""),
                     allowed_denials,
                 )
-                if os.name == "nt" and getattr(denied.exception, "code", "") == "NATIVE_ELEVATED_HOST_DENIED":
-                    return
+                if os.name == "nt":
+                    # The attested half exercises native argv execution,
+                    # which by design cannot run on an elevated /
+                    # high-integrity host (the native-token guard inside
+                    # the MXC invocation builder denies it). Which guard
+                    # fired on the FIRST call depends on call shape, so
+                    # gate the second half on the host posture itself:
+                    # on an elevated host the denial asserted above is
+                    # the complete correct outcome for this test.
+                    from coding_tools_mcp.processes import windows_host_token_posture
+
+                    posture = windows_host_token_posture()
+                    if posture["elevated"] or posture["integrity_rid"] > 0x2000:
+                        return
 
                 runtime.request_context.hub_client = {
                     "client_id": "electron-control-plane-exec-bridge",

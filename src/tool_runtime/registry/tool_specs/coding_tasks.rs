@@ -4,9 +4,9 @@ use super::super::input_schemas::{
 use super::tool_spec;
 use crate::tool_runtime::tool_spec::ToolSpec;
 
-/// Non-model-facing contract retained for direct/API compatibility. This is
-/// intentionally not returned by `tool_specs()` or ordinary MCP discovery.
-#[allow(dead_code)]
+/// Runtime ToolSpec for the coding-session bootstrap entry. Registered in
+/// `tool_specs()` like every other model-visible tool; MCP discovery
+/// surfaces filter it by their own surface rules.
 pub(super) fn start_coding_task_compatibility_spec() -> ToolSpec {
     tool_spec(
         "start_coding_task",
@@ -17,6 +17,7 @@ pub(super) fn start_coding_task_compatibility_spec() -> ToolSpec {
 
 pub(super) fn tool_specs() -> Vec<ToolSpec> {
     vec![
+        start_coding_task_compatibility_spec(),
         tool_spec(
             "work_on_project",
             "Canonical model entry for ordinary coding/review via an existing project or Runner path; Git not required. Supports exact Session continuation and returns compact workflow plus project instructions.",

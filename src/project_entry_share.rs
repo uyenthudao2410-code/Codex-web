@@ -300,8 +300,14 @@ async fn start_cloudflare_quick_with_binary(
 
     loop {
         if let Some(status) = child.try_wait().map_err(|_| tunnel_runtime_error())? {
-            stdout_task.abort();
-            stderr_task.abort();
+            // The child has exited, so its pipes are at EOF: give the
+            // reader tasks a brief window to flush the final lines into
+            // `recent` before summarizing. Aborting first races the
+            // readers and can drop the child's last output (observed in
+            // CI, where the exit branch won and the startup error line
+            // was lost).
+            let _ = tokio::time::timeout(Duration::from_millis(250), stdout_task).await;
+            let _ = tokio::time::timeout(Duration::from_millis(250), stderr_task).await;
             let detail = bounded_tunnel_log_summary(&recent);
             let message = if detail.is_empty() {
                 format!("cloudflared exited before creating a Quick Tunnel ({status})")
