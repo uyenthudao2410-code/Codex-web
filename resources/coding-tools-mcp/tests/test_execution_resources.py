@@ -634,10 +634,15 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         self.governor.bind_process(other_admission, other)
 
         deadline = time.time() + 5
-        while not pid_file.exists() and time.time() < deadline:
+        child_pid: int | None = None
+        while child_pid is None and time.time() < deadline:
+            if pid_file.exists():
+                raw_pid = pid_file.read_text(encoding="utf-8").strip()
+                if raw_pid.isdecimal() and int(raw_pid) > 0:
+                    child_pid = int(raw_pid)
+                    break
             time.sleep(0.02)
-        self.assertTrue(pid_file.exists())
-        child_pid = int(pid_file.read_text(encoding="utf-8"))
+        self.assertIsNotNone(child_pid, "child process never published a parseable PID")
         self.assertTrue(process_is_alive(child_pid))
 
         control.record_failure(ctx, "TEST_REPLAN")
@@ -866,10 +871,15 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         self.governor.bind_process(admission, root)
         root.wait(timeout=5)
         deadline = time.time() + 5
-        while not pid_file.exists() and time.time() < deadline:
+        child_pid: int | None = None
+        while child_pid is None and time.time() < deadline:
+            if pid_file.exists():
+                raw_pid = pid_file.read_text(encoding="utf-8").strip()
+                if raw_pid.isdecimal() and int(raw_pid) > 0:
+                    child_pid = int(raw_pid)
+                    break
             time.sleep(0.02)
-        self.assertTrue(pid_file.exists())
-        child_pid = int(pid_file.read_text(encoding="utf-8"))
+        self.assertIsNotNone(child_pid, "child process never published a parseable PID")
         self.assertTrue(process_is_alive(child_pid))
 
         self.governor.reconcile()

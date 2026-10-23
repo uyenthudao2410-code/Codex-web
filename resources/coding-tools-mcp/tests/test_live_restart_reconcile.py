@@ -94,7 +94,8 @@ class LiveRestartReconcileTests(unittest.TestCase):
                 "import os\n"
                 "import time\n"
                 "from pathlib import Path\n"
-                "Path('child.pid').write_text(str(os.getpid()), encoding='ascii')\n"
+                "Path('child.pid.tmp').write_text(str(os.getpid()), encoding='ascii')\n"
+                "os.replace('child.pid.tmp', 'child.pid')\n"
                 "time.sleep(60)\n",
                 encoding="utf-8",
             )
@@ -124,10 +125,14 @@ class LiveRestartReconcileTests(unittest.TestCase):
                 self.assertEqual(structured.get("status"), "running")
                 command_id = structured.get("command_id")
                 deadline = time.monotonic() + 10
-                while not child_pid_file.exists() and time.monotonic() < deadline:
+                while child_pid is None and time.monotonic() < deadline:
+                    if child_pid_file.exists():
+                        raw_pid = child_pid_file.read_text(encoding="ascii").strip()
+                        if raw_pid.isdecimal() and int(raw_pid) > 0:
+                            child_pid = int(raw_pid)
+                            break
                     time.sleep(0.05)
-                self.assertTrue(child_pid_file.exists(), "child process never started")
-                child_pid = int(child_pid_file.read_text(encoding="ascii"))
+                self.assertIsNotNone(child_pid, "child process never published a parseable PID")
 
                 process_a.kill()
                 process_a.wait(timeout=10)
