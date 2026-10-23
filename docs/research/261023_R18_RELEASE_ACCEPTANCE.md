@@ -73,6 +73,26 @@ with `fully_ready=true` (snapshot 2026-10-23T07:16:46Z). Package,
 installation and source are unchanged; only the activation epoch rotated,
 which is an activation instance, not part of the release identity above.
 
+## Addendum 2 — rollback drill executed (2026-10-23)
+
+The rollback position below was exercised end to end on 2026-10-23 under
+the operator's full-authority grant:
+
+- Pre-drill: r18 live, epoch `activation-mvkmy4ps` READY (snapshot
+  2026-10-23T07:36:16Z).
+- Rollback leg: r18 supervisor uninstalled, r17 supervisor installed,
+  full-clean activation → r17 installation `2e91538e…`, epoch
+  `activation-mvknropv-c8a06abf4fcf4b229186e0726cc36a5f` READY / OPEN,
+  supervisor healthy, `fully_ready=true` (snapshot 2026-10-23T07:40:01Z).
+- Roll-forward leg: r17 supervisor uninstalled, r18 supervisor installed,
+  full-clean activation → r18 installation `0b4cdecb…`, epoch
+  `activation-mvknwh0u-af5988c4f6f68ab7b37a58df8346d8e7` READY / OPEN,
+  `fully_ready=true` (snapshot 2026-10-23T07:43:16Z).
+
+Both directions used the proven Recovery Host IPC path; no census-gate
+intervention was needed on cross-installation switches. The live release
+after the drill is again r18 (current epoch `activation-mvknwh0u`).
+
 ## Rollback position
 
 - Previous packaged builds retained on the Windows machine: r17, r16, r15k.
