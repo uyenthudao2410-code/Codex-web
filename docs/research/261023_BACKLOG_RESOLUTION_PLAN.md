@@ -40,6 +40,21 @@ item behind evidence that does not exist yet.
   CI does not install. Fixed in commit `e92fd98f` and re-dispatched
   (2026-10-23 15:07 +07); the re-run's conclusion is recorded when it
   finishes. The standing trigger policy is unchanged.
+  **Second and third layers (same day).** The re-run moved past the MCP
+  step and failed later: the control-plane suite had 22 failures — 18
+  node-E2E fixtures that resolve the electron executable from the root
+  `node_modules` the ubuntu job never installed, 3 facade tests still
+  asserting the pre-feedback JSON-RPC error envelope for tool refusals
+  (the shipped contract returns complete `isError` results with the code
+  in `structuredContent`; verified side-effect-free), and 1 tarfile
+  extraction missing the filter Python 3.12 requires under `-W error`.
+  The Windows job failed at checkout itself: archived `.coding-tools`
+  report paths exceed MAX_PATH on the runner. Fixes: `c7de5872` (facade
+  assertions + tarfile filter; full control-plane suite 505 tests OK
+  locally) and `7e6ffd44` (workflow: `npm ci` before the control-plane
+  step; `core.longpaths` before Windows checkout). Re-dispatched
+  2026-10-23 15:36 +07 at HEAD `7e6ffd44`; conclusion recorded when the
+  run finishes.
 - **P1.4 Rollback drill — DONE 2026-10-23.** r18 → r17 → r18, both legs
   READY/OPEN with `fully_ready=true`; recorded as Addendum 2 of the r18
   release acceptance file. (This renumbers the drill from item 3 above.)
