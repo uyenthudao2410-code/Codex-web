@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from coding_tools_mcp import execution_resources
 from coding_tools_mcp.acceptance_receipts import passed_proof_fingerprint
 from coding_tools_mcp.execution_resources import (
     ExecutionResourceError,
@@ -65,6 +66,10 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         )
         return process
 
+    # The governor treats psutil as an optional dependency (it is only in
+    # the desktop extra); this case patches psutil directly, so it requires
+    # psutil to be installed in the test environment.
+    @unittest.skipIf(execution_resources.psutil is None, "psutil is not installed in this environment")
     def test_foreign_heavy_scan_defers_expensive_process_attrs_until_heavy(self) -> None:
         class FakeProcess:
             def __init__(self, pid: int, name: str, cmdline: list[str], cwd: str, rss: int) -> None:

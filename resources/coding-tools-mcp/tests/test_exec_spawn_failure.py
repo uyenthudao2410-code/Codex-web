@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,6 +45,10 @@ class ExecSpawnFailureTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    # These two cases simulate the Windows MXC spawn path by patching
+    # os.name; pathlib follows the patched os.name and cannot instantiate
+    # WindowsPath on a POSIX host, so they can only run on Windows.
+    @unittest.skipUnless(os.name == "nt", "Windows MXC spawn simulation requires a Windows host")
     def test_no_process_failure_has_exact_durable_terminal_evidence(self):
         failure, row = self._run_failure()
         self.assertFalse(failure.retryable)
@@ -56,6 +61,7 @@ class ExecSpawnFailureTests(unittest.TestCase):
         self.assertEqual(failure.details["phase"], "start")
         self.assertEqual(failure.details["backend_error_code"], "backend_error")
 
+    @unittest.skipUnless(os.name == "nt", "Windows MXC spawn simulation requires a Windows host")
     def test_unavailable_job_proof_preserves_unknown_without_invented_fields(self):
         failure, _ = self._run_failure(lookup_unavailable=True)
         self.assertTrue(failure.retryable)

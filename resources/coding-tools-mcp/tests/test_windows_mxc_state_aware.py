@@ -213,6 +213,9 @@ class MxcWindowsSandboxStateAwareTests(unittest.TestCase):
         self.assertEqual(phase.call_count, 4)
         self.assertTrue(manager._uncertain)
 
+    # The invocation builder refuses to run on non-Windows hosts before it
+    # reaches the manager, so this staged-restart scenario is Windows-only.
+    @unittest.skipUnless(os.name == "nt", "Windows Sandbox invocation requires a Windows host")
     def test_failed_cached_restart_cannot_create_exec_payload_or_replay_command(self) -> None:
         manager = self._manager()
         failure = ToolFailure("SANDBOX_STATE_PHASE_FAILED", "Unavailable.",

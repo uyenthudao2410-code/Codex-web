@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
@@ -222,6 +223,10 @@ class CommandHandleMigrationTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    # Simulates the Windows MXC preflight by patching os.name; other
+    # platform checks in the exec path follow the real host, so the
+    # scenario is only faithful on a Windows host.
+    @unittest.skipUnless(os.name == "nt", "Windows MXC preflight simulation requires a Windows host")
     def test_control_plane_structured_argv_fails_closed_when_mxc_preflight_is_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="dangerous")
