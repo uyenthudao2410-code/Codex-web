@@ -226,7 +226,7 @@
     }
     if (Array.isArray(raw.skills)) {
       data.skills = raw.skills.filter((s) => s && typeof s.name === 'string' && typeof s.content === 'string').slice(0, LIMITS.skills)
-        .map((s) => ({ id: String(s.id || ''), name: s.name.slice(0, 120), content: s.content.slice(0, 20000), source: String(s.source || 'local').slice(0, 500), projects: Array.isArray(s.projects) ? s.projects.filter((p) => typeof p === 'string').slice(0, 100) : [], updatedAt: Number(s.updatedAt) || 0 }));
+        .map((s) => ({ id: String(s.id || ''), name: s.name.slice(0, 120), content: s.content.slice(0, 20000), source: String(s.source || 'local').slice(0, 500), projects: Array.isArray(s.projects) ? s.projects.filter((p) => typeof p === 'string').slice(0, 100) : [], updatedAt: Number(s.updatedAt) || 0, revision: Math.max(1, Number(s.revision) || 1), sha256: String(s.sha256 || '').slice(0, 64), lastUsedAt: Number(s.lastUsedAt) || 0, lastUsedProject: String(s.lastUsedProject || '').slice(0, 500) }));
     }
     if (raw.chats && typeof raw.chats === 'object') {
       for (const [key, items] of Object.entries(raw.chats)) {
@@ -237,7 +237,7 @@
     }
     if (Array.isArray(raw.sshTargets)) {
       data.sshTargets = raw.sshTargets.filter((t) => t && typeof t.name === 'string' && typeof t.host === 'string').slice(0, LIMITS.sshTargets)
-        .map((t) => ({ id: String(t.id || ''), name: t.name.slice(0, 120), host: t.host.slice(0, 255), user: String(t.user || '').slice(0, 80), port: Math.max(1, Math.min(65535, Number(t.port) || 22)), remoteDir: String(t.remoteDir || '').slice(0, 500) }));
+        .map((t) => ({ id: String(t.id || ''), name: t.name.slice(0, 120), host: t.host.slice(0, 255), user: String(t.user || '').slice(0, 80), port: Math.max(1, Math.min(65535, Number(t.port) || 22)), remoteDir: String(t.remoteDir || '').slice(0, 500), fingerprint: String(t.fingerprint || '').slice(0, 80), fingerprintVerifiedAt: Number(t.fingerprintVerifiedAt) || 0 }));
     }
     return data;
   }
@@ -579,14 +579,29 @@
         if (!cleanContent.trim()) throw new Error('Nội dung hướng dẫn skill không được trống.');
         const existing = id ? data.skills.find((s) => s.id === id) : null;
         if (existing) {
+          const contentChanged = existing.content !== cleanContent.slice(0, 20000);
           existing.name = cleanName.slice(0, 120); existing.content = cleanContent.slice(0, 20000);
           existing.source = String(source || 'local').slice(0, 500); existing.updatedAt = Date.now();
+          if (contentChanged) { existing.revision = Math.max(1, Number(existing.revision) || 1) + 1; existing.sha256 = ''; }
         } else {
           if (data.skills.length >= LIMITS.skills) throw new Error('Thư viện skills đã đầy.');
-          data.skills.push({ id: nextId('skill'), name: cleanName.slice(0, 120), content: cleanContent.slice(0, 20000), source: String(source || 'local').slice(0, 500), projects: [], updatedAt: Date.now() });
+          data.skills.push({ id: nextId('skill'), name: cleanName.slice(0, 120), content: cleanContent.slice(0, 20000), source: String(source || 'local').slice(0, 500), projects: [], updatedAt: Date.now(), revision: 1, sha256: '', lastUsedAt: 0, lastUsedProject: '' });
         }
         persist();
         return existing || data.skills[data.skills.length - 1];
+      },
+      setSkillSha(id, sha256) {
+        const skill = data.skills.find((s) => s.id === id);
+        if (!skill) return;
+        skill.sha256 = String(sha256 || '').slice(0, 64);
+        persist();
+      },
+      markSkillUsed(id, workspace) {
+        const skill = data.skills.find((s) => s.id === id);
+        if (!skill) return;
+        skill.lastUsedAt = Date.now();
+        skill.lastUsedProject = String(workspace || '').slice(0, 500);
+        persist();
       },
       removeSkill(id) { data.skills = data.skills.filter((s) => s.id !== id); persist(); },
       setSkillForProject(id, workspace, enabled) {
@@ -630,7 +645,7 @@
 
       // ---- F40 named SSH targets ----
       listSshTargets() { return data.sshTargets.slice(); },
-      upsertSshTarget({ id, name, host, user, port, remoteDir }) {
+      upsertSshTarget({ id, name, host, user, port, remoteDir, fingerprint }) {
         const cleanName = String(name || '').trim();
         const cleanHost = String(host || '').trim();
         if (!cleanName) throw new Error('Tên máy SSH không được trống.');
@@ -641,6 +656,8 @@
           user: String(user || '').trim().slice(0, 80),
           port: Math.max(1, Math.min(65535, Number(port) || 22)),
           remoteDir: String(remoteDir || '').trim().slice(0, 500),
+          fingerprint: String(fingerprint !== undefined ? fingerprint : (existing?.fingerprint || '')).slice(0, 80),
+          fingerprintVerifiedAt: fingerprint ? Date.now() : (existing?.fingerprintVerifiedAt || 0),
         };
         if (existing) Object.assign(existing, value);
         else {

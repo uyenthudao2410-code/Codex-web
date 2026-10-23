@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "at": "2026-10-23T00:42:47.888Z",
+      "host": "100.116.112.22",
+      "user": "svhome",
+      "port": 22,
+      "remoteDir": "",
+      "fingerprint": "SHA256:VRVIELZ91mIfqqo9g/m3lrjLJZqcalFLMsYVAIWo6/U",
+      "expected": "SHA256:wrong",
+      "result": "HOST_KEY_MISMATCH"
+    }
+  ]
+}

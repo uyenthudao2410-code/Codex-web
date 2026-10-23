@@ -25,6 +25,7 @@ const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const workHubFiles = require('./services/workHubFiles');
 const workHubLsp = require('./services/workHubLsp');
 const workHubCoordination = require('./services/workHubCoordination');
+const workHubSsh = require('./services/workHubSsh');
 const {
   ensureRecoveryHost,
   recoveryLoginItemArguments,
@@ -982,6 +983,10 @@ function registerIpc() {
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.name, payload?.branch)));
   secureHandle('workhub:worktree-remove', (_event, payload) => invokeSafely(async () => workHubFiles.gitWorktreeRemove(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.path)));
+  secureHandle('workhub:sha256', (_event, text) => invokeSafely(async () => require('crypto').createHash('sha256').update(String(text || '')).digest('hex')));
+  secureHandle('workhub:ssh-scan', (_event, payload) => invokeSafely(async () => workHubSsh.scanHostKey(payload)));
+  secureHandle('workhub:ssh-test', (_event, payload) => invokeSafely(async () => workHubSsh.testTarget(
+    scopedWorkHubRoot(payload?.expectedWorkspace), payload)));
   secureHandle('workhub:coord-runs', (_event, payload) => invokeSafely(async () => workHubCoordination.listRuns(
     scopedWorkHubRoot(payload?.expectedWorkspace), payload?.limit)));
   secureHandle('workhub:coord-run', (_event, payload) => invokeSafely(async () => workHubCoordination.runDetail(

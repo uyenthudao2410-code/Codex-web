@@ -92,6 +92,7 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/workHubCoordination.js',
       'electron/services/workHubFiles.js',
       'electron/services/workHubLsp.js',
+      'electron/services/workHubSsh.js',
       'renderer/app-icon.png'
     ]),
     directories: Object.freeze([

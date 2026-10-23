@@ -1614,14 +1614,24 @@
       const active = store.skillsForProject(currentProject()).some((s) => s.id === skill.id);
       const row = el('div', 'wh-row');
       const main = el('div', 'wh-row-main');
-      main.append(el('b', '', skill.name), el('small', '', `${skill.source} · ${active ? 'đang bật cho dự án này' : 'chưa bật cho dự án này'}`));
+      const shaLabel = skill.sha256 ? `sha256 ${skill.sha256.slice(0, 12)}…` : 'sha256: đang tính…';
+      const usedLabel = skill.lastUsedAt ? ` · đã dùng ${new Date(skill.lastUsedAt).toLocaleString()} tại ${skill.lastUsedProject || 'dự án'}` : ' · chưa có consumer dùng';
+      main.append(el('b', '', skill.name), el('small', '', `${skill.source} · rev ${skill.revision || 1} · ${shaLabel} · ${active ? 'đang bật cho dự án này' : 'chưa bật cho dự án này'}${usedLabel}`));
       row.append(main);
+      if (!skill.sha256 && window.mcpAssistant?.workhubSha256) {
+        window.mcpAssistant.workhubSha256(skill.content).then((sha) => {
+          const value = unwrap(sha);
+          if (value) { store.setSkillSha(skill.id, value); renderSkills(); }
+        }).catch(() => null);
+      }
       const toggle = smallButton(active ? 'Tắt' : 'Bật cho dự án');
       toggle.addEventListener('click', () => { store.setSkillForProject(skill.id, currentProject(), !active); renderSkills(); });
       const add = smallButton('Đưa vào yêu cầu');
       add.addEventListener('click', () => {
         const preview = $('#whPreview');
         if (preview) preview.value = `${preview.value ? `${preview.value}\n` : ''}[Skill: ${skill.name}]\n${skill.content}`;
+        store.markSkillUsed(skill.id, currentProject());
+        renderSkills();
       });
       const remove = smallButton('Xóa');
       remove.addEventListener('click', () => { store.removeSkill(skill.id); renderSkills(); });
@@ -1650,19 +1660,37 @@
     simpleList($('#whSshList'), store.listSshTargets(), (target) => {
       const row = el('div', 'wh-row');
       const main = el('div', 'wh-row-main');
-      main.append(el('b', '', target.name), el('small', '', `${target.user ? `${target.user}@` : ''}${target.host}:${target.port}${target.remoteDir ? ` · ${target.remoteDir}` : ''}`));
+      const fpLabel = target.fingerprint ? ` · ${target.fingerprint}` : ' · chưa ghim vân tay host';
+      main.append(el('b', '', target.name), el('small', '', `${target.user ? `${target.user}@` : ''}${target.host}:${target.port}${target.remoteDir ? ` · ${target.remoteDir}` : ''}${fpLabel}`));
       row.append(main);
+      const scan = smallButton('Quét & ghim vân tay');
+      scan.addEventListener('click', async () => {
+        const out = $('#whSshOutput');
+        if (out) out.textContent = `Đang quét host key của ${target.host}…`;
+        const data = unwrap(await window.mcpAssistant?.workhubSshScan?.({ host: target.host, port: target.port }).catch(() => null));
+        if (!data) { if (out) out.textContent = 'Quét vân tay thất bại.'; return; }
+        store.upsertSshTarget({ id: target.id, name: target.name, host: target.host, user: target.user, port: target.port, remoteDir: target.remoteDir, fingerprint: data.fingerprint });
+        if (out) out.textContent = `Đã ghim ${data.fingerprint} (${data.keyType}).`;
+        renderSshTargets();
+      });
       const check = smallButton('Chạy kiểm tra');
       check.addEventListener('click', async () => {
         const out = $('#whSshOutput');
-        if (out) out.textContent = 'Đang chạy qua Job (ssh)...';
-        const command = `ssh ${S.sshArgs(target, 'pwd && git status --short | head -20').map((a) => (/\s/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)).join(' ')}`;
-        await runRecipeAsJob({ name: `SSH ${target.name}`, command, cwd: currentProject() });
-        if (out) out.textContent = 'Kết quả ở bảng Job phía trên.';
+        if (out) out.textContent = 'Đang kiểm tra SSH (ghim vân tay, StrictHostKeyChecking)…';
+        const scope = requestScope('ssh');
+        const data = unwrap(await window.mcpAssistant?.workhubSshTest?.({
+          host: target.host, port: target.port, user: target.user, remoteDir: target.remoteDir,
+          expectedFingerprint: target.fingerprint || '', expectedWorkspace: scope.workspace,
+        }).catch((error) => ({ error: String(error?.message || error) })));
+        if (!scope.current()) return;
+        if (!out) return;
+        if (!data) { out.textContent = 'Kiểm tra thất bại (không có phản hồi).'; return; }
+        if (data.error) { out.textContent = `Từ chối: ${data.error}`; return; }
+        out.textContent = `${data.ok ? 'OK' : `exit ${data.exitCode}`} · ${data.fingerprint}${data.pinned ? ' · khớp vân tay đã ghim' : ' · CHƯA ghim vân tay'}\n${data.stdout || ''}${data.stderr ? `\n[stderr] ${data.stderr}` : ''}`;
       });
       const remove = smallButton('Xóa');
       remove.addEventListener('click', () => { store.removeSshTarget(target.id); renderSshTargets(); });
-      row.append(check, remove);
+      row.append(scan, check, remove);
       return row;
     });
   }
