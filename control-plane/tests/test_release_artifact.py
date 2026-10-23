@@ -279,7 +279,7 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             receipt = BUILDER.build_release(ROOT, output, revision, require_clean_source=False)
             extracted = temporary_root / "extracted"
             with tarfile.open(receipt["archive"], "r:gz") as bundle:
-                bundle.extractall(extracted)
+                bundle.extractall(extracted, filter="data")
             release_root = extracted / receipt["release_name"]
             database = temporary_root / "state" / "control-plane.sqlite3"
             database.parent.mkdir()

@@ -2117,8 +2117,13 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             "name": "workspace_context", "arguments": {"context_id": "ctx_outside_access_grant"},
         })
         status, rejected, _ = self._modern_mcp_post(grant, call)
-        self.assertEqual(status, 400)
-        self.assertEqual(rejected["error"]["data"]["code"], "FORBIDDEN")
+        # Tool-level refusals are complete results with isError and the
+        # refusal code in structuredContent (the client-feedback contract),
+        # not JSON-RPC errors.
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["result"]["resultType"], "complete")
+        self.assertTrue(rejected["result"]["isError"])
+        self.assertEqual(rejected["result"]["structuredContent"]["code"], "FORBIDDEN")
         call["params"]["arguments"] = {}
         call["params"]["name"] = "exec_command"
         status, unavailable, _ = self._modern_mcp_post(grant, call)
@@ -2158,8 +2163,13 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(rejected["error"]["code"], "VALIDATION_ERROR")
         self.server.store.set_admission_mode(mode="recovery")
         status, rejected, _ = self._modern_mcp_post(grant, call)
-        self.assertEqual(status, 400)
-        self.assertIn("error", rejected)
+        # Recovery-mode refusal is a tool-level CONFLICT feedback result
+        # (isError, execution not_started); the counts below prove it had
+        # no side effect.
+        self.assertEqual(status, 200)
+        self.assertTrue(rejected["result"]["isError"])
+        self.assertEqual(rejected["result"]["structuredContent"]["code"], "CONFLICT")
+        self.assertEqual(rejected["result"]["structuredContent"]["execution"], "not_started")
         for collection in ("mcp_read_only_intents", "work_requests", "actions"):
             self.assertEqual(self.server.store.health()["counts"][collection], 0)
         self.assertEqual(self.server.store.admission_status()["admission_mode"], "recovery")
@@ -2314,7 +2324,8 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         call["params"]["arguments"]["expires_at_ms"] += 1
         status, conflict = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
-        self.assertEqual(conflict["error"]["code"], -32602)
+        self.assertTrue(conflict["result"]["isError"])
+        self.assertEqual(conflict["result"]["structuredContent"]["code"], "CONFLICT")
         self.assertEqual(self.server.store.health()["counts"]["actions"], 1)
         call["params"]["arguments"]["expires_at_ms"] -= 1
 
@@ -2326,8 +2337,8 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         }
         status, mismatch = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
-        self.assertEqual(mismatch["error"]["code"], -32602)
-        self.assertEqual(mismatch["error"]["data"]["code"], "CONTRACT_MISMATCH")
+        self.assertTrue(mismatch["result"]["isError"])
+        self.assertEqual(mismatch["result"]["structuredContent"]["code"], "CONTRACT_MISMATCH")
         self.assertEqual(self.server.store.health()["counts"]["actions"], 1)
         call["params"]["arguments"]["expected_facade_contract"] = {
             key: self.server.mcp_facade.contract[key]
@@ -2423,8 +2434,8 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         call["params"]["arguments"]["context_id"] = other_context["context_id"]
         status, wrong_context = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
-        self.assertEqual(wrong_context["error"]["code"], -32602)
-        self.assertEqual(wrong_context["error"]["data"]["code"], "FORBIDDEN")
+        self.assertTrue(wrong_context["result"]["isError"])
+        self.assertEqual(wrong_context["result"]["structuredContent"]["code"], "FORBIDDEN")
 
         call["id"] = "call-002"
         call["params"]["arguments"] = {}
