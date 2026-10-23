@@ -305,7 +305,9 @@ impl SourceSnapshotV1 {
 }
 
 fn is_windows_reserved_device_component(component: &str) -> bool {
-    let basename = component.split_once('.').map_or(component, |(basename, _)| basename);
+    let basename = component
+        .split_once('.')
+        .map_or(component, |(basename, _)| basename);
     let upper = basename.to_ascii_uppercase();
     if matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL") {
         return true;
