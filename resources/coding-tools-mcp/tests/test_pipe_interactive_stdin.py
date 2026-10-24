@@ -271,10 +271,23 @@ class PipeInteractiveRealProcessTests(unittest.TestCase):
         started = self.runtime.exec_command(
             {"cmd": self.cmd, "yield_time_ms": 100, "timeout_ms": 30000, "verbosity": "full"}
         )
-        self.assertEqual(started["status"], "running", started)
+        # The first snapshot races the child: on fast runners the line
+        # reader already sees EOF and exits 0 inside the 100ms yield, so
+        # the snapshot is 'exited' instead of 'running'. Both outcomes are
+        # legitimate; anything else (timeout/terminated) still fails, and
+        # an 'exited' snapshot must carry exit_code 0 — this does not pass
+        # arbitrary states. (Gate run 40078678540 failed only on the old
+        # assertEqual(status, 'running') line.)
+        self.assertIn(started["status"], ("running", "exited"), started)
+        if started["status"] == "exited":
+            self.assertEqual(started["exit_code"], 0, started)
         self.assertIs(started["stdin_open"], False)
         session_id = started["session_id"]
-        session = self.runtime.sessions[session_id]
+        # A completed session is popped from sessions but remembered in
+        # output_sessions, so look in both; the late-write gate below
+        # resolves through the same fallback.
+        session = self.runtime.sessions.get(session_id) or self.runtime.output_sessions.get(session_id)
+        self.assertIsNotNone(session, started)
         # Legacy guarantee, checked at the spawn seam: stdin already closed.
         self.assertFalse(session.stdin_is_open)
         self.assertTrue(session.process.stdin.closed)
