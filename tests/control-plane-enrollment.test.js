@@ -545,7 +545,7 @@ test('central executor lists and retires only an opaque registered workspace aft
     workspace_generation: workspaceGeneration,
     display_name: 'fixture-workspace',
     capabilities: { read: true, write: false, exec: false },
-    workspace_path: fs.realpathSync(root)
+    workspace_path: fs.realpathSync.native(root)
   }]);
   const receipt = await service.retireWorkspace({ workspaceId, workspaceGeneration });
   assert.deepEqual(receipt, {

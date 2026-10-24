@@ -34,7 +34,7 @@ test('activation carries exact registered identity and returns only local canoni
   const calls = [];
   const f = fixture(t, async (...args) => { calls.push(args); return { code: 0, stdout: JSON.stringify(receipt()) }; });
   const result = await f.service.activateWorkspace({ workspaceId, workspaceGeneration, confirmActivate: true });
-  assert.equal(result.workspace_path, fs.realpathSync(f.root));
+  assert.equal(result.workspace_path, fs.realpathSync.native(f.root));
   const [command, args, options] = calls[0];
   assert.equal(command, f.paths.portablePython());
   assert.deepEqual(args.slice(0, 3), ['-I', f.paths.controlPlaneNodeAgent(), 'activate-workspace']);

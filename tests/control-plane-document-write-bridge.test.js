@@ -142,7 +142,7 @@ test('workspace prefix document policy admits a new exact target and rejects rep
   const policy = loaded(item);
   const wanted = admitDocumentWriteBridgeRequest(policy,
     request(policy, { target: 'docs/new-result.md' }), { now: NOW });
-  assert.equal(resolveDocumentTarget(item.root, wanted), path.join(item.root, 'docs', 'new-result.md'));
+  assert.equal(resolveDocumentTarget(item.root, wanted), path.join(fs.realpathSync.native(item.root), 'docs', 'new-result.md'));
   assert.throws(() => admitDocumentWriteBridgeRequest(policy,
     request(policy, { target: '../outside.md' }), { now: NOW }));
   assert.throws(() => admitDocumentWriteBridgeRequest(policy,

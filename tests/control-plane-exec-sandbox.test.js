@@ -152,7 +152,7 @@ test('exec policy installation fails closed when nested processes fail on the se
       }
       if (args[0] === '-B' && args[1] === '-I' && args[2] === '-c') {
         assert.match(args[3], /probe_mxc_child_process/);
-        assert.ok(args[3].includes(JSON.stringify(item.workspaceRoot)), 'probe must use the exact locally registered workspace path');
+        assert.ok(args[3].includes(JSON.stringify(fs.realpathSync.native(item.workspaceRoot))), 'probe must use the exact locally registered workspace path');
         assert.equal(args[3].includes('never-forward-this'), false);
         return { stdout: JSON.stringify({
           probe: 'mxc_nested_process_v1',
@@ -238,7 +238,7 @@ test('explicit exec installation still runs the exact workspace Sandbox probe', 
     const probes = calls.filter(({ args }) => args[0] === '-B');
     assert.equal(probes.length, 1);
     assert.match(probes[0].args[3], /probe_mxc_windows_sandbox_child_process/);
-    assert.ok(probes[0].args[3].includes(JSON.stringify(item.workspaceRoot)));
+    assert.ok(probes[0].args[3].includes(JSON.stringify(fs.realpathSync.native(item.workspaceRoot))));
   } finally { fs.existsSync = originalExistsSync; }
 });
 
@@ -350,7 +350,7 @@ test('development runtime can inspect the exact workspace sandbox but cannot ins
       calls.push({ command, args });
       if (command === mxc) return { stdout: JSON.stringify(sandboxProbe()) };
       if (command === python && args[0] === '-B' && args[1] === '-I' && args[2] === '-c') {
-        assert.ok(args[3].includes(JSON.stringify(item.workspaceRoot)));
+        assert.ok(args[3].includes(JSON.stringify(fs.realpathSync.native(item.workspaceRoot))));
         return { stdout: JSON.stringify({
           probe: 'mxc_nested_process_v1', available: false,
           reason: 'WINDOWS_NPM_SCRIPT_PROCESS_UNAVAILABLE'
@@ -605,7 +605,7 @@ test('packaged WSB candidate probes the exact workspace through state-aware life
         assert.equal(command, python, 'WSB inspection uses the packaged Python runtime directly');
         assert.deepEqual(args.slice(0, 3), ['-B', '-I', '-c']);
         assert.match(args[3], /probe_mxc_windows_sandbox_child_process/);
-        assert.ok(args[3].includes(JSON.stringify(item.workspaceRoot)));
+        assert.ok(args[3].includes(JSON.stringify(fs.realpathSync.native(item.workspaceRoot))));
         assert.equal(options.timeoutMs, 360_000);
         await probeGate;
         return { stdout: JSON.stringify({

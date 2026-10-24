@@ -205,7 +205,7 @@ test('workspace prefix file-read policy admits exact nested files and fences uns
   assert.equal(loaded.schema_version, 3);
   const wanted = { ...request(), path: 'src/deep/fixture.txt' };
   assert.equal(admitFileReadBridgeRequest(loaded, wanted, { now: NOW }).path, wanted.path);
-  assert.equal(resolveDirectRegisteredFile(item.root, wanted.path), path.join(nested, 'fixture.txt'));
+  assert.equal(resolveDirectRegisteredFile(item.root, wanted.path), fs.realpathSync.native(path.join(nested, 'fixture.txt')));
   for (const denied of ['../outside.txt', 'src/.env', 'src/.git/config', '/tmp/outside.txt']) {
     assert.throws(() => admitFileReadBridgeRequest(loaded, { ...wanted, path: denied }, { now: NOW }));
   }
