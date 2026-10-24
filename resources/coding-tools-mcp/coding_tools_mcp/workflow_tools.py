@@ -39,7 +39,7 @@ from .resolution_contract import (
     counterevidence_frame_update_advisory,
     normalize_problem_frame,
 )
-from .solution_economics import ELIGIBLE_WORKFLOWS, SOLUTION_SHADOW_EVENT, record_solution_shadow
+from .solution_economics import SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
@@ -438,15 +438,12 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin, PatchWorkflowMixin):
                 "measurement_integrity_epoch": "workspace_identity_v1",
             }
             evaluation = dict(args["evaluation"]) if isinstance(args.get("evaluation"), dict) else {}
-            if workflow in ELIGIBLE_WORKFLOWS and not str(evaluation.get("provenance") or "").strip():
-                evaluation["provenance"] = "representative"
-                evaluation.setdefault("task_class", workflow)
-                run_metadata["provenance_source"] = "runtime_default_organic_v1"
             explicit_evaluation_identity = bool(
                 str(evaluation.get("trace_id") or "").strip()
                 or str(evaluation.get("turn_id") or "").strip()
             )
             claimed_host_turn = None
+            transport_host_turn = None
             host_problem_identity: dict[str, Any] | None = None
             if explicit_evaluation_identity:
                 self._discard_pending_host_turn()
@@ -475,6 +472,28 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin, PatchWorkflowMixin):
                             "eligible": True,
                             "content_free": True,
                         }
+            # Origin-gated default provenance (P2 effectiveness): stamp
+            # "representative" only when a server-owned host-turn claim
+            # positively establishes an organic origin (Electron pending
+            # host turn, or attested ChatWeb transport trace). Never from
+            # the workflow label alone, never over an explicit provenance,
+            # and never for known system callers: the CP approved-patch
+            # bridge always uses mcp_only + deterministic (enforced by
+            # approved_patch_verification), and maintenance smoke runs
+            # bypass agent_workflow entirely (direct ledger.create_run).
+            # An unestablished origin stays blank: missing eligibility
+            # beats fabricated eligibility.
+            system_call = requested_mode == "mcp_only" and str(
+                args.get("execution_route", "")
+            ).strip().lower() == "deterministic"
+            if (
+                not str(evaluation.get("provenance") or "").strip()
+                and not system_call
+                and (claimed_host_turn is not None or transport_host_turn is not None)
+            ):
+                evaluation["provenance"] = "representative"
+                evaluation.setdefault("task_class", workflow)
+                run_metadata["provenance_source"] = "runtime_default_organic_v1"
             try:
                 problem_resolution = self._problem_resolution_context_for_run(
                     args,
