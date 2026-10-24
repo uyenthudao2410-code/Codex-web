@@ -2309,9 +2309,11 @@ class Runtime(
             if action in {"poll", "write"}:
                 return self.write_stdin({
                     "command_id": command_id,
-                    # W5 job-input contract: pass a caller-supplied input_id
-                    # through to the receipted write path (internal callers;
-                    # the public facade schema is unchanged).
+                    # W5 job-input contract, opened on the wire in the
+                    # follow-up cluster: pass a caller-supplied input_id
+                    # through to the receipted write path. The facade
+                    # schema now declares input_id as an optional property
+                    # of command_control, so MCP callers can use it too.
                     "input_id": str(args.get("input_id", "") or "") if action == "write" else "",
                     "chars": str(args.get("chars", "")) if action == "write" else "",
                     "yield_time_ms": args.get("yield_time_ms", 10000),

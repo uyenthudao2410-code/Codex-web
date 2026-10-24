@@ -138,11 +138,13 @@ function deferred() {
 const ok = (data) => ({ ok: true, data });
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
-async function fixture({ storage = new Map(), read, write, drafts = [] } = {}) {
+async function fixture({ storage = new Map(), read, write, drafts = [], gitReview = null, gitHead = '' } = {}) {
   const document = createDocument();
   let workspace = PROJECT_A;
+  let currentGitHead = gitHead;
   const readCalls = [];
   const writeCalls = [];
+  const gitReviewCalls = [];
   const shellCalls = [];
   const shellState = { workspace: PROJECT_A };
   const fileContents = new Map();
@@ -181,6 +183,8 @@ async function fixture({ storage = new Map(), read, write, drafts = [] } = {}) {
     workhubSearch: async (query) => ok({ query, results: [{ rel: 'one.js', line: 2, text: 'return 1;' }], scannedFiles: 2, truncated: false }),
     workhubGitStatus: async () => ok([]),
     workhubGitLog: async () => ok([]),
+    workhubGitHead: async () => ok(currentGitHead),
+    workhubGitReview: async (payload) => { gitReviewCalls.push(payload); return gitReview ? gitReview(payload) : ok(null); },
     workhubKeepAwake: async () => ok(true),
   };
   const window = {
@@ -198,7 +202,8 @@ async function fixture({ storage = new Map(), read, write, drafts = [] } = {}) {
   await document.emit('DOMContentLoaded');
   await settle();
   return {
-    document, storage, readCalls, writeCalls, shellCalls, shellState, hub: window.WorkHubUI,
+    document, storage, readCalls, writeCalls, shellCalls, shellState, hub: window.WorkHubUI, gitReviewCalls,
+    setGitHead: (value) => { currentGitHead = value; },
     setWorkspace: (value) => { workspace = value; },
     refresh: async () => { await window.WorkHubUI.refresh(); await settle(); },
     get: (id) => document.querySelector(`#${id}`),
@@ -485,6 +490,58 @@ test('context from an old workspace cannot replace the new workspace request', a
   await building;
   assert.equal(f.get('whPreview').value, 'beta request');
   assert.equal(f.hub.store.getDraft(PROJECT_B).text, 'beta request');
+});
+
+test('git range review renders subsystems, renames, binary and totals, then goes STALE when HEAD moves', async () => {
+  const headA = 'aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111';
+  const headB = 'bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222';
+  const review = {
+    from: 'HEAD~1', to: 'HEAD', fromHash: 'cccc3333cccc3333cccc3333cccc3333cccc3333', toHash: headA,
+    commits: [{ hash: headA, subject: 'two', author: 'T', date: '2026-10-24' }],
+    files: [
+      { status: 'R', path: 'src/new.js', origPath: 'src/old.js', renamed: true, subsystem: 'src', additions: 1, deletions: 0, binary: false },
+      { status: 'M', path: 'assets/logo.png', origPath: null, renamed: false, subsystem: 'assets', additions: null, deletions: null, binary: true },
+    ],
+    subsystems: [
+      { subsystem: 'src', files: 1, additions: 1, deletions: 0, renames: 1 },
+      { subsystem: 'assets', files: 1, additions: 0, deletions: 0, renames: 0 },
+    ],
+    totals: { files: 2, commits: 1, additions: 1, deletions: 0, renames: 1 },
+    fingerprint: 'f'.repeat(64),
+    truncated: false,
+  };
+  const f = await fixture({ gitHead: headA, gitReview: async () => ok(review) });
+  await f.refresh();
+  await f.get('whGitReviewRun').emit('click');
+  await settle();
+  // Empty inputs leave from/to undefined so the service applies HEAD~1..HEAD.
+  assert.equal(f.gitReviewCalls.length, 1);
+  assert.equal(f.gitReviewCalls[0].from, undefined);
+  assert.equal(f.gitReviewCalls[0].to, undefined);
+  assert.equal(f.gitReviewCalls[0].expectedWorkspace, PROJECT_A);
+  const meta = f.get('whGitReviewMeta').textContent;
+  assert.match(meta, /HEAD~1\.\.HEAD · 1 commit · 2 tệp · \+1 \/ −0 · 1 rename/);
+  assert.match(meta, /fingerprint ffffffffffff…/);
+  assert.doesNotMatch(meta, /STALE/);
+  const results = f.get('whGitReview').textContent;
+  assert.match(results, /src\/old\.js → src\/new\.js/);
+  assert.match(results, /assets\/logo\.png/);
+  assert.match(results, /binary \(không tính dòng\)/);
+  assert.match(results, /Commit trong range \(1\)/);
+  // HEAD moves afterwards: a refresh (renderGit re-check) marks it STALE.
+  f.setGitHead(headB);
+  await f.refresh();
+  assert.match(f.get('whGitReviewMeta').textContent, /STALE — HEAD hiện tại bbbb2222/);
+});
+
+test('git range review shows the service validation error verbatim', async () => {
+  const f = await fixture({ gitReview: async () => ({ ok: false, error: 'Rev from không hợp lệ.' }) });
+  await f.refresh();
+  f.get('whGitReviewFrom').value = 'HEAD..HEAD~2';
+  await f.get('whGitReviewRun').emit('click');
+  await settle();
+  assert.equal(f.gitReviewCalls[0].from, 'HEAD..HEAD~2');
+  assert.equal(f.get('whGitReviewMeta').textContent, 'Rev from không hợp lệ.');
 });
 
 test('context generation preserves a request edited while files were loading', async () => {

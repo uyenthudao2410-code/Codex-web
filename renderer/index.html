@@ -709,6 +709,14 @@
               <pre class="task-command wh-viewer" id="whDiff">Chưa chọn tệp.</pre>
               <p class="task-muted" id="whDiffMeta"></p>
               <div class="inline-actions" id="whPatchApproval"></div>
+              <div class="panel-title"><h4>Rà soát thay đổi theo range</h4><span class="soft-badge neutral">Chỉ đọc · theo subsystem</span></div>
+              <div class="wh-commit-bar">
+                <input type="text" id="whGitReviewFrom" placeholder="Base — trống = HEAD~1" maxlength="100">
+                <input type="text" id="whGitReviewTo" placeholder="Head — trống = HEAD" maxlength="100">
+                <button class="secondary-button" id="whGitReviewRun" type="button">Rà soát range</button>
+                <span class="task-muted" id="whGitReviewMeta"></span>
+              </div>
+              <div class="wh-list" id="whGitReview"></div>
               <div class="panel-title"><h4>Lịch sử commit</h4><button class="secondary-button wh-small" id="whGitLogRefresh" type="button">Tải lịch sử</button></div>
               <div class="wh-list" id="whGitLog"></div>
               <div class="panel-title"><h4>Worktree được quản lý</h4><button class="secondary-button wh-small" id="whWorktreeRefresh" type="button">Tải danh sách</button></div>
@@ -805,7 +813,10 @@
               <div class="wh-chat-log" id="whCodexChatLog"></div>
               <div class="wh-list" id="whCodexChatEvents"></div>
               <label class="field"><span>Nội dung chat</span><textarea id="whCodexChatInput" rows="3" placeholder="Hỏi về workspace này…"></textarea></label>
-              <div class="inline-actions"><button class="primary-button" id="whCodexChatSend" type="button">Gửi</button><button class="secondary-button" id="whCodexChatPoll" type="button">Làm mới lượt</button><button class="secondary-button" id="whCodexChatStop" type="button">Dừng lượt</button><button class="ghost-button" id="whCodexChatNew" type="button">Chat mới</button></div>
+              <div class="inline-actions"><label class="field"><span>Model (để trống = mặc định chat)</span><select id="whCodexChatModel"><option value="">Mặc định của profile chat</option></select></label><label class="field"><span>Effort</span><select id="whCodexChatEffort"><option value="">Mặc định (medium)</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option><option value="max">max</option><option value="ultra">ultra</option></select></label></div>
+              <p class="task-muted">Đổi model/effort chỉ đổi tuyến mô hình của lượt chat; approvalPolicy=never, sandbox read-only và không mạng không đổi.</p>
+              <div class="inline-actions"><button class="primary-button" id="whCodexChatSend" type="button">Gửi</button><button class="secondary-button" id="whCodexChatPoll" type="button">Làm mới lượt</button><button class="secondary-button" id="whCodexChatStop" type="button">Dừng lượt</button><button class="ghost-button" id="whCodexChatNew" type="button">Chat mới</button><button class="secondary-button" id="whCodexChatHandoff" type="button">Chuyển thành việc điều hành</button></div>
+              <p class="task-muted" id="whCodexChatHandoffInfo">Chưa chuyển phiên chat này thành việc điều hành. Handoff dùng đúng capsule/directive của ledger (task_control); nếu directive là RECONCILE_BEFORE_REPLAY hoặc ALREADY_CONFIRMED, panel sẽ chặn và nói rõ — không tiếp tục mù.</p>
               <p class="task-muted" id="whCodexChatLink">Chưa liên kết RUN.</p>
               <div class="wh-list" id="whCodexChatThreads"></div>
             </article><article class="panel"><div class="panel-title"><h3>Máy đích &amp; tích hợp</h3><span class="soft-badge neutral">Chỉ việc mới bị ảnh hưởng khi đổi đích</span></div>

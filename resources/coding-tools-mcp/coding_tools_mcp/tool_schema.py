@@ -102,6 +102,9 @@ def validate_schema_value(value: Any, schema: dict[str, Any], *, path: str) -> N
         min_length = schema.get("minLength")
         if isinstance(min_length, int) and len(value) < min_length:
             raise ToolFailure("INVALID_ARGUMENT", f"{path} is shorter than {min_length}.", category="validation")
+        max_length = schema.get("maxLength")
+        if isinstance(max_length, int) and len(value) > max_length:
+            raise ToolFailure("INVALID_ARGUMENT", f"{path} is longer than {max_length}.", category="validation")
         if "enum" in schema and value not in schema["enum"]:
             raise ToolFailure("INVALID_ARGUMENT", f"{path} must be one of {schema['enum']!r}.", category="validation")
         pattern = schema.get("pattern")
@@ -427,7 +430,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "detail": {**string, "enum": ["compact", "full"], "default": "compact", "description": "compact returns only the project, root entries, Git summary and task summary; full includes complete Git and task state."},
         }),
         "codex_bridge": object_schema({
-            "action": {**string, "enum": ["status", "models", "threads", "run", "continue", "observe", "interrupt", "close"], "default": "status", "description": "status probes route/capacity state; models lists compact Codex model capabilities; threads lists persisted Desktop history for the current workspace; run starts a new read-only reviewer thread or explicit history fork; continue starts a follow-up only on a bridge-owned thread; observe polls; interrupt stops a bridge-owned turn; close stops the sidecar process tree."},
+            "action": {**string, "enum": ["status", "models", "threads", "run", "continue", "resume", "observe", "interrupt", "close"], "default": "status", "description": "status probes route/capacity state; models lists compact Codex model capabilities; threads lists persisted Desktop history for the current workspace; run starts a new read-only reviewer thread or explicit history fork; continue starts a follow-up only on a bridge-owned thread; resume re-owns one persistent thread the caller durably registered at creation (thread_id + session_id must match) without launching a turn; observe polls; interrupt stops a bridge-owned turn; close stops the sidecar process tree."},
             "profile": {**string, "enum": ["candidate_mini", "candidate_luna", "cross_file", "deep_code", "consequential", "parallel_extreme", "packet", "scoped", "critical", "history", "chat"], "description": "Hidden bridge profile. chat=Work Hub native chat (Terra medium, read-only inspection, conversational). candidate_mini/luna are no-tools patch candidates; cross_file=Terra high read-only inspection; deep_code=Sol xhigh; consequential=Sol max; parallel_extreme=Sol ultra with multi-agent enabled; packet/scoped/critical/history are review modes."},
             "model": {**string, "maxLength": 80, "description": "Optional Codex model override. Production routing normally uses the profile defaults and records the resolved route."},
             "effort": {**string, "enum": ["low", "medium", "high", "xhigh", "max", "ultra"], "description": "Optional reasoning-effort override. Applied to thread config and turn/start so Desktop ultra defaults do not leak into reviewer lanes."},
@@ -437,6 +440,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "source_thread_id": {**string, "description": "Optional persisted Codex thread id from action=threads. This selects the explicit history profile and forks read-only instead of mutating/resuming the Desktop thread."},
             "prompt": {**string, "maxLength": 20000, "description": "Prompt for action=run or continue. Every turn remains approvalPolicy=never, read-only, and network-disabled."},
             "thread_id": {**string, "description": "Bridge-owned thread id returned by action=run; required for continue/observe/interrupt."},
+            "session_id": {**string, "description": "For action=resume only: the session id recorded when the persistent thread was created; resume is refused when the persisted thread's session identity does not match it."},
             "turn_id": {**string, "description": "Bridge-owned turn id returned by action=run."},
             "after_cursor": {**integer, "minimum": 0, "default": 0, "description": "For action=observe, return events newer than this cursor."},
             "wait_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 0, "description": "Bounded wait for action=run/observe; zero returns immediately."},
@@ -847,6 +851,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "command_id": {**string, "description": "Preferred command handle returned by exec_command."},
             "session_id": {**string, "description": "Deprecated compatibility alias for command_id."},
             "chars": string,
+            "input_id": {**string, "maxLength": 128, "description": "Optional idempotency id supplied by the caller for a single stdin write (action='write' only). Resending the same input_id for the same command returns the stored input_receipt with duplicate=true and does not write again; an input whose write failed part-way (outcome=unknown) is never replayed automatically."},
             "yield_time_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 10000},
             "max_output_bytes": {**integer, "minimum": 1, "maximum": 1048576, "default": 65536},
             "consumer_id": {**string, "maxLength": 128, "description": "Optional independent poll cursor identity so multiple clients do not consume each other's command output."},
@@ -1043,6 +1048,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             {
                 "session_id": {**string, "minLength": 1},
                 "chars": {**string, "default": ""},
+                "input_id": {**string, "maxLength": 128, "description": "Optional idempotency id supplied by the caller for a single stdin write. Resending the same input_id for the same session returns the stored input_receipt with duplicate=true and does not write again; an input whose write failed part-way (outcome=unknown) is never replayed automatically."},
                 "yield_time_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 10000},
                 "max_output_bytes": {**integer, "minimum": 1, "maximum": 1048576, "default": 65536},
                 "verbosity": {**string, "enum": ["summary", "preview", "full"]},

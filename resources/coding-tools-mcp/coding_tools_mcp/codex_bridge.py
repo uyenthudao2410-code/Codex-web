@@ -520,6 +520,19 @@ class CodexAppServerBridge:
                 output_schema=output_schema,
                 wait_ms=int(args.get("wait_ms", 0)),
             )
+        if action == "resume":
+            # W3-C: re-own a thread the caller durably registered when this
+            # bridge created it (Work Hub chat registry: thread_id +
+            # session_id). This is NOT a way to claim an arbitrary Desktop
+            # thread: restore verifies the exact session identity and the
+            # workspace before thread/resume, and launches no turn.
+            return self.resume_registered_thread(
+                thread_id=str(args.get("thread_id", "")).strip(),
+                profile=str(args.get("profile", "")).strip().lower() or "chat",
+                model=str(args.get("model", "")).strip() or None,
+                effort=str(args.get("effort", "")).strip().lower() or None,
+                expected_session_id=str(args.get("session_id", "") or args.get("expected_session_id", "")).strip(),
+            )
         if action == "observe":
             return self.observe(
                 thread_id=str(args.get("thread_id", "")).strip(),
@@ -539,7 +552,7 @@ class CodexAppServerBridge:
         raise CodexBridgeError(
             "INVALID_ACTION",
             f"Unsupported codex_bridge action: {action}",
-            details={"supported": ["status", "models", "threads", "run", "continue", "observe", "interrupt", "close"]},
+            details={"supported": ["status", "models", "threads", "run", "continue", "resume", "observe", "interrupt", "close"]},
         )
 
     def status(self) -> dict[str, Any]:
@@ -739,6 +752,32 @@ class CodexAppServerBridge:
             output_schema=output_schema,
             wait_ms=wait_ms,
         )
+
+    def resume_registered_thread(self, *, thread_id: str, profile: str = "chat", model: str | None = None, effort: str | None = None, expected_session_id: str = "") -> dict[str, Any]:
+        """Re-own one caller-registered persistent thread without a turn (W3-C).
+
+        The Work Hub chat service persists the thread_id + session_id of every
+        chat thread it creates (lifetime=persistent) in its own durable
+        registry, so after an MCP/App Server restart it can ask the new
+        sidecar to take the thread back. The restore itself is the existing
+        persistent-lane machinery: it refuses when the thread is gone from
+        CODEX_HOME (PERSISTENT_THREAD_NOT_FOUND), when the session identity
+        no longer matches the registered one (PERSISTENT_SESSION_MISMATCH),
+        or when the thread belongs to a different workspace. Only the compact
+        route projection is returned — never the full internal route.
+        """
+        restored = self.restore_persistent_thread(thread_id=thread_id, profile=profile, model=model, effort=effort, expected_session_id=expected_session_id)
+        route = restored.get("route") if isinstance(restored.get("route"), dict) else {}
+        return {
+            "ok": True, "resumed": True,
+            "thread_id": restored.get("thread_id") or thread_id,
+            "session_id": restored.get("session_id") or None,
+            "creation_mode": restored.get("creation_mode") or "persistent_restore",
+            "lifetime": restored.get("lifetime") or "persistent",
+            "route": {"profile": route.get("profile"), "model": route.get("model"), "effort": route.get("effort")},
+            "safety": {"approval_policy": "never", "sandbox": "read-only", "network_access": False},
+            "note": "Resume depends on the App Server still holding this thread in CODEX_HOME; the panel timeline is not restored, only thread ownership.",
+        }
 
     def resume_persistent_thread(
         self,

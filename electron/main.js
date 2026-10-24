@@ -27,6 +27,7 @@ const workHubLsp = require('./services/workHubLsp');
 const workHubCoordination = require('./services/workHubCoordination');
 const { CosCompanionAdapter, resolveCosUserDataDir } = require('./services/cosCompanionAdapter');
 const { createWorkHubCodexChat } = require('./services/workHubCodexChat');
+const workHubGitReview = require('./services/workHubGitReview');
 const workHubSsh = require('./services/workHubSsh');
 const { createBrowserQa } = require('./services/workHubBrowserQa');
 const browserQa = createBrowserQa({
@@ -1088,6 +1089,18 @@ function registerIpc() {
   // workHubCodexChat service (main process), keyed by scoped workspace.
   const codexChat = createWorkHubCodexChat({
     callBridge: (args, timeoutMs) => callMcpTool('codex_bridge', args, timeoutMs || 30000),
+    // W3-C: handoff reuses the existing task_control surface (task start +
+    // handoff capsule record/get) through the same callMcpTool channel;
+    // the controller lease is read-only from the orchestration ledger.
+    callTool: (name, args, timeoutMs) => callMcpTool(name, args, timeoutMs || 30000),
+    readLease: (root, runId) => {
+      const detail = workHubCoordination.runDetail(root, runId);
+      return detail && detail.found ? detail.lease : null;
+    },
+    // Durable chat-session registry beside the app data (same folder as
+    // settings.json / runtime-state.json), so a persistent chat thread
+    // can be resumed after an Electron/MCP restart.
+    stateFile: path.join(runtimePaths.dataRoot(), 'workhub-codex-chat-sessions.json'),
   });
   secureHandle('workhub:codex-chat-probe', (_event, payload) => invokeSafely(async () => (
     codexChat.probe(scopedWorkHubRoot(payload?.expectedWorkspace)))));
@@ -1096,6 +1109,8 @@ function registerIpc() {
   secureHandle('workhub:codex-chat-send', (_event, payload) => invokeSafely(async () => (
     codexChat.send(scopedWorkHubRoot(payload?.expectedWorkspace), {
       text: payload?.text,
+      model: payload?.model,
+      effort: payload?.effort,
       link: payload?.link && typeof payload.link === 'object' ? { runId: payload.link.runId, taskId: payload.link.taskId } : null,
     }))));
   secureHandle('workhub:codex-chat-poll', (_event, payload) => invokeSafely(async () => (
@@ -1104,6 +1119,32 @@ function registerIpc() {
     codexChat.interrupt(scopedWorkHubRoot(payload?.expectedWorkspace)))));
   secureHandle('workhub:codex-chat-reset', (_event, payload) => invokeSafely(async () => (
     codexChat.reset(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  // W3-C handlers (kept in this block, AFTER workhub:check-url, like the
+  // original W3 chat block — the work-hub-scope fixture evaluates main.js
+  // only up to workhub:check-url and lacks these factories).
+  secureHandle('workhub:codex-chat-models', (_event, payload) => invokeSafely(async () => (
+    codexChat.listModels(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-fork', (_event, payload) => invokeSafely(async () => (
+    codexChat.fork(scopedWorkHubRoot(payload?.expectedWorkspace), {
+      sourceThreadId: payload?.sourceThreadId,
+      text: payload?.text,
+      model: payload?.model,
+      effort: payload?.effort,
+      link: payload?.link && typeof payload.link === 'object' ? { runId: payload.link.runId, taskId: payload.link.taskId } : null,
+    }))));
+  secureHandle('workhub:codex-chat-resume', (_event, payload) => invokeSafely(async () => (
+    codexChat.resume(scopedWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-handoff', (_event, payload) => invokeSafely(async () => (
+    codexChat.handoffToTask(scopedWorkHubRoot(payload?.expectedWorkspace), {
+      objective: payload?.objective,
+      runId: payload?.runId,
+    }))));
+  // W5 git range review (kept AFTER workhub:check-url for the same scope-
+  // fixture reason as the W3-C handlers above): read-only range analysis
+  // of the scoped workspace; the service builds the range from two revs
+  // and validates them, so a bad rev surfaces its own error message.
+  secureHandle('workhub:git-review', (_event, payload) => invokeSafely(async () => workHubGitReview.gitRangeReview(
+    scopedWorkHubRoot(payload?.expectedWorkspace), { from: payload?.from, to: payload?.to })));
   let workHubAwakeId = null;
   secureHandle('workhub:keep-awake', (_event, on) => invokeSafely(async () => {
     const { powerSaveBlocker } = require('electron');

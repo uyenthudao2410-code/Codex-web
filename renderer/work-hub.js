@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '' };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '' };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -93,14 +93,18 @@
     ui.diffHead = '';
     ui.diffFingerprint = '';
     ui.diffStale = false;
+    ui.gitReview = null;
+    ui.gitReviewHead = '';
     ui.taskPayload = null;
     ui.pendingImports = [];
     ui.importResults = [];
-    for (const id of ['whCodeResults', 'whGitList', 'whGitLog', 'whTaskFiles', 'whArtifactImage', 'whCapsuleView', 'whImportList', 'whPatchApproval', 'whCosSessions', 'whCodexChatLog', 'whCodexChatEvents', 'whCodexChatThreads']) $(`#${id}`)?.replaceChildren();
-    for (const id of ['whCodeQuery', 'whEditor', 'whPreview', 'whFilePath', 'whFileSize', 'whImportDest', 'whSnippetName', 'whSnippetBody', 'whFeedbackText', 'whQueueTitle', 'whNoteTitle', 'whNoteBody', 'whChatLabel', 'whChatUrl', 'whCodexChatInput']) { const input = $(`#${id}`); if (input) input.value = ''; }
+    for (const id of ['whCodeResults', 'whGitList', 'whGitLog', 'whTaskFiles', 'whArtifactImage', 'whCapsuleView', 'whImportList', 'whPatchApproval', 'whCosSessions', 'whCodexChatLog', 'whCodexChatEvents', 'whCodexChatThreads', 'whGitReview']) $(`#${id}`)?.replaceChildren();
+    for (const id of ['whCodeQuery', 'whEditor', 'whPreview', 'whFilePath', 'whFileSize', 'whImportDest', 'whSnippetName', 'whSnippetBody', 'whFeedbackText', 'whQueueTitle', 'whNoteTitle', 'whNoteBody', 'whChatLabel', 'whChatUrl', 'whCodexChatInput', 'whGitReviewFrom', 'whGitReviewTo']) { const input = $(`#${id}`); if (input) input.value = ''; }
+    if ($('#whGitReviewMeta')) $('#whGitReviewMeta').textContent = '';
     stopCodexChatPolling();
     if ($('#whCodexChatState')) $('#whCodexChatState').textContent = 'Chưa kiểm tra Codex App Server.';
     if ($('#whCodexChatLink')) $('#whCodexChatLink').textContent = 'Chưa liên kết RUN.';
+    if ($('#whCodexChatHandoffInfo')) $('#whCodexChatHandoffInfo').textContent = 'Chưa chuyển phiên chat này thành việc điều hành.';
     for (const id of ['whViewerAddBasket', 'whEditFile', 'whSaveFile', 'whBlame']) { const button = $(`#${id}`); if (button) button.disabled = true; }
     if ($('#whEditor')) $('#whEditor').hidden = true;
     if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = true;
@@ -566,6 +570,9 @@
     // A refreshed HEAD may prove the currently displayed diff stale.
     if (scope.current() && ui.diffRel) renderDiffMeta();
     if (scope.current() && ui.diffRel) renderPatchApproval();
+    // Same re-check for a range review already on screen (W5): its STALE
+    // label is recomputed against the freshly observed HEAD.
+    if (scope.current() && ui.gitReview) renderGitReviewMeta();
     if (!data.length) { ui.commitSelection.clear(); renderCommitBar(); box.replaceChildren(el('span', 'task-muted', 'Không có thay đổi nào trong cây làm việc.')); return; }
     const present = new Set(data.map((item) => item.path));
     for (const path of [...ui.commitSelection]) if (!present.has(path)) ui.commitSelection.delete(path);
@@ -822,6 +829,117 @@
       renderDiffMeta([counts, data.truncated ? 'diff đã rút gọn ở 200KB' : ''].filter(Boolean).join(' · '));
     }
     renderPatchApproval();
+  }
+
+  // W5: git range review (workhub:git-review -> workHubGitReview).
+  // ui.gitReviewHead is the workspace HEAD captured when the review ran
+  // (for the default HEAD~1..HEAD range it equals the review's toHash);
+  // the review is STALE once a later render/refresh observes a different
+  // HEAD — the same pattern as the W2 diff STALE label above.
+  function gitReviewIsStale() {
+    return Boolean(ui.gitReview && ui.gitReviewHead && ui.gitHead && ui.gitReviewHead !== ui.gitHead);
+  }
+
+  function renderGitReviewMeta(extra = '') {
+    const meta = $('#whGitReviewMeta');
+    if (!meta) return;
+    if (!ui.gitReview) { meta.textContent = extra; return; }
+    const review = ui.gitReview;
+    const totals = review.totals || {};
+    const parts = [];
+    parts.push(`${review.from}..${review.to} · ${totals.commits ?? 0} commit · ${totals.files ?? 0} tệp · +${totals.additions ?? 0} / −${totals.deletions ?? 0}${totals.renames ? ` · ${totals.renames} rename` : ''}`);
+    if (review.fingerprint) parts.push(`fingerprint ${String(review.fingerprint).slice(0, 12)}…`);
+    if (ui.gitReviewHead) parts.push(`HEAD khi rà soát: ${String(ui.gitReviewHead).slice(0, 10)}`);
+    if (gitReviewIsStale()) parts.push(`STALE — HEAD hiện tại ${String(ui.gitHead).slice(0, 10)} đã khác đầu đã rà soát; chạy lại rà soát để xem range mới`);
+    if (review.truncated) parts.push('kết quả đã rút gọn ở giới hạn commit/tệp của service');
+    if (extra) parts.push(extra);
+    meta.textContent = parts.join(' · ');
+  }
+
+  function renderGitReviewResults(review) {
+    const box = $('#whGitReview');
+    if (!box) return;
+    const rows = [];
+    const commits = Array.isArray(review.commits) ? review.commits : [];
+    if (commits.length) {
+      rows.push(el('div', 'wh-row', `Commit trong range (${commits.length})`));
+      for (const commit of commits.slice(0, 20)) {
+        const row = el('div', 'wh-row');
+        const main = el('div', 'wh-row-main');
+        main.append(el('b', '', `${String(commit.hash || '').slice(0, 10)} · ${commit.subject || ''}`),
+          el('small', '', `${commit.author || ''} · ${commit.date || ''}`));
+        row.append(main);
+        rows.push(row);
+      }
+      if (commits.length > 20) rows.push(el('span', 'task-muted', `… còn ${commits.length - 20} commit nữa trong range (service giới hạn 200).`));
+    }
+    const files = Array.isArray(review.files) ? review.files : [];
+    if (!files.length) {
+      rows.push(el('span', 'task-muted', 'Range không có tệp thay đổi.'));
+    } else {
+      for (const group of (Array.isArray(review.subsystems) ? review.subsystems : [])) {
+        rows.push(el('div', 'wh-row', `${group.subsystem} · ${group.files} tệp · +${group.additions} / −${group.deletions}${group.renames ? ` · ${group.renames} rename` : ''}`));
+        for (const file of files.filter((item) => item.subsystem === group.subsystem)) {
+          const row = el('div', 'wh-row');
+          const main = el('div', 'wh-row-main');
+          const label = file.renamed && file.origPath ? `${file.origPath} → ${file.path}` : file.path;
+          const stats = file.binary
+            ? 'binary (không tính dòng)'
+            : `+${file.additions ?? '—'} / −${file.deletions ?? '—'} dòng`;
+          main.append(el('b', '', label), el('small', '', `${file.status} · ${stats}`));
+          row.append(main);
+          rows.push(row);
+        }
+      }
+    }
+    box.replaceChildren(...rows);
+  }
+
+  async function renderGitReview() {
+    const box = $('#whGitReview');
+    if (!box) return;
+    if (typeof window.mcpAssistant?.workhubGitReview !== 'function') {
+      renderGitReviewMeta('Rà soát range cần ứng dụng Desktop.');
+      return;
+    }
+    const scope = requestScope('gitreview');
+    const from = String($('#whGitReviewFrom')?.value || '').trim();
+    const to = String($('#whGitReviewTo')?.value || '').trim();
+    box.replaceChildren(el('span', 'task-muted', 'Đang rà soát range…'));
+    renderGitReviewMeta('Đang rà soát…');
+    let raw = null;
+    let thrown = '';
+    try {
+      raw = await window.mcpAssistant.workhubGitReview({ from: from || undefined, to: to || undefined, expectedWorkspace: scope.workspace });
+    } catch (error) { thrown = error?.message || String(error || ''); }
+    if (!scope.current()) return;
+    if (raw && raw.ok === false) {
+      // Service validation errors (e.g. an invalid rev) are shown verbatim.
+      ui.gitReview = null;
+      ui.gitReviewHead = '';
+      box.replaceChildren(el('span', 'task-muted', 'Rà soát thất bại.'));
+      renderGitReviewMeta(typeof raw.error === 'string' ? raw.error : (raw.error?.message || thrown || 'Rà soát thất bại.'));
+      return;
+    }
+    const data = unwrap(raw);
+    if (!data) {
+      ui.gitReview = null;
+      ui.gitReviewHead = '';
+      box.replaceChildren(el('span', 'task-muted', 'Không lấy được kết quả rà soát.'));
+      renderGitReviewMeta(thrown || 'Không lấy được kết quả rà soát.');
+      return;
+    }
+    ui.gitReview = data;
+    // Capture the workspace HEAD at review time for the STALE check; for
+    // the default range this is the review's own `to` head (toHash).
+    ui.gitReviewHead = data.toHash || '';
+    if (typeof window.mcpAssistant.workhubGitHead === 'function') {
+      const head = unwrap(await window.mcpAssistant.workhubGitHead(scope.workspace).catch(() => ''));
+      if (!scope.current()) return;
+      if (typeof head === 'string' && head) { ui.gitReviewHead = head; ui.gitHead = head; }
+    }
+    renderGitReviewResults(data);
+    renderGitReviewMeta();
   }
 
   function renderPatchApproval() {
@@ -1163,7 +1281,7 @@
     MCP_UNAVAILABLE: 'MCP chưa sẵn sàng',
     OWNERSHIP_LOST: 'Phiên chat thuộc tiến trình bridge trước (MCP/App Server đã khởi động lại) — không tiếp tục được, hãy tạo chat mới',
   };
-  const codexChatUi = { timer: null };
+  const codexChatUi = { timer: null, modelsLoaded: false };
   function stopCodexChatPolling() {
     if (codexChatUi.timer) { clearInterval(codexChatUi.timer); codexChatUi.timer = null; }
   }
@@ -1196,14 +1314,28 @@
     }
     const linkBox = $('#whCodexChatLink');
     if (linkBox) {
-      linkBox.textContent = view.link?.runId
-        ? `Liên kết RUN ${view.link.runId}${view.link.taskId ? ` · task ${view.link.taskId}` : ''} (id thật từ trạng thái tác vụ lúc tạo chat).`
-        : 'Chưa liên kết RUN — liên kết chỉ được ghi khi chat được tạo trong lúc tác vụ hiện tại có RUN thật.';
+      const forkNote = view.forkedFrom ? ` · fork từ thread Desktop ${String(view.forkedFrom).slice(0, 8)} (kế thừa bối cảnh qua App Server; panel không đọc được lượt cũ)` : '';
+      linkBox.textContent = (view.link?.runId
+        ? `Liên kết RUN ${view.link.runId}${view.link.taskId ? ` · task ${view.link.taskId}` : ''} (id thật từ trạng thái tác vụ lúc tạo chat hoặc từ handoff).`
+        : 'Chưa liên kết RUN — liên kết chỉ được ghi khi chat được tạo trong lúc tác vụ hiện tại có RUN thật, hoặc qua "Chuyển thành việc điều hành".') + forkNote;
+    }
+    // W3-C handoff receipt: directive + recommended action are shown
+    // verbatim; a blocked directive is a stop sign, not a suggestion.
+    const handoffBox = $('#whCodexChatHandoffInfo');
+    if (handoffBox && view.handoff) {
+      const h = view.handoff;
+      if (h.status === 'blocked') {
+        handoffBox.textContent = `Handoff BỊ CHẶN bởi directive ${h.directive || ''}. ${h.recommendedNextAction || 'Hãy reconcile trước khi tiếp tục.'} Không tạo task mới, không ghi capsule mới, không tiếp tục mù.`;
+      } else {
+        handoffBox.textContent = `Đã chuyển thành việc điều hành: task ${h.taskId || '—'}${h.runId ? ` · RUN ${h.runId}` : ''}${h.capsuleId ? ` · capsule ${String(h.capsuleId).slice(0, 8)}` : ''}${h.lease ? ` · lease ${h.lease.status || ''} · owner ${h.lease.owner || ''} · hết hạn ${h.lease.expiresAt || ''}` : ''}${h.capsuleNote ? ` · ${h.capsuleNote}` : ''}${h.leaseNote ? ` · ${h.leaseNote}` : ''}`;
+      }
     }
     const sendBtn = $('#whCodexChatSend');
     if (sendBtn) sendBtn.disabled = view.state === 'RUNNING' || view.state === 'PROVIDER_UNAVAILABLE' || view.state === 'MCP_UNAVAILABLE' || view.state === 'OWNERSHIP_LOST';
     const stopBtn = $('#whCodexChatStop');
     if (stopBtn) stopBtn.disabled = view.state !== 'RUNNING';
+    const handoffBtn = $('#whCodexChatHandoff');
+    if (handoffBtn) handoffBtn.disabled = !(view.messages || []).length || view.state === 'RUNNING';
   }
   async function pollCodexChatTurn(scope) {
     if (typeof window.mcpAssistant?.workhubCodexChatPoll !== 'function') return;
@@ -1227,15 +1359,82 @@
     if (!view) { stateBox.textContent = 'Không đọc được trạng thái Codex App Server.'; return; }
     paintCodexChat(view);
     if (view.state === 'RUNNING') startCodexChatPolling(scope);
+    loadCodexChatModels(scope);
     const threadsBox = $('#whCodexChatThreads');
     if (threadsBox && result.ok) {
       const history = unwrap(await window.mcpAssistant.workhubCodexChatHistory({ expectedWorkspace: scope.workspace }).catch(() => null));
       if (!scope.current()) return;
       const threads = history?.data?.threads || [];
-      threadsBox.replaceChildren(...(threads.length
-        ? [el('span', 'task-muted', 'Lịch sử Codex của dự án này (chỉ xem — bridge không tiếp tục thread Desktop, muốn dùng phải fork ở bước sau):'),
-          ...threads.map((t) => el('div', 'wh-row', `${t.name || t.preview || t.id.slice(0, 8)}${t.updatedAt ? ` · ${new Date(t.updatedAt).toLocaleString('vi-VN')}` : ''}`))]
-        : [el('span', 'task-muted', 'Chưa có lịch sử Codex nào trong dự án này.')]));
+      if (!threads.length) {
+        threadsBox.replaceChildren(el('span', 'task-muted', 'Chưa có lịch sử Codex nào trong dự án này.'));
+        return;
+      }
+      const rows = [el('span', 'task-muted', 'Lịch sử Codex của dự án này (chỉ xem summary — panel không đọc được nội dung lượt cũ của thread Desktop; fork kế thừa bối cảnh qua App Server bằng thread/fork, không qua việc panel đọc turns):')];
+      for (const t of threads) {
+        const row = el('div', 'wh-row');
+        const main = el('span', 'wh-row-main', `${t.name || t.preview || t.id.slice(0, 8)}${t.updatedAt ? ` · ${new Date(t.updatedAt).toLocaleString('vi-VN')}` : ''}`);
+        row.append(main);
+        if (typeof window.mcpAssistant?.workhubCodexChatFork === 'function') {
+          const forkBtn = el('button', 'secondary-button', 'Fork thành chat mới');
+          forkBtn.addEventListener('click', () => forkCodexChatFromHistory(t.id));
+          row.append(forkBtn);
+        }
+        rows.push(row);
+      }
+      threadsBox.replaceChildren(...rows);
+    }
+  }
+  async function loadCodexChatModels(scope) {
+    const select = $('#whCodexChatModel');
+    if (!select || codexChatUi.modelsLoaded || typeof window.mcpAssistant?.workhubCodexChatModels !== 'function') return;
+    codexChatUi.modelsLoaded = true;
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatModels({ expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    const models = result?.data?.models || [];
+    const current = select.value;
+    const makeOption = (value, label) => { const opt = el('option', '', label); opt.value = value; return opt; };
+    select.replaceChildren(...[
+      makeOption('', 'Mặc định của profile chat'),
+      ...models.map((m) => makeOption(m.id, m.displayName || m.id)),
+    ]);
+    select.value = current || '';
+  }
+  function codexChatRouteSelection() {
+    const model = String($('#whCodexChatModel')?.value || '').trim();
+    const effort = String($('#whCodexChatEffort')?.value || '').trim();
+    return { ...(model ? { model } : {}), ...(effort ? { effort } : {}) };
+  }
+  async function forkCodexChatFromHistory(sourceThreadId) {
+    const input = $('#whCodexChatInput');
+    const text = String(input?.value || '').trim();
+    if (!text) {
+      setStatus('Nhập nội dung lượt đầu vào ô chat trước khi fork — fork tạo thread mới bằng chính lượt đó (bridge không tạo thread rỗng).', 'error');
+      input?.focus();
+      return;
+    }
+    if (typeof window.mcpAssistant?.workhubCodexChatFork !== 'function') return;
+    const scope = requestScope('codex-chat');
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatFork({
+      expectedWorkspace: scope.workspace, sourceThreadId, text, ...codexChatRouteSelection(),
+    }).catch(() => null));
+    if (!scope.current()) return;
+    const view = result?.data;
+    if (view) paintCodexChat(view);
+    if (result?.ok) {
+      if (input) input.value = '';
+      setStatus('Đã fork thành chat mới (bridge-owned, tiếp tục được). Nội dung lượt cũ của thread Desktop không hiển thị ở panel — chỉ summary; bối cảnh được kế thừa qua App Server.');
+      startCodexChatPolling(scope);
+    }
+  }
+  async function handoffCodexChat() {
+    if (typeof window.mcpAssistant?.workhubCodexChatHandoff !== 'function') return;
+    const scope = requestScope('codex-chat');
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatHandoff({ expectedWorkspace: scope.workspace }).catch(() => null));
+    if (!scope.current()) return;
+    const view = result?.data;
+    if (view) paintCodexChat(view);
+    if (!result?.ok) {
+      setStatus(result?.error?.message || 'Handoff thất bại.', 'error');
     }
   }
   async function sendCodexChat() {
@@ -1248,7 +1447,7 @@
     const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
     const runId = task?.orchestration?.run_id || task?.run_id || '';
     const link = runId ? { runId, taskId: task?.task_id || '' } : null;
-    const result = unwrap(await window.mcpAssistant.workhubCodexChatSend({ expectedWorkspace: scope.workspace, text, link }).catch(() => null));
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatSend({ expectedWorkspace: scope.workspace, text, link, ...codexChatRouteSelection() }).catch(() => null));
     if (!scope.current()) return;
     const view = result?.data;
     if (view) paintCodexChat(view);
@@ -2217,6 +2416,8 @@
       if (viewer) viewer.textContent = data ? data.lines.map((l) => `${l.line} · ${l.author} · ${l.text}`).join('\n') : 'Không lấy được blame.';
     });
     $('#whGitLogRefresh')?.addEventListener('click', renderGitLog);
+    $('#whGitReviewRun')?.addEventListener('click', renderGitReview);
+    for (const id of ['whGitReviewFrom', 'whGitReviewTo']) $(`#${id}`)?.addEventListener('keydown', (event) => { if (event.key === 'Enter') renderGitReview(); });
     $('#whWorktreeRefresh')?.addEventListener('click', renderWorktrees);
     $('#whWorktreeAdd')?.addEventListener('click', addWorktree);
     $('#whChooseImport')?.addEventListener('click', async () => {
@@ -2449,6 +2650,7 @@
       if (scope.current() && result?.data) paintCodexChat(result.data);
       renderCodexChat();
     });
+    $('#whCodexChatHandoff')?.addEventListener('click', () => handoffCodexChat());
     $('#whWindowsBtn')?.addEventListener('click', async () => {
       const data = unwrap(await window.mcpAssistant.workhubListWindows().catch(() => null));
       const box = $('#whWindowsList');

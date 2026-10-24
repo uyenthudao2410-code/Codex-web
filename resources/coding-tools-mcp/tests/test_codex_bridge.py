@@ -627,6 +627,104 @@ class CodexBridgeTests(unittest.TestCase):
             with self.subTest(last=last):
                 self.assertIsNone(_usage_economics({"last": last}, "gpt-5.6-luna"))
 
+    def test_handle_resume_reowns_a_registered_chat_thread_without_a_turn(self) -> None:
+        # W3-C: after a sidecar restart the Work Hub chat service asks the
+        # new bridge instance to take back the exact thread it registered
+        # at creation (thread_id + session_id). Resume must restore
+        # ownership through thread/read + thread/resume and launch no turn.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "thread/read":
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session", "cwd": str(root)}}
+                if method == "thread/resume":
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session", "cwd": str(root), "model": "gpt-5.6-terra", "reasoningEffort": "medium"}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            result = bridge.handle({
+                "action": "resume",
+                "thread_id": "chat-thread",
+                "session_id": "chat-session",
+                "profile": "chat",
+            })
+            self.assertTrue(result["resumed"])
+            self.assertEqual(result["thread_id"], "chat-thread")
+            self.assertEqual(result["session_id"], "chat-session")
+            self.assertEqual(result["route"], {"profile": "chat", "model": "gpt-5.6-terra", "effort": "medium"})
+            self.assertNotIn("base_instructions", result["route"])
+            self.assertTrue(bridge.owns_thread("chat-thread"))
+            self.assertEqual([method for method, _params in calls], ["thread/read", "thread/resume"])
+            resume_params = next(params for method, params in calls if method == "thread/resume")
+            self.assertEqual(resume_params["approvalPolicy"], "never")
+            self.assertEqual(resume_params["sandbox"], "read-only")
+
+    def test_handle_resume_refuses_a_session_identity_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            bridge._request = lambda method, _params: {
+                "thread": {"id": "chat-thread", "sessionId": "other-session", "cwd": str(root)}
+            } if method == "thread/read" else None
+            with self.assertRaises(CodexBridgeError) as raised:
+                bridge.handle({
+                    "action": "resume",
+                    "thread_id": "chat-thread",
+                    "session_id": "chat-session",
+                    "profile": "chat",
+                })
+            self.assertEqual(raised.exception.code, "PERSISTENT_SESSION_MISMATCH")
+            self.assertFalse(bridge.owns_thread("chat-thread"))
+
+    def test_chat_run_accepts_model_and_effort_overrides_without_breaking_invariants(self) -> None:
+        # W3-C selector: profile chat is not route-locked, so run/continue
+        # may carry a model/effort override; the turn still launches with
+        # approvalPolicy=never, a read-only sandbox and no network.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "thread/start":
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session"}}
+                if method == "turn/start":
+                    return {"turn": {"id": "chat-turn", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            result = bridge.run("Chào", profile="chat", model="gpt-5.6-sol", effort="high", lifetime="persistent")
+            self.assertEqual(result["route"]["model"], "gpt-5.6-sol")
+            self.assertEqual(result["route"]["effort"], "high")
+            self.assertEqual(result["lifetime"], "persistent")
+            self.assertEqual(result["creation_mode"], "persistent_new")
+            thread_params = next(params for method, params in calls if method == "thread/start")
+            turn_params = next(params for method, params in calls if method == "turn/start")
+            self.assertFalse(thread_params["ephemeral"])
+            self.assertEqual(thread_params["config"]["model_reasoning_effort"], "high")
+            self.assertEqual(thread_params["approvalPolicy"], "never")
+            self.assertEqual(turn_params["model"], "gpt-5.6-sol")
+            self.assertEqual(turn_params["effort"], "high")
+            self.assertEqual(turn_params["sandboxPolicy"], {"type": "readOnly", "networkAccess": False})
+
+            bridge._turn_states["chat-turn"] = {"thread_id": "chat-thread", "status": "completed"}
+            bridge._latest_turn_by_thread["chat-thread"] = "chat-turn"
+            calls.clear()
+            follow = bridge.continue_thread(thread_id="chat-thread", prompt="Tiếp", model="gpt-5.6-luna", effort="low")
+            self.assertEqual(follow["route"]["model"], "gpt-5.6-luna")
+            self.assertEqual(follow["route"]["effort"], "low")
+            turn_params = next(params for method, params in calls if method == "turn/start")
+            self.assertEqual(turn_params["model"], "gpt-5.6-luna")
+            self.assertEqual(turn_params["effort"], "low")
+
     def test_invalid_action_fails_without_starting_codex(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             bridge = CodexAppServerBridge(lambda: Path(temp))

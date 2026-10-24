@@ -78,6 +78,39 @@ test('range review reports commits, renames, subsystems and fingerprint', async 
   assert.equal(again.fingerprint, review.fingerprint, 'same range → same fingerprint');
 });
 
+test('IPC/preload/UI wiring sits after workhub:check-url and exposes a specific function', () => {
+  const repoRoot = path.join(__dirname, '..');
+  const mainSource = fs.readFileSync(path.join(repoRoot, 'electron/main.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(repoRoot, 'electron/preload.js'), 'utf8');
+  const markup = fs.readFileSync(path.join(repoRoot, 'renderer/index.html'), 'utf8');
+  const renderer = fs.readFileSync(path.join(repoRoot, 'renderer/work-hub.js'), 'utf8');
+
+  // The handler must live in the safe zone AFTER workhub:check-url: the
+  // work-hub-scope fixture only evaluates main.js up to that handler.
+  const checkUrlAt = mainSource.indexOf("secureHandle('workhub:check-url'");
+  const handlerAt = mainSource.indexOf("secureHandle('workhub:git-review'");
+  assert.ok(checkUrlAt >= 0 && handlerAt > checkUrlAt, 'git-review handler must be registered after check-url');
+  const handler = mainSource.slice(handlerAt, handlerAt + 400);
+  assert.match(handler, /gitRangeReview\(/);
+  assert.match(handler, /scopedWorkHubRoot\(payload\?\.expectedWorkspace\)/);
+  assert.match(handler, /payload\?\.from/);
+  assert.match(handler, /payload\?\.to/);
+  assert.match(mainSource, /require\('\.\/services\/workHubGitReview'\)/);
+
+  // Preload exposes one specific function, not a generic transport.
+  assert.match(preloadSource, /workhubGitReview: \(payload\) => ipcRenderer\.invoke\('workhub:git-review', payload\)/);
+
+  // Renderer: base/head inputs + run button near the changes panel, and
+  // the render path uses the scoped preload call with a STALE label.
+  for (const id of ['whGitReviewFrom', 'whGitReviewTo', 'whGitReviewRun', 'whGitReview']) {
+    assert.ok(markup.includes(`id="${id}"`), `index.html must contain #${id}`);
+  }
+  assert.match(renderer, /workhubGitReview\(\{ from:/);
+  assert.match(renderer, /expectedWorkspace: scope\.workspace/);
+  assert.match(renderer, /STALE — HEAD hiện tại/);
+  assert.match(renderer, /gitReviewIsStale/);
+});
+
 test('fingerprint changes when the range endpoint moves', async (t) => {
   const root = fixtureRepo(t);
   fs.writeFileSync(path.join(root, 'core', 'main.py'), 'x\ny\nz\n');
