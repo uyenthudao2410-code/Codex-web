@@ -109,15 +109,18 @@ jobs:
           retention-days: 3
 
   test-windows:
-    # Windows release gate: the desktop runtime tests, the crates that must run
-    # natively on Windows 11 (CLI, Runner, persistent-shell's fail-closed gate,
-    # process control, agent config, and webcodex-workspace's portable project
-    # identity used by the native semantic bridge), and the npm distribution
-    # checks. The full Windows artifact -> npm install smoke lives in its own
-    # job (test-windows-smoke) on a fresh checkout: the suite above dirties
-    # the worktree, while the smoke's -RequireExactSource demands a clean
-    # one, so the two cannot share a worktree. The Server and its Unix-only
-    # runtime stay Linux-only.
+    # Windows release gate: the crates that must run natively on Windows 11
+    # (CLI, Runner, persistent-shell's fail-closed gate, process control,
+    # agent config, and webcodex-workspace's portable project identity used
+    # by the native semantic bridge), and the npm distribution checks. The
+    # desktop runtime integration suite (npm test) lives in its own job
+    # (test-windows-desktop): in this job the pytest step fails first under
+    # runner load often enough that the desktop suite never ran, leaving
+    # Node changes with no CI evidence at all. The full Windows artifact ->
+    # npm install smoke lives in its own job (test-windows-smoke) on a fresh
+    # checkout: the suite above dirties the worktree, while the smoke's
+    # -RequireExactSource demands a clean one, so the two cannot share a
+    # worktree. The Server and its Unix-only runtime stay Linux-only.
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -160,8 +163,6 @@ jobs:
         run: npm ci
       - name: Verify production desktop dependencies
         run: npm run audit:prod -- --audit-level=high
-      - name: Test desktop runtime integration
-        run: npm test
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
       - name: Build frontend assets
@@ -174,6 +175,61 @@ jobs:
         run: cargo test --locked -p webcodex-agent-config -p webcodex-process -p webcodex-persistent-shell -p webcodex-workspace -p webcodex-cli -p webcodex-runner
       - name: Test npm installer and release manifest natively
         run: npm --prefix npm/webcodex test
+
+  test-windows-desktop:
+    # Desktop runtime integration suite (npm test) on its own job, separate
+    # from test-windows. The suite is self-contained: it needs only a
+    # checkout, Node 22, root npm dependencies, and a Python interpreter on
+    # PATH (some desktop tests execute `python -c` snippets through
+    # tests/helpers/python-executable.js); it consumes no artifact from the
+    # pytest, cargo, or frontend steps of test-windows, and in the old
+    # single-job layout it ran BEFORE the frontend build and cargo steps,
+    # so it depends on neither. The audit:prod check stays in test-windows,
+    # where it still gates the run. This job must stay separate: a pytest
+    # failure in test-windows must not be able to skip the desktop suite
+    # again. Gate strictness is unchanged — the run conclusion still
+    # requires every job green; only the evidence is decoupled. The test
+    # log is uploaded on failure so the suite's verdict (including the
+    # individual Node test names) is preserved beyond the job log.
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      # Same long-path reason as test-windows: archived .coding-tools report
+      # overlays exceed legacy Windows MAX_PATH under the runner work dir.
+      - name: Allow long paths for checkout
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: resources/coding-tools-mcp/pyproject.toml
+      - name: Install Coding Tools MCP test dependencies
+        run: python -m pip install -e "resources/coding-tools-mcp[dev]"
+      - name: Install desktop dependencies
+        run: npm ci
+      - name: Test desktop runtime integration
+        shell: pwsh
+        run: |
+          npm test 2>&1 | Tee-Object -FilePath desktop-test.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload desktop test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-test-log-${{ github.sha }}
+          path: desktop-test.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   test-windows-smoke:
     # Windows artifact -> npm install smoke on a FRESH checkout, separate
