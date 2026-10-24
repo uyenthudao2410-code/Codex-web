@@ -3,31 +3,83 @@
   "task_id": "ecb9baf311a945b3a4b8300c79c17d9a",
   "orchestration": {},
   "objective": "Run a workspace command",
-  "status": "waiting",
+  "status": "failed",
   "steps": [],
-  "current_step": "Waiting for model",
+  "current_step": "Command failed",
   "current_command": null,
   "last_command_result": {
-    "command_id": "UBlZ610tnw4mR9CuQalx_dCS",
+    "command_id": "",
     "kind": "command",
-    "status": "exited",
-    "result_status": "passed",
-    "exit_code": 0,
-    "duration_ms": 406,
-    "finished_at": "2026-10-23T18:16:15.635Z"
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-10-24T02:35:21.404Z"
   },
-  "completion_report": null,
-  "completion_report_id": "",
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "hQcJEQqoJ4OvGtzmKNyRv60t",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "hQcJEQqoJ4OvGtzmKNyRv60t",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": 484
+      },
+      "git": {
+        "head": "5b79f72d1e7aba1443a9bc54de5a468645dedc29",
+        "branch": "main",
+        "worktree_fp": "d9912b4f12fa70c2ba455d8deb844a2bbf00ca92b610f5ebf0da2f470bcd0721",
+        "dirty_paths": [
+          "docs/research/261023_PROBLEM_OUTCOME_QUANTITATIVE_EVALUATION.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "ecb9baf311a945b3a4b8300c79c17d9a",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "9b28a3ac678c42fc144d0a0acf9f869024081c84a517ed725869158f846adb39",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
-  "failure": null,
-  "next_step": "Generate the result from the inspected content, then save it once.",
+  "failure": "operator completion report 9b28a3ac678c42fc144d0a0acf9f869024081c84a517ed725869158f846adb39 must be acknowledged before starting a replacement task",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-10-23T18:16:14.956Z",
-  "updated_at": "2026-10-23T18:28:59.413Z",
+  "updated_at": "2026-10-24T02:35:21.404Z",
   "events": [
     {
       "time": "2026-10-23T18:16:14.957Z",
@@ -64,6 +116,167 @@
       "event": "files_modified",
       "details": {
         "count": 0
+      }
+    },
+    {
+      "time": "2026-10-24T02:15:40.683Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd",
+        "session_id": "hQcJEQqoJ4OvGtzmKNyRv60t"
+      }
+    },
+    {
+      "time": "2026-10-24T02:15:40.910Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:15:41.936Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "COMMAND_CLOSED"
+      }
+    },
+    {
+      "time": "2026-10-24T02:15:42.943Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "COMMAND_CLOSED"
+      }
+    },
+    {
+      "time": "2026-10-24T02:15:44.325Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "hQcJEQqoJ4OvGtzmKNyRv60t",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "9b28a3ac678c42fc144d0a0acf9f869024081c84a517ed725869158f846adb39"
+      }
+    },
+    {
+      "time": "2026-10-24T02:15:44.529Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "COMMAND_CLOSED"
+      }
+    },
+    {
+      "time": "2026-10-24T02:17:49.468Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:17:49.468Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "TTY_UNSUPPORTED"
+      }
+    },
+    {
+      "time": "2026-10-24T02:19:46.265Z",
+      "event": "command_finished",
+      "details": {
+        "command": "ping -n 120 127.0.0.1",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:19:46.265Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-10-24T02:22:24.039Z",
+      "event": "command_finished",
+      "details": {
+        "command": "ping -n 120 127.0.0.1",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:22:24.039Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-10-24T02:23:56.788Z",
+      "event": "command_finished",
+      "details": {
+        "command": "ping -n 120 127.0.0.1",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:23:56.788Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-10-24T02:26:37.407Z",
+      "event": "command_finished",
+      "details": {
+        "command": "ping -n 120 127.0.0.1",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:26:37.407Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-10-24T02:33:30.892Z",
+      "event": "command_finished",
+      "details": {
+        "command": "ping -n 120 127.0.0.1",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:33:30.892Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-10-24T02:35:21.404Z",
+      "event": "command_finished",
+      "details": {
+        "command": "ping -n 120 127.0.0.1",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-10-24T02:35:21.404Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
       }
     }
   ]
