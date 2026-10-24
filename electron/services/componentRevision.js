@@ -94,6 +94,12 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/workHubFiles.js',
       'electron/services/workHubLsp.js',
       'electron/services/workHubSsh.js',
+      // Work Hub panel services (W3/W7 chat + git review) and the Work Hub
+      // CoS companion adapter (W1, surfaced via workhub:cos-status): all
+      // three serve the Work Hub panel, like their workHub* siblings above.
+      'electron/services/workHubCodexChat.js',
+      'electron/services/workHubGitReview.js',
+      'electron/services/cosCompanionAdapter.js',
       'renderer/app-icon.png'
     ]),
     directories: Object.freeze([

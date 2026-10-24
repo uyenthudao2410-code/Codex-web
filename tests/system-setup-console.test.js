@@ -472,7 +472,10 @@ test('compact primary navigation keeps work, history and all settings pages grou
 });
 
 test('startup opens Work Hub for empty or unknown routes and preserves a valid route', () => {
-  const source = read('renderer/app.js');
+  // The Windows checkout materializes renderer/app.js with CRLF (text=auto),
+  // so a blank line is \r\n\r\n and '\n\n' never matches. Normalize first;
+  // the sliced block runs identically under LF.
+  const source = read('renderer/app.js').replace(/\r\n/g, '\n');
   const start = source.indexOf('    const requestedPage = location.hash.slice(1);');
   const end = source.indexOf('\n\n', start);
   assert.ok(start >= 0 && end > start, 'initial routing block must exist');

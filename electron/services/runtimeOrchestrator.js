@@ -12,6 +12,7 @@ const {
 } = require('./nativeService');
 const { TunnelService } = require('./tunnelService');
 const { validateRuntimeSettings, mergeRecentWorkspaces, normalizeWorkspacePath, workspaceKey } = require('./config');
+const { pathTraversesReparsePoint } = require('./pathSemantics');
 const { canConnect } = require('./environmentService');
 const { resolveProxy } = require('./proxyService');
 const defaultPaths = require('../paths');
@@ -1737,8 +1738,14 @@ class RuntimeOrchestrator {
           code: 'CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID'
         });
       }
-      if (workspaceKey(projectedPath) !== workspaceKey(expectedFile)
-        || workspaceKey(returnedFile) !== workspaceKey(expectedFile)) {
+      // Project only the exact canonical file: same-file identity is not
+      // enough on its own, because canonical keys would also accept a path
+      // spelled through a junction/symlink alias to the same file. Reject
+      // any returned path that traverses a reparse point, while still
+      // accepting 8.3 short-name spellings (not reparse points, so the walk
+      // above passes them).
+      if (workspaceKey(returnedFile) !== workspaceKey(expectedFile)
+        || pathTraversesReparsePoint(projectedPath)) {
         throw Object.assign(new Error('Coding Tools MCP returned a different file path.'), {
           code: 'CONTROL_PLANE_FILE_READ_RESULT_FILE_INVALID'
         });

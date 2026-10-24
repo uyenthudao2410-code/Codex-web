@@ -11,6 +11,7 @@ const fs = require('node:fs');
 const { MAX_COLLECTION_BYTES, selectWorkspacePolicy } = require('./controlPlanePolicyStore');
 const path = require('node:path');
 const { URL } = require('node:url');
+const { canonicalPathKey } = require('./pathSemantics');
 
 const POLICY_SCHEMA_VERSION = 2;
 const LEGACY_POLICY_SCHEMA_VERSION = 1;
@@ -237,8 +238,8 @@ function loadExecBridgePolicy(paths, { target = null, now = Date.now(), allowExp
 }
 
 function pathKey(value) {
-  const normalized = path.normalize(path.resolve(value));
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  // Canonical keys: see pathSemantics.canonicalPathKey.
+  return canonicalPathKey(value);
 }
 
 function resolveRegisteredWorkspaceRoot(paths, policy) {

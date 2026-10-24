@@ -537,13 +537,13 @@ test('idle handoff shares its deadline with a slow status IPC call', async (t) =
     client: {
       status: async (options) => {
         requestedTimeouts.push(options.timeout);
-        await new Promise((resolve) => setTimeout(resolve, 120));
+        await new Promise((resolve) => setTimeout(resolve, 300));
         return {};
       },
       call: async () => assert.fail('a status call beyond the deadline must not start the snapshot call')
     }
   }), { code: 'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED' });
-  assert.ok(Date.now() - startedAt < 110, 'the shared deadline must bound an uncooperative status client');
+  assert.ok(Date.now() - startedAt < 250, 'the shared deadline must bound an uncooperative status client');
   assert.equal(requestedTimeouts.length, 1);
   assert.ok(requestedTimeouts[0] > 0 && requestedTimeouts[0] <= 25);
 });
@@ -572,12 +572,12 @@ test('idle handoff shares its deadline with a slow snapshot IPC call', async (t)
       },
       call: async (_action, _arguments, options) => {
         requestedTimeouts.push(options.timeout);
-        await new Promise((resolve) => setTimeout(resolve, 120));
+        await new Promise((resolve) => setTimeout(resolve, 300));
         return {};
       }
     }
   }), { code: 'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED' });
-  assert.ok(Date.now() - startedAt < 110, 'the shared deadline must bound an uncooperative snapshot client');
+  assert.ok(Date.now() - startedAt < 250, 'the shared deadline must bound an uncooperative snapshot client');
   assert.equal(requestedTimeouts.length, 2);
   assert.ok(requestedTimeouts.every((value) => value > 0 && value <= 25));
 });

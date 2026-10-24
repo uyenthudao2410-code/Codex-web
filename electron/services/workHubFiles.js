@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
+const { canonicalPathKey } = require('./pathSemantics');
 
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.coding-tools', 'dist', 'target', '.next', 'coverage']);
 const DEFAULTS = {
@@ -461,9 +462,14 @@ function managedWorktreeBase(rootResolved) {
 // path.join/path.resolve produce backslashes there. Compare managed-path
 // prefixes separator-insensitively or managed worktrees are never
 // recognized on Windows (found by the M1.3 test on a Windows host).
+// Canonical keys additionally collapse 8.3/junction/subst aliases: git
+// returns worktree paths in long form while the managed base may be spelled
+// in short form, and the prefix must still match.
 function pathHasPrefix(candidate, prefix) {
-  const norm = (value) => String(value || '').replace(/\\/g, '/').toLowerCase();
-  return norm(candidate).startsWith(norm(prefix));
+  const candidateKey = canonicalPathKey(candidate);
+  const prefixKey = canonicalPathKey(prefix);
+  if (!candidateKey || !prefixKey) return false;
+  return candidateKey === prefixKey || candidateKey.startsWith(`${prefixKey}${path.sep}`);
 }
 
 async function gitWorktreeList(root) {
@@ -506,7 +512,7 @@ async function gitWorktreeRemove(root, worktreePath) {
   const { root: rootResolved } = resolveInsideRoot(root, '');
   const target = path.resolve(String(worktreePath || ''));
   const base = managedWorktreeBase(rootResolved);
-  if (!pathHasPrefix(target, base) || target.toLowerCase() === rootResolved.toLowerCase()) {
+  if (!pathHasPrefix(target, base) || canonicalPathKey(target) === canonicalPathKey(rootResolved)) {
     throw new Error('Chỉ gỡ được worktree do ứng dụng quản lý (trong thư mục .worktrees cạnh dự án).');
   }
   await runGit(rootResolved, ['worktree', 'remove', target], { timeout: 30000 });
@@ -530,4 +536,5 @@ module.exports = {
   resolveInsideRoot, listDir, readTextFile, writeTextFile, copyIntoWorkspace, readImageData,
   searchText, gitStatus, gitFileDiff, gitLog, gitShow, gitBlame, gitHead, gitCommitFiles,
   gitWorktreeList, gitWorktreeAdd, gitWorktreeRemove,
+  pathHasPrefix,
 };

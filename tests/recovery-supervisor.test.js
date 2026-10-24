@@ -394,7 +394,7 @@ else {
     workerPid=Number(firstState.last_deferred_worker_pid);
     assert.ok(workerPid>0,JSON.stringify(firstState));
     const observed=await waitForStatus(marker,(value)=>Array.isArray(value)&&value.length===1);
-    assert.deepEqual(observed[0].argv,['--deferred-worker',requestPath]);
+    assert.deepEqual(observed[0].argv,['--deferred-worker',fs.realpathSync.native(requestPath)]);
     assert.equal(observed[0].run_as_node,'1');
     assert.equal(observed[0].deferred_worker,'1');
     assert.equal(observed[0].openai_key_present,false);

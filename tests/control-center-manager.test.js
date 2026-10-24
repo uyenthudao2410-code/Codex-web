@@ -203,7 +203,7 @@ test('manager heartbeat distinguishes direct Tunnel and uncertain telemetry', ()
 test('manager primary navigation keeps execution central and combines connection and folder setup in System', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
-  for (const page of ['overview', 'task', 'device', 'system']) {
+  for (const page of ['workhub', 'task', 'system']) {
     assert.match(nav, new RegExp(`data-page="${page}"`), `missing primary page ${page}`);
   }
   for (const legacy of ['build', 'health', 'guide', 'logs', 'settings']) {

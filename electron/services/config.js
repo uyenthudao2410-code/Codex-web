@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { canonicalPathKey } = require('./pathSemantics');
 
 const DEFAULTS = Object.freeze({
   configVersion: 7,
@@ -75,9 +76,11 @@ function normalizeWorkspacePath(value) {
 
 function workspaceKey(value) {
   const normalized = normalizeWorkspacePath(value);
-  return process.platform === 'win32' || isWindowsAbsolutePath(normalized)
-    ? normalized.toLowerCase()
-    : normalized;
+  if (!normalized) return '';
+  // Canonicalize (8.3/junction/subst aliases collapse to one key) so a
+  // workspace spelled two ways is still the same workspace. Non-absolute
+  // and drive-relative values are already rejected by normalizeWorkspacePath.
+  return canonicalPathKey(normalized);
 }
 
 function mergeRecentWorkspaces(existing, workspace, limit = 50) {

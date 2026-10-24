@@ -672,7 +672,7 @@ test('development Coding MCP launch is pinned to the current checkout module roo
     resourcesRoot: () => fixture.resourcesRoot
   }, { command: 'python.exe', launchCommand: 'pythonw.exe' });
   assert.equal(launch.runtimeMode, 'development');
-  assert.equal(launch.moduleRoot, fs.realpathSync(fixture.moduleRoot));
+  assert.equal(launch.moduleRoot, fs.realpathSync.native(fixture.moduleRoot));
   assert.equal(launch.command, 'pythonw.exe');
   assert.equal(path.dirname(launch.vendoredPython), launch.moduleRoot);
 });
@@ -695,7 +695,7 @@ test('packaged Coding MCP launch accepts its packaged resource root', (t) => {
     resourcesRoot: () => fixture.resourcesRoot
   }, { command: 'python.exe' });
   assert.equal(launch.runtimeMode, 'packaged');
-  assert.equal(launch.moduleRoot, fs.realpathSync(fixture.moduleRoot));
+  assert.equal(launch.moduleRoot, fs.realpathSync.native(fixture.moduleRoot));
 });
 
 test('proxy values from Windows settings are normalized', () => {

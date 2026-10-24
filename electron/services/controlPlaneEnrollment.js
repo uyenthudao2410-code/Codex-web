@@ -7,6 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { canonicalPathKey, pathTraversesReparsePoint } = require('./pathSemantics');
 const { URL } = require('node:url');
 const { normalizeDeviceIdentity } = require('./deviceIdentity');
 const { run } = require('./commandRunner');
@@ -171,7 +172,7 @@ function assertSelectedWorkspaceRegistration(registryFile, canonicalPath, worksp
   }
   const matches = registry.entries.filter((entry) => entry && typeof entry === 'object'
     && entry.workspace_id === workspaceId && entry.workspace_generation === workspaceGeneration
-    && typeof entry.canonical_path === 'string' && path.normalize(entry.canonical_path) === path.normalize(canonicalPath));
+    && typeof entry.canonical_path === 'string' && canonicalPathKey(entry.canonical_path) === canonicalPathKey(canonicalPath));
   if (matches.length !== 1) {
     throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH', 'Thư mục vừa chọn không khớp với workspace ở dòng này. Chưa đổi quyền nào.');
   }
@@ -199,8 +200,14 @@ function registeredWorkspacePath(registryFile, workspaceId, workspaceGeneration)
   const canonicalPath = canonicalWorkspacePath(matches[0].canonical_path);
   const storedPath = path.normalize(matches[0].canonical_path);
   const currentPath = path.normalize(canonicalPath);
-  if ((process.platform === 'win32' ? storedPath.toLowerCase() : storedPath) !==
-    (process.platform === 'win32' ? currentPath.toLowerCase() : currentPath)) {
+  const spellingDiffers = (process.platform === 'win32' ? storedPath.toLowerCase() : storedPath) !==
+    (process.platform === 'win32' ? currentPath.toLowerCase() : currentPath);
+  // A spelling difference alone is not drift: registry entries written under
+  // an 8.3 short name (runner TEMP) legitimately differ from the live long
+  // form. Drift is a spelling difference PLUS a reparse point in the stored
+  // path, meaning the registered directory was replaced (renamed + junction
+  // planted). 8.3 components are not reparse points, so the walk passes them.
+  if (spellingDiffers && pathTraversesReparsePoint(matches[0].canonical_path)) {
     throw enrollmentError('CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH', 'Đường dẫn workspace local đã thay đổi so với inventory đã đăng ký.');
   }
   return canonicalPath;

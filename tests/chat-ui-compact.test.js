@@ -79,6 +79,6 @@ test('settings window hides independently and reveals its shell before runtime i
   assert.doesNotMatch(main, /parent:\s*chatWindow/);
   assert.match(main, /(?:managerWindow|openingWindow|chatWindow)\.hide\(\)/);
   assert.match(main, /chatWindow\.show\(\)/);
-  assert.match(app, /Show the settings shell immediately/);
+  assert.match(app, /Show the app shell immediately/);
   assert.match(compact, /grid-template-columns:200px/);
 });

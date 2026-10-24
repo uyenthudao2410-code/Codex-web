@@ -9,6 +9,7 @@ const { rotateLog } = require('./logService');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 const { canonicalPath } = require('./runtimeIdentity');
+const { canonicalPathKey } = require('./pathSemantics');
 const { CONNECTOR_ATTESTATION_ENV } = require('./connectorAttestation');
 const {
   normalizeProcessStartToken,
@@ -311,8 +312,9 @@ function connectorAttestationSecretMatches(state, secret) {
 }
 
 function pathKey(value) {
-  const normalized = path.normalize(String(value || ''));
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  // Canonical keys: a stored receipt in short form and a launch root in
+  // long form are the same directory, so launch authority must reuse.
+  return canonicalPathKey(value);
 }
 
 function resolveNativeLaunchContract(paths, python) {

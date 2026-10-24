@@ -8,6 +8,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const { MAX_COLLECTION_BYTES, selectWorkspacePolicy } = require('./controlPlanePolicyStore');
+const { canonicalPathKey, lexicalPathKey } = require('./pathSemantics');
 const path = require('node:path');
 const { URL } = require('node:url');
 
@@ -272,13 +273,12 @@ function resolveRegisteredWorkspaceRoot(paths, policy) {
     }
     const declared = path.resolve(root);
     const real = fs.realpathSync.native(root);
-    const pathKey = (value) => {
-      const normalized = path.normalize(path.resolve(value));
-      return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
-    };
-    // The root must still exist and remain the exact canonical directory that
-    // was selected locally. Never follow a symlink/reparse-point replacement
-    // into a new target just because its opaque ID was once valid.
+    const pathKey = canonicalPathKey;
+    // The root must still exist and remain the same directory that was
+    // selected locally. Spelling differences alone (8.3 short names) are
+    // accepted because canonical keys collapse them to one directory;
+    // per-file reparse checks downstream still reject real reparse
+    // points on targets.
     if (pathKey(real) !== pathKey(declared) || !fs.statSync(real).isDirectory()) {
       throw new Error('invalid');
     }
@@ -296,15 +296,12 @@ function resolveDirectRegisteredFile(workspaceRoot, relative) {
   let root;
   try { root = fs.realpathSync.native(workspaceRoot); }
   catch { throw bridgeError('CONTROL_PLANE_FILE_READ_WORKSPACE_REGISTRY_REQUIRED', 'file-read workspace is unavailable.'); }
-  const pathKey = (value) => {
-    const normalized = path.normalize(path.resolve(value));
-    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
-  };
+  const pathKey = canonicalPathKey;
   if (pathKey(root) !== pathKey(workspaceRoot) || !fs.statSync(root).isDirectory()) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_WORKSPACE_REGISTRY_REQUIRED', 'file-read workspace has changed.');
   }
   const target = path.resolve(root, ...filePath.split('/'));
-  if (!pathKey(target).startsWith(`${pathKey(root)}${path.sep}`)) {
+  if (!lexicalPathKey(target).startsWith(`${lexicalPathKey(root)}${path.sep}`)) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_PATH_DENIED', 'file path escapes the registered workspace.');
   }
   const parts = filePath.split('/');

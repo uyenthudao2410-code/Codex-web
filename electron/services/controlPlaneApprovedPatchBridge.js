@@ -10,6 +10,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const { MAX_COLLECTION_BYTES, selectWorkspacePolicy } = require('./controlPlanePolicyStore');
+const { canonicalPathKey, lexicalPathKey } = require('./pathSemantics');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { URL } = require('node:url');
@@ -265,8 +266,11 @@ function loadApprovedPatchBridgePolicy(paths, { target = null, now = Date.now() 
 }
 
 function pathKey(value) {
-  const normalized = path.normalize(path.resolve(value));
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  // Canonical keys: a registered workspace spelled in 8.3 short form and
+  // the same directory in long form must pass the registry/root guards.
+  // Per-file reparse checks (assertDirectPatchComponents, isSymbolicLink)
+  // are untouched and still reject real reparse points on targets.
+  return canonicalPathKey(value);
 }
 
 function assertDirectPatchComponents(root, relative, missingCode) {
@@ -514,8 +518,8 @@ function resolveExactRegisteredPatchTarget(workspaceRoot, admission) {
   }
   const relative = relativePath(admission?.path, 'CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED');
   const target = path.resolve(root, ...relative.split('/'));
-  const rootPrefix = `${pathKey(root)}${path.sep}`;
-  if (!pathKey(target).startsWith(rootPrefix)) {
+  const rootPrefix = `${lexicalPathKey(root)}${path.sep}`;
+  if (!lexicalPathKey(target).startsWith(rootPrefix)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED', 'approved patch path escapes the local workspace.');
   }
   assertDirectPatchComponents(root, relative, 'CONTROL_PLANE_APPROVED_PATCH_TARGET_MISSING');
@@ -561,8 +565,8 @@ function verifyExactRegisteredPatchPostimage(workspaceRoot, admission) {
   }
   const relative = relativePath(admission?.path, 'CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED');
   const target = path.resolve(root, ...relative.split('/'));
-  const rootPrefix = `${pathKey(root)}${path.sep}`;
-  if (!pathKey(target).startsWith(rootPrefix)) {
+  const rootPrefix = `${lexicalPathKey(root)}${path.sep}`;
+  if (!lexicalPathKey(target).startsWith(rootPrefix)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED', 'approved patch path escapes the local workspace.');
   }
   assertDirectPatchComponents(root, relative, 'CONTROL_PLANE_APPROVED_PATCH_POSTIMAGE_MISSING');

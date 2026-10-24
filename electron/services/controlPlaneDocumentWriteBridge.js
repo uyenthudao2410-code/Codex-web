@@ -11,6 +11,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { URL } = require('node:url');
+const { canonicalPathKey, lexicalPathKey } = require('./pathSemantics');
 
 const {
   loadApprovedPatchBridgePolicy,
@@ -64,8 +65,8 @@ function sha256(value) {
 }
 
 function pathKey(value) {
-  const normalized = path.normalize(path.resolve(value));
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  // Canonical keys: see pathSemantics.canonicalPathKey.
+  return canonicalPathKey(value);
 }
 
 function documentPath(value, code = 'CONTROL_PLANE_DOCUMENT_WRITE_PATH_INVALID', { source = false } = {}) {
@@ -235,8 +236,8 @@ function resolveDocumentTarget(workspaceRoot, admission, { source = false } = {}
   }
   const relative = source ? admission.source : admission.target;
   const target = path.resolve(root, ...relative.split('/'));
-  const prefix = `${pathKey(root)}${path.sep}`;
-  if (!pathKey(target).startsWith(prefix)) {
+  const prefix = `${lexicalPathKey(root)}${path.sep}`;
+  if (!lexicalPathKey(target).startsWith(prefix)) {
     throw bridgeError('CONTROL_PLANE_DOCUMENT_WRITE_PATH_DENIED', 'document path escapes workspace.');
   }
   const parts = relative.split('/');

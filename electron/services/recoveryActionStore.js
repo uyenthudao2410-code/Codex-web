@@ -5,6 +5,7 @@ const { execFile } = require('node:child_process');
 const { promisify, TextDecoder } = require('node:util');
 const { DatabaseSync } = require('node:sqlite');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
+const { canonicalPathKey } = require('./pathSemantics');
 const {
   COMPONENT_ORDER,
   RECOVERY_HOST_LEGACY_V1_CONTRACT,
@@ -442,9 +443,9 @@ function stableValue(value) {
 }
 
 function samePath(left, right) {
-  const a = path.resolve(String(left || ''));
-  const b = path.resolve(String(right || ''));
-  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  // Canonical keys: a git toplevel in long form and a fixture workspace in
+  // 8.3 short form are the same directory and must not mismatch.
+  return canonicalPathKey(left) === canonicalPathKey(right);
 }
 
 function parseGitStatus(output) {
@@ -528,7 +529,7 @@ async function runGitBytes(workspace, args) {
 
 async function gitStatus(workspace, forceUntracked = false) {
   const root = String((await runGit(workspace, ['rev-parse', '--show-toplevel'])).stdout || '').trim();
-  if (!root || !samePath(root, workspace)) throw actionError('AUTO_ACTIVATION_WORKSPACE_MISMATCH', 'Automatic activation requires the configured workspace Git root.');
+  if (!root || !samePath(root, workspace)) throw actionError('AUTO_ACTIVATION_WORKSPACE_MISMATCH', `Automatic activation requires the configured workspace Git root. git=${root} workspace=${workspace}`);
   const args = ['status', '--porcelain=v1', '-z', '-b', forceUntracked ? '--untracked-files=all' : '--untracked-files=no'];
   // Retained runtime evidence is not source identity; exclude it before both
   // the Git output budget and the exact-source entry bound are applied.
@@ -1602,6 +1603,7 @@ module.exports = {
   requestFingerprint,
   workspaceIdentity,
   gitStatus,
+  samePath,
   parseGitStatus,
   fingerprintPaths,
   readAcceptedCheckpoint,
