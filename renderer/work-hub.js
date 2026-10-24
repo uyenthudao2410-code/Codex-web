@@ -1319,6 +1319,10 @@
   function paintCodexChat(view) {
     const stateBox = $('#whCodexChatState');
     if (!stateBox || !view) return;
+    // P4 (L11): remember the last painted chat view for this workspace so
+    // renderTaskBoard can cross-link the thread to its RUN row without an
+    // extra IPC round-trip. Every paint call site runs under a live scope.
+    ui.codexChatView = view;
     const label = CODEX_CHAT_STATE_LABELS[view.state] || String(view.state || '');
     const version = view.availability?.codexVersion ? ` · Codex ${view.availability.codexVersion}` : '';
     const route = view.route ? ` · ${view.route.model || ''}${view.route.effort ? `/${view.route.effort}` : ''}` : '';
@@ -1346,9 +1350,26 @@
     const linkBox = $('#whCodexChatLink');
     if (linkBox) {
       const forkNote = view.forkedFrom ? ` · fork từ thread Desktop ${String(view.forkedFrom).slice(0, 8)} (kế thừa bối cảnh qua App Server; panel không đọc được lượt cũ)` : '';
+      // P4 (L11): the link is frozen at creation time (L5) — warn when the
+      // panel's current RUN has moved on, so the operator does not read
+      // the link as the current task. No current RUN means no comparison.
+      const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+      const currentRunId = task?.orchestration?.run_id || task?.run_id || '';
+      const staleNote = view.link?.runId && currentRunId && view.link.runId !== currentRunId
+        ? ` · Link này ghi lúc tạo chat, có thể cũ — tác vụ hiện tại của panel là RUN ${currentRunId}.`
+        : '';
       linkBox.textContent = (view.link?.runId
         ? `Liên kết RUN ${view.link.runId}${view.link.taskId ? ` · task ${view.link.taskId}` : ''} (id thật từ trạng thái tác vụ lúc tạo chat hoặc từ handoff).`
-        : 'Chưa liên kết RUN — liên kết chỉ được ghi khi chat được tạo trong lúc tác vụ hiện tại có RUN thật, hoặc qua "Chuyển thành việc điều hành".') + forkNote;
+        : 'Chưa liên kết RUN — liên kết chỉ được ghi khi chat được tạo trong lúc tác vụ hiện tại có RUN thật, hoặc qua "Chuyển thành việc điều hành".') + forkNote + staleNote;
+    }
+    // P4 (L7): a session restored from the durable registry has NO panel
+    // timeline — only thread ownership and the RUN link came back. Say so
+    // in one line instead of showing an empty timeline as if it were new.
+    const ownershipBox = $('#whCodexChatOwnership');
+    if (ownershipBox) {
+      ownershipBox.textContent = view.ownership?.restoredFromRegistry
+        ? (view.ownership.note || '')
+        : '';
     }
     // P0 handoff mismatch: the chat link and the panel's current task
     // disagree, so the service refused to guess. Offer the three
@@ -2303,17 +2324,28 @@
     const scope = requestScope('taskboard');
     const rows = [];
     const current = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
-    if (current) rows.push({ title: current.objective || 'Task hiện tại', status: current.status || '', current: true });
+    const currentRunId = current?.orchestration?.run_id || current?.run_id || '';
+    if (current) rows.push({ title: current.objective || 'Task hiện tại', status: current.status || '', current: true, runId: currentRunId });
     const history = unwrap(await window.mcpAssistant?.taskHistory?.().catch(() => null));
     if (!scope.current()) return;
     for (const item of Array.isArray(history) ? history.slice(-12).reverse() : []) {
-      rows.push({ title: item.objective || item.task_id || 'Task', status: item.status || '', current: false });
+      rows.push({ title: item.objective || item.task_id || 'Task', status: item.status || '', current: false, runId: item.run_id || '' });
     }
+    // P4 (L11): cross-link the panel chat thread to its RUN row, using the
+    // last painted chat view for this workspace (cached by paintCodexChat,
+    // no extra IPC). A linked RUN outside the last-12 list shows no marker
+    // here; the chat panel's link line remains the primary display.
+    const chatView = ui.codexChatView && ui.codexChatView.workspace === scope.workspace ? ui.codexChatView : null;
+    const chatLinkRunId = chatView?.link?.runId || '';
+    const chatThreadId = chatView?.threadId || '';
     if (!rows.length) { box.replaceChildren(el('span', 'task-muted', 'Chưa có task nào trong ledger.')); return; }
     box.replaceChildren(...rows.map((item) => {
       const row = el('div', 'wh-row');
       const main = el('div', 'wh-row-main');
       main.append(el('b', '', `${item.current ? '▶ ' : ''}${item.title}`), el('small', '', item.status));
+      if (chatLinkRunId && chatThreadId && item.runId && item.runId === chatLinkRunId) {
+        main.append(el('small', '', `↔ chat thread ${String(chatThreadId).slice(0, 8)}`));
+      }
       row.append(main);
       if (item.current) {
         const open = smallButton('Mở Tác vụ');
