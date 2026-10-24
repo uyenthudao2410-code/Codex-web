@@ -109,6 +109,12 @@ const CHAT_STATES = Object.freeze({
   OWNERSHIP_LOST: 'OWNERSHIP_LOST', // resume failed / thread not owned anymore
 });
 
+// Terminal RUN statuses in the orchestration ledger (the ledger's own
+// terminal_statuses vocabulary). Any other status — including an unknown
+// one — is treated as not-ended so the gate never blocks on vocabulary
+// it does not recognize.
+const TERMINAL_RUN_STATUSES = new Set(['completed', 'failed']);
+
 function boundedText(value, limit = MAX_TEXT_CHARS) {
   const text = String(value ?? '');
   return text.length <= limit ? text : `${text.slice(0, limit)}…`;
@@ -157,6 +163,11 @@ function createWorkHubCodexChat(options = {}) {
   // (main wires workHubCoordination.runDetail). There is no lease write
   // API on the panel side; this service never invents one.
   const readLease = typeof options.readLease === 'function' ? options.readLease : null;
+  // Read-only RUN status projection from the same ledger read (main wires
+  // workHubCoordination.runDetail and returns detail.run.status). Used
+  // only for the ended-RUN handoff gate; absence skips the gate and the
+  // record path's own binding check remains the backstop.
+  const readRunStatus = typeof options.readRunStatus === 'function' ? options.readRunStatus : null;
   // Durable session-registry file (main injects a path beside the app
   // data; tests inject a tmp-dir path). Absent -> in-memory only.
   const stateFile = String(options.stateFile || options.registryFile || '').trim() || null;
@@ -221,6 +232,7 @@ function createWorkHubCodexChat(options = {}) {
       createdAt: null,
       forkedFrom: null, // source Desktop thread id when forked (W3-C)
       handoff: null, // last handoff receipt / blocked directive (W3-C)
+      handoffMismatch: null, // transient P0 choice state: { linkRunId, linkTaskId, currentRunId, currentTaskId, hasPendingCapsule } — never persisted
       resumeInfo: null, // last resume attempt outcome (W3-C)
       ownedVerified: false, // this process holds the thread (created/resumed)
       restoredFromRegistry: false, // thread came from the durable registry
@@ -278,6 +290,7 @@ function createWorkHubCodexChat(options = {}) {
       createdAt: session.createdAt,
       forkedFrom: session.forkedFrom,
       handoff: session.handoff,
+      handoffMismatch: session.handoffMismatch || null,
       resume: session.resumeInfo,
       ownership: {
         verified: session.ownedVerified,
@@ -689,10 +702,87 @@ function createWorkHubCodexChat(options = {}) {
       return refuse('CHAT_HANDOFF_NO_CONTENT', 'Không dựng được mục tiêu cho việc điều hành từ phiên chat này.');
     }
     try {
-      let runId = cleanId(payload.runId) || cleanId(session.link && session.link.runId);
-      let taskId = cleanId(session.link && session.link.taskId);
+      // P0 (L1/L5): resolve the target RUN against the panel's CURRENT
+      // task before writing anything. The chat link is frozen from
+      // creation, while the panel may since have moved to another RUN;
+      // silently using the stale link writes the capsule to the wrong
+      // task, and silently creating a new task duplicates it. Neither
+      // happens here: a mismatch stops and asks the operator to choose.
+      const currentRunId = cleanId(payload.runId) || cleanId(payload.link && payload.link.runId);
+      const currentTaskId = cleanId(payload.link && payload.link.taskId);
+      const linkRunId = cleanId(session.link && session.link.runId);
+      const linkTaskId = cleanId(session.link && session.link.taskId);
+      let runId = null;
+      let taskId = null;
+      let createNew = false;
+      if (currentRunId && linkRunId && currentRunId !== linkRunId) {
+        const choice = String(payload.choice || '').trim();
+        if (choice === 'current') {
+          runId = currentRunId;
+          taskId = currentTaskId || linkTaskId;
+        } else if (choice === 'link') {
+          runId = linkRunId;
+          taskId = linkTaskId;
+        } else if (choice === 'new') {
+          createNew = true;
+        } else {
+          session.handoffMismatch = {
+            linkRunId,
+            linkTaskId: linkTaskId || null,
+            currentRunId,
+            currentTaskId: currentTaskId || null,
+            hasPendingCapsule: Boolean(session.handoff && session.handoff.pendingCapsule),
+          };
+          session.updatedAt = new Date().toISOString();
+          persistSession(session);
+          return {
+            ok: false,
+            state: session.state,
+            error: {
+              code: 'HANDOFF_RUN_MISMATCH',
+              message: `Phiên chat đang liên kết RUN ${linkRunId} nhưng tác vụ hiện tại của panel là RUN ${currentRunId}. Chọn nơi ghi capsule thay vì để hệ thống tự đoán.`,
+              linkRunId,
+              linkTaskId: linkTaskId || null,
+              currentRunId,
+              currentTaskId: currentTaskId || null,
+            },
+            data: view(session),
+          };
+        }
+        session.handoffMismatch = null;
+      } else if (currentRunId) {
+        runId = currentRunId;
+        taskId = currentTaskId || linkTaskId;
+      } else if (linkRunId) {
+        runId = linkRunId;
+        taskId = linkTaskId;
+      } else {
+        createNew = true;
+      }
       let directiveInfo = null;
       if (runId) {
+        // P0 (L1 scenario B): writing a capsule into an ended RUN needs
+        // an explicit confirmation; by default it is refused. The status
+        // comes from the ledger read; when the reader is absent the gate
+        // is skipped and the record path's own binding check backstops.
+        if (readRunStatus) {
+          let runStatus = null;
+          try { runStatus = await readRunStatus(root, runId); } catch { runStatus = null; }
+          const normalized = typeof runStatus === 'string' ? runStatus.trim().toLowerCase() : '';
+          if (normalized && TERMINAL_RUN_STATUSES.has(normalized) && payload.confirmEnded !== true) {
+            return {
+              ok: false,
+              state: session.state,
+              error: {
+                code: 'HANDOFF_RUN_ENDED',
+                message: `RUN ${runId} đã kết thúc (trạng thái ${normalized}). Ghi capsule vào RUN đã kết thúc cần xác nhận rõ ràng.`,
+                runId,
+                runStatus: normalized,
+              },
+              data: view(session),
+            };
+          }
+        }
         // Respect the W4 directive of the RUN's current capsule BEFORE
         // recording anything new or creating anything new.
         const getResult = await callTool('task_control', {
@@ -725,7 +815,7 @@ function createWorkHubCodexChat(options = {}) {
           };
         }
       }
-      if (!runId) {
+      if (createNew) {
         // Existing Work Hub task-creation path: task_control action=start
         // (the same callMcpTool channel as job-run / handoff-get).
         const startResult = await callTool('task_control', {
@@ -744,6 +834,17 @@ function createWorkHubCodexChat(options = {}) {
       let capsuleNote = null;
       let recommended = null;
       if (runId) {
+        // P0 (L6): flush a pending capsule from an earlier handoff into
+        // this RUN instead of leaving it stranded in the registry. It is
+        // cleared only after a successful record, so a failed flush never
+        // loses it; the fresh capsule for this handoff is recorded after.
+        const pending = session.handoff && session.handoff.pendingCapsule ? session.handoff.pendingCapsule : null;
+        if (pending) {
+          await callTool('task_control', {
+            action: 'handoff', handoff_action: 'record', run_id: runId, payload: pending,
+          }, 15_000);
+          session.handoff.pendingCapsule = null;
+        }
         const recordResult = await callTool('task_control', {
           action: 'handoff', handoff_action: 'record', run_id: runId, payload: capsulePayload,
         }, 15_000);
@@ -780,6 +881,11 @@ function createWorkHubCodexChat(options = {}) {
         objective,
         at: new Date().toISOString(),
       };
+      // A resolved handoff settles the mismatch: the chosen RUN becomes
+      // the chat link, so the next handoff compares against it, not the
+      // stale creation-time link.
+      session.handoffMismatch = null;
+      if (runId || taskId) session.link = { runId: runId || null, taskId: taskId || null };
       session.updatedAt = new Date().toISOString();
       persistSession(session);
       return { ok: true, state: session.state, data: view(session) };

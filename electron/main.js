@@ -964,15 +964,51 @@ function registerIpc() {
     const command = String(payload?.command || '').trim();
     if (!command) throw new Error('Lệnh không được trống.');
     const root = scopedWorkHubRoot(payload?.expectedWorkspace);
-    const cwd = String(payload?.cwd || '').trim() || root;
-    return callMcpTool('exec_command', {
+    // P1 (L2) terminal fence: the recipe cwd must resolve inside the
+    // scoped root, exactly like Files (resolveInsideRoot throws outside
+    // it, including symlink/junction escapes). An empty cwd still means
+    // the root itself. Rejecting — not silently relocating — keeps the
+    // command's relative paths honest.
+    const cwd = workHubFiles.resolveInsideRoot(root, String(payload?.cwd || '').trim()).target;
+    const execArgs = {
       cmd: command,
       cwd,
       yield_time_ms: 8000,
       timeout_ms: 600000,
       verbosity: 'full',
       principal_id: 'workhub',
-    }, 30000);
+    };
+    // P1 (L2) RUN binding: exec_command requires run_id and wave_id
+    // together, and the panel task state carries no wave — so the current
+    // wave is resolved from the same ledger read the panel lease uses
+    // (waves are ordinal-ordered; the last one is the current wave, the
+    // same rule orchestration recovery uses). A requested RUN the ledger
+    // does not know is refused rather than run unbound under a bogus id;
+    // a RUN with no wave yet (or no local ledger) runs unbound exactly
+    // as before, and the binding outcome is reported back so the UI
+    // never claims a binding it did not get.
+    let workhubRunBinding = null;
+    const requestedRunId = String(payload?.runId || '').trim();
+    if (requestedRunId) {
+      const detail = workHubCoordination.runDetail(root, requestedRunId);
+      if (detail && detail.available && !detail.found) {
+        throw new Error('RUN không tồn tại trong ledger của dự án này — từ chối chạy lệnh để tránh gắn nhầm task.');
+      }
+      const waves = detail && detail.found && Array.isArray(detail.waves) ? detail.waves : [];
+      if (waves.length) {
+        const waveId = waves[waves.length - 1].waveId;
+        if (waveId) {
+          execArgs.run_id = requestedRunId;
+          execArgs.wave_id = waveId;
+          workhubRunBinding = { runId: requestedRunId, waveId };
+        }
+      }
+    }
+    const result = await callMcpTool('exec_command', execArgs, 30000);
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      return { ...result, workhubRunBinding };
+    }
+    return result;
   }));
   secureHandle('workhub:handoff-get', (_event, payload) => invokeSafely(async () => {
     // A8: read the recorded handoff capsule for a run through the runtime's
@@ -1097,6 +1133,11 @@ function registerIpc() {
       const detail = workHubCoordination.runDetail(root, runId);
       return detail && detail.found ? detail.lease : null;
     },
+    // P0 ended-RUN gate: same ledger read, run status only.
+    readRunStatus: (root, runId) => {
+      const detail = workHubCoordination.runDetail(root, runId);
+      return detail && detail.found ? detail.run.status : null;
+    },
     // Durable chat-session registry beside the app data (same folder as
     // settings.json / runtime-state.json), so a persistent chat thread
     // can be resumed after an Electron/MCP restart.
@@ -1138,6 +1179,9 @@ function registerIpc() {
     codexChat.handoffToTask(scopedWorkHubRoot(payload?.expectedWorkspace), {
       objective: payload?.objective,
       runId: payload?.runId,
+      link: payload?.link && typeof payload.link === 'object' ? { runId: payload.link.runId, taskId: payload.link.taskId } : null,
+      choice: payload?.choice,
+      confirmEnded: payload?.confirmEnded === true,
     }))));
   // W5 git range review (kept AFTER workhub:check-url for the same scope-
   // fixture reason as the W3-C handlers above): read-only range analysis

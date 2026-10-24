@@ -1319,10 +1319,23 @@
         ? `Liên kết RUN ${view.link.runId}${view.link.taskId ? ` · task ${view.link.taskId}` : ''} (id thật từ trạng thái tác vụ lúc tạo chat hoặc từ handoff).`
         : 'Chưa liên kết RUN — liên kết chỉ được ghi khi chat được tạo trong lúc tác vụ hiện tại có RUN thật, hoặc qua "Chuyển thành việc điều hành".') + forkNote;
     }
-    // W3-C handoff receipt: directive + recommended action are shown
-    // verbatim; a blocked directive is a stop sign, not a suggestion.
+    // P0 handoff mismatch: the chat link and the panel's current task
+    // disagree, so the service refused to guess. Offer the three
+    // choices explicitly instead of a dead error line.
     const handoffBox = $('#whCodexChatHandoffInfo');
-    if (handoffBox && view.handoff) {
+    if (handoffBox && view.mismatch) {
+      const m = view.mismatch;
+      handoffBox.replaceChildren();
+      handoffBox.append(el('div', 'wh-row',
+        `Handoff đang lệch: phiên chat liên kết RUN ${m.linkRunId}${m.linkTaskId ? ` · task ${m.linkTaskId}` : ''}, nhưng tác vụ hiện tại của panel là RUN ${m.currentRunId}${m.currentTaskId ? ` · task ${m.currentTaskId}` : ''}${m.hasPendingCapsule ? ' · có capsule chờ ghi từ lần handoff trước.' : '.'} Chọn nơi ghi capsule:`));
+      for (const [choice, label] of [['current', 'Ghi vào RUN hiện tại'], ['link', 'Giữ link cũ'], ['new', 'Tạo task mới']]) {
+        const button = smallButton(label);
+        button.addEventListener('click', () => handoffCodexChatChoice(choice));
+        handoffBox.append(button);
+      }
+    } else if (handoffBox && view.handoff) {
+      // W3-C handoff receipt: directive + recommended action are shown
+      // verbatim; a blocked directive is a stop sign, not a suggestion.
       const h = view.handoff;
       if (h.status === 'blocked') {
         handoffBox.textContent = `Handoff BỊ CHẶN bởi directive ${h.directive || ''}. ${h.recommendedNextAction || 'Hãy reconcile trước khi tiếp tục.'} Không tạo task mới, không ghi capsule mới, không tiếp tục mù.`;
@@ -1426,16 +1439,35 @@
       startCodexChatPolling(scope);
     }
   }
-  async function handoffCodexChat() {
-    if (typeof window.mcpAssistant?.workhubCodexChatHandoff !== 'function') return;
+  async function handoffCodexChatRequest(extra = {}) {
+    if (typeof window.mcpAssistant?.workhubCodexChatHandoff !== 'function') return null;
     const scope = requestScope('codex-chat');
-    const result = unwrap(await window.mcpAssistant.workhubCodexChatHandoff({ expectedWorkspace: scope.workspace }).catch(() => null));
-    if (!scope.current()) return;
+    // P0 (L1/L5): pass the CURRENT panel task link, exactly like send
+    // does — the service blocks on a stale link instead of guessing.
+    const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+    const runId = task?.orchestration?.run_id || task?.run_id || '';
+    const link = runId ? { runId, taskId: task?.task_id || '' } : null;
+    const result = unwrap(await window.mcpAssistant.workhubCodexChatHandoff({ expectedWorkspace: scope.workspace, link, runId: runId || undefined, ...extra }).catch(() => null));
+    if (!scope.current()) return null;
     const view = result?.data;
     if (view) paintCodexChat(view);
-    if (!result?.ok) {
-      setStatus(result?.error?.message || 'Handoff thất bại.', 'error');
+    if (!result?.ok) setStatus(result?.error?.message || 'Handoff thất bại.', 'error');
+    return result;
+  }
+  async function handoffCodexChat() {
+    const result = await handoffCodexChatRequest();
+    if (result?.error?.code === 'HANDOFF_RUN_ENDED' && result.error.runId) {
+      // Ended RUN, default refuse: only an explicit confirmation
+      // proceeds, and it re-invokes with the confirmation flag.
+      if (window.confirm(`RUN ${result.error.runId} đã kết thúc (trạng thái ${result.error.runStatus || ''}). Ghi capsule vào RUN đã kết thúc?`)) {
+        await handoffCodexChatRequest({ confirmEnded: true });
+      } else {
+        setStatus('Đã hủy handoff vào RUN đã kết thúc.', 'info');
+      }
     }
+  }
+  async function handoffCodexChatChoice(choice) {
+    await handoffCodexChatRequest({ choice });
   }
   async function sendCodexChat() {
     const input = $('#whCodexChatInput');
@@ -1886,7 +1918,7 @@
     const job = ui.job;
     const labels = { starting: 'Đang gửi lệnh', running: 'Đang chạy', unknown: 'Chưa xác định trạng thái', exited: 'Đã kết thúc', terminated: 'Đã dừng', stopped: 'Đã dừng', timeout: 'Hết thời gian', error: 'Không chạy được' };
     const status = job.stopRequested && !jobIsTerminal(job) ? 'Đã yêu cầu dừng · chờ xác nhận' : (labels[job.status] || job.status);
-    meta.textContent = `${job.name} · ${status}${job.workspace ? ` · Dự án: ${job.workspace}` : ''}${job.commandId ? ` · Mã lần chạy: ${job.commandId}` : ''}${job.exitCode != null ? ` · Mã thoát: ${job.exitCode}` : ''}`;
+    meta.textContent = `${job.name} · ${status}${job.workspace ? ` · Dự án: ${job.workspace}` : ''}${job.commandId ? ` · Mã lần chạy: ${job.commandId}` : ''}${job.exitCode != null ? ` · Mã thoát: ${job.exitCode}` : ''}${job.boundRunId ? ` · gắn RUN ${job.boundRunId}` : (job.commandId ? ' · không gắn task' : '')}`;
     const notices = [];
     if (job.observationError) notices.push(job.status === 'error'
       ? `Lệnh chưa được gửi: ${job.observationError}\nBạn có thể chạy lại sau khi khắc phục lỗi.`
@@ -1905,19 +1937,33 @@
   async function runRecipeAsJob(recipe) {
     if (ui.job && !jobIsTerminal(ui.job)) { window.alert('Lần chạy trước đang được gửi, đang chạy hoặc chưa xác định trạng thái. Hãy kiểm tra lần chạy đó trước khi chạy lệnh khác.'); return; }
     const workspace = currentProject();
-    const job = { name: recipe.name, workspace, commandId: '', status: 'starting', output: '', exitCode: null };
+    const job = { name: recipe.name, workspace, commandId: '', status: 'starting', output: '', exitCode: null, boundRunId: '' };
     ui.job = job;
     renderJob();
     try {
-      const response = await window.mcpAssistant.workhubJobRun({ command: recipe.command, cwd: recipe.cwd || workspace, expectedWorkspace: workspace });
+      // P1 (L2): bind the job to the panel's current task RUN when one
+      // exists, exactly like send binds the chat link — so the runtime's
+      // owner-mismatch guard can refuse a stale scope instead of running
+      // silently unbound. No RUN means no binding, shown as such below.
+      const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+      const runId = task?.orchestration?.run_id || task?.run_id || '';
+      const request = { command: recipe.command, cwd: recipe.cwd || workspace, expectedWorkspace: workspace };
+      if (runId) request.runId = runId;
+      const response = await window.mcpAssistant.workhubJobRun(request);
       if (ui.job !== job || jobUiUnloaded) return;
       if (response?.ok === false) {
         // IPC errors can include a timeout after the runtime admitted a
         // command. Without an explicit pre-dispatch rejection, execution is
         // unknown and must not be silently retried.
-        job.status = /MCP chưa sẵn sàng|Lệnh không được trống|Dự án đã thay đổi/.test(String(response.error || '')) ? 'error' : 'unknown';
+        job.status = /MCP chưa sẵn sàng|Lệnh không được trống|Dự án đã thay đổi|OWNER_MISMATCH|không khớp với task/.test(String(response.error || '')) ? 'error' : 'unknown';
         job.observationError = String(response.error || 'Bộ thực thi từ chối lệnh.').slice(0, 400);
-      } else applyJobResult(job, jobResult(response));
+      } else {
+        const result = jobResult(response);
+        job.boundRunId = result && typeof result === 'object' && result.workhubRunBinding && typeof result.workhubRunBinding === 'object'
+          ? String(result.workhubRunBinding.runId || '')
+          : '';
+        applyJobResult(job, result);
+      }
     } catch (error) {
       if (ui.job !== job || jobUiUnloaded) return;
       job.status = 'unknown';

@@ -970,8 +970,9 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     category="validation",
                 )
             hub_identity = self._current_hub_client() or {}
+            panel_run_status = ""
             if hub_identity.get("client_type") == "electron" and hub_identity.get("client_id") == "electron-panel":
-                state, projection, run_id, wave_id = self.panel_handoff_state(args.get("run_id"), args.get("wave_id"))
+                state, projection, run_id, wave_id, panel_run_status = self.panel_handoff_state(args.get("run_id"), args.get("wave_id"))
             if "send_checkpoint" in payload:
                 try:
                     payload = {**payload, "send_checkpoint": normalize_send_checkpoint(payload.get("send_checkpoint"))}
@@ -1046,6 +1047,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             return {
                 "recorded": True,
                 "capsule": capsule,
+                "run_status": panel_run_status or None,
                 "recommended_next_action": "Open a fresh ChatWeb conversation, fetch this capsule, then poll pending messages.",
             }
         if action == "quality":

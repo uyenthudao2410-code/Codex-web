@@ -53,7 +53,7 @@ class RuntimeStatelessContextMixin:
                     continue
         return stores
 
-    def panel_handoff_state(self, run_id: object, wave_id: object = "") -> tuple[dict[str, Any], dict[str, Any], str, str]:
+    def panel_handoff_state(self, run_id: object, wave_id: object = "") -> tuple[dict[str, Any], dict[str, Any], str, str, str]:
         """Resolve the panel RUN's exact task binding without adopting a context.
 
         The authenticated panel displays the RUN from the canonical ledger
@@ -145,6 +145,9 @@ class RuntimeStatelessContextMixin:
                     break
 
         failed_checks: list[str] = []
+        run_status = (
+            str(canonical_run.get("status") or "") if isinstance(canonical_run, dict) else ""
+        )
         if not isinstance(canonical_run, dict):
             failed_checks.append("canonical_run_missing")
         if context is None:
@@ -168,6 +171,7 @@ class RuntimeStatelessContextMixin:
                 category="runtime", retryable=False,
                 details={
                     "run_id": requested_run,
+                    "run_status": run_status or None,
                     "failed_checks": failed_checks,
                     "canonical_task_id": canonical_task_id or None,
                     "current_wave": current_wave or None,
@@ -178,7 +182,7 @@ class RuntimeStatelessContextMixin:
                     "unscoped_task_id": str(unscoped.get("task_id") or "") or None,
                 },
             )
-        return binding_state, context.projection(), requested_run, current_wave
+        return binding_state, context.projection(), requested_run, current_wave, run_status
 
     def stateless_task_context_for_run(self, run_id: object, *, logical_client_id: str = "chatweb") -> str:
         expected_run_id = str(run_id or "").strip()

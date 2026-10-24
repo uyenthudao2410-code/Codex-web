@@ -196,6 +196,9 @@ class PanelHandoffBindingTests(unittest.TestCase):
         self.assertFalse(response["result"]["isError"], response)
         structured = response["result"]["structuredContent"]
         self.assertTrue(structured["recorded"])
+        # P0 (audit P1): panel_handoff_state reports the RUN status with
+        # the record, so the panel can gate writes into ended RUNs.
+        self.assertEqual(structured["run_status"], "active")
         capsule = structured["capsule"]
         self.assertEqual(capsule["run_id"], run_id)
         # Wave stamped from the orchestration snapshot, not the stale file.
@@ -240,6 +243,7 @@ class PanelHandoffBindingTests(unittest.TestCase):
         self.assertIn("exact_task_binding_missing", details.get("failed_checks") or [])
         self.assertEqual(details.get("canonical_task_id"), "orphan-task")
         self.assertFalse(details.get("binding_found"))
+        self.assertEqual(details.get("run_status"), "active")
 
         # A caller-supplied stale wave is still refused for the bound RUN.
         status, response = self.tool_call(

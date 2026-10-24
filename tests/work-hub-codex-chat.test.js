@@ -539,3 +539,110 @@ test('(n) model/effort selector: listModels maps the bridge list and send forwar
   assert.equal(invalid.ok, false);
   assert.equal(invalid.error.code, 'CHAT_EFFORT_INVALID');
 });
+
+// ---------------- P0 (audit P1): handoff asks the panel's current task --
+
+async function linkedChat(tc, readRunStatus) {
+  const fake = makeFakeBridge();
+  const chat = createWorkHubCodexChat({
+    callBridge: fake.callBridge, callTool: tc.callTool, readRunStatus,
+  });
+  await chat.send(ROOT, { text: 'Việc cần chuyển', link: { runId: 'run-A', taskId: 'task-A' } });
+  await chat.poll(ROOT); await chat.poll(ROOT); // turn completes
+  return chat;
+}
+
+test('(s) handoff with a stale chat link blocks on mismatch without any write, and each choice resolves it', async () => {
+  const tc = makeFakeTaskControl();
+  const chat = await linkedChat(tc);
+  const current = { runId: 'run-B', taskId: 'task-B' };
+  const blocked = await chat.handoffToTask(ROOT, { runId: current.runId, link: current });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.error.code, 'HANDOFF_RUN_MISMATCH');
+  assert.equal(blocked.error.linkRunId, 'run-A');
+  assert.equal(blocked.error.currentRunId, 'run-B');
+  assert.equal(blocked.data.handoffMismatch.linkRunId, 'run-A');
+  assert.equal(blocked.data.handoffMismatch.currentRunId, 'run-B');
+  assert.equal(blocked.data.handoffMismatch.hasPendingCapsule, false);
+  assert.equal(tc.calls.length, 0, 'no get/record/start happens before the operator chooses');
+
+  const bogus = await chat.handoffToTask(ROOT, { runId: current.runId, link: current, choice: 'bogus' });
+  assert.equal(bogus.ok, false);
+  assert.equal(bogus.error.code, 'HANDOFF_RUN_MISMATCH');
+  assert.equal(tc.calls.length, 0);
+
+  const intoCurrent = await chat.handoffToTask(ROOT, { runId: current.runId, link: current, choice: 'current' });
+  assert.equal(intoCurrent.ok, true);
+  assert.deepEqual(intoCurrent.data.link, { runId: 'run-B', taskId: 'task-B' });
+  assert.equal(intoCurrent.data.handoffMismatch, null);
+  const recordCurrent = tc.calls.find((c) => c.args.handoff_action === 'record');
+  assert.equal(recordCurrent.args.run_id, 'run-B');
+
+  const tcLink = makeFakeTaskControl();
+  const chatLink = await linkedChat(tcLink);
+  const intoLink = await chatLink.handoffToTask(ROOT, { runId: current.runId, link: current, choice: 'link' });
+  assert.equal(intoLink.ok, true);
+  assert.deepEqual(intoLink.data.link, { runId: 'run-A', taskId: 'task-A' });
+  assert.equal(tcLink.calls.find((c) => c.args.handoff_action === 'record').args.run_id, 'run-A');
+
+  const tcNew = makeFakeTaskControl();
+  const chatNew = await linkedChat(tcNew);
+  const intoNew = await chatNew.handoffToTask(ROOT, { runId: current.runId, link: current, choice: 'new' });
+  assert.equal(intoNew.ok, true);
+  assert.equal(tcNew.calls.find((c) => c.args.action === 'start').args.objective, 'Việc cần chuyển');
+  assert.deepEqual(intoNew.data.link, { runId: 'run-new-1', taskId: 'task-new-1' });
+});
+
+test('(t) a pending capsule from an earlier handoff is flushed into the current RUN instead of creating a new task', async () => {
+  const tc = makeFakeTaskControl({
+    start: async (args) => ({ state: { task_id: 'task-p', objective: args.objective, status: 'active', orchestration: {} } }),
+  });
+  const fake = makeFakeBridge();
+  const chat = createWorkHubCodexChat({ callBridge: fake.callBridge, callTool: tc.callTool });
+  await chat.send(ROOT, { text: 'Việc chưa có RUN' });
+  await chat.poll(ROOT); await chat.poll(ROOT);
+  const first = await chat.handoffToTask(ROOT, {});
+  assert.equal(first.ok, true);
+  assert.equal(first.data.handoff.status, 'task_created');
+  assert.ok(first.data.handoff.pendingCapsule, 'capsule waits in the registry');
+  assert.deepEqual(first.data.link, { runId: null, taskId: 'task-p' });
+  const pendingPayload = first.data.handoff.pendingCapsule;
+
+  const callsBefore = tc.calls.length;
+  const second = await chat.handoffToTask(ROOT, { runId: 'run-B', link: { runId: 'run-B', taskId: 'task-B' } });
+  assert.equal(second.ok, true);
+  assert.equal(second.data.handoff.status, 'recorded');
+  assert.equal(second.data.handoff.pendingCapsule, null);
+  assert.deepEqual(second.data.link, { runId: 'run-B', taskId: 'task-B' });
+  const records = tc.calls.slice(callsBefore).filter((c) => c.args.handoff_action === 'record');
+  assert.equal(records.length, 2, 'pending flush first, then the fresh capsule');
+  assert.deepEqual(records[0].args.payload, pendingPayload);
+  assert.equal(records[0].args.run_id, 'run-B');
+  assert.equal(records[1].args.payload.chat_link.run_id, 'run-B');
+  assert.equal(tc.calls.slice(callsBefore).filter((c) => c.args.action === 'start').length, 0, 'no duplicate task is created');
+});
+
+test('(u) handoff into an ended RUN is refused by default and proceeds only with explicit confirmation', async () => {
+  const tc = makeFakeTaskControl();
+  const chat = await linkedChat(tc, async () => 'completed');
+  const refused = await chat.handoffToTask(ROOT, {});
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error.code, 'HANDOFF_RUN_ENDED');
+  assert.equal(refused.error.runId, 'run-A');
+  assert.equal(refused.error.runStatus, 'completed');
+  assert.equal(tc.calls.length, 0, 'no get/record happens before confirmation');
+
+  const confirmed = await chat.handoffToTask(ROOT, { confirmEnded: true });
+  assert.equal(confirmed.ok, true);
+  assert.deepEqual(tc.calls.map((c) => `${c.args.action}:${c.args.handoff_action || ''}`), ['handoff:get', 'handoff:record']);
+  assert.equal(tc.calls.find((c) => c.args.handoff_action === 'record').args.run_id, 'run-A');
+});
+
+test('(v) an unknown RUN status does not block handoff', async () => {
+  const tc = makeFakeTaskControl();
+  const chat = await linkedChat(tc, async () => null);
+  const result = await chat.handoffToTask(ROOT, {});
+  assert.equal(result.ok, true);
+  assert.equal(result.data.handoff.status, 'recorded');
+  assert.equal(tc.calls.find((c) => c.args.handoff_action === 'record').args.run_id, 'run-A');
+});

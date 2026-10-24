@@ -13,7 +13,7 @@ function fragment(source, start, end) {
   assert.ok(from >= 0 && to > from, `Missing source boundary: ${start}`);
   return source.slice(from, to);
 }
-function fixture({ platform = 'win32', workspace = 'E:\\Project' } = {}) {
+function fixture({ platform = 'win32', workspace = 'E:\\Project', runDetail = () => ({ available: true, found: false, waves: [] }) } = {}) {
   const handlers = new Map(), calls = [];
   let activeWorkspace = workspace;
   const pathApi = platform === 'win32' ? path.win32 : path.posix;
@@ -21,9 +21,18 @@ function fixture({ platform = 'win32', workspace = 'E:\\Project' } = {}) {
   for (const method of ['listDir', 'readTextFile', 'searchText', 'writeTextFile', 'copyIntoWorkspace', 'gitStatus', 'gitFileDiff', 'gitLog', 'gitShow', 'gitBlame', 'readImageData']) {
     workHubFiles[method] = (...args) => { calls.push({ method, args }); return { method, root: args[0] }; };
   }
-  workHubFiles.resolveInsideRoot = (root, rel) => { calls.push({ method: 'resolveInsideRoot', args: [root, rel] }); return { target: pathApi.resolve(root, rel) }; };
+  // Faithful to the real resolveInsideRoot: inside paths resolve, outside
+  // paths (including '..' escapes) throw instead of resolving.
+  workHubFiles.resolveInsideRoot = (root, rel) => {
+    calls.push({ method: 'resolveInsideRoot', args: [root, rel] });
+    const target = pathApi.resolve(root, rel || '');
+    const relative = pathApi.relative(root, target);
+    if (relative === '..' || relative.startsWith(`..${pathApi.sep}`) || pathApi.isAbsolute(relative)) throw new Error('Đường dẫn nằm ngoài thư mục làm việc.');
+    return { target };
+  };
+  const workHubCoordination = { runDetail: (root, runId) => { calls.push({ method: 'runDetail', args: [root, runId] }); return runDetail(root, runId); } };
   vm.runInNewContext(fragment(mainSource, '  const workHubRoot =', "  secureHandle('workhub:check-url'"), {
-    path: pathApi, process: { platform }, workHubFiles,
+    path: pathApi, process: { platform }, workHubFiles, workHubCoordination,
     settings: { load: () => ({ workspace: activeWorkspace }) },
     secureHandle: (channel, handler) => { handlers.set(channel, handler); },
     invokeSafely: async (action) => { try { return { ok: true, data: await action() }; } catch (error) { return { ok: false, error: error.message }; } },
@@ -81,10 +90,11 @@ test('Job dispatch validates the expected project and preserves the visible cwd'
   const f = fixture();
   const first = await f.invoke('workhub:job-run', { command: 'npm test', expectedWorkspace: 'E:\\Project' });
   assert.equal(first.ok, true);
-  assert.equal(f.calls[0].method, 'exec_command');
-  assert.equal(f.calls[0].args.cwd, 'E:\\Project');
+  const firstExec = f.calls.find((call) => call.method === 'exec_command');
+  assert.equal(firstExec.args.cwd, 'E:\\Project');
   await f.invoke('workhub:job-run', { command: 'npm test', cwd: 'E:\\Project\\submodule', expectedWorkspace: 'E:\\Project' });
-  assert.equal(f.calls[1].args.cwd, 'E:\\Project\\submodule');
+  const secondExec = f.calls.filter((call) => call.method === 'exec_command').at(-1);
+  assert.equal(secondExec.args.cwd, 'E:\\Project\\submodule');
 });
 
 test('Existing callsites can omit the optional scope while explicit empty scope is rejected', async () => {
@@ -120,4 +130,42 @@ test('Preload forwards the final expectedWorkspace argument without changing exi
   const job = { command: 'npm test', cwd: expected, expectedWorkspace: expected };
   await api.workhubJobRun(job);
   assert.deepEqual(calls.at(-1), ['workhub:job-run', job]);
+});
+
+// ---------------- P1 (audit P1): terminal fence + RUN binding -----------
+
+test('Job dispatch rejects a cwd outside the scoped root before any MCP call', async () => {
+  const f = fixture();
+  const result = await f.invoke('workhub:job-run', { command: 'npm test', cwd: 'E:\\Other\\sub', expectedWorkspace: 'E:\\Project' });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /nằm ngoài thư mục làm việc/);
+  assert.equal(f.calls.filter((call) => call.method === 'exec_command').length, 0);
+});
+
+test('Job dispatch binds the panel RUN and its current wave to exec_command', async () => {
+  const f = fixture({ runDetail: () => ({ available: true, found: true, waves: [{ waveId: 'wave-1', ordinal: 1 }, { waveId: 'wave-2', ordinal: 2 }] }) });
+  const result = await f.invoke('workhub:job-run', { command: 'npm test', cwd: 'E:\\Project', expectedWorkspace: 'E:\\Project', runId: 'run-9' });
+  assert.equal(result.ok, true);
+  const exec = f.calls.find((call) => call.method === 'exec_command');
+  assert.equal(exec.args.run_id, 'run-9');
+  assert.equal(exec.args.wave_id, 'wave-2', 'the last ordinal wave is the current wave');
+  // Field-wise asserts: the binding object crosses the vm realm boundary,
+  // so deepStrictEqual rejects it on prototype identity alone.
+  assert.equal(result.data.workhubRunBinding.runId, 'run-9');
+  assert.equal(result.data.workhubRunBinding.waveId, 'wave-2');
+});
+
+test('Job dispatch refuses an unknown RUN and runs unbound when the RUN has no wave yet', async () => {
+  const unknown = fixture({ runDetail: () => ({ available: true, found: false }) });
+  const refused = await unknown.invoke('workhub:job-run', { command: 'npm test', expectedWorkspace: 'E:\\Project', runId: 'run-ghost' });
+  assert.equal(refused.ok, false);
+  assert.match(refused.error, /không tồn tại trong ledger/);
+  assert.equal(unknown.calls.filter((call) => call.method === 'exec_command').length, 0);
+
+  const waveless = fixture({ runDetail: () => ({ available: true, found: true, waves: [] }) });
+  const result = await waveless.invoke('workhub:job-run', { command: 'npm test', expectedWorkspace: 'E:\\Project', runId: 'run-new' });
+  assert.equal(result.ok, true);
+  const exec = waveless.calls.find((call) => call.method === 'exec_command');
+  assert.equal(exec.args.run_id, undefined);
+  assert.equal(result.data.workhubRunBinding, null);
 });

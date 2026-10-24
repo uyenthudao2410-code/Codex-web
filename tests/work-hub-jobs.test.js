@@ -226,3 +226,35 @@ test('A queued input is not sent after the preceding poll proves the command has
   assert.match(job.inputDeliveryError, /kết thúc trước khi gửi/);
   await h.close();
 });
+
+// ---------------- P1 (audit P1): recipe RUN binding in the UI -----------
+
+test('Recipe dispatch sends the panel task RUN and shows the binding it actually got', async () => {
+  let sent = null;
+  const h = harness({ workhubJobRun: async (payload) => {
+    sent = payload;
+    return { ok: true, data: { command_id: 'command-1', status: 'exited', exit_code: 0, workhubRunBinding: { runId: 'run-9', waveId: 'wave-9' } } };
+  } });
+  h.context.ui.taskPayload = { state: { task_id: 'task-9', orchestration: { run_id: 'run-9' } } };
+  await h.context.runRecipeAsJob({ name: 'Test', command: 'npm test' });
+  assert.equal(sent.runId, 'run-9');
+  assert.match(h.elements.get('#whJobMeta').textContent, /gắn RUN run-9/);
+  await h.close();
+});
+
+test('Recipe dispatch without a panel RUN sends no binding and says the job is not bound to a task', async () => {
+  const h = harness();
+  await h.context.runRecipeAsJob({ name: 'Test', command: 'npm test' });
+  assert.equal(h.runs[0].runId, undefined);
+  assert.match(h.elements.get('#whJobMeta').textContent, /không gắn task/);
+  await h.close();
+});
+
+test('An owner-mismatch refusal is an error, not an unknown state', async () => {
+  const h = harness({ workhubJobRun: async () => ({ ok: false, error: 'EXECUTION_OWNER_MISMATCH: run_id does not match the task\'s current orchestration owner.' }) });
+  h.context.ui.taskPayload = { state: { task_id: 'task-9', orchestration: { run_id: 'run-9' } } };
+  await h.context.runRecipeAsJob({ name: 'Test', command: 'npm test' });
+  assert.equal(h.context.ui.job.status, 'error');
+  assert.match(h.context.ui.job.observationError, /OWNER_MISMATCH/);
+  await h.close();
+});
