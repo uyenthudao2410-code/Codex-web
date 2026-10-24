@@ -149,6 +149,37 @@
     const settings = ui.snapshot?.settings || {};
     return String(settings.workspace || '').trim();
   }
+  // P2: one canonical workspace key. Main publishes the canonical
+  // spelling in snapshot.settings.canonicalWorkspace (it realpaths; the
+  // renderer cannot). currentProject() keeps the raw spelling because
+  // IPC scope arguments must stay lexical (scopedWorkHubRoot is a
+  // fail-closed lexical fence). Only store keys use the canonical key.
+  function canonicalProjectKey() {
+    const settings = ui.snapshot?.settings || {};
+    const canonical = String(settings.canonicalWorkspace || '').trim();
+    return S.workspaceKeyOf(canonical || currentProject());
+  }
+  function syncCanonicalWorkspaceKey() {
+    // Map the current raw spelling to the snapshot's canonical key so
+    // store getters/writers unify aliases (8.3, junction, subst) under
+    // one bucket, and migrate any legacy bucket that exists.
+    const raw = currentProject();
+    const settings = ui.snapshot?.settings || {};
+    const canonical = String(settings.canonicalWorkspace || '').trim();
+    if (typeof store.setCanonicalKeyResolver === 'function') {
+      store.setCanonicalKeyResolver((workspace) => {
+        if (raw && S.workspaceKeyOf(workspace) === S.workspaceKeyOf(raw) && canonical) return canonical;
+        return null;
+      });
+    }
+    if (raw && canonical) {
+      const fromKey = S.workspaceKeyOf(raw);
+      const toKey = canonicalProjectKey();
+      if (fromKey && toKey && fromKey !== toKey && typeof store.migrateWorkspaceKey === 'function') {
+        store.migrateWorkspaceKey(fromKey, toKey);
+      }
+    }
+  }
   function recentProjects() {
     const settings = ui.snapshot?.settings || {};
     const list = Array.isArray(settings.recentWorkspaces) ? settings.recentWorkspaces.slice() : [];
@@ -1772,6 +1803,7 @@
         const changed = ui.boundProject === null || S.workspaceKeyOf(ui.boundProject) !== S.workspaceKeyOf(project);
         if (changed && ui.boundProject) { saveCurrentDraft(ui.boundProject); rememberFileEdit(ui.boundProject); }
         ui.snapshot = snapshot;
+        syncCanonicalWorkspaceKey();
         if (changed) {
           ui.boundProject = project;
           resetProjectView();

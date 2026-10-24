@@ -87,6 +87,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { canonicalPathKey } = require('./pathSemantics');
 
 const MAX_PROMPT_CHARS = 20_000; // mirrors the bridge prompt bound
 const MAX_TEXT_CHARS = 65_536; // mirrors the bridge agent-text bound
@@ -171,7 +172,15 @@ function createWorkHubCodexChat(options = {}) {
   // Durable session-registry file (main injects a path beside the app
   // data; tests inject a tmp-dir path). Absent -> in-memory only.
   const stateFile = String(options.stateFile || options.registryFile || '').trim() || null;
-  const sessions = new Map(); // workspace root -> session
+  const sessions = new Map(); // canonical workspace key -> session
+  // P2: one canonical workspace key. A workspace spelled two ways (8.3
+  // short name, junction, subst) is the same directory, so sessions are
+  // keyed by canonicalPathKey(root) — never by the raw spelling. A root
+  // that canonicalizes to '' (empty / unresolvable) keeps its raw string
+  // so empty-root behavior is unchanged.
+  function sessionKeyFor(root) {
+    return canonicalPathKey(root) || String(root || '');
+  }
 
   // ---------------- durable session registry ----------------------------
   function readRegistry() {
@@ -203,8 +212,12 @@ function createWorkHubCodexChat(options = {}) {
           handoff: session.handoff || null,
           lastState: session.state,
         };
+        // P2 migration: drop the legacy raw-spelling entry once the
+        // session is re-persisted under its canonical key.
+        if (session.migratedFromKey && session.migratedFromKey !== session.workspace) delete all[session.migratedFromKey];
       } else {
         delete all[session.workspace];
+        if (session.migratedFromKey && session.migratedFromKey !== session.workspace) delete all[session.migratedFromKey];
       }
       fs.mkdirSync(path.dirname(stateFile), { recursive: true });
       const temp = `${stateFile}.tmp-${process.pid}`;
@@ -236,6 +249,7 @@ function createWorkHubCodexChat(options = {}) {
       resumeInfo: null, // last resume attempt outcome (W3-C)
       ownedVerified: false, // this process holds the thread (created/resumed)
       restoredFromRegistry: false, // thread came from the durable registry
+      migratedFromKey: null, // transient P2 migration marker (never persisted; persistSession writes explicit fields only)
       link: null, // { runId, taskId } — real ids only, set at creation
       messages: [], // { role: 'user'|'assistant', text, turnId, status }
       events: [], // { cursor, method, itemType, status }
@@ -245,12 +259,19 @@ function createWorkHubCodexChat(options = {}) {
   }
 
   function sessionFor(root) {
-    const key = String(root || '');
+    const key = sessionKeyFor(root);
+    const rawKey = String(root || '');
     if (!sessions.has(key)) {
       const fresh = newSession(key);
       sessions.set(key, fresh);
       if (stateFile) {
-        const entry = readRegistry()[key];
+        const registry = readRegistry();
+        const canonicalEntry = registry[key];
+        // P2 migration (dual-read): a session persisted under a legacy
+        // raw-spelling key is still found when the same workspace is
+        // addressed by its canonical key; it is re-persisted under the
+        // canonical key on the next persist (see persistSession).
+        const entry = canonicalEntry || (key !== rawKey ? registry[rawKey] : undefined);
         if (entry && entry.threadId) {
           fresh.threadId = cleanId(entry.threadId);
           fresh.sessionId = cleanId(entry.sessionId);
@@ -269,6 +290,7 @@ function createWorkHubCodexChat(options = {}) {
           fresh.updatedAt = entry.updatedAt || null;
           fresh.restoredFromRegistry = true;
           fresh.ownedVerified = false;
+          if (!canonicalEntry && key !== rawKey && registry[rawKey]) fresh.migratedFromKey = rawKey;
         }
       }
     }
@@ -972,9 +994,11 @@ function createWorkHubCodexChat(options = {}) {
   }
 
   function reset(root) {
-    const key = String(root || '');
+    const key = sessionKeyFor(root);
+    const rawKey = String(root || '');
     const previous = sessions.get(key);
     const fresh = newSession(key);
+    if (key !== rawKey) fresh.migratedFromKey = rawKey;
     if (previous) fresh.availability = previous.availability;
     fresh.state = fresh.availability ? CHAT_STATES.READY : CHAT_STATES.UNKNOWN;
     sessions.set(key, fresh);

@@ -25,6 +25,7 @@ const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const workHubFiles = require('./services/workHubFiles');
 const workHubLsp = require('./services/workHubLsp');
 const workHubCoordination = require('./services/workHubCoordination');
+const { canonicalPathKey } = require('./services/pathSemantics');
 const { CosCompanionAdapter, resolveCosUserDataDir } = require('./services/cosCompanionAdapter');
 const { createWorkHubCodexChat } = require('./services/workHubCodexChat');
 const workHubGitReview = require('./services/workHubGitReview');
@@ -131,8 +132,18 @@ function decorateUiRuntimeSnapshot(snapshot) {
   const hostMatchesUi = Boolean(hostInstallationId)
     && hostInstallationId === uiRuntimeIdentity.installation_id;
   const hostIdentityUnverified = !hostInstallationId;
+  // P2: one canonical workspace key. The renderer cannot realpath, so
+  // main publishes the canonical spelling here; the renderer uses it for
+  // store keys (work-hub.js) while IPC scope arguments keep the raw
+  // settings spelling (scopedWorkHubRoot stays a lexical fail-closed
+  // fence — canonicalizing scope input would change its contract).
+  const snapshotSettings = snapshot.settings && typeof snapshot.settings === 'object' && !Array.isArray(snapshot.settings)
+    ? snapshot.settings
+    : null;
+  const canonicalWorkspace = snapshotSettings ? canonicalPathKey(snapshotSettings.workspace) : '';
   return {
     ...snapshot,
+    ...(snapshotSettings && canonicalWorkspace ? { settings: { ...snapshotSettings, canonicalWorkspace } } : {}),
     current_ui_runtime: {
       version: uiRuntimeIdentity.version,
       mode: uiRuntimeIdentity.mode,
@@ -1122,7 +1133,7 @@ function registerIpc() {
   // the runtime's existing internal codex_bridge tool — the same panel
   // channel as job-run/handoff-get; the public smart-v3 surface is
   // unchanged and no CoS app is involved. Session state lives in the
-  // workHubCodexChat service (main process), keyed by scoped workspace.
+  // workHubCodexChat service (main process), keyed by canonical workspace key (P2).
   const codexChat = createWorkHubCodexChat({
     callBridge: (args, timeoutMs) => callMcpTool('codex_bridge', args, timeoutMs || 30000),
     // W3-C: handoff reuses the existing task_control surface (task start +
@@ -1130,12 +1141,18 @@ function registerIpc() {
     // the controller lease is read-only from the orchestration ledger.
     callTool: (name, args, timeoutMs) => callMcpTool(name, args, timeoutMs || 30000),
     readLease: (root, runId) => {
-      const detail = workHubCoordination.runDetail(root, runId);
+      // P2 (L8): lease lookup uses the canonical root so an alias-spelled
+      // panel root reads the same ledger. canonicalPathKey falls back to
+      // the resolved spelling when the path does not exist, so
+      // absent-ledger behavior is unchanged.
+      const key = canonicalPathKey(root);
+      const detail = workHubCoordination.runDetail(key || root, runId);
       return detail && detail.found ? detail.lease : null;
     },
     // P0 ended-RUN gate: same ledger read, run status only.
     readRunStatus: (root, runId) => {
-      const detail = workHubCoordination.runDetail(root, runId);
+      const key = canonicalPathKey(root);
+      const detail = workHubCoordination.runDetail(key || root, runId);
       return detail && detail.found ? detail.run.status : null;
     },
     // Durable chat-session registry beside the app data (same folder as

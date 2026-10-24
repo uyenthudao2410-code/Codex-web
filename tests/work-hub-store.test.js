@@ -1,6 +1,9 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const storeApi = require('../renderer/work-hub-store');
 const {
   normalizeText, fillTemplate, createStore, buildRequest,
@@ -344,4 +347,67 @@ test('A8 regression: headMatches compares prefixes and refuses weak evidence', (
   assert.equal(storeApi.headMatches('', 'deadbeef'), null);
   assert.equal(storeApi.headMatches('deadbeef', ''), null);
   assert.equal(storeApi.headMatches('abc', 'abc'), null);
+});
+
+test('P2 canonical key: legacy buckets stay readable, writes land on the canonical key, migration moves the rest', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-store-p2-'));
+  const link = `${dir}-link`;
+  fs.symlinkSync(dir, link);
+  try {
+    const adapter = memoryAdapter();
+    const store = createStore(adapter);
+    // Legacy writes (no resolver yet): keyed by the raw spelling.
+    store.setPin(link, { pinned: true, alias: 'Dự án' });
+    store.saveDraft(link, 'nháp cũ');
+    store.upsertNote(link, { title: 'Ghi chú cũ', body: 'nội dung' });
+    store.upsertChat(link, { label: 'Chat cũ', url: 'https://example.invalid/x' });
+    const legacyKey = storeApi.workspaceKeyOf(link);
+    const canonicalKey = storeApi.workspaceKeyOf(dir);
+    assert.notEqual(legacyKey, canonicalKey);
+    assert.equal(adapter.dump().pins[legacyKey].alias, 'Dự án');
+    // Resolver on: the same workspace addressed by its raw spelling reads
+    // the legacy bucket, and a write moves it to the canonical key.
+    store.setCanonicalKeyResolver((workspace) => storeApi.workspaceKeyOf(workspace) === legacyKey ? dir : null);
+    assert.equal(store.pinOf(link).alias, 'Dự án');
+    assert.equal(store.getDraft(link).text, 'nháp cũ');
+    store.setPin(link, { alias: 'Dự án mới' });
+    const dumped = adapter.dump();
+    assert.equal(dumped.pins[canonicalKey].alias, 'Dự án mới');
+    assert.equal(dumped.pins[legacyKey], undefined);
+    // Migration moves the remaining legacy buckets; a bucket already
+    // present under the canonical key is left untouched (canonical wins).
+    const moved = store.migrateWorkspaceKey(legacyKey, canonicalKey);
+    assert.ok(moved.includes('drafts'));
+    assert.ok(moved.includes('notes'));
+    assert.ok(moved.includes('chats'));
+    assert.ok(!moved.includes('pins'));
+    assert.equal(store.listNotes(link).length, 1);
+    assert.equal(store.listChats(link).length, 1);
+    assert.equal(store.getDraft(link).text, 'nháp cũ');
+    // No-op and empty-key guards never report a phantom move.
+    assert.deepEqual(store.migrateWorkspaceKey(legacyKey, canonicalKey), []);
+    assert.deepEqual(store.migrateWorkspaceKey('', canonicalKey), []);
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('P2 canonical key: recipes pinned by either spelling of the project match', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-store-p2-recipes-'));
+  const link = `${dir}-link`;
+  fs.symlinkSync(dir, link);
+  try {
+    const store = createStore(memoryAdapter());
+    const legacyKey = storeApi.workspaceKeyOf(link);
+    store.setCanonicalKeyResolver((workspace) => storeApi.workspaceKeyOf(workspace) === legacyKey ? dir : null);
+    store.upsertRecipe({ name: 'Lệnh legacy', command: 'echo a', cwd: link });
+    store.upsertRecipe({ name: 'Lệnh canonical', command: 'echo b', cwd: dir });
+    store.upsertRecipe({ name: 'Lệnh dùng chung', command: 'echo c', cwd: '' });
+    store.upsertRecipe({ name: 'Lệnh hàng xóm', command: 'echo d', cwd: `${dir}-sibling` });
+    assert.deepEqual(store.listRecipes(link).map((r) => r.name), ['Lệnh legacy', 'Lệnh canonical', 'Lệnh dùng chung']);
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

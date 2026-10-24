@@ -256,8 +256,99 @@
     function safeLoad() { try { return persistence.load(); } catch { return null; } }
     function persist() { try { persistence.save(JSON.parse(JSON.stringify(data))); } catch { /* storage full/blocked: keep in-memory state */ } }
 
+    // P2: one canonical workspace key (dual-read migration). The renderer
+    // cannot realpath, so work-hub.js injects a resolver mapping the
+    // current raw spelling to the snapshot's canonicalWorkspace (see
+    // syncCanonicalWorkspaceKey). Getters prefer the canonical bucket and
+    // fall back to the legacy lexical bucket; writers always write the
+    // canonical bucket when a mapping exists. File-path keys inside a
+    // basket keep using workspaceKeyOf (lexical) — they are file identity,
+    // not workspace identity.
+    let canonicalKeyFor = null;
+    function workspaceKeys(workspace) {
+      const legacy = workspaceKeyOf(workspace);
+      let canonical = null;
+      if (typeof canonicalKeyFor === 'function') {
+        try {
+          const mapped = canonicalKeyFor(workspace);
+          if (mapped) {
+            const key = workspaceKeyOf(mapped);
+            if (key && key !== legacy) canonical = key;
+          }
+        } catch { /* a resolver must never break the store */ }
+      }
+      return { legacy, canonical };
+    }
+    function readBucket(map, workspace) {
+      const { legacy, canonical } = workspaceKeys(workspace);
+      if (canonical && map[canonical] !== undefined) return map[canonical];
+      return map[legacy];
+    }
+    function writeBucketKey(workspace) {
+      const { legacy, canonical } = workspaceKeys(workspace);
+      return canonical || legacy;
+    }
+    function ensureBucket(map, workspace, factory) {
+      const { legacy, canonical } = workspaceKeys(workspace);
+      if (canonical) {
+        if (map[canonical] === undefined) {
+          if (map[legacy] !== undefined) { map[canonical] = map[legacy]; delete map[legacy]; }
+          else map[canonical] = factory();
+        }
+        return map[canonical];
+      }
+      if (map[legacy] === undefined) map[legacy] = factory();
+      return map[legacy];
+    }
+    function canonicalizeBucket(map, workspace) {
+      const { legacy, canonical } = workspaceKeys(workspace);
+      if (canonical && map[canonical] === undefined && map[legacy] !== undefined) {
+        map[canonical] = map[legacy];
+        delete map[legacy];
+        return map[canonical];
+      }
+      if (canonical && map[canonical] !== undefined) return map[canonical];
+      return map[legacy];
+    }
+    function putBucket(map, workspace, value) {
+      const { legacy, canonical } = workspaceKeys(workspace);
+      const target = canonical || legacy;
+      map[target] = value;
+      if (canonical && canonical !== legacy) delete map[legacy];
+    }
+    function deleteBucket(map, workspace) {
+      const { legacy, canonical } = workspaceKeys(workspace);
+      delete map[legacy];
+      if (canonical) delete map[canonical];
+    }
+
     return {
       get data() { return data; },
+
+      // P2: inject the current-workspace canonical mapping (work-hub.js
+      // supplies it from the snapshot; tests supply it directly).
+      setCanonicalKeyResolver(fn) { canonicalKeyFor = typeof fn === 'function' ? fn : null; },
+      // P2 migration: move per-workspace buckets from a legacy lexical
+      // key to the canonical key. Buckets already present under the
+      // canonical key are left untouched (canonical wins; the legacy copy
+      // stays for dual-read). Returns the moved bucket names; persists
+      // only if anything moved.
+      migrateWorkspaceKey(fromKey, toKey) {
+        const from = String(fromKey || '');
+        const to = String(toKey || '');
+        if (!from || !to || from === to) return [];
+        const moved = [];
+        for (const bucket of ['pins', 'baskets', 'drafts', 'queues', 'feedback', 'goalPreps', 'notes', 'chats']) {
+          const map = data[bucket];
+          if (map && map[from] !== undefined && map[to] === undefined) {
+            map[to] = map[from];
+            delete map[from];
+            moved.push(bucket);
+          }
+        }
+        if (moved.length) persist();
+        return moved;
+      },
 
       // ---- F01 prompt library ----
       listPrompts() { return data.prompts.slice(); },
@@ -282,17 +373,17 @@
 
       // ---- F03 project pins / aliases ----
       setPin(workspace, { pinned, alias } = {}) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Đường dẫn dự án không hợp lệ.');
-        const current = data.pins[key] || { pinned: false, alias: '' };
+        const current = readBucket(data.pins, workspace) || { pinned: false, alias: '' };
         if (pinned !== undefined) current.pinned = Boolean(pinned);
         if (alias !== undefined) current.alias = String(alias).trim().slice(0, 80);
-        if (!current.pinned && !current.alias) delete data.pins[key];
-        else data.pins[key] = current;
+        if (!current.pinned && !current.alias) deleteBucket(data.pins, workspace);
+        else putBucket(data.pins, workspace, current);
         persist();
         return current;
       },
-      pinOf(workspace) { return data.pins[workspaceKeyOf(workspace)] || { pinned: false, alias: '' }; },
+      pinOf(workspace) { return readBucket(data.pins, workspace) || { pinned: false, alias: '' }; },
       projectLabel(workspace) {
         const pin = this.pinOf(workspace);
         if (pin.alias) return pin.alias;
@@ -308,13 +399,13 @@
       },
 
       // ---- F05 context basket (isolated per project) ----
-      basketFor(workspace) { return (data.baskets[workspaceKeyOf(workspace)] || []).slice(); },
+      basketFor(workspace) { return (readBucket(data.baskets, workspace) || []).slice(); },
       addToBasket(workspace, file) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const path = String(file?.path || '').trim();
         if (!path) throw new Error('Đường dẫn tệp không được trống.');
-        const list = data.baskets[key] || (data.baskets[key] = []);
+        const list = ensureBucket(data.baskets, workspace, () => []);
         if (list.some((f) => workspaceKeyOf(f.path) === workspaceKeyOf(path))) return list.slice();
         if (list.length >= LIMITS.basketPerProject) throw new Error('Giỏ ngữ cảnh đã đầy.');
         list.push({ path: path.slice(0, 1000), size: Number.isFinite(Number(file?.size)) && Number(file.size) >= 0 ? Number(file.size) : null });
@@ -322,12 +413,12 @@
         return list.slice();
       },
       removeFromBasket(workspace, path) {
-        const key = workspaceKeyOf(workspace);
-        if (data.baskets[key]) data.baskets[key] = data.baskets[key].filter((f) => workspaceKeyOf(f.path) !== workspaceKeyOf(path));
+        const items = readBucket(data.baskets, workspace);
+        if (items) putBucket(data.baskets, workspace, items.filter((f) => workspaceKeyOf(f.path) !== workspaceKeyOf(path)));
         persist();
       },
       clearBasket(workspace) {
-        delete data.baskets[workspaceKeyOf(workspace)];
+        deleteBucket(data.baskets, workspace);
         persist();
       },
       contextPackageText(workspace) {
@@ -343,13 +434,19 @@
         // one of its subdirectories, plus shared recipes (no cwd). Sibling
         // folders that merely share a name prefix do not leak in. No
         // argument lists everything; an explicitly empty project lists none.
+        // P2: a recipe cwd spelled the legacy way still matches when the
+        // project is addressed by its canonical key, and vice versa.
         if (workspace === undefined) return data.recipes.slice();
         if (!String(workspace).trim()) return [];
-        const project = String(workspace).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-        return data.recipes.filter((recipe) => {
-          const cwd = String(recipe.cwd || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-          return !cwd || cwd === project || cwd.startsWith(`${project}/`);
-        });
+        const { legacy, canonical } = workspaceKeys(workspace);
+        const matches = (cwdRaw) => {
+          const cwd = String(cwdRaw || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+          if (!cwd) return true;
+          if (cwd === legacy || cwd.startsWith(`${legacy}/`)) return true;
+          if (canonical && (cwd === canonical || cwd.startsWith(`${canonical}/`))) return true;
+          return false;
+        };
+        return data.recipes.filter((recipe) => matches(recipe.cwd));
       },
       upsertRecipe({ id, name, command, cwd, url }) {
         const cleanName = String(name || '').trim();
@@ -384,19 +481,19 @@
 
       // ---- F02 per-project drafts ----
       getDraft(workspace) {
-        const draft = data.drafts[workspaceKeyOf(workspace)];
+        const draft = readBucket(data.drafts, workspace);
         return draft ? { ...draft, fields: { ...draft.fields } } : null;
       },
       saveDraft(workspace, draft) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         // A plain empty string clears the draft; any other save MERGES into
         // the stored draft, so updating just the preview text never loses
         // the task type, form fields or selected prompt (and vice versa).
-        if (typeof draft === 'string' && !draft.trim()) { delete data.drafts[key]; persist(); return null; }
+        if (typeof draft === 'string' && !draft.trim()) { deleteBucket(data.drafts, workspace); persist(); return null; }
         const incoming = sanitizeDraft(draft);
         if (!incoming) return null;
-        const existing = data.drafts[key];
+        const existing = readBucket(data.drafts, workspace);
         const merged = existing ? {
           text: typeof draft === 'string' || typeof draft?.text === 'string' ? incoming.text : existing.text,
           type: draft && typeof draft === 'object' && typeof draft.type === 'string' ? incoming.type : existing.type,
@@ -404,14 +501,14 @@
           promptId: draft && typeof draft === 'object' && typeof draft.promptId === 'string' ? incoming.promptId : existing.promptId,
         } : incoming;
         const hasContent = merged.text.trim() || merged.promptId || Object.values(merged.fields).some((value) => value.trim());
-        if (!hasContent) { delete data.drafts[key]; persist(); return null; }
+        if (!hasContent) { deleteBucket(data.drafts, workspace); persist(); return null; }
         if (!existing && Object.keys(data.drafts).length >= LIMITS.drafts) throw new Error('Kho nháp đã đầy.');
         merged.updatedAt = Date.now();
-        data.drafts[key] = merged;
+        putBucket(data.drafts, workspace, merged);
         persist();
         return this.getDraft(workspace);
       },
-      clearDraft(workspace) { delete data.drafts[workspaceKeyOf(workspace)]; persist(); },
+      clearDraft(workspace) { deleteBucket(data.drafts, workspace); persist(); },
 
       // ---- F10 patch approvals bound to the exact diff content ----
       approvePatch(rel, diffHash) {
@@ -430,15 +527,15 @@
 
       // ---- F15 bounded work queue per project ----
       queueFor(workspace) {
-        const queue = data.queues[workspaceKeyOf(workspace)];
+        const queue = readBucket(data.queues, workspace);
         return queue ? { paused: queue.paused, items: queue.items.slice() } : { paused: false, items: [] };
       },
       enqueue(workspace, { title, text }) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const cleanTitle = String(title || '').trim();
         if (!cleanTitle) throw new Error('Tên việc trong hàng đợi không được trống.');
-        const queue = data.queues[key] || (data.queues[key] = { paused: false, items: [] });
+        const queue = ensureBucket(data.queues, workspace, () => ({ paused: false, items: [] }));
         if (queue.items.length >= LIMITS.queuePerProject) throw new Error('Hàng đợi đã đầy.');
         const item = { id: nextId('queue'), title: cleanTitle.slice(0, 200), text: String(text || '').slice(0, 20000), status: 'queued', createdAt: Date.now() };
         queue.items.push(item);
@@ -446,7 +543,7 @@
         return item;
       },
       moveQueueItem(workspace, id, direction) {
-        const queue = data.queues[workspaceKeyOf(workspace)];
+        const queue = canonicalizeBucket(data.queues, workspace);
         if (!queue) return;
         const index = queue.items.findIndex((i) => i.id === id);
         const target = index + (direction < 0 ? -1 : 1);
@@ -455,62 +552,62 @@
         persist();
       },
       setQueueItemStatus(workspace, id, status) {
-        const queue = data.queues[workspaceKeyOf(workspace)];
+        const queue = canonicalizeBucket(data.queues, workspace);
         const item = queue?.items.find((i) => i.id === id);
         if (item && ['queued', 'running', 'done', 'skipped'].includes(status)) { item.status = status; persist(); }
       },
       removeQueueItem(workspace, id) {
-        const queue = data.queues[workspaceKeyOf(workspace)];
+        const queue = canonicalizeBucket(data.queues, workspace);
         if (queue) { queue.items = queue.items.filter((i) => i.id !== id); persist(); }
       },
       setQueuePaused(workspace, paused) {
-        const key = workspaceKeyOf(workspace);
-        const queue = data.queues[key] || (data.queues[key] = { paused: false, items: [] });
+        const queue = ensureBucket(data.queues, workspace, () => ({ paused: false, items: [] }));
         queue.paused = Boolean(paused);
         persist();
       },
       nextQueuedItem(workspace) {
-        const queue = data.queues[workspaceKeyOf(workspace)];
+        const queue = readBucket(data.queues, workspace);
         if (!queue || queue.paused) return null;
         return queue.items.find((i) => i.status === 'queued') || null;
       },
 
       // ---- F18 steering notes with saved/copied/acknowledged states ----
-      listFeedback(workspace) { return (data.feedback[workspaceKeyOf(workspace)] || []).slice(); },
+      listFeedback(workspace) { return (readBucket(data.feedback, workspace) || []).slice(); },
       addFeedback(workspace, text) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const clean = String(text || '').trim();
         if (!clean) throw new Error('Nội dung điều chỉnh không được trống.');
-        const items = data.feedback[key] || (data.feedback[key] = []);
+        const items = ensureBucket(data.feedback, workspace, () => []);
         const item = { id: nextId('feedback'), text: clean.slice(0, 4000), state: 'saved', at: Date.now() };
         items.push(item);
-        if (items.length > LIMITS.feedbackPerProject) data.feedback[key] = items.slice(-LIMITS.feedbackPerProject);
+        if (items.length > LIMITS.feedbackPerProject) putBucket(data.feedback, workspace, items.slice(-LIMITS.feedbackPerProject));
         persist();
         return item;
       },
       setFeedbackState(workspace, id, state) {
-        const item = (data.feedback[workspaceKeyOf(workspace)] || []).find((i) => i.id === id);
+        const item = (readBucket(data.feedback, workspace) || []).find((i) => i.id === id);
         if (item && ['saved', 'copied', 'acknowledged'].includes(state)) { item.state = state; persist(); }
       },
 
       // ---- F23 bounded goal preparation (preparation only, no loop) ----
-      goalPrepFor(workspace) { return data.goalPreps[workspaceKeyOf(workspace)] || null; },
+      goalPrepFor(workspace) { return readBucket(data.goalPreps, workspace) || null; },
       setGoalPrep(workspace, { criteria, maxTurns, maxMinutes }) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const clean = String(criteria || '').trim();
         if (!clean) throw new Error('Tiêu chí mục tiêu không được trống.');
-        data.goalPreps[key] = {
+        const value = {
           criteria: clean.slice(0, 4000),
           maxTurns: Math.max(1, Math.min(50, Number(maxTurns) || 5)),
           maxMinutes: Math.max(1, Math.min(1440, Number(maxMinutes) || 60)),
           updatedAt: Date.now(),
         };
+        putBucket(data.goalPreps, workspace, value);
         persist();
-        return data.goalPreps[key];
+        return value;
       },
-      clearGoalPrep(workspace) { delete data.goalPreps[workspaceKeyOf(workspace)]; persist(); },
+      clearGoalPrep(workspace) { deleteBucket(data.goalPreps, workspace); persist(); },
 
       // ---- F24 schedules for saved recipes (evaluated while the app runs) ----
       listSchedules() { return data.schedules.slice(); },
@@ -545,15 +642,15 @@
 
       // ---- F32 project notes ----
       listNotes(workspace) {
-        return (data.notes[workspaceKeyOf(workspace)] || []).slice()
+        return (readBucket(data.notes, workspace) || []).slice()
           .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
       },
       upsertNote(workspace, { id, title, body, pinned }) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const cleanTitle = String(title || '').trim();
         if (!cleanTitle) throw new Error('Tiêu đề ghi chú không được trống.');
-        const items = data.notes[key] || (data.notes[key] = []);
+        const items = ensureBucket(data.notes, workspace, () => []);
         const existing = id ? items.find((n) => n.id === id) : null;
         if (existing) {
           existing.title = cleanTitle.slice(0, 200); existing.body = String(body || '').slice(0, 8000);
@@ -566,8 +663,8 @@
         return existing || items[items.length - 1];
       },
       removeNote(workspace, id) {
-        const key = workspaceKeyOf(workspace);
-        if (data.notes[key]) { data.notes[key] = data.notes[key].filter((n) => n.id !== id); persist(); }
+        const items = readBucket(data.notes, workspace);
+        if (items) { putBucket(data.notes, workspace, items.filter((n) => n.id !== id)); persist(); }
       },
 
       // ---- F34 skills library (instructions only, per-project enable) ----
@@ -607,26 +704,29 @@
       setSkillForProject(id, workspace, enabled) {
         const skill = data.skills.find((s) => s.id === id);
         if (!skill) return;
-        const key = workspaceKeyOf(workspace);
-        skill.projects = enabled ? [...new Set([...skill.projects, key])] : skill.projects.filter((p) => p !== key);
+        const { legacy, canonical } = workspaceKeys(workspace);
+        const target = canonical || legacy;
+        skill.projects = enabled
+          ? [...new Set([...skill.projects.filter((p) => !(canonical && p === legacy)), target])]
+          : skill.projects.filter((p) => p !== legacy && p !== canonical);
         persist();
       },
       skillsForProject(workspace) {
-        const key = workspaceKeyOf(workspace);
-        return data.skills.filter((s) => s.projects.includes(key));
+        const { legacy, canonical } = workspaceKeys(workspace);
+        return data.skills.filter((s) => s.projects.includes(legacy) || (canonical && s.projects.includes(canonical)));
       },
 
       // ---- F39 conversation registry (user-supplied labels/URLs only) ----
       listChats(workspace) {
-        return (data.chats[workspaceKeyOf(workspace)] || []).slice()
+        return (readBucket(data.chats, workspace) || []).slice()
           .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
       },
       upsertChat(workspace, { id, label, url, note, pinned }) {
-        const key = workspaceKeyOf(workspace);
+        const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const cleanLabel = String(label || '').trim();
         if (!cleanLabel) throw new Error('Nhãn hội thoại không được trống.');
-        const items = data.chats[key] || (data.chats[key] = []);
+        const items = ensureBucket(data.chats, workspace, () => []);
         const existing = id ? items.find((c) => c.id === id) : null;
         if (existing) {
           existing.label = cleanLabel.slice(0, 200); existing.url = String(url || '').slice(0, 1000);
@@ -639,8 +739,8 @@
         return existing || items[items.length - 1];
       },
       removeChat(workspace, id) {
-        const key = workspaceKeyOf(workspace);
-        if (data.chats[key]) { data.chats[key] = data.chats[key].filter((c) => c.id !== id); persist(); }
+        const items = readBucket(data.chats, workspace);
+        if (items) { putBucket(data.chats, workspace, items.filter((c) => c.id !== id)); persist(); }
       },
 
       // ---- F40 named SSH targets ----

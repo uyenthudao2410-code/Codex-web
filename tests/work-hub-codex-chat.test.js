@@ -17,6 +17,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { createWorkHubCodexChat, classifyBridgeError } = require('../electron/services/workHubCodexChat');
+const { canonicalPathKey } = require('../electron/services/pathSemantics');
 
 const ROOT = '/tmp/workhub-chat-test-workspace';
 
@@ -264,7 +265,10 @@ test('(j) a persisted session is resumed on probe after a restart, then continue
   const runCall = first.calls.find((c) => c.action === 'run');
   assert.equal(runCall.lifetime, 'persistent'); // chat threads are durable now
   const registry = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-  const entry = registry.sessions[ROOT];
+  // P2: the registry is keyed by the canonical workspace key, not the raw
+  // spelling the caller passed (on Windows the canonical key lowercases
+  // and resolves aliases, so it differs from ROOT there).
+  const entry = registry.sessions[canonicalPathKey(ROOT)];
   assert.equal(entry.threadId, 'thread-1');
   assert.equal(entry.sessionId, 'sess-1');
   assert.equal(entry.profile, 'chat');
@@ -645,4 +649,63 @@ test('(v) an unknown RUN status does not block handoff', async () => {
   assert.equal(result.ok, true);
   assert.equal(result.data.handoff.status, 'recorded');
   assert.equal(tc.calls.find((c) => c.args.handoff_action === 'record').args.run_id, 'run-A');
+});
+
+test('(p2-a) two spellings of the same workspace share one chat session', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-chat-p2-'));
+  const link = `${dir}-link`;
+  fs.symlinkSync(dir, link);
+  try {
+    const fake = makeFakeBridge();
+    const chat = createWorkHubCodexChat({ callBridge: fake.callBridge });
+    await chat.probe(link);
+    const first = await chat.send(link, { text: 'Hỏi từ đường link' });
+    assert.equal(first.ok, true);
+    await chat.poll(link);
+    await chat.poll(dir); // the turn completes even when polled by the other spelling
+    const second = await chat.send(dir, { text: 'Hỏi tiếp từ đường thật' });
+    assert.equal(second.ok, true);
+    assert.equal(fake.calls.filter((c) => c.action === 'run').length, 1);
+    assert.equal(fake.calls.filter((c) => c.action === 'continue').length, 1);
+    assert.equal(chat.getView(link).data.threadId, chat.getView(dir).data.threadId);
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-b) a session persisted under a legacy spelling is restored and re-persisted under the canonical key', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-chat-p2-reg-'));
+  const link = `${dir}-link`;
+  fs.symlinkSync(dir, link);
+  try {
+    const stateFile = path.join(dir, 'sessions.json');
+    const seeded = {
+      version: 1,
+      sessions: {
+        [link]: {
+          workspace: link, threadId: 'thread-legacy', sessionId: 'sess-legacy',
+          profile: 'chat', title: 'Phiên legacy', createdAt: null, updatedAt: null,
+          link: null, forkedFrom: null, route: null, handoff: null, lastState: 'READY',
+        },
+      },
+    };
+    fs.writeFileSync(stateFile, JSON.stringify(seeded));
+    const fake = makeFakeBridge();
+    const chat = createWorkHubCodexChat({ callBridge: fake.callBridge, stateFile });
+    const restored = chat.getView(link);
+    assert.equal(restored.data.threadId, 'thread-legacy');
+    assert.equal(restored.data.ownership.restoredFromRegistry, true);
+    const probe = await chat.probe(link);
+    assert.equal(probe.ok, true);
+    const registry = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    // P2: the re-persisted entry lives under the canonical key; the
+    // legacy raw-spelling entry is gone.
+    assert.equal(registry.sessions[canonicalPathKey(dir)].threadId, 'thread-legacy');
+    assert.equal(registry.sessions[link], undefined);
+    assert.equal(chat.getView(dir).data.threadId, 'thread-legacy');
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
