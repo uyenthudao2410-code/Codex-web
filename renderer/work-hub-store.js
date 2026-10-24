@@ -209,7 +209,7 @@
     if (raw.goalPreps && typeof raw.goalPreps === 'object') {
       for (const [key, value] of Object.entries(raw.goalPreps)) {
         if (value && typeof value.criteria === 'string') {
-          data.goalPreps[key] = { criteria: value.criteria.slice(0, 4000), maxTurns: Math.max(1, Math.min(50, Number(value.maxTurns) || 5)), maxMinutes: Math.max(1, Math.min(1440, Number(value.maxMinutes) || 60)), updatedAt: Number(value.updatedAt) || 0 };
+          data.goalPreps[key] = { criteria: value.criteria.slice(0, 4000), maxTurns: Math.max(1, Math.min(50, Number(value.maxTurns) || 5)), maxMinutes: Math.max(1, Math.min(1440, Number(value.maxMinutes) || 60)), updatedAt: Number(value.updatedAt) || 0, taskId: String(value.taskId || ''), runId: String(value.runId || '') };
         }
       }
     }
@@ -592,7 +592,7 @@
 
       // ---- F23 bounded goal preparation (preparation only, no loop) ----
       goalPrepFor(workspace) { return readBucket(data.goalPreps, workspace) || null; },
-      setGoalPrep(workspace, { criteria, maxTurns, maxMinutes }) {
+      setGoalPrep(workspace, { criteria, maxTurns, maxMinutes, taskId, runId }) {
         const key = writeBucketKey(workspace);
         if (!key) throw new Error('Chưa chọn dự án.');
         const clean = String(criteria || '').trim();
@@ -602,6 +602,10 @@
           maxTurns: Math.max(1, Math.min(50, Number(maxTurns) || 5)),
           maxMinutes: Math.max(1, Math.min(1440, Number(maxMinutes) || 60)),
           updatedAt: Date.now(),
+          // P5 (L10/L12): binding captured at save time; '' means the prep
+          // was saved with no panel RUN — never an invented binding.
+          taskId: String(taskId || ''),
+          runId: String(runId || ''),
         };
         putBucket(data.goalPreps, workspace, value);
         persist();

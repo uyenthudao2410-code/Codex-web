@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '' };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '', gitReviewBinding: null };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -95,6 +95,7 @@
     ui.diffStale = false;
     ui.gitReview = null;
     ui.gitReviewHead = '';
+    ui.gitReviewBinding = null;
     ui.taskPayload = null;
     ui.pendingImports = [];
     ui.importResults = [];
@@ -867,6 +868,16 @@
   // (for the default HEAD~1..HEAD range it equals the review's toHash);
   // the review is STALE once a later render/refresh observes a different
   // HEAD — the same pattern as the W2 diff STALE label above.
+  // P5 (L12): the panel's CURRENT task link, exactly like handoff/send
+  // capture it — a real run_id the runtime already recorded. No run ->
+  // no link, by design; callers display "không gắn task" instead of
+  // inventing a binding.
+  function panelTaskLink() {
+    const task = ui.taskPayload?.state || ui.taskPayload?.data?.state || null;
+    const runId = task?.orchestration?.run_id || task?.run_id || '';
+    return runId ? { runId, taskId: task?.task_id || '' } : null;
+  }
+
   function gitReviewIsStale() {
     return Boolean(ui.gitReview && ui.gitReviewHead && ui.gitHead && ui.gitReviewHead !== ui.gitHead);
   }
@@ -882,6 +893,15 @@
     if (review.fingerprint) parts.push(`fingerprint ${String(review.fingerprint).slice(0, 12)}…`);
     if (ui.gitReviewHead) parts.push(`HEAD khi rà soát: ${String(ui.gitReviewHead).slice(0, 10)}`);
     if (gitReviewIsStale()) parts.push(`STALE — HEAD hiện tại ${String(ui.gitHead).slice(0, 10)} đã khác đầu đã rà soát; chạy lại rà soát để xem range mới`);
+    // P5 (L12): binding captured at review time; a review with no panel
+    // RUN says so explicitly instead of looking owned by the current task.
+    if (ui.gitReviewBinding) {
+      const binding = ui.gitReviewBinding;
+      const bound = binding.taskId ? `task ${binding.taskId} · RUN ${binding.runId}` : `RUN ${binding.runId}`;
+      parts.push(`Gắn ${bound}`);
+    } else {
+      parts.push('Không gắn task (lúc rà soát chưa có RUN hiện tại)');
+    }
     if (review.truncated) parts.push('kết quả đã rút gọn ở giới hạn commit/tệp của service');
     if (extra) parts.push(extra);
     meta.textContent = parts.join(' · ');
@@ -948,6 +968,7 @@
       // Service validation errors (e.g. an invalid rev) are shown verbatim.
       ui.gitReview = null;
       ui.gitReviewHead = '';
+      ui.gitReviewBinding = null;
       box.replaceChildren(el('span', 'task-muted', 'Rà soát thất bại.'));
       renderGitReviewMeta(typeof raw.error === 'string' ? raw.error : (raw.error?.message || thrown || 'Rà soát thất bại.'));
       return;
@@ -956,11 +977,16 @@
     if (!data) {
       ui.gitReview = null;
       ui.gitReviewHead = '';
+      ui.gitReviewBinding = null;
       box.replaceChildren(el('span', 'task-muted', 'Không lấy được kết quả rà soát.'));
       renderGitReviewMeta(thrown || 'Không lấy được kết quả rà soát.');
       return;
     }
     ui.gitReview = data;
+    // P5 (L12): stamp the panel's CURRENT task link at review time, so
+    // the displayed result is traceable to exactly one task/RUN (or
+    // explicitly unbound when the panel had no RUN).
+    ui.gitReviewBinding = panelTaskLink();
     // Capture the workspace HEAD at review time for the STALE check; for
     // the default range this is the review's own `to` head (toHash).
     ui.gitReviewHead = data.toHash || '';
@@ -2607,7 +2633,11 @@
     });
     $('#whGoalSave')?.addEventListener('click', () => {
       try {
-        store.setGoalPrep(currentProject(), { criteria: $('#whGoalCriteria').value, maxTurns: Number($('#whGoalTurns').value) || 5, maxMinutes: Number($('#whGoalMinutes').value) || 60 });
+        // P5 (L10): stamp the panel's CURRENT task link at save time, so
+        // the prep is traceable to exactly one task/RUN (or explicitly
+        // unbound when the panel had no RUN — never invented).
+        const binding = panelTaskLink();
+        store.setGoalPrep(currentProject(), { criteria: $('#whGoalCriteria').value, maxTurns: Number($('#whGoalTurns').value) || 5, maxMinutes: Number($('#whGoalMinutes').value) || 60, taskId: binding?.taskId || '', runId: binding?.runId || '' });
         renderGoal();
       } catch (error) { window.alert(error.message); }
     });
@@ -2774,9 +2804,22 @@
     const box = $('#whGoalState');
     if (!box) return;
     const prep = store.goalPrepFor(currentProject());
-    box.textContent = prep
-      ? `Đã chuẩn bị: "${prep.criteria}" · tối đa ${prep.maxTurns} lượt / ${prep.maxMinutes} phút. Đây là bản chuẩn bị yêu cầu — vòng lặp chỉ chạy khi controller/grant của runtime cho phép.`
-      : 'Chưa chuẩn bị mục tiêu nào cho dự án này.';
+    if (!prep) {
+      box.textContent = 'Chưa chuẩn bị mục tiêu nào cho dự án này.';
+      return;
+    }
+    const base = `Đã chuẩn bị: "${prep.criteria}" · tối đa ${prep.maxTurns} lượt / ${prep.maxMinutes} phút. Đây là bản chuẩn bị yêu cầu — vòng lặp chỉ chạy khi controller/grant của runtime cho phép.`;
+    // P5 (L10): show the binding captured at save time. When the panel's
+    // current task has moved on, the prep says which task it became
+    // instead of sitting as if it were still current.
+    if (!prep.runId) {
+      box.textContent = `${base} Không gắn task (lúc lưu chưa có RUN hiện tại).`;
+      return;
+    }
+    const bound = prep.taskId ? `task ${prep.taskId} · RUN ${prep.runId}` : `RUN ${prep.runId}`;
+    const current = panelTaskLink();
+    const moved = Boolean(current && current.runId && current.runId !== prep.runId);
+    box.textContent = `${base} Gắn ${bound}.${moved ? ` Panel hiện tại đang ở task khác — prep này đã thành ${bound}.` : ''}`;
   }
 
   function renderImports() {

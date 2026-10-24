@@ -288,6 +288,24 @@ test('F23 goal prep builds a bounded continuation request', () => {
   assert.match(text, /test đạt/);
 });
 
+test('P5 goal prep keeps its task/RUN binding across a load round-trip', () => {
+  const adapter = memoryAdapter();
+  const s = createStore(adapter);
+  const saved = s.setGoalPrep(PROJECT_A, { criteria: 'chuẩn bị X', maxTurns: 4, maxMinutes: 45, taskId: 'task-42', runId: 'run-99' });
+  assert.equal(saved.taskId, 'task-42');
+  assert.equal(saved.runId, 'run-99');
+  const reopened = createStore(adapter);
+  const prep = reopened.goalPrepFor(PROJECT_A);
+  assert.equal(prep.taskId, 'task-42');
+  assert.equal(prep.runId, 'run-99');
+  // A prep saved with no panel RUN stays explicitly unbound — never an
+  // invented binding — and survives the round-trip the same way.
+  s.setGoalPrep(PROJECT_B, { criteria: 'chuẩn bị Y', maxTurns: 2, maxMinutes: 15 });
+  const unbound = createStore(adapter).goalPrepFor(PROJECT_B);
+  assert.equal(unbound.taskId, '');
+  assert.equal(unbound.runId, '');
+});
+
 test('F24 schedules become due by interval and record runs', () => {
   const s = freshStore();
   const recipe = s.upsertRecipe({ name: 'Test', command: 'npm test', cwd: PROJECT_A });
