@@ -709,3 +709,28 @@ test('(p2-b) a session persisted under a legacy spelling is restored and re-pers
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('(p3) sessions for a main root and its managed worktree are keyed distinctly by canonical worktree path', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-chat-p3-wt-'));
+  const stateFile = path.join(dir, 'sessions.json');
+  try {
+    const mainRoot = path.join(dir, 'proj');
+    const worktreeRoot = `${mainRoot}.worktrees/feat`;
+    fs.mkdirSync(mainRoot, { recursive: true });
+    const fake = makeFakeBridge();
+    const chat = createWorkHubCodexChat({ callBridge: fake.callBridge, stateFile });
+    const first = await chat.send(mainRoot, { text: 'Phiên chính' });
+    assert.equal(first.ok, true);
+    const second = await chat.send(worktreeRoot, { text: 'Phiên worktree' });
+    assert.equal(second.ok, true);
+    const registry = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    const mainKey = canonicalPathKey(mainRoot);
+    const wtKey = canonicalPathKey(worktreeRoot);
+    assert.notEqual(wtKey, mainKey);
+    assert.ok(registry.sessions[mainKey]);
+    assert.ok(registry.sessions[wtKey]);
+    assert.equal(chat.getView(worktreeRoot).data.threadId, 'thread-1');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

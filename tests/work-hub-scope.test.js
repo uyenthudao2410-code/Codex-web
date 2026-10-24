@@ -8,6 +8,12 @@ const vm = require('node:vm');
 
 const mainSource = fs.readFileSync(path.join(__dirname, '..', 'electron/main.js'), 'utf8');
 const preloadSource = fs.readFileSync(path.join(__dirname, '..', 'electron/preload.js'), 'utf8');
+// P3: the scope fragment in main.js calls the real pathHasPrefix (canonical
+// prefix, same definition as gitWorktreeRemove) and the real
+// canonicalPathKey; both are pure node functions, so the fixture uses the
+// real implementations instead of re-stubbing them.
+const { canonicalPathKey } = require('../electron/services/pathSemantics');
+const { pathHasPrefix } = require('../electron/services/workHubFiles');
 function fragment(source, start, end) {
   const from = source.indexOf(start), to = source.indexOf(end, from);
   assert.ok(from >= 0 && to > from, `Missing source boundary: ${start}`);
@@ -17,7 +23,7 @@ function fixture({ platform = 'win32', workspace = 'E:\\Project', runDetail = ()
   const handlers = new Map(), calls = [];
   let activeWorkspace = workspace;
   const pathApi = platform === 'win32' ? path.win32 : path.posix;
-  const workHubFiles = {};
+  const workHubFiles = { pathHasPrefix };
   for (const method of ['listDir', 'readTextFile', 'searchText', 'writeTextFile', 'copyIntoWorkspace', 'gitStatus', 'gitFileDiff', 'gitLog', 'gitShow', 'gitBlame', 'readImageData']) {
     workHubFiles[method] = (...args) => { calls.push({ method, args }); return { method, root: args[0] }; };
   }
@@ -32,7 +38,7 @@ function fixture({ platform = 'win32', workspace = 'E:\\Project', runDetail = ()
   };
   const workHubCoordination = { runDetail: (root, runId) => { calls.push({ method: 'runDetail', args: [root, runId] }); return runDetail(root, runId); } };
   vm.runInNewContext(fragment(mainSource, '  const workHubRoot =', "  secureHandle('workhub:check-url'"), {
-    path: pathApi, process: { platform }, workHubFiles, workHubCoordination,
+    path: pathApi, process: { platform }, workHubFiles, workHubCoordination, canonicalPathKey,
     settings: { load: () => ({ workspace: activeWorkspace }) },
     secureHandle: (channel, handler) => { handlers.set(channel, handler); },
     invokeSafely: async (action) => { try { return { ok: true, data: await action() }; } catch (error) { return { ok: false, error: error.message }; } },
@@ -168,4 +174,65 @@ test('Job dispatch refuses an unknown RUN and runs unbound when the RUN has no w
   const exec = waveless.calls.find((call) => call.method === 'exec_command');
   assert.equal(exec.args.run_id, undefined);
   assert.equal(result.data.workhubRunBinding, null);
+});
+
+// P3: a managed worktree of the active project is a valid scope, so the
+// handlers work in the worktree without a global project switch (L9). The
+// fixture uses posix paths: the real pathHasPrefix/canonicalPathKey resolve
+// through the host path module, so on this Linux host only posix spellings
+// exercise the prefix branch; the Windows shape of the same branch is
+// covered by the Windows dev-suite run of this file.
+test('Managed worktree scope is accepted and routes handlers to the worktree root', async () => {
+  const f = fixture({ platform: 'linux', workspace: '/projects/Example' });
+  const worktree = '/projects/Example.worktrees/feat';
+  for (const [channel, args] of endpointCases) {
+    const result = await f.invoke(channel, ...args, worktree);
+    assert.equal(result.ok, true, `${channel}: ${result.error || ''}`);
+  }
+  for (const call of f.calls.filter((c) => ['listDir', 'readTextFile', 'searchText', 'writeTextFile', 'copyIntoWorkspace', 'gitStatus', 'gitFileDiff', 'gitLog', 'gitShow', 'gitBlame', 'readImageData'].includes(c.method))) {
+    assert.equal(call.args[0], worktree);
+  }
+  const openCall = f.calls.find((c) => c.method === 'resolveInsideRoot');
+  assert.equal(openCall.args[0], worktree);
+});
+
+test('Worktree scope outside the managed base is rejected before any side effect', async () => {
+  const f = fixture({ platform: 'linux', workspace: '/projects/Example' });
+  const rejected = [
+    '/projects/Example.worktrees', // the base itself is not a worktree
+    '/projects/Example.worktrees-evil/feat', // separator boundary, not a prefix
+    '/projects/Other.worktrees/feat', // another project's worktrees
+    '/projects/Other', // outside the project entirely
+    '/projects/Example.worktrees/../Other', // resolves outside the base
+  ];
+  for (const scope of rejected) {
+    const before = f.calls.length;
+    const result = await f.invoke('workhub:read', 'a.js', scope);
+    assert.equal(result.ok, false, scope);
+    assert.match(result.error, /Dự án đã thay đổi/, scope);
+    assert.equal(f.calls.length, before, scope);
+  }
+});
+
+test('Worktree scope with dot segments and a trailing slash still routes to the worktree', async () => {
+  const f = fixture({ platform: 'linux', workspace: '/projects/Example' });
+  const result = await f.invoke('workhub:read', 'a.js', '/projects/Example.worktrees/./feat/');
+  assert.equal(result.ok, true, result.error || '');
+  const call = f.calls.find((c) => c.method === 'readTextFile');
+  assert.equal(call.args[0], '/projects/Example.worktrees/feat');
+});
+
+test('Job dispatch in a worktree scope fences cwd to the worktree', async () => {
+  const f = fixture({ platform: 'linux', workspace: '/projects/Example' });
+  const worktree = '/projects/Example.worktrees/feat';
+  const first = await f.invoke('workhub:job-run', { command: 'npm test', expectedWorkspace: worktree });
+  assert.equal(first.ok, true, first.error || '');
+  assert.equal(f.calls.find((c) => c.method === 'exec_command').args.cwd, worktree);
+  const inside = await f.invoke('workhub:job-run', { command: 'npm test', cwd: `${worktree}/sub`, expectedWorkspace: worktree });
+  assert.equal(inside.ok, true, inside.error || '');
+  assert.equal(f.calls.filter((c) => c.method === 'exec_command').at(-1).args.cwd, `${worktree}/sub`);
+  const execBefore = f.calls.filter((c) => c.method === 'exec_command').length;
+  const outside = await f.invoke('workhub:job-run', { command: 'npm test', cwd: '/projects/Example', expectedWorkspace: worktree });
+  assert.equal(outside.ok, false);
+  assert.equal(f.calls.filter((c) => c.method === 'exec_command').length, execBefore);
 });

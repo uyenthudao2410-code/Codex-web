@@ -942,14 +942,35 @@ function registerIpc() {
     const resolved = path.resolve(String(value || ''));
     return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
   };
+  // P3: a managed worktree of the active project is a valid scope. Managed
+  // worktrees live in a sibling "<project>.worktrees" folder (see
+  // gitWorktreeAdd); accepting one lets Files/Diff/Chat/Terminal work in
+  // the worktree without switching the global settings workspace (which
+  // would re-key every surface, L3). Membership uses the same canonical
+  // prefix definition as gitWorktreeRemove, so alias spellings of the same
+  // managed worktree match; the main-project branch above stays lexical
+  // per P2. The base directory itself is not a worktree, and anything
+  // outside the project + its managed worktrees still rejects — the fence
+  // set does not grow, it only gains the worktree members.
+  const managedWorktreeScopeRoot = (root, expectedWorkspace) => {
+    const candidate = path.resolve(String(expectedWorkspace || ''));
+    const base = path.join(path.dirname(root), `${path.basename(root)}.worktrees`);
+    if (!workHubFiles.pathHasPrefix(candidate, base)) return null;
+    if (canonicalPathKey(candidate) === canonicalPathKey(base)) return null;
+    return candidate;
+  };
   const scopedWorkHubRoot = (expectedWorkspace) => {
     const root = workHubRoot();
     if (expectedWorkspace === undefined) return root;
-    if (!String(expectedWorkspace || '').trim()
-      || normalizeWorkHubScope(expectedWorkspace) !== normalizeWorkHubScope(root)) {
-      throw new Error('Dự án đã thay đổi so với lúc dữ liệu được mở — thao tác bị từ chối, hãy tải lại trang này.');
+    if (String(expectedWorkspace || '').trim()
+      && normalizeWorkHubScope(expectedWorkspace) === normalizeWorkHubScope(root)) {
+      return root;
     }
-    return root;
+    const worktreeRoot = String(expectedWorkspace || '').trim()
+      ? managedWorktreeScopeRoot(root, expectedWorkspace)
+      : null;
+    if (worktreeRoot) return worktreeRoot;
+    throw new Error('Dự án đã thay đổi so với lúc dữ liệu được mở — thao tác bị từ chối, hãy tải lại trang này.');
   };
   secureHandle('workhub:list', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.listDir(scopedWorkHubRoot(expectedWorkspace), rel)));
   secureHandle('workhub:read', (_event, rel, expectedWorkspace) => invokeSafely(async () => workHubFiles.readTextFile(scopedWorkHubRoot(expectedWorkspace), rel)));
