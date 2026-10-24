@@ -908,6 +908,57 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                 thread.join(timeout=5)
                 self.assertFalse(thread.is_alive())
 
+    def test_initialize_result_echoes_negotiated_legacy_protocol_version(self) -> None:
+        # Regression (W7 cluster 3, live 2026-10-24): Codex rmcp negotiates
+        # 2025-06-18. The per-session HTTPSessionRuntimeView records that
+        # negotiated version, but Runtime.initialize() read the shared
+        # runtime's default (2025-11-25), so the initialize result told the
+        # client the wrong version. Clients that echo the result version in
+        # the MCP-Protocol-Version header (the hub stdio proxy does exactly
+        # this) were then rejected on tools/list with HTTP 400
+        # "MCP-Protocol-Version does not match the initialized session",
+        # which the proxy masked as -32001 and Codex reported as a generic
+        # MCP startup failure, silently dropping the server.
+        with tempfile.TemporaryDirectory() as temp:
+            workspace = Path(temp) / "current"
+            workspace.mkdir()
+            with patch.dict(os.environ, {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+                runtime = Runtime(workspace, transport="http")
+            server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            port = int(server.server_address[1])
+            try:
+                status, headers, initialized = self._post(port, {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "codex-mcp-client", "version": "0.164.0"},
+                    },
+                })
+                self.assertEqual(status, 200, initialized)
+                self.assertEqual(initialized["result"]["protocolVersion"], "2025-06-18")
+                session_id = headers.get("mcp-session-id", "")
+                self.assertTrue(session_id.startswith("ws1."), session_id)
+
+                status, _headers, listed = self._post(
+                    port,
+                    {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+                    session_id=session_id,
+                    protocol_version=initialized["result"]["protocolVersion"],
+                )
+                self.assertEqual(status, 200, listed)
+                tool_names = [tool["name"] for tool in listed["result"]["tools"]]
+                self.assertIn("workspace_context", tool_names)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+                self.assertFalse(thread.is_alive())
+
     @staticmethod
     def _post(
         port: int,

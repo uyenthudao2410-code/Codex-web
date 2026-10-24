@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .artifact_refs import command_output_artifact_ref
+from .errors import ToolFailure
 from .execution_resources import ExecutionResourceError
 from .landlock_exec import landlock_status_payload
 
@@ -325,8 +326,16 @@ class TaskStateStore:
     def _require_no_pending_report(self, state: dict[str, Any], operation: str) -> None:
         pending = self._pending_completion_report_from_state(state)
         if pending is not None:
-            raise RuntimeError(
-                f"operator completion report {pending['report_id']} must be acknowledged before {operation}"
+            # Same surface as CoordinationMixin._require_operator_report_ack:
+            # entries that reach the latch through ensure_started (e.g. the
+            # orchestration preflight) must not degrade this actionable gate
+            # to a bare RuntimeError, which dispatch maps to INTERNAL_ERROR.
+            raise ToolFailure(
+                "OPERATOR_REPORT_ACK_REQUIRED",
+                f"operator completion report {pending['report_id']} must be acknowledged before {operation}",
+                category="runtime",
+                retryable=True,
+                details=pending,
             )
 
     def ensure_started(self, objective: str, *, current_step: str = "") -> dict[str, Any]:

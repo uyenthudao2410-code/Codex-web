@@ -725,6 +725,184 @@ class CodexBridgeTests(unittest.TestCase):
             self.assertEqual(turn_params["model"], "gpt-5.6-luna")
             self.assertEqual(turn_params["effort"], "low")
 
+    def test_resume_reconciles_an_orphan_inprogress_turn_reported_by_the_app_server(self) -> None:
+        # W7 fix-round cluster 2 (restart simulation): a new bridge instance
+        # resumes a thread whose last turn was interrupted under the OLD
+        # process, but the App Server's persisted thread data still reports
+        # that turn as inProgress — its terminal event was never persisted.
+        # On resume the server also replays a turn/started notification for
+        # the orphan, which poisons the new bridge's own turn map, so the
+        # continue guard blocks the first post-restart send forever and a
+        # turn_id-addressed interrupt can never name the orphan. Resume must
+        # reconcile deterministically: interrupt by the server-reported turn
+        # id, verify by re-reading, and only then re-own — after which the
+        # first continue must go through.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            server = {"interrupted": False}
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "thread/read":
+                    return {
+                        "thread": {
+                            "id": "chat-thread",
+                            "sessionId": "chat-session",
+                            "cwd": str(root),
+                            "turns": [
+                                {"id": "orphan-turn", "status": "interrupted" if server["interrupted"] else "inProgress"},
+                            ],
+                        }
+                    }
+                if method == "thread/resume":
+                    # The resumed thread is replayed to the new client with
+                    # its still-active turn before the response lands.
+                    bridge._record_notification(
+                        "turn/started",
+                        {"threadId": "chat-thread", "turn": {"id": "orphan-turn", "status": "inProgress"}},
+                    )
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session", "cwd": str(root)}}
+                if method == "turn/interrupt":
+                    server["interrupted"] = True
+                    return {}
+                if method == "turn/start":
+                    return {"turn": {"id": "turn-after-resume", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            result = bridge.handle({
+                "action": "resume",
+                "thread_id": "chat-thread",
+                "session_id": "chat-session",
+                "profile": "chat",
+            })
+            self.assertTrue(result["resumed"])
+            self.assertEqual(result["reconciled_orphan_turns"], ["orphan-turn"])
+            interrupts = [params for method, params in calls if method == "turn/interrupt"]
+            self.assertEqual(interrupts, [{"threadId": "chat-thread", "turnId": "orphan-turn"}])
+            self.assertTrue(bridge.owns_thread("chat-thread"))
+            # The tracked orphan is terminal now, so the guard lets the
+            # first post-restart turn start.
+            self.assertEqual(bridge._turn_states["orphan-turn"]["status"], "interrupted")
+            follow = bridge.continue_thread(thread_id="chat-thread", prompt="Gửi sau restart")
+            self.assertEqual(follow["creation_mode"], "continue")
+            self.assertEqual(follow["turn_id"], "turn-after-resume")
+
+    def test_resume_fails_loudly_when_the_orphan_turn_cannot_be_cleared(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+
+            def fake_request(method, params):
+                if method == "thread/read":
+                    return {
+                        "thread": {
+                            "id": "chat-thread",
+                            "sessionId": "chat-session",
+                            "cwd": str(root),
+                            "turns": [{"id": "orphan-turn", "status": "inProgress"}],
+                        }
+                    }
+                if method == "thread/resume":
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session", "cwd": str(root)}}
+                if method == "turn/interrupt":
+                    return {}  # accepted, but the server never clears the turn
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            with self.assertRaises(CodexBridgeError) as raised:
+                bridge.handle({
+                    "action": "resume",
+                    "thread_id": "chat-thread",
+                    "session_id": "chat-session",
+                    "profile": "chat",
+                })
+            self.assertEqual(raised.exception.code, "PERSISTENT_ORPHAN_TURN_NOT_CLEARED")
+            self.assertFalse(bridge.owns_thread("chat-thread"))
+
+    def test_resume_accepts_the_benign_no_active_turn_interrupt_race(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            server = {"active": True}
+
+            def fake_request(method, params):
+                if method == "thread/read":
+                    return {
+                        "thread": {
+                            "id": "chat-thread",
+                            "sessionId": "chat-session",
+                            "cwd": str(root),
+                            "turns": [{"id": "orphan-turn", "status": "inProgress" if server["active"] else "interrupted"}],
+                        }
+                    }
+                if method == "thread/resume":
+                    return {"thread": {"id": "chat-thread", "sessionId": "chat-session", "cwd": str(root)}}
+                if method == "turn/interrupt":
+                    server["active"] = False
+                    raise CodexBridgeError(
+                        "CODEX_REQUEST_FAILED",
+                        "Codex App Server rejected turn/interrupt: no active turn to interrupt",
+                    )
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            result = bridge.handle({
+                "action": "resume",
+                "thread_id": "chat-thread",
+                "session_id": "chat-session",
+                "profile": "chat",
+            })
+            self.assertTrue(result["resumed"])
+            self.assertEqual(result["reconciled_orphan_turns"], ["orphan-turn"])
+
+    def test_interrupt_without_turn_id_targets_the_latest_tracked_turn(self) -> None:
+        # The panel cannot name an orphan turn after a restart (its session
+        # holds no turnId), so a turn_id-less interrupt must resolve the
+        # latest turn the bridge tracks for the owned thread — the same map
+        # the continue guard reads — instead of failing TURN_NOT_OWNED.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            bridge._owned_threads["owned"] = {"workspace": str(root), "profile": "chat", "model": "gpt-5.6-terra", "effort": "medium"}
+            bridge._record_notification(
+                "turn/started",
+                {"threadId": "owned", "turn": {"id": "orphan-turn", "status": "inProgress"}},
+            )
+            # While the orphan is genuinely tracked as active, the guard
+            # still blocks continue (invariant preserved).
+            with self.assertRaises(CodexBridgeError) as raised:
+                bridge.continue_thread(thread_id="owned", prompt="blocked")
+            self.assertEqual(raised.exception.code, "TURN_ALREADY_ACTIVE")
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "turn/interrupt":
+                    return {}
+                if method == "turn/start":
+                    return {"turn": {"id": "next-turn", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            stopped = bridge.interrupt(thread_id="owned", turn_id="")
+            self.assertTrue(stopped["interrupt_requested"])
+            self.assertEqual(stopped["turn_id"], "orphan-turn")
+            self.assertEqual(calls[0], ("turn/interrupt", {"threadId": "owned", "turnId": "orphan-turn"}))
+            # The server confirms the interruption; the guard now passes.
+            bridge._record_notification(
+                "turn/completed",
+                {"threadId": "owned", "turn": {"id": "orphan-turn", "status": "interrupted"}},
+            )
+            follow = bridge.continue_thread(thread_id="owned", prompt="tiếp tục")
+            self.assertEqual(follow["turn_id"], "next-turn")
+
     def test_invalid_action_fails_without_starting_codex(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             bridge = CodexAppServerBridge(lambda: Path(temp))

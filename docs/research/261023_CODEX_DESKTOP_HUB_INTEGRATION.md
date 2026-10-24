@@ -132,6 +132,90 @@ trong app làm đúng việc đó), nếu không Desktop sẽ trỏ vào thư m�
   trong các lần kiểm tra điểm) — hành vi này bình thường với stdio MCP.
 - Cấu hình gắn với thư mục build r19 (xem giới hạn ở §3).
 
+### ĐÍNH CHÍNH (2026-10-24) — Lượt Desktop 23/10 KHÔNG phải MCP tool call thật; khẳng định “5/8 tool live từ Desktop” được rút lại
+
+> Đoạn này đính chính §4 ở trên (và dòng trạng thái ở đầu tài liệu). Theo quy ước biên niên
+> của thư mục `docs/research/`, toàn bộ nội dung cũ — kể cả các khẳng định nay đã biết là sai —
+> được **giữ nguyên văn** ở trên; đoạn đính chính này là nơi ghi sự thật đã kiểm chứng lại.
+> Nguồn forensic: `~/workspace/research/cos-webcodex/w7/fix-round/cluster3.md`
+> (phân tích rollout Codex + `logs_2.sqlite` phía Codex + mã gateway `protocol.py`,
+> thực hiện 2026-10-24 trên DESKTOP-63643J4, bản live r20).
+
+**Sự thật đã chứng minh:**
+
+- Các lượt Desktop ngày 23/10 **không** gọi được hub qua MCP tool thật: bề mặt MCP tool của
+  server `coding-tools` **chưa từng nạp được vào bất kỳ phiên Codex nào** — quét toàn bộ
+  rollout 23–24/10 không phiên nào (Desktop / app-server / `codex exec`) từng có
+  `mcp__coding_tools__*` trong danh sách tool. `codex exec` CLI cũng không nạp được
+  `coding-tools` từ config (nó vẫn nạp bình thường các MCP server user-defined khác —
+  fake server kiểm chứng nạp và gọi tool thành công ngay lần đầu; chỉ riêng `coding-tools`
+  chết ở bước `tools/list`).
+- **Nguyên nhân gốc ở gateway của hub:** khi client negotiate protocol version legacy
+  khác bản mặc định — Codex rmcp gửi `2025-06-18` — gateway ghi session theo version đã
+  negotiate nhưng lại trả kết quả `initialize` với version mặc định `2025-11-25`
+  (`Runtime.initialize()` trả `self.protocol_version` của runtime dùng chung thay vì
+  version của session-view). Proxy (`hub_proxy_stdio`) làm đúng chuẩn: lấy đúng
+  `result.protocolVersion` để gắn header `MCP-Protocol-Version` cho request kế tiếp →
+  `tools/list` mang header `2025-11-25` → gateway tự từ chối bằng HTTP 400
+  `MCP-Protocol-Version does not match the initialized session`
+  (`expected: 2025-06-18, received: 2025-11-25`), proxy che thành
+  `-32001 Execution Hub gateway is unavailable` → Codex ghi WARN
+  `MCP server startup failed server_name="coding-tools" … http_status 400` vào
+  `logs_2.sqlite` (target `codex_mcp::rmcp_client`; **không có một lần startup thành công
+  nào trong toàn bộ log**) rồi lặng lẽ bỏ server khỏi phiên. Đây cũng là lý do các probe
+  tối giản của §4 luôn “initialize + tools/list hoàn hảo”: chúng negotiate đúng
+  `2025-11-25` — version duy nhất không dính bug; và `codex mcp list` hiện `enabled`
+  chỉ vì lệnh đó parse config, không handshake.
+- **Những “bằng chứng live” hôm 23/10 thực chất là model tự ứng biến:** trong rollout của
+  phiên Desktop GUI 22:37 23/10 (originator `Codex Desktop`), model lọc `ALL_TOOLS` không
+  thấy tool → gọi `tools.mcp__coding_tools__workspace_context({})` → nhận
+  `TypeError: … is not a function` → chuyển sang đọc config/descriptor/mã
+  `hub_proxy_stdio.py` rồi **tự gọi HTTP trực tiếp tới gateway qua `exec_command`**
+  (15:40:21, 15:40:58, 15:41:14 UTC). Lời gọi 15:41:14 UTC chính là entry
+  `workspace_context` lúc 22:41:15 (+07) trong `performance.json` với
+  `client_id: "codex-desktop"` mà §4 mục 5 trích làm bằng chứng — script của model gắn
+  cùng identity header mà proxy dùng, nên entry hub là **thật** nhưng **không phải MCP
+  tool call**; diễn giải ở §4 rằng “danh tính này chỉ xuất hiện khi lời gọi đi qua
+  `hub_proxy_stdio`” là sai. Cùng cơ chế ứng biến HTTP-trực-tiếp này áp dụng cho các entry
+  `client_id=codex-desktop` còn lại của đợt kiểm chứng 23/10 (`task_control`,
+  `exec_command`, `agent_workflow`, `document_workflow` trong lượt kiểm chứng đa-tool
+  buổi tối 23/10).
+- **Bug đã sửa ở nguồn trong vòng sửa lỗi cho r21:** `protocol.py` (`dispatch_rpc`, nhánh
+  `initialize`) nay ghim `result["protocolVersion"] = runtime.protocol_version` — đúng
+  version đã negotiate — kèm test hồi quy HTTP
+  `test_initialize_result_echoes_negotiated_legacy_protocol_version`
+  (`tests/test_workspace_session_isolation.py`: initialize với `2025-06-18` → result trả
+  đúng `2025-06-18` → `tools/list` kèm header đó trả HTTP 200; đã kiểm chứng đỏ/xanh).
+  Bản live r20 vẫn chứa bug; fix chỉ có hiệu lực live sau khi phát hành bản đóng gói r21
+  và sinh lại config Desktop.
+
+**Các khẳng định cũ bị rút lại bởi đính chính này** (nguyên văn vẫn giữ ở trên để đối chiếu):
+
+1. Dòng trạng thái đầu tài liệu: “**Trạng thái: ĐÃ ÁP DỤNG + KIỂM CHỨNG GUI ĐẦU-CUỐI
+   PASS**” — phần “kiểm chứng GUI đầu-cuối PASS” qua MCP không còn đứng vững; phần
+   “đã áp dụng” (ghi config bằng generator của repo, §2–§3) vẫn đúng.
+2. §4, phần GUI, bước 4: việc lượt chạy kết thúc bằng “*Đã gọi `workspace_context` thành
+   công.*” được hiểu là Desktop đã gọi MCP tool `workspace_context` — sai; đó là kết quả
+   của đường HTTP trực tiếp do model tự ứng biến qua `exec_command`.
+3. §4, mục 5 (“Bằng chứng phía hub”): entry `performance.json` 22:41:15–22:41:16 (+07)
+   không phải bằng chứng Desktop nạp MCP thành công, và khẳng định danh tính
+   `codex-desktop` “chỉ xuất hiện khi lời gọi đi qua `hub_proxy_stdio`” bị rút lại.
+4. §4, “Chưa/điểm còn thiếu”: câu “Mới chứng minh một tool đọc (`workspace_context`)…”
+   — số tool đã chứng minh qua MCP thật từ Desktop tính đến 23/10 là **0**, không phải 1.
+5. Khẳng định tổng hợp suy ra từ các lượt 23/10 rằng “**5/8 tool đã chứng minh live từ
+   Desktop**” (`workspace_context`, `task_control`, `exec_command`, `agent_workflow`,
+   `document_workflow`) — **được rút lại toàn bộ**: cả 5 entry đều là lời gọi HTTP trực
+   tiếp của model, không entry nào là MCP tool call. Phần kiểm chứng tĩnh ở §4 (MCP
+   client tối giản negotiate `2025-11-25` gọi `initialize` + `tools/list` thấy đủ 8 tool
+   smart-v3) vẫn đúng trong phạm vi của nó, nhưng không chứng minh được Desktop/Codex
+   nạp server.
+
+**Kết luận thay thế:** bằng chứng MCP-tool-thật từ Codex Desktop (tiêu chuẩn vàng: entry
+mới `client_id=codex-desktop` trong `performance.json` do chính MCP tool call tạo ra) sẽ
+được lấy ở live retest trên bản đóng gói r21 và cập nhật vào tài liệu sau retest; cho tới
+khi đó, trạng thái đúng là: config Desktop đã áp dụng đúng thiết kế (§2–§3), gateway đã
+sửa ở nguồn, **chưa có bằng chứng MCP native thành công từ Desktop**.
+
 ## 5. Cách gỡ
 
 1. Khôi phục nguyên trạng: copy `C:\Users\Admin\.codex\config.toml.bak-20261023-desktop-hub`

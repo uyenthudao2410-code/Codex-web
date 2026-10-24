@@ -816,6 +816,48 @@ class OperatorReportIsolationTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_ensure_started_surfaces_ack_gate_as_tool_failure_not_internal_error(self) -> None:
+        # Regression (W7 fix round, cluster 4b): entries that reach the
+        # pending-report latch through ensure_started used to raise a bare
+        # RuntimeError, which dispatch mapped to INTERNAL_ERROR with no
+        # details, while task_control/agent_workflow entries raised the
+        # actionable OPERATOR_REPORT_ACK_REQUIRED ToolFailure.
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                runtime.task_state.update({"objective": "terminal command", "status": "active"})
+                runtime.task_state.record_command_started("delivery-helper", "command-delivery", ".")
+                payload = {
+                    "ok": True,
+                    "status": "exited",
+                    "command_id": "command-delivery",
+                    "session_id": "command-delivery",
+                    "exit_code": 0,
+                    "elapsed_ms": 7,
+                }
+                runtime._record_task_tool_result(
+                    "command_control",
+                    {"action": "poll", "command_id": "command-delivery"},
+                    payload,
+                )
+                pending = runtime.task_state.pending_completion_report()
+                self.assertIsNotNone(pending)
+                report_id = str(pending["report_id"])
+                runtime.task_state.update({"status": "failed"})
+
+                with self.assertRaises(ToolFailure) as blocked:
+                    runtime.task_state.ensure_started("replacement task")
+                self.assertEqual(blocked.exception.code, "OPERATOR_REPORT_ACK_REQUIRED")
+                self.assertTrue(blocked.exception.retryable)
+                self.assertEqual(blocked.exception.details["report_id"], report_id)
+
+                acknowledged = runtime.task_control({"action": "ack", "message_id": report_id})
+                self.assertTrue(acknowledged["acknowledged"])
+                started = runtime.task_state.ensure_started("replacement task")
+                self.assertEqual(started["objective"], "replacement task")
+            finally:
+                runtime.close()
+
     def test_cross_context_command_report_recovery_and_exact_ack_are_workspace_local(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

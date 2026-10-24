@@ -193,6 +193,17 @@ def dispatch_rpc(
             runtime.protocol_version = validate_initialize_params(params)
             client_info = params.get("clientInfo")
             result = runtime.initialize(client_info if isinstance(client_info, dict) else None)
+            # The negotiated version recorded above is authoritative for the
+            # session: HTTP session checks compare later MCP-Protocol-Version
+            # headers against it. Runtime.initialize() can read the version
+            # through a shared-runtime delegate (HTTPSessionRuntimeView),
+            # which still holds the server default, so pin the result to the
+            # negotiated value. Otherwise a client that negotiates a legacy
+            # version (e.g. Codex rmcp sends 2025-06-18) echoes the default
+            # 2025-11-25 in its next header and is rejected with HTTP 400
+            # "MCP-Protocol-Version does not match the initialized session".
+            if isinstance(result, dict):
+                result["protocolVersion"] = runtime.protocol_version
             runtime.initialized = True
         elif method == "notifications/initialized":
             return None

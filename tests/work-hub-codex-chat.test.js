@@ -473,6 +473,50 @@ test('(q) a successful probe does NOT erase a real failed turn (turnId present)'
   assert.ok(probe.data.turnId, 'the failed turn is still the current turn');
 });
 
+test('(r) after a restart, a phantom active turn reported on send can be cleared by interrupt even though the session holds no turnId', async () => {
+  // W7 fix-round cluster 2: registry restores thread + INTERRUPTED state
+  // but no turnId. The first send is classified TURN_ALREADY_ACTIVE ->
+  // RUNNING (the App Server still reports the pre-restart turn). The
+  // panel's interrupt must not stop at a local NO_ACTIVE_TURN: it calls
+  // the bridge with an empty turn_id so the bridge can interrupt the
+  // latest turn it tracks for the thread, and then sending works again.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-chat-registry-'));
+  const stateFile = path.join(dir, 'sessions.json');
+  const first = makeFakeBridge();
+  const chat1 = createWorkHubCodexChat({ callBridge: first.callBridge, stateFile });
+  await chat1.send(ROOT, { text: 'Phiên trước restart' });
+  await chat1.poll(ROOT); await chat1.poll(ROOT); // turn completes
+
+  let phantom = true;
+  const second = makeFakeBridge({
+    continue: async () => {
+      if (phantom) throw new Error('The bridge-owned thread already has an active turn; observe or interrupt it before continuing. TURN_ALREADY_ACTIVE');
+      return { ok: true, status: 'running', thread_id: 'thread-1', turn_id: 'turn-after-phantom', session_id: 'sess-1', creation_mode: 'continue', route: { profile: 'chat', model: 'gpt-5.6-terra', effort: 'medium' } };
+    },
+  });
+  const chat2 = createWorkHubCodexChat({ callBridge: second.callBridge, stateFile });
+  const probe = await chat2.probe(ROOT);
+  assert.equal(probe.ok, true);
+  assert.equal(probe.data.turnId, null); // registry never persisted one
+  const blocked = await chat2.send(ROOT, { text: 'Lượt đầu sau restart' });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.error.code, 'TURN_ALREADY_ACTIVE');
+  assert.equal(blocked.data.state, 'RUNNING');
+  assert.equal(blocked.data.turnId, null);
+  const stopped = await chat2.interrupt(ROOT);
+  assert.equal(stopped.ok, true);
+  assert.equal(stopped.data.state, 'INTERRUPTED');
+  assert.equal(stopped.data.error, null);
+  const interruptCall = second.calls.find((c) => c.action === 'interrupt');
+  assert.equal(interruptCall.thread_id, 'thread-1');
+  assert.equal(interruptCall.turn_id, '');
+  phantom = false;
+  const resent = await chat2.send(ROOT, { text: 'Lượt đầu sau restart' });
+  assert.equal(resent.ok, true);
+  assert.equal(resent.data.turnId, 'turn-after-phantom');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('(n) model/effort selector: listModels maps the bridge list and send forwards a validated override', async () => {
   const fake = makeFakeBridge();
   const chat = createWorkHubCodexChat({ callBridge: fake.callBridge });

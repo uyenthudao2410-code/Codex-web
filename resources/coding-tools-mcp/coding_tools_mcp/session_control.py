@@ -104,6 +104,7 @@ class SessionControlMixin:
         pty_master_fd: int | None = None,
         cleanup_callback: Any = None,
         execution_metadata: dict[str, str] | None = None,
+        stdin_open: bool = False,
     ) -> ExecSession:
         return ExecSession(
             session_id=session_id or secrets.token_urlsafe(18),
@@ -117,6 +118,7 @@ class SessionControlMixin:
             pty_master_fd=pty_master_fd,
             cleanup_callback=cleanup_callback,
             execution_metadata=execution_metadata or {},
+            stdin_open=stdin_open,
         )
 
     def _remember_output_session(self, session: ExecSession) -> None:

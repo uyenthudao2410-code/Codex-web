@@ -1002,6 +1002,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "preview_bytes": {**integer, "minimum": 1, "maximum": 1048576, "default": 4096},
                 "stdin": {**string, "default": ""},
                 "tty": {**boolean, "default": False},
+                "stdin_open": {**boolean, "default": False, "description": "Pipe-interactive opt-in for a non-TTY command: when true, stdin is NOT closed after spawn (and after any initial stdin payload), so later command_control action='write' / write_stdin calls — optionally receipted with input_id — can keep feeding the running command line by line through its pipe. Cannot be combined with tty=true. This is not a real terminal: no ConPTY/PTY semantics, no prompt echo or full-screen TUI. The session stays bounded by timeout_ms and the session watchdog, and ends when the command exits or is killed."},
                 "confirm_destructive_token": {
                     **string,
                     "minLength": 20,

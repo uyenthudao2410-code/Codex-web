@@ -487,7 +487,18 @@ class ExecSession:
     sandbox_abort_on_cleanup: bool = False
     sandbox_idle_generation: int | None = None
     pty_master_fd: int | None = None
+    # Pipe-interactive opt-in (exec_command stdin_open=true): the session was
+    # spawned non-TTY and its stdin pipe was deliberately left open after
+    # spawn so later writes can feed the still-running process. This is a
+    # mode flag, not a liveness claim: snapshot_since_cursor combines it with
+    # _stdin_closed to report the effective state.
+    stdin_open: bool = False
     _stdin_closed: bool = False
+
+    @property
+    def stdin_is_open(self) -> bool:
+        """Effective stdin state: opted-in pipe session whose stdin was not closed."""
+        return bool(self.stdin_open and not self._stdin_closed)
 
     def cleanup_sandbox_state(self) -> None:
         """Run the optional per-command sandbox scratch cleanup once."""
@@ -611,6 +622,7 @@ class ExecSession:
             "exit_code": self.exit_code,
             "signal": self.signal_name,
             "timed_out": self.timed_out,
+            "stdin_open": self.stdin_is_open,
             "stdout": stdout_truncation.content,
             "stderr": stderr_truncation.content,
             "stdout_truncated": stdout_truncation.truncated,

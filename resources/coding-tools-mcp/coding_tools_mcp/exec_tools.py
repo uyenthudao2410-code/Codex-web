@@ -322,6 +322,18 @@ class ExecToolsMixin:
         yield_ms = int(args.get("yield_time_ms", 10000))
         max_output_bytes = int(args.get("max_output_bytes", 65536))
         tty = bool(args.get("tty", False))
+        # Pipe-interactive opt-in (cluster 4a): keep a non-TTY session's
+        # stdin pipe open after spawn so later receipted writes
+        # (command_control write / write_stdin, optionally with input_id)
+        # can feed the running command. Absent/false = legacy behavior:
+        # stdin is closed immediately after spawn.
+        stdin_open = bool(args.get("stdin_open", False))
+        if stdin_open and tty:
+            raise ToolFailure(
+                "INVALID_ARGUMENT",
+                "stdin_open cannot be combined with tty=true; stdin_open is the non-TTY pipe-interactive mode.",
+                category="validation",
+            )
         stdin_text = str(args.get("stdin", ""))
         env = self._command_env(args.get("env", {}))
         start = time.time()
@@ -577,6 +589,7 @@ class ExecToolsMixin:
                 pty_master_fd=pty_master_fd,
                 cleanup_callback=sandbox_cleanup_callback,
                 execution_metadata=windows_decision.metadata() if windows_decision is not None else None,
+                stdin_open=stdin_open,
             )
             if windows_mxc_stateful:
                 windows_mxc_session_holder["session"] = session
@@ -667,7 +680,11 @@ class ExecToolsMixin:
             if process.poll() is None:
                 raise
         finally:
-            if not tty:
+            # Cluster 4a: a stdin_open (pipe-interactive) session keeps its
+            # stdin pipe open after spawn; every other non-TTY session keeps
+            # the legacy close-immediately behavior. TTY sessions never went
+            # through close_stdin() (their stdin is the PTY master).
+            if not tty and not stdin_open:
                 session.close_stdin()
         initial_wait = max(0, min(yield_ms, 30000)) / 1000.0
 

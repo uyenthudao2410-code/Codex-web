@@ -843,11 +843,18 @@ function createWorkHubCodexChat(options = {}) {
 
   async function interrupt(root) {
     const session = sessionFor(root);
-    if (!session.threadId || !session.turnId) {
+    // After a restart the session may hold a thread but no turnId (the
+    // registry does not persist one) while the bridge reports an active
+    // turn the panel never launched (state RUNNING via the
+    // TURN_ALREADY_ACTIVE classification). That orphan turn must still be
+    // interruptible: call the bridge with an empty turn_id and let it
+    // resolve the latest turn it tracks for the thread.
+    if (!session.threadId || (!session.turnId && session.state !== CHAT_STATES.RUNNING)) {
       return { ok: false, state: session.state, error: { code: 'NO_ACTIVE_TURN', message: 'Không có lượt chat nào để dừng.' }, data: view(session) };
     }
     try {
       await bridge(session, { action: 'interrupt', thread_id: session.threadId, turn_id: session.turnId }, 15_000);
+      session.error = null;
       const assistant = [...session.messages].reverse().find((m) => m.role === 'assistant' && m.turnId === session.turnId);
       if (assistant && assistant.status === 'running') assistant.status = 'interrupted';
       session.state = CHAT_STATES.INTERRUPTED;

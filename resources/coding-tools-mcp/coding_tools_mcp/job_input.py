@@ -16,12 +16,15 @@ acknowledgement of a send can never silently turn into a duplicate send:
   already exited) is recorded as ``rejected``, which is a definite outcome,
   not ``unknown``.
 
-Receipts are kept in memory, bounded, per server instance. This is an
-internal contract layer: the public smart-v3 tool schemas are unchanged
-(the facade validator rejects unknown arguments, and changing a facade
-schema would change the attested smart contract), so ``input_id`` is
-currently accepted from Python-internal callers of
-``SessionControlMixin.write_stdin`` / ``Server.command_control``.
+Receipts are kept in memory, bounded, per server instance. W5 introduced
+this as an internal contract layer for Python-internal callers of
+``SessionControlMixin.write_stdin`` / ``Server.command_control``. The
+follow-up cluster opened it on the wire: ``input_id`` is now an optional
+property (string, maxLength 128) of the ``command_control`` facade schema
+and of the internal ``write_stdin`` tool schema, so MCP callers can use it
+too. Adding the property changes the runtime-computed smart-v3 contract
+SHA, so connector clients must rediscover and acknowledge the new
+contract after release — that rediscovery is expected, not an error.
 """
 
 from __future__ import annotations

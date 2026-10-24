@@ -773,6 +773,7 @@ class CodexAppServerBridge:
             "thread_id": restored.get("thread_id") or thread_id,
             "session_id": restored.get("session_id") or None,
             "creation_mode": restored.get("creation_mode") or "persistent_restore",
+            "reconciled_orphan_turns": restored.get("reconciled_orphan_turns") or [],
             "lifetime": restored.get("lifetime") or "persistent",
             "route": {"profile": route.get("profile"), "model": route.get("model"), "effort": route.get("effort")},
             "safety": {"approval_policy": "never", "sandbox": "read-only", "network_access": False},
@@ -936,6 +937,9 @@ class CodexAppServerBridge:
 
     def interrupt(self, *, thread_id: str, turn_id: str) -> dict[str, Any]:
         self._ensure_connected()
+        if not turn_id:
+            with self._condition:
+                turn_id = str(self._latest_turn_by_thread.get(thread_id) or "")
         self._require_owned_thread(thread_id)
         self._require_owned_turn(thread_id, turn_id)
         self._request("turn/interrupt", {"threadId": thread_id, "turnId": turn_id})

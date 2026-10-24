@@ -727,7 +727,28 @@ class StatelessHttp2026Tests(unittest.TestCase):
                 )
                 self.assertTrue(rejected["result"]["isError"])
                 self.assertEqual(rejected["result"]["structuredContent"]["error"]["code"], expected_code)
-        for field, value in (("task_id", "another-task"), ("run_id", "another-run"), ("wave_id", "another-wave")):
+        # A stale wave in the persisted file projection is NOT a binding
+        # failure: the capsule wave comes from the orchestration snapshot.
+        # (Live W7 smoke: the file wave lagged the RUN's current wave after
+        # the chat turns completed and panel handoff failed deterministically.)
+        source_store = TaskStateStore(Path(self.temp.name))
+        stale_wave_state = source_store.get()
+        stale_wave_state["orchestration"] = {**stale_wave_state["orchestration"], "wave_id": "another-wave"}
+        source_store._write(stale_wave_state)
+        status, _, stale_wave_response = self.tool_call(
+            "task_control",
+            {"action": "handoff", "handoff_action": "record", "run_id": context.run_id,
+             "payload": {"panel_summary": "stale file wave still binds"}},
+            request_id=314, extra_headers=headers,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(stale_wave_response["result"]["isError"], stale_wave_response)
+        stale_capsule = stale_wave_response["result"]["structuredContent"]["capsule"]
+        self.assertEqual(stale_capsule["run_id"], context.run_id)
+        self.assertEqual(stale_capsule["wave_id"], context.wave_id)
+        source_store._write({**source_store.get(), "task_id": state["task_id"], "orchestration": dict(projection)})
+
+        for field, value in (("task_id", "another-task"), ("run_id", "another-run")):
             changes = {"task_id": state["task_id"], "orchestration": dict(projection)}
             if field == "task_id":
                 changes["task_id"] = value
@@ -747,7 +768,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
                 )
         self.assertEqual(
             self.runtime.orchestration_ledger.latest_handoff_capsule(run_id=context.run_id)["capsule_id"],
-            capsule["capsule_id"],
+            stale_capsule["capsule_id"],
         )
         self.assertEqual(len(self.runtime.orchestration_ledger.list_runs()), 1)
 
