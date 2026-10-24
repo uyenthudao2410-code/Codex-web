@@ -55,6 +55,11 @@ if ($LASTEXITCODE -ne 0 -or $InitialHead -notmatch '^[a-f0-9]{40}$' -or $Initial
 if ($RequireExactSource) {
     $initialStatus = @(& git -C $Root status --porcelain --untracked-files=all)
     if ($LASTEXITCODE -ne 0 -or $initialStatus.Count -ne 0) {
+        # Name the dirt before failing: a bare "clean worktree required"
+        # error leaves the next investigation guessing which entry broke it
+        # (see the step-21 gate failure on run 40089338352, whose log named
+        # no file). Logging does not weaken the check — it still throws.
+        foreach ($entry in $initialStatus) { Write-Host "exact-source dirty entry: $entry" }
         throw "-RequireExactSource requires a clean Git worktree before building the Windows candidate"
     }
 }

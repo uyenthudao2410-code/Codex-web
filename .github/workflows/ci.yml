@@ -112,9 +112,12 @@ jobs:
     # Windows release gate: the desktop runtime tests, the crates that must run
     # natively on Windows 11 (CLI, Runner, persistent-shell's fail-closed gate,
     # process control, agent config, and webcodex-workspace's portable project
-    # identity used by the native semantic bridge), the npm distribution checks,
-    # and the full Windows artifact -> npm install smoke. The Server and its
-    # Unix-only runtime stay Linux-only.
+    # identity used by the native semantic bridge), and the npm distribution
+    # checks. The full Windows artifact -> npm install smoke lives in its own
+    # job (test-windows-smoke) on a fresh checkout: the suite above dirties
+    # the worktree, while the smoke's -RequireExactSource demands a clean
+    # one, so the two cannot share a worktree. The Server and its Unix-only
+    # runtime stay Linux-only.
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -171,6 +174,41 @@ jobs:
         run: cargo test --locked -p webcodex-agent-config -p webcodex-process -p webcodex-persistent-shell -p webcodex-workspace -p webcodex-cli -p webcodex-runner
       - name: Test npm installer and release manifest natively
         run: npm --prefix npm/webcodex test
+
+  test-windows-smoke:
+    # Windows artifact -> npm install smoke on a FRESH checkout, separate
+    # from test-windows. The smoke script proves exact source
+    # (-RequireExactSource: clean worktree at start and end, source identity
+    # pinned to HEAD, staging from `git archive HEAD`, outputs outside the
+    # repo), so it consumes no artifact from any earlier step and needs no
+    # test step before it. It must stay a separate job: running it after the
+    # test-windows suite in one worktree fails by design, because the suite
+    # dirties the tree (tracked runtime churn + untracked task-context files)
+    # before the smoke's clean-worktree check. The provenance upload moves
+    # with the smoke into this job because it reads the file from this job's
+    # own $RUNNER_TEMP.
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      # Same long-path reason as test-windows: archived .coding-tools report
+      # overlays exceed legacy Windows MAX_PATH under the runner work dir.
+      - name: Allow long paths for checkout
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Do not reuse stale workspace test executables across revisions.
+          cache-targets: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Windows artifact to npm install smoke
         # Builds the three Windows binaries, packages the win32-x64 artifact
         # with the native PowerShell script, installs it through the npm
