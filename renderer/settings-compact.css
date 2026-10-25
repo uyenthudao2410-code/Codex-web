@@ -63,6 +63,7 @@ body[data-theme="dark"] .busy-overlay{background:rgba(20,20,20,.72)!important}
 .setup-card-head h3{margin:4px 0 4px;color:var(--text);font-size:17px}
 .setup-card-head p{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
 .setup-card .soft-badge.positive{color:var(--green);border-color:color-mix(in srgb,var(--green) 35%,var(--border-strong));background:color-mix(in srgb,var(--green) 10%,var(--surface-2))}
+.setup-card .soft-badge.negative{color:#b84955;border-color:color-mix(in srgb,#b84955 35%,var(--border-strong));background:color-mix(in srgb,#b84955 10%,var(--surface-2))}
 .setup-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:17px}
 .setup-step{display:flex;align-items:center;gap:8px;min-width:0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--muted)}
 .setup-step i{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;font-style:normal;font-size:10px;font-weight:800;background:var(--border);color:var(--muted)}

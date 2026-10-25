@@ -74,6 +74,7 @@ const pageMeta = {
 
 const state = {
   snapshot: null,
+  snapshotLoadError: '',
   currentPage: 'workhub',
   selectedWorkspace: '',
   logFilter: 'all',
@@ -2291,6 +2292,7 @@ function renderSnapshot(snapshot, options = {}) {
   const workspaceKey = (value) => String(value || '').trim().replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
   const previousWorkspace = workspaceKey(state.snapshot?.settings?.workspace);
   state.snapshot = snapshot;
+  state.snapshotLoadError = '';
   applyFormValues(snapshot, options.forceForms);
   const { settings, secrets, environment, status } = snapshot;
   state.selectedWorkspace = settings.workspace;
@@ -2693,12 +2695,62 @@ async function rotateControlPlaneCredential() {
   }
 }
 
+const SNAPSHOT_LOAD_TIMEOUT_MS = 25_000;
+
+// ipcRenderer.invoke has no built-in deadline, and a main-process snapshot
+// collect can stall while the runtime changes epoch or the machine is busy.
+// Without a renderer-side bound, the setup console keeps its initial
+// "Đang kiểm tra" text forever and the retry button joins the same stalled
+// collect. Bound the wait so the UI reaches an honest, actionable error
+// state instead; a snapshot that still lands later (orchestrator cache or a
+// status event) renders normally and clears the error.
+function withSnapshotTimeout(promise, timeoutMs = SNAPSHOT_LOAD_TIMEOUT_MS) {
+  const budget = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : SNAPSHOT_LOAD_TIMEOUT_MS;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const error = new Error(`Quá thời gian chờ đọc trạng thái thiết lập (${Math.round(budget / 1000)} giây). Dịch vụ cục bộ chưa phản hồi; hãy kiểm tra lại.`);
+      error.code = 'SNAPSHOT_LOAD_TIMEOUT';
+      reject(error);
+    }, budget);
+    Promise.resolve(promise).then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
+// Only used while no snapshot has ever been applied. Once a real snapshot
+// exists the console keeps rendering it (with the usual freshness signals)
+// instead of replacing verified state with a load error.
+function renderSetupLoadError() {
+  if (state.snapshot) return;
+  const summary = $('#setupSummaryTitle');
+  const summaryText = $('#setupSummaryText');
+  const badge = $('#setupSummaryBadge');
+  const nextDetail = $('#setupNextDetail');
+  const action = $('#setupPrimaryAction');
+  if (summary) summary.textContent = 'Chưa đọc được trạng thái thiết lập';
+  if (summaryText) summaryText.textContent = state.snapshotLoadError || 'Dịch vụ cục bộ chưa phản hồi.';
+  if (badge) {
+    badge.textContent = 'LỖI ĐỌC TRẠNG THÁI';
+    badge.className = 'soft-badge negative';
+  }
+  if (nextDetail) nextDetail.textContent = 'Chưa có trạng thái nào được xác minh. Bấm Kiểm tra lại để đọc lại.';
+  if (action) {
+    action.textContent = 'Kiểm tra lại';
+    action.dataset.setupAction = 'refresh';
+  }
+}
+
 async function refreshSnapshot(options = {}) {
   try {
-    const snapshot = unwrap(await api.snapshot(options));
+    const snapshot = unwrap(await withSnapshotTimeout(api.snapshot(options), options.timeoutMs));
+    state.snapshotLoadError = '';
     renderSnapshot(snapshot, options);
     return snapshot;
   } catch (error) {
+    state.snapshotLoadError = error.message;
+    renderSetupLoadError();
     toast('Kiểm tra trạng thái thất bại', error.message, 'error');
     return null;
   }

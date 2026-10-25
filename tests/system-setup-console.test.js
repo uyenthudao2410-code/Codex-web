@@ -554,3 +554,63 @@ test('development central controls are visibly gated before action handlers run'
     assert.match(app, new RegExp(`assertPackagedCentralSetup\\('${action}'\\)`));
   }
 });
+
+function snapshotLoadFixture({ snapshotImpl } = {}) {
+  const source = read('renderer/app.js');
+  const elements = {};
+  const toasts = [];
+  const rendered = [];
+  const context = {
+    state: { snapshot: null, snapshotLoadError: '' },
+    api: { snapshot: snapshotImpl || (async () => ({ ok: true, data: { settings: {}, status: {}, environment: {} } })) },
+    unwrap: (result) => { if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại'); return result.data; },
+    renderSnapshot: (snapshot) => { context.state.snapshot = snapshot; rendered.push(snapshot); },
+    toast: (...args) => toasts.push(args),
+    $: (selector) => elements[selector] || (elements[selector] = { textContent: '', className: '', dataset: {} }),
+    setTimeout, clearTimeout
+  };
+  const start = source.indexOf('const SNAPSHOT_LOAD_TIMEOUT_MS');
+  const end = source.indexOf('\nfunction collectSettings(');
+  assert.ok(start >= 0 && end > start, 'snapshot load slice must exist in renderer/app.js');
+  vm.runInNewContext(source.slice(start, end), context);
+  return { context, elements, toasts, rendered };
+}
+
+test('setup status load is time-bounded: a silent backend yields an honest error state, not endless checking', async () => {
+  const { context, elements, toasts } = snapshotLoadFixture({ snapshotImpl: () => new Promise(() => {}) });
+  const result = await context.refreshSnapshot({ timeoutMs: 25 });
+  assert.equal(result, null);
+  assert.match(context.state.snapshotLoadError, /Quá thời gian chờ đọc trạng thái thiết lập/);
+  assert.equal(elements['#setupSummaryTitle'].textContent, 'Chưa đọc được trạng thái thiết lập');
+  assert.equal(elements['#setupSummaryText'].textContent, context.state.snapshotLoadError);
+  assert.equal(elements['#setupSummaryBadge'].textContent, 'LỖI ĐỌC TRẠNG THÁI');
+  assert.equal(elements['#setupPrimaryAction'].textContent, 'Kiểm tra lại');
+  assert.equal(elements['#setupPrimaryAction'].dataset.setupAction, 'refresh');
+  assert.equal(toasts.length, 1);
+  assert.equal(toasts[0][0], 'Kiểm tra trạng thái thất bại');
+});
+
+test('setup status retry after a timeout renders the real snapshot and clears the error state', async () => {
+  const fixture = snapshotLoadFixture({ snapshotImpl: () => new Promise(() => {}) });
+  await fixture.context.refreshSnapshot({ timeoutMs: 25 });
+  assert.match(fixture.context.state.snapshotLoadError, /Quá thời gian chờ/);
+  const snapshot = { settings: { workspace: 'E:/Projects/Beta' }, status: {}, environment: {} };
+  fixture.context.api.snapshot = async () => ({ ok: true, data: snapshot });
+  const result = await fixture.context.refreshSnapshot({ timeoutMs: 1_000 });
+  assert.equal(result, snapshot);
+  assert.equal(fixture.context.state.snapshotLoadError, '');
+  assert.deepEqual(fixture.rendered, [snapshot]);
+});
+
+test('setup status load surfaces a fast backend failure verbatim instead of masking it as a timeout', async () => {
+  const { context } = snapshotLoadFixture({ snapshotImpl: async () => ({ ok: false, error: 'IPC hỏng' }) });
+  const result = await context.refreshSnapshot({ timeoutMs: 1_000 });
+  assert.equal(result, null);
+  assert.equal(context.state.snapshotLoadError, 'IPC hỏng');
+});
+
+test('snapshot timeout helper passes through fast settlements untouched', async () => {
+  const { context } = snapshotLoadFixture();
+  assert.equal(await context.withSnapshotTimeout(Promise.resolve(42), 1_000), 42);
+  await assert.rejects(context.withSnapshotTimeout(Promise.reject(new Error('gốc')), 1_000), /gốc/);
+});
