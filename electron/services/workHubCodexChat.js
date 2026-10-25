@@ -429,6 +429,22 @@ function createWorkHubCodexChat(options = {}) {
     }
   }
 
+  // App Server thread timestamps arrive in Unix SECONDS, but the renderer
+  // reads updatedAt with new Date() (milliseconds) — seconds read as ms land
+  // on 22/01/1970. Normalize at listHistory, the single choke point for
+  // thread history: seconds (< 1e12) -> ms -> ISO; ISO strings pass
+  // through; null stays null. Session-panel timestamps are registry-written
+  // ISO and never pass through here.
+  function normalizeThreadTimestamp(value) {
+    if (value == null) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const ms = value < 1e12 ? value * 1000 : value;
+      return new Date(ms).toISOString();
+    }
+    return null;
+  }
+
   async function listHistory(root) {
     const session = sessionFor(root);
     try {
@@ -445,7 +461,7 @@ function createWorkHubCodexChat(options = {}) {
             name: boundedText(t && t.name, 200) || null,
             preview: boundedText(t && t.preview, 300) || null,
             status: t && t.status ? String(t.status) : null,
-            updatedAt: (t && (t.updated_at || t.recency_at)) || null,
+            updatedAt: normalizeThreadTimestamp(t && (t.updated_at || t.recency_at)),
             forkedFrom: cleanId(t && t.forked_from_id) || null,
             continuable: false, // bridge: Desktop threads are inspect/fork only
             forkable: true, // W3-C: run + source_thread_id + profile history

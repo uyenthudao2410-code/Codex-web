@@ -734,3 +734,28 @@ test('(p3) sessions for a main root and its managed worktree are keyed distinctl
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('(gui4-c) listHistory normalizes Unix-second thread timestamps to ISO', async () => {
+  const fake = makeFakeBridge({
+    threads: async () => ({
+      ok: true, scope: 'current_workspace_only', note: '',
+      threads: [
+        { id: 'sec-1', name: 'Giây', updated_at: 1792886400, status: 'idle' },
+        { id: 'iso-1', name: 'ISO', updated_at: '2026-10-24T08:00:00.000Z', status: 'idle' },
+        { id: 'ms-1', name: 'Mili', updated_at: 1792886400000, status: 'idle' },
+        { id: 'rec-1', name: 'Recency', updated_at: null, recency_at: 1792886400, status: 'idle' },
+        { id: 'null-1', name: 'Trống', updated_at: null, recency_at: null, status: 'idle' },
+      ],
+    }),
+  });
+  const chat = createWorkHubCodexChat({ callBridge: fake.callBridge });
+  const history = await chat.listHistory(ROOT);
+  assert.equal(history.ok, true);
+  const byId = Object.fromEntries(history.data.threads.map((t) => [t.id, t]));
+  // Seconds read as ms used to render 22/1/1970; now they arrive as ISO 2026.
+  assert.equal(byId['sec-1'].updatedAt, '2026-10-25T00:00:00.000Z');
+  assert.equal(byId['iso-1'].updatedAt, '2026-10-24T08:00:00.000Z');
+  assert.equal(byId['ms-1'].updatedAt, '2026-10-25T00:00:00.000Z');
+  assert.equal(byId['rec-1'].updatedAt, '2026-10-25T00:00:00.000Z');
+  assert.equal(byId['null-1'].updatedAt, null);
+});

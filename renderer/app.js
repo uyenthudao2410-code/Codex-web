@@ -1689,7 +1689,9 @@ function renderSetupState(snapshot) {
     ['setupStepFolder', workspaceReady, workspaceReady
       ? 'Đã chọn thư mục local'
       : inventoryUnknown
-        ? 'Chưa đọc được inventory · cần tải lại'
+        ? state.centralWorkspaceInventoryStatus === 'unknown'
+          ? 'Chưa đọc được inventory · cần tải lại'
+          : 'Chưa tải inventory · cần tải lại'
         : 'Chưa chọn thư mục'],
     ['setupStepAccount', authorityReady, central
       ? (accountTargetReady ? 'Target online · runtime ready · policy enabled' : setupBlocker.detail)
@@ -1762,7 +1764,11 @@ function renderSetupState(snapshot) {
       : central && !connectionReady
         ? guidance.detail
       : inventoryUnknown
-        ? `Không đọc được inventory workspace (${state.centralWorkspaceInventoryError || 'lỗi chưa rõ'}). Bấm tải lại; không đăng ký lại chỉ vì lỗi đọc.`
+        ? state.centralWorkspaceInventoryStatus === 'unknown'
+          ? `Không đọc được inventory workspace (${state.centralWorkspaceInventoryError || 'lỗi chưa rõ'}). Bấm tải lại; không đăng ký lại chỉ vì lỗi đọc.`
+          : state.centralWorkspaceInventoryStatus === 'loading'
+            ? 'Đang tải inventory workspace local…'
+            : 'Chưa từng tải inventory workspace local — chưa có lần tải nào chạy tới bước đọc. Bấm tải lại để thử.'
         : !workspaceReady
           ? 'Chọn một thư mục trước khi cấp quyền.'
         : central && !authorityReady
@@ -1820,7 +1826,21 @@ async function handleSetupPrimaryAction() {
     return;
   }
   if (action === 'workspace-refresh') {
-    await refreshControlPlaneWorkspaces({ quiet: false });
+    try {
+      await refreshControlPlaneWorkspaces({ quiet: false });
+    } catch (error) {
+      // The refresh gates (central-executor role, packaged-runtime assert)
+      // throw before the try block inside refreshControlPlaneWorkspaces, so
+      // without this catch the failure was an unhandled rejection: no toast,
+      // no recorded error, and the setup page kept showing "lỗi chưa rõ".
+      // A load the operator explicitly retried that fails at a gate IS a
+      // tried-and-failed load, so record it as 'unknown' with the real error.
+      const code = error?.code || error?.message || 'CONTROL_PLANE_WORKSPACE_REFRESH_FAILED';
+      state.centralWorkspaceInventoryError = code;
+      if (state.centralWorkspaceInventoryStatus !== 'loaded') state.centralWorkspaceInventoryStatus = 'unknown';
+      toast('Không tải được inventory workspace', code, 'error');
+      if (state.snapshot) renderSetupState(state.snapshot);
+    }
     return;
   }
   if (action === 'overview' || action === 'deploy' || action === 'workspace' || action === 'account') {

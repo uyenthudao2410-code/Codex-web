@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '', gitReviewBinding: null };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '', gitReviewBinding: null, diffLoading: false };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -111,7 +111,12 @@
     if ($('#whCancelEditFile')) $('#whCancelEditFile').hidden = true;
     if ($('#whViewer')) { $('#whViewer').hidden = false; $('#whViewer').textContent = 'Chọn một tệp để xem nội dung.'; }
     if ($('#whViewerTitle')) $('#whViewerTitle').textContent = 'Chưa chọn tệp';
-    if ($('#whDiff')) $('#whDiff').textContent = 'Chọn một tệp để xem thay đổi.';
+    // A reset must not silently erase a diff load that is still in flight:
+    // if renderDiff already started, leave the cancelled notice instead of
+    // the pristine placeholder, so "clicked but cancelled" stays visibly
+    // distinct from "never clicked". The in-flight load's stale branch
+    // repaints the same notice when its IPC resolves.
+    if ($('#whDiff')) $('#whDiff').textContent = ui.diffLoading ? 'Tải diff bị hủy do dữ liệu làm việc thay đổi — bấm lại để xem.' : 'Chọn một tệp để xem thay đổi.';
     if ($('#whDiffMeta')) $('#whDiffMeta').textContent = '';
     if ($('#whCosEvents')) $('#whCosEvents').textContent = 'Chọn một phiên CoS để xem sự kiện (chỉ đọc).';
     setStatus('');
@@ -835,6 +840,8 @@
     const box = $('#whDiff');
     if (!box) return;
     const scope = requestScope('diff');
+    ui.diffLoading = true;
+    const loadId = ui.requests.diff;
     activateTab('changes');
     box.textContent = 'Đang đọc thay đổi…';
     ui.diffRel = '';
@@ -844,7 +851,19 @@
     renderDiffMeta();
     renderPatchApproval();
     const data = unwrap(await window.mcpAssistant.workhubGitDiff(rel, scope.workspace).catch(() => null));
-    if (!scope.current()) return;
+    if (!scope.current()) {
+      // Cancelled by a later resetProjectView (gen bump) or superseded by a
+      // newer diff load. Only the load whose id is still the latest may
+      // paint the cancelled state, so an old load resolving after a newer
+      // one started cannot clobber the new load's view; the flag is cleared
+      // only by the latest load.
+      if (loadId === ui.requests.diff) {
+        box.textContent = 'Tải diff bị hủy do dữ liệu làm việc thay đổi — bấm lại để xem.';
+        ui.diffLoading = false;
+      }
+      return;
+    }
+    ui.diffLoading = false;
     ui.diffRel = rel;
     ui.diffText = data?.diff || '';
     ui.diffHead = data?.head || '';
