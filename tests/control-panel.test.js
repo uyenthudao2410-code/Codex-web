@@ -61,7 +61,7 @@ test('main process exposes Execution Control Center IPC through MCP control plan
   assert.match(main, /path: '\/__control\/orchestration\/live'/);
   assert.match(main, /path: '\/__control\/orchestration\/analytics'/);
   assert.match(main, /path: '\/__control\/orchestration'/);
-  assert.match(main, /const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;/);
+  assert.match(main, /const PANEL_ORCHESTRATION_TIMEOUT_MS = 60000;/);
   assert.match(main, /const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;/);
   assert.match(main, /timeout: PANEL_ORCHESTRATION_TIMEOUT_MS/);
   assert.match(main, /timeout: PANEL_LIVE_CONTROL_TIMEOUT_MS/);
@@ -365,4 +365,19 @@ test('panel CSP permits inline styles but rejects inline scripts', () => {
   assert.ok(csp);
   assert.equal(csp.match(/(?:^|;)script-src ([^;]+)/)?.[1], "'self'");
   assert.match(csp, /style-src 'self' 'unsafe-inline'/);
+});
+
+test('task history snapshot timeout covers the ledger scan budget', () => {
+  const main = read('electron/main.js');
+  const match = main.match(/const PANEL_ORCHESTRATION_TIMEOUT_MS = (\d+);/);
+  assert.ok(match, 'panel orchestration timeout constant should exist');
+  assert.ok(Number(match[1]) >= 60000, 'timeout must cover the measured ~22s ledger scan with margin');
+  assert.match(main, /async function readOrchestrationControlSnapshot\(\)/);
+  assert.match(main, /timeout: PANEL_ORCHESTRATION_TIMEOUT_MS/);
+  assert.match(main, /secureHandle\('task-state:history'/);
+  assert.match(main, /secureHandle\('task-state:read'/);
+  assert.match(main, /Quá thời gian kết nối MCP\./);
+  // Scope guard: the lightweight live path and the analytics path keep their own budgets.
+  assert.match(main, /const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;/);
+  assert.match(main, /const PANEL_ANALYTICS_TIMEOUT_MS = 10000;/);
 });

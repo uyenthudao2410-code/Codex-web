@@ -69,7 +69,11 @@ let lastRecoveryProgressTime = '';
 let runtimeHeartbeatInFlight = null;
 const trustedRendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
 const trustedRendererUrl = pathToFileURL(trustedRendererPath).href;
-const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
+// The hub rebuilds the orchestration snapshot from the ledger on every GET
+// (reconciliation + export_summary over the 101MB ledger; a warm full scan
+// measures ~22s), so the old 10s budget failed structurally on a healthy
+// epoch. 60s keeps a ~2.7x margin; do not lower this below the scan cost.
+const PANEL_ORCHESTRATION_TIMEOUT_MS = 60000;
 const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
 const PANEL_ANALYTICS_TIMEOUT_MS = 10000;
 const TOOLBAR_HEIGHT = 112;
