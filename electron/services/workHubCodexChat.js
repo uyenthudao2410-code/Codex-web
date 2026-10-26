@@ -93,6 +93,9 @@ const MAX_PROMPT_CHARS = 20_000; // mirrors the bridge prompt bound
 const MAX_TEXT_CHARS = 65_536; // mirrors the bridge agent-text bound
 const MAX_EVENTS_KEPT = 100;
 const VALID_EFFORTS = Object.freeze(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
+// P2 (4): durable native-chat usage history bound (telemetry records are
+// small; the file keeps the most recent records only).
+const MAX_USAGE_RECORDS = 1000;
 // W4 send_replay_directive values that forbid a blind continuation.
 const BLOCKING_DIRECTIVES = Object.freeze(new Set(['RECONCILE_BEFORE_REPLAY', 'ALREADY_CONFIRMED']));
 const RESUME_NOTE = 'Resume phụ thuộc App Server còn giữ thread này trong CODEX_HOME; '
@@ -169,6 +172,20 @@ function createWorkHubCodexChat(options = {}) {
   // only for the ended-RUN handoff gate; absence skips the gate and the
   // record path's own binding check remains the backstop.
   const readRunStatus = typeof options.readRunStatus === 'function' ? options.readRunStatus : null;
+  // P2 (4): durable native-chat usage history (main injects a path beside
+  // the session registry; tests inject a tmp-dir path). Absent -> usage is
+  // not persisted, but the chat itself is unaffected. The file holds one
+  // record per terminal turn: run binding + counts + model + timestamp
+  // ONLY — never prompt text, agent text, or tool content. It is app-data
+  // telemetry, not orchestration-ledger evidence.
+  const usageFile = String(options.usageFile || '').trim() || null;
+  // P2 (4): read-only current-RUN projection (main wires the P0/P5
+  // orchestration accessor: task_list.current -> { runId, taskId }). The
+  // record binds to the panel's CURRENT run at turn completion. Absent ->
+  // the chat's own creation link is the fallback binding; a failed read
+  // degrades the record to unlinked. Absence or failure never drops a
+  // record and never breaks the turn.
+  const readCurrentRun = typeof options.readCurrentRun === 'function' ? options.readCurrentRun : null;
   // Durable session-registry file (main injects a path beside the app
   // data; tests inject a tmp-dir path). Absent -> in-memory only.
   const stateFile = String(options.stateFile || options.registryFile || '').trim() || null;
@@ -251,6 +268,7 @@ function createWorkHubCodexChat(options = {}) {
       restoredFromRegistry: false, // thread came from the durable registry
       migratedFromKey: null, // transient P2 migration marker (never persisted; persistSession writes explicit fields only)
       link: null, // { runId, taskId } — real ids only, set at creation
+      lastUsage: null, // P2 (4): last usage record persisted for this session (counts+model+timestamp only)
       messages: [], // { role: 'user'|'assistant', text, turnId, status }
       events: [], // { cursor, method, itemType, status }
       error: null,
@@ -320,6 +338,7 @@ function createWorkHubCodexChat(options = {}) {
         note: RESUME_NOTE,
       },
       link: session.link,
+      usage: session.lastUsage ? { ...session.lastUsage } : null, // P2 (4): last persisted usage record (counts+model+timestamp only)
       messages: session.messages.map((m) => ({ ...m })),
       events: session.events.slice(-20).map((e) => ({ ...e })),
       error: session.error,
@@ -933,6 +952,112 @@ function createWorkHubCodexChat(options = {}) {
     }
   }
 
+  // ---------------- P2 (4): native-chat usage telemetry ----------------
+  // One record per terminal turn, persisted to usageFile (app data, not
+  // ledger evidence): run binding + counts + model + timestamp ONLY.
+  // Never prompt text, agent text, or tool content. Counts come only from
+  // bridge economics (App Server thread/tokenUsage/updated, validated by
+  // the bridge); anything missing, partial, or inconsistent is recorded
+  // as unobserved with null counts — never zero-filled, because a zero
+  // would claim a free turn.
+  function readUsageRecords() {
+    if (!usageFile) return [];
+    try {
+      const parsed = JSON.parse(fs.readFileSync(usageFile, 'utf8'));
+      return Array.isArray(parsed && parsed.records) ? parsed.records : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function sanitizeCounts(economics) {
+    if (!economics || typeof economics !== 'object') return null;
+    const fields = ['input_tokens', 'cached_input_tokens', 'uncached_input_tokens', 'output_tokens', 'reasoning_output_tokens'];
+    for (const field of fields) {
+      const value = economics[field];
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+    }
+    return {
+      input_tokens: economics.input_tokens,
+      cached_input_tokens: economics.cached_input_tokens,
+      uncached_input_tokens: economics.uncached_input_tokens,
+      output_tokens: economics.output_tokens,
+      reasoning_output_tokens: economics.reasoning_output_tokens,
+    };
+  }
+
+  async function recordUsage(session, { status, economics, model }) {
+    // Best-effort: usage recording must never break the chat turn, so
+    // every failure path degrades (unlinked / unobserved / no record when
+    // no file is wired) and this function never throws to its caller.
+    try {
+      if (!usageFile) return null;
+      const turnId = session.turnId || '';
+      if (!turnId) return null;
+      const counts = sanitizeCounts(economics);
+      const cleanModel = model
+        ? String(model).slice(0, 120)
+        : (session.route && session.route.model ? String(session.route.model).slice(0, 120) : null);
+      let runId = null;
+      let taskId = null;
+      let attribution = 'unlinked';
+      if (readCurrentRun) {
+        try {
+          const current = await readCurrentRun(session.workspace);
+          if (current && cleanId(current.runId)) {
+            runId = cleanId(current.runId);
+            taskId = cleanId(current.taskId) || null;
+            attribution = 'current_run';
+          }
+        } catch {
+          // Current-RUN read failed (e.g. control snapshot timeout): the
+          // record stays unlinked rather than blocking the turn.
+        }
+      } else if (session.link && session.link.runId) {
+        runId = cleanId(session.link.runId);
+        taskId = cleanId(session.link.taskId) || null;
+        attribution = 'chat_link';
+      }
+      const record = {
+        version: 1,
+        recorded_at: new Date().toISOString(),
+        thread_id: session.threadId || null,
+        turn_id: turnId,
+        run_id: runId,
+        task_id: taskId,
+        attribution,
+        status: status || null,
+        model: cleanModel,
+        usage_status: counts ? 'observed' : 'unobserved',
+        input_tokens: counts ? counts.input_tokens : null,
+        cached_input_tokens: counts ? counts.cached_input_tokens : null,
+        uncached_input_tokens: counts ? counts.uncached_input_tokens : null,
+        output_tokens: counts ? counts.output_tokens : null,
+        reasoning_output_tokens: counts ? counts.reasoning_output_tokens : null,
+      };
+      const all = readUsageRecords();
+      const existingIndex = all.findIndex((r) => r && r.turn_id === turnId);
+      if (existingIndex >= 0) {
+        // Dedup by turn_id (interrupt marker vs terminal observe race):
+        // an observed record always wins over an unobserved marker; any
+        // other duplicate keeps the first record.
+        if (all[existingIndex].usage_status === 'unobserved' && counts) all[existingIndex] = record;
+        else return all[existingIndex];
+      } else {
+        all.push(record);
+      }
+      const kept = all.length > MAX_USAGE_RECORDS ? all.slice(-MAX_USAGE_RECORDS) : all;
+      fs.mkdirSync(path.dirname(usageFile), { recursive: true });
+      const temp = `${usageFile}.tmp-${process.pid}`;
+      fs.writeFileSync(temp, JSON.stringify({ version: 1, records: kept }, null, 2));
+      fs.renameSync(temp, usageFile);
+      session.lastUsage = record;
+      return record;
+    } catch {
+      return null;
+    }
+  }
+
   async function poll(root) {
     const session = sessionFor(root);
     if (!session.threadId || !session.turnId || session.state !== CHAT_STATES.RUNNING) {
@@ -971,6 +1096,16 @@ function createWorkHubCodexChat(options = {}) {
         }
         session.updatedAt = new Date().toISOString();
         persistSession(session);
+        // P2 (4): record this terminal turn's usage (counts + model +
+        // timestamp, bound to the panel's current RUN). Awaited: the
+        // current-RUN snapshot read is fast when the hub is healthy; when
+        // it is slow the panel is already degraded, and recordUsage itself
+        // never throws — a failed read degrades the record to unlinked.
+        await recordUsage(session, {
+          status,
+          economics: result.economics || null,
+          model: result.route && result.route.model ? result.route.model : null,
+        });
       }
       session.updatedAt = new Date().toISOString();
       return { ok: true, state: session.state, data: view(session) };
@@ -996,6 +1131,7 @@ function createWorkHubCodexChat(options = {}) {
     if (!session.threadId || (!session.turnId && session.state !== CHAT_STATES.RUNNING)) {
       return { ok: false, state: session.state, error: { code: 'NO_ACTIVE_TURN', message: 'Không có lượt chat nào để dừng.' }, data: view(session) };
     }
+    const wasRunning = session.state === CHAT_STATES.RUNNING;
     try {
       await bridge(session, { action: 'interrupt', thread_id: session.threadId, turn_id: session.turnId }, 15_000);
       session.error = null;
@@ -1003,6 +1139,11 @@ function createWorkHubCodexChat(options = {}) {
       if (assistant && assistant.status === 'running') assistant.status = 'interrupted';
       session.state = CHAT_STATES.INTERRUPTED;
       session.updatedAt = new Date().toISOString();
+      // P2 (4): an interrupted turn has no terminal observe, so its usage
+      // is recorded as unobserved (never silently absent). recordUsage
+      // dedupes by turn_id: a terminal observe that already recorded this
+      // turn observed wins and this marker is skipped.
+      if (wasRunning) await recordUsage(session, { status: 'interrupted', economics: null, model: null });
       return { ok: true, state: session.state, data: view(session) };
     } catch (err) {
       return fail(session, classifyBridgeError(err));

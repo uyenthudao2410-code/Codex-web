@@ -759,3 +759,228 @@ test('(gui4-c) listHistory normalizes Unix-second thread timestamps to ISO', asy
   assert.equal(byId['rec-1'].updatedAt, '2026-10-25T00:00:00.000Z');
   assert.equal(byId['null-1'].updatedAt, null);
 });
+
+
+// ---------------- P2 (4): native-chat usage telemetry ----------------
+// A terminal turn's usage comes from bridge economics (App Server
+// thread/tokenUsage/updated, validated by the bridge); the record binds
+// to the panel's current RUN (readCurrentRun injection = the P0/P5
+// orchestration accessor) and holds counts + model + timestamp ONLY.
+// No prompt text, no agent text, no tool content is ever persisted.
+
+const P24_ECONOMICS = {
+  input_tokens: 1200,
+  cached_input_tokens: 300,
+  uncached_input_tokens: 900,
+  output_tokens: 400,
+  reasoning_output_tokens: 150,
+};
+
+function makeUsageChat(overrides = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-chat-p24-usage-'));
+  const usageFile = path.join(dir, 'usage.json');
+  const readCurrentRun = 'readCurrentRun' in overrides
+    ? overrides.readCurrentRun
+    : ('currentRun' in overrides ? async () => overrides.currentRun : async () => ({ runId: 'run-123', taskId: 'task-9' }));
+  const fake = makeFakeBridge(overrides.bridge || {});
+  const options = { callBridge: fake.callBridge, usageFile };
+  if (readCurrentRun !== undefined) options.readCurrentRun = readCurrentRun;
+  const chat = createWorkHubCodexChat(options);
+  const readRecords = () => {
+    try { return JSON.parse(fs.readFileSync(usageFile, 'utf8')).records; }
+    catch { return null; }
+  };
+  return { dir, usageFile, fake, chat, readRecords };
+}
+
+function p24TerminalObserved() {
+  return {
+    status: 'completed', terminal: true, agent_text: 'Xong.',
+    events: [], next_cursor: 1,
+    economics: { ...P24_ECONOMICS },
+    route: { profile: 'chat', model: 'gpt-5.6-terra', effort: 'medium' },
+  };
+}
+
+test('(p2-4a) terminal poll with bridge economics persists a usage record bound to the current RUN (counts+model+timestamp, no prompt text)', async () => {
+  const u = makeUsageChat({ bridge: { observe: async () => p24TerminalObserved() } });
+  try {
+    await u.chat.send(ROOT, { text: 'Câu hỏi bí mật không được log' });
+    const polled = await u.chat.poll(ROOT);
+    assert.equal(polled.data.state, 'COMPLETED');
+    const records = u.readRecords();
+    assert.equal(records.length, 1);
+    const r = records[0];
+    assert.equal(r.run_id, 'run-123');
+    assert.equal(r.task_id, 'task-9');
+    assert.equal(r.attribution, 'current_run');
+    assert.equal(r.model, 'gpt-5.6-terra');
+    assert.equal(r.status, 'completed');
+    assert.equal(r.usage_status, 'observed');
+    assert.equal(r.input_tokens, 1200);
+    assert.equal(r.cached_input_tokens, 300);
+    assert.equal(r.uncached_input_tokens, 900);
+    assert.equal(r.output_tokens, 400);
+    assert.equal(r.reasoning_output_tokens, 150);
+    assert.match(r.recorded_at, /^\d{4}-\d{2}-\d{2}T\d{2}:/);
+    assert.equal(r.thread_id, 'thread-1');
+    assert.equal(r.turn_id, 'turn-1');
+    const raw = fs.readFileSync(u.usageFile, 'utf8');
+    assert.ok(!raw.includes('Câu hỏi bí mật không được log'));
+    assert.ok(!raw.includes('Xong.'));
+    assert.equal(u.chat.getView(ROOT).data.usage.model, 'gpt-5.6-terra');
+    assert.equal(u.chat.getView(ROOT).data.usage.input_tokens, 1200);
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4b) terminal poll without bridge economics records unobserved with null counts (never zeros)', async () => {
+  const u = makeUsageChat({
+    bridge: { observe: async () => ({ status: 'completed', terminal: true, agent_text: '', events: [], next_cursor: 1 }) },
+  });
+  try {
+    await u.chat.send(ROOT, { text: 'Không usage' });
+    await u.chat.poll(ROOT);
+    const records = u.readRecords();
+    assert.equal(records.length, 1);
+    assert.equal(records[0].usage_status, 'unobserved');
+    assert.equal(records[0].input_tokens, null);
+    assert.equal(records[0].cached_input_tokens, null);
+    assert.equal(records[0].uncached_input_tokens, null);
+    assert.equal(records[0].output_tokens, null);
+    assert.equal(records[0].reasoning_output_tokens, null);
+    assert.equal(records[0].model, 'gpt-5.6-terra');
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4c) terminal poll with no current RUN records the turn as unlinked (run_id null) and never drops it', async () => {
+  const u = makeUsageChat({ currentRun: null, bridge: { observe: async () => p24TerminalObserved() } });
+  try {
+    await u.chat.send(ROOT, { text: 'Không RUN' });
+    await u.chat.poll(ROOT);
+    const records = u.readRecords();
+    assert.equal(records.length, 1);
+    assert.equal(records[0].run_id, null);
+    assert.equal(records[0].task_id, null);
+    assert.equal(records[0].attribution, 'unlinked');
+    assert.equal(records[0].usage_status, 'observed');
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4d) a failing current-RUN read never breaks the turn and degrades the record to unlinked', async () => {
+  const u = makeUsageChat({
+    readCurrentRun: async () => { throw new Error('control snapshot timeout'); },
+    bridge: { observe: async () => p24TerminalObserved() },
+  });
+  try {
+    await u.chat.send(ROOT, { text: 'Snapshot lỗi' });
+    const polled = await u.chat.poll(ROOT);
+    assert.equal(polled.ok, true);
+    assert.equal(polled.data.state, 'COMPLETED');
+    const records = u.readRecords();
+    assert.equal(records.length, 1);
+    assert.equal(records[0].attribution, 'unlinked');
+    assert.equal(records[0].run_id, null);
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4e) interrupt records the turn as unobserved once, and a second interrupt does not duplicate it', async () => {
+  const u = makeUsageChat({});
+  try {
+    await u.chat.send(ROOT, { text: 'Dừng lại' });
+    const stopped = await u.chat.interrupt(ROOT);
+    assert.equal(stopped.ok, true);
+    assert.equal(stopped.data.state, 'INTERRUPTED');
+    let records = u.readRecords();
+    assert.equal(records.length, 1);
+    assert.equal(records[0].status, 'interrupted');
+    assert.equal(records[0].usage_status, 'unobserved');
+    await u.chat.interrupt(ROOT);
+    records = u.readRecords();
+    assert.equal(records.length, 1);
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4f) a terminal observe racing interrupt replaces the unobserved marker with the observed record (exactly one record)', async () => {
+  const u = makeUsageChat({
+    bridge: {
+      observe: () => new Promise((resolve) => setTimeout(() => resolve(p24TerminalObserved()), 100)),
+    },
+  });
+  try {
+    await u.chat.send(ROOT, { text: 'Đua' });
+    const pollP = u.chat.poll(ROOT);
+    await u.chat.interrupt(ROOT);
+    const polled = await pollP;
+    assert.equal(polled.ok, true);
+    const records = u.readRecords();
+    assert.equal(records.length, 1);
+    assert.equal(records[0].usage_status, 'observed');
+    assert.equal(records[0].status, 'completed');
+    assert.equal(records[0].input_tokens, 1200);
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4g) without a current-RUN reader the record falls back to the chat creation link (chat_link)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-chat-p24-link-'));
+  const usageFile = path.join(dir, 'usage.json');
+  try {
+    const fake = makeFakeBridge({ observe: async () => p24TerminalObserved() });
+    const chat = createWorkHubCodexChat({ callBridge: fake.callBridge, usageFile });
+    await chat.send(ROOT, { text: 'Link cũ', link: { runId: 'run-link', taskId: 'task-link' } });
+    await chat.poll(ROOT);
+    const records = JSON.parse(fs.readFileSync(usageFile, 'utf8')).records;
+    assert.equal(records.length, 1);
+    assert.equal(records[0].run_id, 'run-link');
+    assert.equal(records[0].task_id, 'task-link');
+    assert.equal(records[0].attribution, 'chat_link');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('(p2-4h) without a usageFile wired, turns complete unchanged and view usage stays null', async () => {
+  const fake = makeFakeBridge();
+  const chat = createWorkHubCodexChat({ callBridge: fake.callBridge });
+  await chat.send(ROOT, { text: 'Không file' });
+  await chat.poll(ROOT);
+  const polled = await chat.poll(ROOT);
+  assert.equal(polled.data.state, 'COMPLETED');
+  assert.equal(polled.data.usage, null);
+});
+
+test('(p2-4i) partial bridge economics is recorded as unobserved (never partial counts)', async () => {
+  const partial = { ...P24_ECONOMICS };
+  delete partial.reasoning_output_tokens;
+  const u = makeUsageChat({
+    bridge: {
+      observe: async () => ({
+        status: 'completed', terminal: true, agent_text: '', events: [], next_cursor: 1,
+        economics: partial,
+        route: { profile: 'chat', model: 'gpt-5.6-terra', effort: 'medium' },
+      }),
+    },
+  });
+  try {
+    await u.chat.send(ROOT, { text: 'Thiếu trường' });
+    await u.chat.poll(ROOT);
+    const records = u.readRecords();
+    assert.equal(records.length, 1);
+    assert.equal(records[0].usage_status, 'unobserved');
+    assert.equal(records[0].input_tokens, null);
+    assert.equal(records[0].output_tokens, null);
+  } finally {
+    fs.rmSync(u.dir, { recursive: true, force: true });
+  }
+});

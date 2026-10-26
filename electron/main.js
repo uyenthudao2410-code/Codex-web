@@ -1180,6 +1180,25 @@ function registerIpc() {
     // settings.json / runtime-state.json), so a persistent chat thread
     // can be resumed after an Electron/MCP restart.
     stateFile: path.join(runtimePaths.dataRoot(), 'workhub-codex-chat-sessions.json'),
+    // P2 (4): native-chat usage — current-RUN binding uses the same P0/P5
+    // orchestration accessor as the task-state handlers (task_list.current
+    // -> run_id/task_id). A snapshot failure degrades the record to
+    // unlinked inside the service; it never throws here.
+    readCurrentRun: async () => {
+      try {
+        const control = await readOrchestrationControlSnapshot();
+        const current = control && control.task_list ? control.task_list.current : null;
+        return current && current.run_id
+          ? { runId: String(current.run_id), taskId: current.task_id ? String(current.task_id) : null }
+          : null;
+      } catch {
+        return null;
+      }
+    },
+    // P2 (4): durable usage history beside the session registry (app data,
+    // not ledger evidence): one record per terminal turn, counts + model +
+    // timestamp only — never prompt, agent text, or tool content.
+    usageFile: path.join(runtimePaths.dataRoot(), 'workhub-codex-chat-usage.json'),
   });
   secureHandle('workhub:codex-chat-probe', (_event, payload) => invokeSafely(async () => (
     codexChat.probe(scopedWorkHubRoot(payload?.expectedWorkspace)))));
