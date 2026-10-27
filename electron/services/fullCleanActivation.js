@@ -751,6 +751,13 @@ function summarizeCensus(raw, { workspace, allowAcceptancePending = false } = {}
   const activeP5 = runs.filter((item) => String(item.classification || '') === 'P5_EXPERIMENT_ANCHOR'
     && !TERMINAL_P5_LIFECYCLES.has(String(item.p5_epoch_lifecycle || '')));
   const liveManagedJobs = managedJobs.filter((item) => String(item.classification || '') === 'LIVE_OWNED');
+  const liveServiceJobs = Array.isArray(raw?.live_service_jobs)
+    ? raw.live_service_jobs.filter((item) => item && typeof item === 'object')
+    : [];
+  const liveServiceJobIds = new Set(liveServiceJobs
+    .map((item) => String(item.job_id || ''))
+    .filter((jobId) => jobId !== ''));
+  const taskManagedJobs = liveManagedJobs.filter((item) => !liveServiceJobIds.has(String(item.job_id || '')));
   const orphanedManagedJobs = managedJobs.filter((item) => String(item.classification || '') === 'ORPHANED_OR_FOREIGN_MANAGED_JOB');
   const unbound = Array.isArray(raw?.unbound_live_resources) ? raw.unbound_live_resources : [];
   const projectionDrift = summary.projection_drift === true
@@ -764,11 +771,11 @@ function summarizeCensus(raw, { workspace, allowAcceptancePending = false } = {}
     active_commands: 0,
     starting_commands: 0,
     active_background_operations: runs.reduce((sum, item) => sum + Number(item.ownership?.running_background_operations || 0), 0),
-    active_managed_processes: liveManagedJobs.length,
+    active_managed_processes: taskManagedJobs.length,
     foreign_heavy_processes: 0,
     active_agent_lanes: runs.reduce((sum, item) => sum + Number(item.ownership?.live_agent_lanes || 0), 0),
     threshold_sensitive_stale_candidates: Number(summary.run_classification_counts?.THRESHOLD_SENSITIVE_STALE_CANDIDATE || 0),
-    owned_codex_sidecar_residues: 0
+    owned_codex_sidecar_residues: liveServiceJobs.length
   };
   const blockers = [];
   if (!snapshotOk) blockers.push('ledger_snapshot_integrity_failed');
@@ -792,6 +799,7 @@ function summarizeCensus(raw, { workspace, allowAcceptancePending = false } = {}
     ledger_path: text(raw?.ledger_path || path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3')),
     snapshot,
     counts,
+    live_service_jobs: liveServiceJobs,
     lifecycle: {
       unexplained_active_runs: Number(summary.unexplained_active_runs || 0),
       unbound_live_resource_residues: Number(summary.unbound_live_resource_residues || unbound.length),

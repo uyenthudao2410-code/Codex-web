@@ -14,6 +14,7 @@ const {
   CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS,
   canonicalLedgerCensus,
   canonicalLedgerCensusFailure,
+  summarizeCensus,
   oneShotCensus,
   heldCensus,
   canonicalProjectionRebuildSha256,
@@ -3118,3 +3119,100 @@ test('expiry at commit, open, or durable READY boundary leaves admission closed'
     });
   }
 });
+
+const censusSummaryWorkspace = 'E:\\workspace';
+const censusSummarySnapshot = () => ({
+  backup_api_copy: true,
+  immutable: true,
+  query_only: true,
+  integrity_check: ['ok'],
+  foreign_key_check_rows: 0,
+  sha256: 'a'.repeat(64),
+  logical_sha256: 'b'.repeat(64)
+});
+function censusSummaryRaw(overrides = {}) {
+  return {
+    snapshot: censusSummarySnapshot(),
+    workspace: censusSummaryWorkspace,
+    runs: [],
+    managed_jobs: [],
+    unbound_live_resources: [],
+    summary: {},
+    ...overrides
+  };
+}
+const censusSummaryServiceJob = {
+  job_id: '4d77511e155a49b985bc8794ae7913a1',
+  classification: 'LIVE_OWNED',
+  owner: 'codex-app-server',
+  command_id: 'codex-app-server-1',
+  resource_class: 'MEDIUM',
+  lifecycle_state: 'running',
+  root_pid: 29400,
+  run_id: '',
+  wave_id: '',
+  job_updated_at: '2026-10-27T06:33:42.850Z'
+};
+const censusSummaryServiceEntry = {
+  job_id: '4d77511e155a49b985bc8794ae7913a1',
+  owner: 'codex-app-server',
+  command_id: 'codex-app-server-1',
+  resource_class: 'MEDIUM',
+  lifecycle_state: 'running',
+  root_pid: 29400,
+  job_updated_at: '2026-10-27T06:33:42.850Z'
+};
+const censusSummaryTaskJob = {
+  job_id: 'task-job-1',
+  classification: 'LIVE_OWNED',
+  lifecycle_state: 'running',
+  root_pid: 12345,
+  run_id: 'run-1',
+  wave_id: 'wave-1',
+  job_updated_at: '2026-10-27T06:33:42.850Z'
+};
+
+test('census summary discounts a live provider service job from managed work', () => {
+  const result = summarizeCensus(censusSummaryRaw({
+    managed_jobs: [censusSummaryServiceJob],
+    live_service_jobs: [censusSummaryServiceEntry]
+  }), { workspace: censusSummaryWorkspace });
+  assert.equal(result.counts.active_managed_processes, 0);
+  assert.equal(result.counts.owned_codex_sidecar_residues, 1);
+  assert.equal(result.lifecycle.blockers.includes('active_runtime_work'), false);
+  assert.equal(result.safe, true);
+  assert.equal(result.code, 'READY');
+  assert.deepEqual(result.live_service_jobs, [censusSummaryServiceEntry]);
+});
+
+test('census summary still counts a live task-work job as managed work', () => {
+  const result = summarizeCensus(censusSummaryRaw({
+    managed_jobs: [censusSummaryTaskJob]
+  }), { workspace: censusSummaryWorkspace });
+  assert.equal(result.counts.active_managed_processes, 1);
+  assert.equal(result.counts.owned_codex_sidecar_residues, 0);
+  assert.equal(result.lifecycle.blockers.includes('active_runtime_work'), true);
+  assert.equal(result.safe, false);
+});
+
+test('census summary counts only task-work jobs when service and task jobs are mixed', () => {
+  const result = summarizeCensus(censusSummaryRaw({
+    managed_jobs: [censusSummaryServiceJob, censusSummaryTaskJob],
+    live_service_jobs: [censusSummaryServiceEntry]
+  }), { workspace: censusSummaryWorkspace });
+  assert.equal(result.counts.active_managed_processes, 1);
+  assert.equal(result.counts.owned_codex_sidecar_residues, 1);
+  assert.equal(result.lifecycle.blockers.includes('active_runtime_work'), true);
+  assert.equal(result.safe, false);
+});
+
+test('census summary without live_service_jobs behaves as before', () => {
+  const result = summarizeCensus(censusSummaryRaw({
+    managed_jobs: [censusSummaryServiceJob]
+  }), { workspace: censusSummaryWorkspace });
+  assert.equal(result.counts.active_managed_processes, 1);
+  assert.equal(result.counts.owned_codex_sidecar_residues, 0);
+  assert.equal(result.lifecycle.blockers.includes('active_runtime_work'), true);
+  assert.equal(result.safe, false);
+});
+
