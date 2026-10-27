@@ -147,6 +147,8 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   workhubCodexChatHistory: (payload) => ipcRenderer.invoke('workhub:codex-chat-history', payload),
   workhubCodexChatSend: (payload) => ipcRenderer.invoke('workhub:codex-chat-send', payload),
   workhubCodexChatPoll: (payload) => ipcRenderer.invoke('workhub:codex-chat-poll', payload),
+  workhubCodexChatProbeRegistered: (payload) => ipcRenderer.invoke('workhub:codex-chat-probe-registered', payload),
+  workhubCodexChatPollRegistered: (payload) => ipcRenderer.invoke('workhub:codex-chat-poll-registered', payload),
   workhubCodexChatInterrupt: (payload) => ipcRenderer.invoke('workhub:codex-chat-interrupt', payload),
   workhubCodexChatReset: (payload) => ipcRenderer.invoke('workhub:codex-chat-reset', payload),
   workhubCodexChatModels: (payload) => ipcRenderer.invoke('workhub:codex-chat-models', payload),

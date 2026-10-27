@@ -1,5 +1,6 @@
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
 const crypto = require('node:crypto');
 const http = require('node:http');
 const { pathToFileURL } = require('node:url');
@@ -1243,6 +1244,51 @@ function registerIpc() {
       choice: payload?.choice,
       confirmEnded: payload?.confirmEnded === true,
     }))));
+  // P3-C1: read-only registered-folder chat status. This is a NARROW
+  // additional allowance, NOT a weakening of scopedWorkHubRoot: it accepts
+  // only roots the owner already registered (settings workspace,
+  // authorizedRoots, recentWorkspaces, or the control-plane workspace
+  // registry), and it serves ONLY probe + poll. send/interrupt/reset/
+  // fork/resume/handoff/models/history keep going through
+  // scopedWorkHubRoot unchanged. Anything outside the registered set —
+  // including an existing directory that is not registered, and a
+  // worktree of a registered root (worktrees are not registered roots) —
+  // is rejected with the same wrong-target error shape.
+  const registeredCodexChatRoots = () => {
+    const current = settings.load();
+    const roots = [];
+    const push = (value) => { if (typeof value === 'string' && value.trim()) roots.push(value); };
+    push(current.workspace);
+    for (const root of (Array.isArray(current.authorizedRoots) ? current.authorizedRoots : [])) push(root);
+    for (const root of (Array.isArray(current.recentWorkspaces) ? current.recentWorkspaces : [])) push(root);
+    try {
+      const raw = fsSync.readFileSync(runtimePaths.controlPlaneWorkspaceRegistryFile());
+      if (raw.length > 64 * 1024) return roots;
+      const registry = JSON.parse(raw.toString('utf8'));
+      if (!registry || registry.schema_version !== 1 || !Array.isArray(registry.entries) || registry.entries.length > 64) return roots;
+      for (const entry of registry.entries) {
+        if (entry && typeof entry === 'object' && typeof entry.workspace_id === 'string' && entry.workspace_id
+          && typeof entry.workspace_generation === 'string' && entry.workspace_generation
+          && typeof entry.canonical_path === 'string') push(entry.canonical_path);
+      }
+    } catch {
+      // Fail closed for registry-only roots: settings sets still apply.
+    }
+    return roots;
+  };
+  const registeredWorkHubRoot = (expectedWorkspace) => {
+    const requested = String(expectedWorkspace || '').trim();
+    const requestedKey = requested ? canonicalPathKey(requested) : '';
+    if (!requestedKey) throw new Error('Dự án đã thay đổi so với lúc dữ liệu được mở — thao tác bị từ chối, hãy tải lại trang này.');
+    for (const root of registeredCodexChatRoots()) {
+      if (canonicalPathKey(root) === requestedKey) return root;
+    }
+    throw new Error('Dự án đã thay đổi so với lúc dữ liệu được mở — thao tác bị từ chối, hãy tải lại trang này.');
+  };
+  secureHandle('workhub:codex-chat-probe-registered', (_event, payload) => invokeSafely(async () => (
+    codexChat.probe(registeredWorkHubRoot(payload?.expectedWorkspace)))));
+  secureHandle('workhub:codex-chat-poll-registered', (_event, payload) => invokeSafely(async () => (
+    codexChat.poll(registeredWorkHubRoot(payload?.expectedWorkspace)))));
   // W5 git range review (kept AFTER workhub:check-url for the same scope-
   // fixture reason as the W3-C handlers above): read-only range analysis
   // of the scoped workspace; the service builds the range from two revs

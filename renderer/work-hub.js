@@ -103,6 +103,8 @@
     for (const id of ['whCodeQuery', 'whEditor', 'whPreview', 'whFilePath', 'whFileSize', 'whImportDest', 'whSnippetName', 'whSnippetBody', 'whFeedbackText', 'whQueueTitle', 'whNoteTitle', 'whNoteBody', 'whChatLabel', 'whChatUrl', 'whCodexChatInput', 'whGitReviewFrom', 'whGitReviewTo']) { const input = $(`#${id}`); if (input) input.value = ''; }
     if ($('#whGitReviewMeta')) $('#whGitReviewMeta').textContent = '';
     stopCodexChatPolling();
+    if (typeof codexChatUi !== 'undefined') codexChatUi.folderStates.clear();
+    if (typeof paintCodexChatFolderStrip === 'function') paintCodexChatFolderStrip();
     if ($('#whCodexChatState')) $('#whCodexChatState').textContent = 'Chưa kiểm tra Codex App Server.';
     if ($('#whCodexChatLink')) $('#whCodexChatLink').textContent = 'Chưa liên kết RUN.';
     if ($('#whCodexChatHandoffInfo')) $('#whCodexChatHandoffInfo').textContent = 'Chưa chuyển phiên chat này thành việc điều hành.';
@@ -1357,9 +1359,61 @@
     MCP_UNAVAILABLE: 'MCP chưa sẵn sàng',
     OWNERSHIP_LOST: 'Phiên chat thuộc tiến trình bridge trước (MCP/App Server đã khởi động lại) — không tiếp tục được, hãy tạo chat mới',
   };
-  const codexChatUi = { timer: null, modelsLoaded: false };
-  function stopCodexChatPolling() {
-    if (codexChatUi.timer) { clearInterval(codexChatUi.timer); codexChatUi.timer = null; }
+  const codexChatUi = { timers: new Map(), folderStates: new Map(), modelsLoaded: false };
+  function codexChatFolderKey(workspace) {
+    try {
+      const key = S.workspaceKeyOf(workspace);
+      if (key) return key;
+    } catch { /* fall through to the raw spelling */ }
+    return String(workspace || '');
+  }
+  function stopCodexChatPolling(workspace) {
+    // P3-C1: no argument stops ALL pollers (full UI clear only). A
+    // workspace argument stops just that folder's poller; view switches
+    // never call this, so other folders keep polling.
+    if (workspace === undefined) {
+      for (const timer of codexChatUi.timers.values()) clearInterval(timer);
+      codexChatUi.timers.clear();
+      return;
+    }
+    const key = codexChatFolderKey(workspace);
+    if (codexChatUi.timers.has(key)) { clearInterval(codexChatUi.timers.get(key)); codexChatUi.timers.delete(key); }
+  }
+  function rememberCodexChatFolderState(workspace, view) {
+    if (!view) return;
+    codexChatUi.folderStates.set(codexChatFolderKey(workspace), {
+      workspace: String(workspace || ''),
+      state: view.state || '',
+      threadId: view.threadId || null,
+    });
+    paintCodexChatFolderStrip();
+  }
+  function codexChatFolderStripBox() {
+    let box = $('#whCodexChatFolders');
+    if (box) return box;
+    const stateBox = $('#whCodexChatState');
+    if (!stateBox || !stateBox.parentNode || typeof stateBox.parentNode.insertBefore !== 'function') return null;
+    box = el('div', 'wh-chat-folders');
+    box.id = 'whCodexChatFolders';
+    stateBox.parentNode.insertBefore(box, stateBox.nextSibling || null);
+    return box;
+  }
+  function paintCodexChatFolderStrip() {
+    const box = codexChatFolderStripBox();
+    if (!box) return;
+    const currentKey = codexChatFolderKey(currentProject());
+    const rows = [];
+    for (const [key, info] of codexChatUi.folderStates) {
+      const label = (typeof store !== 'undefined' && store && typeof store.projectLabel === 'function')
+        ? store.projectLabel(info.workspace)
+        : info.workspace;
+      const row = el('div', 'wh-row');
+      row.appendChild(el('b', '', label));
+      row.appendChild(el('span', '', ` · ${CODEX_CHAT_STATE_LABELS[info.state] || String(info.state || '')}${info.threadId ? ` · thread ${String(info.threadId).slice(0, 8)}` : ''}`));
+      if (key === currentKey) row.appendChild(el('span', 'soft-badge', 'Đang xem'));
+      rows.push(row);
+    }
+    box.replaceChildren(...rows);
   }
   function paintCodexChat(view) {
     const stateBox = $('#whCodexChatState');
@@ -1448,16 +1502,30 @@
     if (handoffBtn) handoffBtn.disabled = !(view.messages || []).length || view.state === 'RUNNING';
   }
   async function pollCodexChatTurn(scope) {
-    if (typeof window.mcpAssistant?.workhubCodexChatPoll !== 'function') return;
-    const result = unwrap(await window.mcpAssistant.workhubCodexChatPoll({ expectedWorkspace: scope.workspace }).catch(() => null));
-    if (!scope.current()) { stopCodexChatPolling(); return; }
+    // P3-C1: a folder's poller survives view switches. The tick uses the
+    // existing channel while its folder is current and the registered
+    // read-only channel otherwise; it always refreshes the per-folder
+    // strip, but paints the full view only for the current folder.
+    const isCurrent = codexChatFolderKey(scope.workspace) === codexChatFolderKey(currentProject());
+    const pollFn = isCurrent
+      ? window.mcpAssistant?.workhubCodexChatPoll
+      : window.mcpAssistant?.workhubCodexChatPollRegistered;
+    if (typeof pollFn !== 'function') return;
+    const result = unwrap(await pollFn({ expectedWorkspace: scope.workspace }).catch(() => null));
     const view = result?.data;
-    if (view) paintCodexChat(view);
-    if (!view || view.state !== 'RUNNING') stopCodexChatPolling();
+    if (view) {
+      rememberCodexChatFolderState(scope.workspace, view);
+      if (scope.current()) paintCodexChat(view);
+    }
+    if (!view || view.state !== 'RUNNING') stopCodexChatPolling(scope.workspace);
   }
   function startCodexChatPolling(scope) {
-    stopCodexChatPolling();
-    codexChatUi.timer = setInterval(() => { pollCodexChatTurn(scope).catch(() => {}); }, 1500);
+    // P3-C1: one interval per folder, keyed by canonical workspace. A
+    // second start for the same folder is a no-op, so switching views
+    // never duplicates a poller and never kills another folder's poller.
+    const key = codexChatFolderKey(scope.workspace);
+    if (codexChatUi.timers.has(key)) return;
+    codexChatUi.timers.set(key, setInterval(() => { pollCodexChatTurn(scope).catch(() => {}); }, 1500));
   }
   async function renderCodexChat() {
     const stateBox = $('#whCodexChatState');
@@ -1467,6 +1535,7 @@
     if (!scope.current()) return;
     const view = result?.data;
     if (!view) { stateBox.textContent = 'Không đọc được trạng thái Codex App Server.'; return; }
+    rememberCodexChatFolderState(scope.workspace, view);
     paintCodexChat(view);
     if (view.state === 'RUNNING') startCodexChatPolling(scope);
     loadCodexChatModels(scope);
@@ -2797,13 +2866,13 @@
     $('#whCodexChatSend')?.addEventListener('click', () => sendCodexChat());
     $('#whCodexChatPoll')?.addEventListener('click', () => { const scope = requestScope('codex-chat'); pollCodexChatTurn(scope); });
     $('#whCodexChatStop')?.addEventListener('click', async () => {
-      stopCodexChatPolling();
+      stopCodexChatPolling(currentProject());
       const scope = requestScope('codex-chat');
       const result = unwrap(await window.mcpAssistant.workhubCodexChatInterrupt({ expectedWorkspace: scope.workspace }).catch(() => null));
       if (scope.current() && result?.data) paintCodexChat(result.data);
     });
     $('#whCodexChatNew')?.addEventListener('click', async () => {
-      stopCodexChatPolling();
+      stopCodexChatPolling(currentProject());
       const scope = requestScope('codex-chat');
       const result = unwrap(await window.mcpAssistant.workhubCodexChatReset({ expectedWorkspace: scope.workspace }).catch(() => null));
       if (scope.current() && result?.data) paintCodexChat(result.data);
