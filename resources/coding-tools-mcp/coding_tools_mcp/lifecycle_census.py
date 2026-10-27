@@ -327,6 +327,22 @@ def _is_live_background_operation(row: sqlite3.Row, observed_at: float, grace_se
     return max(0.0, observed_at - latest) <= grace_seconds
 
 
+def _is_live_provider_service_job(job: dict[str, Any]) -> bool:
+    """A provider service job (e.g. the Codex App Server sidecar) is a live
+    managed process that belongs to no task run. It stays visible in
+    managed_jobs, but its empty run_id is by design, not a missing parent,
+    so it must never be reported as an unbound residue. Identity mirrors
+    activation_lifecycle._activation_owned_codex_sidecar_rows, minus the
+    bridge-instance binding (the census is process-independent)."""
+    return (
+        str(job.get("owner") or "") == "codex-app-server"
+        and str(job.get("command_id") or "").startswith("codex-app-server-")
+        and str(job.get("resource_class") or "") == "MEDIUM"
+        and not str(job.get("run_id") or "")
+        and not str(job.get("wave_id") or "")
+    )
+
+
 def _latest_state_after(facts: LedgerFacts, run_id: str) -> str:
     events = facts.list_events(run_id)
     for event in reversed(events):
@@ -597,6 +613,9 @@ def lifecycle_census(
             "job_id": job_id,
             "run_id": run_id,
             "wave_id": str(row["wave_id"] or ""),
+            "owner": str(row["owner"] or ""),
+            "command_id": str(row["command_id"] or ""),
+            "resource_class": str(row["resource_class"] or ""),
             "lifecycle_state": state,
             "classification": classification,
             "checkout_relation": checkout_relation,
@@ -785,15 +804,28 @@ def lifecycle_census(
                 lifecycle_state=str(row["status"] or ""),
                 updated_at=str(row["updated_at"] or ""),
             )
+    live_service_jobs: list[dict[str, Any]] = []
     for item in job_records:
-        if item["classification"] == "LIVE_OWNED":
-            record_unbound(
-                resource_type="managed_process_job",
-                resource_id=str(item["job_id"]),
-                run_id=str(item["run_id"]),
-                lifecycle_state=str(item["lifecycle_state"]),
-                updated_at=str(item["job_updated_at"]),
-            )
+        if item["classification"] != "LIVE_OWNED":
+            continue
+        if _is_live_provider_service_job(item):
+            live_service_jobs.append({
+                "job_id": str(item["job_id"]),
+                "owner": str(item["owner"]),
+                "command_id": str(item["command_id"]),
+                "resource_class": str(item["resource_class"]),
+                "lifecycle_state": str(item["lifecycle_state"]),
+                "root_pid": item["root_pid"],
+                "job_updated_at": str(item["job_updated_at"]),
+            })
+            continue
+        record_unbound(
+            resource_type="managed_process_job",
+            resource_id=str(item["job_id"]),
+            run_id=str(item["run_id"]),
+            lifecycle_state=str(item["lifecycle_state"]),
+            updated_at=str(item["job_updated_at"]),
+        )
 
     projection_result = _projection_status(projection, facts=facts, records=records, grace_seconds=grace)
     counts = Counter(str(item["classification"]) for item in records)
@@ -815,6 +847,7 @@ def lifecycle_census(
         "managed_jobs": job_records,
         "terminal_parent_lanes": terminal_parent_lanes,
         "unbound_live_resources": unbound_live_resources,
+        "live_service_jobs": live_service_jobs,
         "projection": projection_result,
         "summary": {
             "run_classification_counts": dict(sorted(counts.items())),
@@ -822,6 +855,7 @@ def lifecycle_census(
             "ordinary_active_runs": sum(1 for item in records if item["run_status"] == _ACTIVE_RUN_STATUS and item["classification"] != "P5_EXPERIMENT_ANCHOR"),
             "unexplained_active_runs": sum(1 for item in records if item["classification"] == "UNEXPLAINED_ACTIVE"),
             "unbound_live_resource_residues": len(unbound_live_resources),
+            "live_service_job_count": len(live_service_jobs),
             "stale_background_operation_residues": sum(
                 1 for row in lifecycle.rows("background_operations")
                 if str(row["status"] or "") == "running"

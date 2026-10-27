@@ -574,5 +574,106 @@ class LifecycleCensusTests(unittest.TestCase):
                 self.assertTrue(wave_id)
 
 
+    def _insert_job(self, ledger, *, job_id, run_id, command_id, owner, checkout_id):
+        old = _iso(OBSERVED_AT - 3_600)
+        with ledger._lock, ledger._connect() as connection:
+            connection.execute(
+                """INSERT INTO managed_process_jobs(
+                    job_id,run_id,wave_id,command_id,owner,checkout_id,resource_class,root_pid,
+                    root_process_token,process_instance_id,runtime_instance_id,lifecycle_state,
+                    started_at,updated_at,finished_at,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    job_id, run_id, "", command_id, owner, checkout_id, "MEDIUM", 4242,
+                    "token", "process", "runtime", "running", old, old, None, "{}",
+                ),
+            )
+
+    def _live_result(self, root, probe):
+        with open_lifecycle_census_snapshot(root) as snapshot:
+            return lifecycle_census(
+                snapshot,
+                workspace=root,
+                observed_at=OBSERVED_AT,
+                process_probe=probe,
+            )
+
+    def test_live_codex_sidecar_stays_visible_but_never_unbound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            self._run(ledger, started_at=_iso(OBSERVED_AT - 3_600))
+            expected_checkout = hashlib.sha256(str(root.resolve()).lower().encode("utf-8")).hexdigest()
+            self._insert_job(
+                ledger, job_id="sidecar-job", run_id="",
+                command_id="codex-app-server-abcdef0123456789", owner="codex-app-server",
+                checkout_id=expected_checkout,
+            )
+
+            def live_probe(pid, _expected):
+                return ProcessIdentityObservation(pid=pid, exists=True, identity="MATCH")
+
+            result = self._live_result(root, live_probe)
+            job = next(item for item in result["managed_jobs"] if item["job_id"] == "sidecar-job")
+            self.assertEqual(job["classification"], "LIVE_OWNED")
+            self.assertEqual(job["owner"], "codex-app-server")
+            self.assertEqual(job["command_id"], "codex-app-server-abcdef0123456789")
+            self.assertEqual(job["resource_class"], "MEDIUM")
+            self.assertEqual(job["run_id"], "")
+            self.assertNotIn("sidecar-job", {item["resource_id"] for item in result["unbound_live_resources"]})
+            self.assertEqual(result["summary"]["unbound_live_resource_residues"], 0)
+            self.assertEqual(result["summary"]["live_service_job_count"], 1)
+            self.assertEqual([item["job_id"] for item in result["live_service_jobs"]], ["sidecar-job"])
+            self.assertEqual(result["summary"]["managed_job_classification_counts"].get("LIVE_OWNED"), 1)
+
+    def test_orphaned_task_job_with_empty_run_id_still_unbound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            self._run(ledger, started_at=_iso(OBSERVED_AT - 3_600))
+            expected_checkout = hashlib.sha256(str(root.resolve()).lower().encode("utf-8")).hexdigest()
+            self._insert_job(
+                ledger, job_id="orphan-task-job", run_id="",
+                command_id="task-command", owner="task-runner",
+                checkout_id=expected_checkout,
+            )
+
+            def live_probe(pid, _expected):
+                return ProcessIdentityObservation(pid=pid, exists=True, identity="MATCH")
+
+            result = self._live_result(root, live_probe)
+            job = next(item for item in result["managed_jobs"] if item["job_id"] == "orphan-task-job")
+            self.assertEqual(job["classification"], "LIVE_OWNED")
+            unbound = {item["resource_id"]: item for item in result["unbound_live_resources"]}
+            self.assertIn("orphan-task-job", unbound)
+            self.assertEqual(unbound["orphan-task-job"]["reason"], "live_resource_has_no_canonical_run_parent")
+            self.assertEqual(unbound["orphan-task-job"]["resource_type"], "managed_process_job")
+            self.assertEqual(result["summary"]["unbound_live_resource_residues"], 1)
+            self.assertEqual(result["summary"]["live_service_job_count"], 0)
+            self.assertEqual(result["live_service_jobs"], [])
+
+    def test_task_job_with_missing_run_parent_still_unbound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            self._run(ledger, started_at=_iso(OBSERVED_AT - 3_600))
+            expected_checkout = hashlib.sha256(str(root.resolve()).lower().encode("utf-8")).hexdigest()
+            self._insert_job(
+                ledger, job_id="missing-parent-job", run_id="missing-run-1234",
+                command_id="task-command", owner="task-runner",
+                checkout_id=expected_checkout,
+            )
+
+            def live_probe(pid, _expected):
+                return ProcessIdentityObservation(pid=pid, exists=True, identity="MATCH")
+
+            result = self._live_result(root, live_probe)
+            job = next(item for item in result["managed_jobs"] if item["job_id"] == "missing-parent-job")
+            self.assertEqual(job["classification"], "LIVE_OWNED")
+            self.assertIn("missing-parent-job", {item["resource_id"] for item in result["unbound_live_resources"]})
+            self.assertEqual(result["summary"]["unbound_live_resource_residues"], 1)
+            self.assertEqual(result["summary"]["live_service_job_count"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
