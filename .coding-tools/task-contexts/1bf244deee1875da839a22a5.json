@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "task_id": "f43aa3f38b0b4bc08fdeffc9723433b2",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "docs/goal-e2e-t4-probe.md",
+      "operation": "create",
+      "updated_at": "2026-10-27T03:33:23.457Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Review or use the generated document.",
+  "created_at": "2026-10-27T03:33:23.454Z",
+  "updated_at": "2026-10-27T03:33:23.457Z",
+  "events": [
+    {
+      "time": "2026-10-27T03:33:23.454Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-10-27T03:33:23.457Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    }
+  ]
+}

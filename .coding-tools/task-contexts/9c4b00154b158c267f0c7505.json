@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "02a2191db2f14912bc2e3a8e266e8b25",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "NmlXDe-3MSQ1U2L2Cm1PoNJq",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 792,
+    "finished_at": "2026-10-26T12:59:02.924Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-26T12:59:01.981Z",
+  "updated_at": "2026-10-26T12:59:02.924Z",
+  "events": [
+    {
+      "time": "2026-10-26T12:59:01.981Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-26T12:59:02.375Z",
+      "event": "command_started",
+      "details": {
+        "command": "git",
+        "session_id": "NmlXDe-3MSQ1U2L2Cm1PoNJq"
+      }
+    },
+    {
+      "time": "2026-10-26T12:59:02.924Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git",
+        "status": "passed"
+      }
+    }
+  ]
+}

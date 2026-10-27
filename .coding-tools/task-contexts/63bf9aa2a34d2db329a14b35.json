@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "ce07ec415ffa4fffb96d9953f9ce9dbc",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "3MuJCH6bJtVHnq9dUas007UN",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 881,
+    "finished_at": "2026-10-26T11:01:24.060Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-26T11:01:22.979Z",
+  "updated_at": "2026-10-26T11:01:24.060Z",
+  "events": [
+    {
+      "time": "2026-10-26T11:01:22.979Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-10-26T11:01:23.530Z",
+      "event": "command_started",
+      "details": {
+        "command": "git",
+        "session_id": "3MuJCH6bJtVHnq9dUas007UN"
+      }
+    },
+    {
+      "time": "2026-10-26T11:01:24.060Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git",
+        "status": "passed"
+      }
+    }
+  ]
+}

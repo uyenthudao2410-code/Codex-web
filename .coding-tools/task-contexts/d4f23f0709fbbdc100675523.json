@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "task_id": "8c0ed01a08a6486c81758d483302d8e4",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "active",
+  "steps": [],
+  "current_step": "Control command session",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-10-27T05:52:47.749Z",
+  "updated_at": "2026-10-27T05:52:48.096Z",
+  "events": [
+    {
+      "time": "2026-10-27T05:52:47.749Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    }
+  ]
+}
