@@ -47,7 +47,6 @@ const {
 } = require('./services/recoveryHostLauncher');
 const { ComponentRevisionTracker } = require('./services/componentRevision');
 const { activationSourceCheckpoint } = require('./services/activationClosure');
-const { canonicalLedgerCensus } = require('./services/fullCleanActivation');
 const { startRecoveryHostApplication } = require('./recoveryHost');
 const { UiPerformanceMetrics, jsonByteLength } = require('./services/uiPerformanceMetrics');
 const { loadOrCreateDeviceIdentity } = require('./services/deviceIdentity');
@@ -1379,16 +1378,6 @@ function registerIpc() {
     }
     if (request?.confirmActivate !== true) {
       throw Object.assign(new Error('Chủ máy cần xác nhận thư mục trước khi kích hoạt.'), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVATION_CONFIRMATION_REQUIRED' });
-    }
-    const census = await canonicalLedgerCensus({ paths: runtimePaths, workspace: settings.load().workspace, allowAcceptancePending: true });
-    const counts = ['active_tool_calls', 'active_commands', 'starting_commands', 'active_background_operations',
-      'active_managed_processes', 'foreign_heavy_processes', 'active_agent_lanes', 'owned_codex_sidecar_residues'];
-    if (!Array.isArray(census.lifecycle?.blockers)
-      || census.lifecycle.blockers.some((reason) => reason !== 'live_runtime_state_process')
-      || (census.safe !== true && census.reason !== 'live_runtime_state_process')
-      || census.lifecycle.unexplained_active_runs !== 0 || census.lifecycle.unbound_live_resource_residues !== 0
-      || counts.some((key) => census.counts?.[key] !== 0)) {
-      throw Object.assign(new Error('Có công việc đang chạy hoặc trạng thái chưa rõ. Hoàn tất công việc rồi thêm thư mục lại.'), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVE_WORK' });
     }
     const workspaceRoot = controlPlaneEnrollment.registeredWorkspaceRoot({
       workspaceId: request?.workspaceId, workspaceGeneration: request?.workspaceGeneration

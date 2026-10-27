@@ -72,27 +72,20 @@ test('activation receipt rejects wrong target, expired authority, malformed iden
   assert.throws(() => parseWorkspaceActivationResult(JSON.stringify(valid) + '\n{}', workspaceId, workspaceGeneration), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVATION_OUTPUT_INVALID' });
 });
 
-test('manager activation IPC guards local work before mutation and keeps native root unchanged', async () => {
+test('manager activation IPC grants without the global ledger census even while a provider sidecar is live', async () => {
   const source = fs.readFileSync(path.join(__dirname, '../electron/main.js'), 'utf8');
   const start = source.indexOf("  secureHandle('control-plane:activate-workspace'");
   const end = source.indexOf("  secureHandle('control-plane:replace-workspace'", start);
-  const counts = Object.fromEntries(['active_tool_calls', 'active_commands', 'starting_commands', 'active_background_operations',
-    'active_managed_processes', 'foreign_heavy_processes', 'active_agent_lanes', 'owned_codex_sidecar_residues'].map(key => [key, 0]));
   let handler, invoked = 0, role = 'central_executor', manager = true, authorized = false;
-  const census = { safe: false, reason: 'live_runtime_state_process', counts,
-    lifecycle: { blockers: ['live_runtime_state_process'], unexplained_active_runs: 0, unbound_live_resource_residues: 0 } };
+  // Old gate scenario: a live provider sidecar was counted as active_managed_processes = 1
+  // plus an unbound residue, and the grant was refused. The grant path must not consult
+  // the global ledger census at all, so the fixture fails loudly if the handler still calls it.
   vm.runInNewContext(source.slice(start, end), { secureHandle: (_name, fn) => { handler = fn; }, invokeSafely: fn => fn(),
     assertManagerIpc: () => { if (!manager) throw new Error('untrusted'); }, settings: { load: () => ({ executionRole: role, workspace: 'E:\\native-root' }) },
-    canonicalLedgerCensus: async () => census, runtimePaths: {}, path,
+    canonicalLedgerCensus: async () => { throw new Error('canonicalLedgerCensus must not be called on the grant path'); }, runtimePaths: {}, path,
     orchestrator: { updateAuthorizedRoots: async roots => { assert.equal(roots.length, 1); assert.equal(roots[0], 'E:\\Autocad'); authorized = true; } },
     controlPlaneEnrollment: { registeredWorkspaceRoot: () => 'E:\\Autocad', activateWorkspace: async request => { assert.equal(authorized, true); invoked++; return request; } } });
   const request = { workspaceId, workspaceGeneration, confirmActivate: true };
-  counts.active_commands = 1;
-  await assert.rejects(handler({}, request), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVE_WORK' });
-  counts.active_commands = 0;
-  census.lifecycle.blockers.push('uncertain');
-  await assert.rejects(handler({}, request), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVE_WORK' });
-  census.lifecycle.blockers.pop();
   await assert.rejects(handler({}, { ...request, confirmActivate: false }), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVATION_CONFIRMATION_REQUIRED' });
   role = 'standalone';
   await assert.rejects(handler({}, request), { code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED' });
