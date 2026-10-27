@@ -628,19 +628,20 @@ async function callMcpTool(name, toolArguments, timeoutMs = 30000) {
   return structuredMcpResult(response?.result) || null;
 }
 
-async function panelTaskControl(action) {
+async function panelTaskControl(action, runId) {
   const allowed = new Set(['pause', 'resume', 'stop', 'clear']);
   if (!allowed.has(action)) throw new Error('Thao tác nhiệm vụ từ bảng điều khiển không hợp lệ.');
   const current = settings.load();
   const token = secrets.get('mcpAuthToken');
   if (!token) throw new Error('MCP chưa sẵn sàng để điều khiển nhiệm vụ.');
+  const run = String(runId || '').trim();
   const request = {
     jsonrpc: '2.0',
     id: `panel-task-${action}-${Date.now()}`,
     method: 'tools/call',
     params: {
       name: 'task_control',
-      arguments: { action },
+      arguments: { action, ...(run ? { run_id: run } : {}) },
       _meta: {
         'io.modelcontextprotocol/protocolVersion': '2026-07-28',
         'io.modelcontextprotocol/clientCapabilities': {},
@@ -1607,10 +1608,10 @@ function registerIpc() {
   secureHandle('task-state:read', () => invokeSafely(async () => {
     return canonicalTaskStateFromControl(await readOrchestrationControlSnapshot());
   }));
-  secureHandle('task-state:clear', () => invokeSafely(() => panelTaskControl('clear')));
-  secureHandle('task-state:pause', () => invokeSafely(() => panelTaskControl('pause')));
-  secureHandle('task-state:resume', () => invokeSafely(() => panelTaskControl('resume')));
-  secureHandle('task-state:stop', () => invokeSafely(() => panelTaskControl('stop')));
+  secureHandle('task-state:clear', (_event, runId) => invokeSafely(() => panelTaskControl('clear', runId)));
+  secureHandle('task-state:pause', (_event, runId) => invokeSafely(() => panelTaskControl('pause', runId)));
+  secureHandle('task-state:resume', (_event, runId) => invokeSafely(() => panelTaskControl('resume', runId)));
+  secureHandle('task-state:stop', (_event, runId) => invokeSafely(() => panelTaskControl('stop', runId)));
   secureHandle('task-state:history', () => invokeSafely(async () => {
     const control = await readOrchestrationControlSnapshot();
     const taskList = control?.task_list;
@@ -1688,7 +1689,7 @@ function registerIpc() {
   secureHandle('panel:orchestration', () => invokeSafely(async () => {
     return readOrchestrationControlSnapshot();
   }));
-  secureHandle('panel:task-control', (_event, action) => invokeSafely(() => panelTaskControl(String(action || ''))));
+  secureHandle('panel:task-control', (_event, action, runId) => invokeSafely(() => panelTaskControl(String(action || ''), runId)));
   secureHandle('p5-a0:control', (_event, action) => invokeSafely(() => panelP5A0Control(String(action || ''))));
   secureHandle('panel:transfer-controller', (_event, payload) => invokeSafely(async () => {
     const current = settings.load();

@@ -5,9 +5,9 @@ contextBridge.exposeInMainWorld('panelAssistant', {
   orchestration: () => ipcRenderer.invoke('panel:live-control'),
   health: () => ipcRenderer.invoke('app:lightweight-snapshot'),
   workspace: () => ipcRenderer.invoke('workspace:hub'),
-  pauseTask: () => ipcRenderer.invoke('panel:task-control', 'pause'),
-  resumeTask: () => ipcRenderer.invoke('panel:task-control', 'resume'),
-  stopTask: () => ipcRenderer.invoke('panel:task-control', 'stop'),
+  pauseTask: (runId) => ipcRenderer.invoke('panel:task-control', 'pause', runId),
+  resumeTask: (runId) => ipcRenderer.invoke('panel:task-control', 'resume', runId),
+  stopTask: (runId) => ipcRenderer.invoke('panel:task-control', 'stop', runId),
   handoff: (payload) => ipcRenderer.invoke('panel:handoff', payload),
   transferController: (payload) => ipcRenderer.invoke('panel:transfer-controller', payload),
   copyCodexConfig: () => ipcRenderer.invoke('panel:copy-codex-config')

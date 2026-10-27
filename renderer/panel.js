@@ -610,9 +610,9 @@ async function pollHealth() {
 async function taskAction(action) {
   if (controlPlaneState !== 'available') return;
   try {
-    if (action === 'pause') unwrap(await api.pauseTask());
-    else if (action === 'resume') unwrap(await api.resumeTask());
-    else if (action === 'stop') unwrap(await api.stopTask());
+    if (action === 'pause') unwrap(await api.pauseTask(lastOrchestration?.run?.run_id));
+    else if (action === 'resume') unwrap(await api.resumeTask(lastOrchestration?.run?.run_id));
+    else if (action === 'stop') unwrap(await api.stopTask(lastOrchestration?.run?.run_id));
     await refreshOrchestration();
   } catch (error) {
     renderControlPlaneUnavailable(error);

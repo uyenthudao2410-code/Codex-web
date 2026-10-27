@@ -1581,7 +1581,7 @@ test('Electron task list reads and controls canonical orchestration state instea
   assert.match(bridge, /controlRunId === canonicalRunId/);
   assert.match(handlers, /Array\.isArray\(taskList\.history\)/);
   for (const action of ['clear', 'pause', 'resume', 'stop']) {
-    assert.match(handlers, new RegExp(`panelTaskControl\\('${action}'\\)`));
+    assert.match(handlers, new RegExp(`panelTaskControl\\('${action}'(, runId)?\\)`));
   }
   assert.doesNotMatch(handlers, /workspaceStatePaths|archiveTask|readJson|writeJsonAtomic/);
 });
