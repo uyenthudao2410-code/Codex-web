@@ -24,7 +24,7 @@
     },
   };
   const store = S.createStore(adapter);
-  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '', gitReviewBinding: null, diffLoading: false };
+  const ui = { snapshot: null, taskPayload: null, selectedPromptId: '', selectedType: 'bugfix', dirRel: '', viewerRel: '', viewerHash: '', viewerContent: null, viewerEditable: false, gen: 0, job: null, taskPayloadSlots: new Map(), jobSlots: new Map(), pendingImports: [], boundProject: null, refreshRequest: 0, requests: {}, activeTab: 'context', commitSelection: new Set(), commitBusy: false, gitHead: '', diffHead: '', diffFingerprint: '', gitReview: null, gitReviewHead: '', gitReviewBinding: null, diffLoading: false };
 
   function setStatus(message, kind = 'info') {
     const box = $('#whStatus');
@@ -188,6 +188,29 @@
       }
     }
   }
+  // P3 C3: per-workspace Work Hub slots. ui.taskPayload / ui.job remain the
+  // CURRENT folder's live pointers, so every existing reader keeps working
+  // unchanged; these Maps hold every folder's last-seen state, keyed by
+  // the canonical workspace key. refresh() saves the outgoing folder's
+  // pointers before the snapshot swap and restores the incoming folder's
+  // pointers after reset, so a job started in A keeps running server-side
+  // and stays listed when the user returns to A. A switch never cancels,
+  // hides permanently, or reassigns a folder's job; a folder with no saved
+  // slot restores to null (empty job view).
+  function saveWorkHubSlots() {
+    const key = canonicalProjectKey();
+    if (!key) return;
+    ui.taskPayloadSlots.set(key, ui.taskPayload ?? null);
+    ui.jobSlots.set(key, ui.job ?? null);
+  }
+  function restoreWorkHubSlots() {
+    const key = canonicalProjectKey();
+    ui.taskPayload = key ? (ui.taskPayloadSlots.get(key) ?? null) : null;
+    ui.job = key ? (ui.jobSlots.get(key) ?? null) : null;
+    renderJob();
+    if (ui.job && !jobIsTerminal(ui.job) && ui.job.commandId) { setJobAwake(true); pollJobLoop(ui.job); }
+  }
+
   function recentProjects() {
     const settings = ui.snapshot?.settings || {};
     const list = Array.isArray(settings.recentWorkspaces) ? settings.recentWorkspaces.slice() : [];
@@ -1936,12 +1959,13 @@
       if (snapshot?.settings) {
         const project = String(snapshot.settings.workspace || '').trim();
         const changed = ui.boundProject === null || S.workspaceKeyOf(ui.boundProject) !== S.workspaceKeyOf(project);
-        if (changed && ui.boundProject) { saveCurrentDraft(ui.boundProject); rememberFileEdit(ui.boundProject); }
+        if (changed && ui.boundProject) { saveCurrentDraft(ui.boundProject); rememberFileEdit(ui.boundProject); saveWorkHubSlots(); }
         ui.snapshot = snapshot;
         syncCanonicalWorkspaceKey();
         if (changed) {
           ui.boundProject = project;
           resetProjectView();
+          restoreWorkHubSlots();
           restoreDraft({ force: true });
         }
       }
@@ -2117,7 +2141,11 @@
       const request = { command: recipe.command, cwd: recipe.cwd || workspace, expectedWorkspace: workspace };
       if (runId) request.runId = runId;
       const response = await window.mcpAssistant.workhubJobRun(request);
-      if (ui.job !== job || jobUiUnloaded) return;
+      if (jobUiUnloaded) return;
+      // P3 C3: a folder switch mid-dispatch no longer drops the outcome.
+      // The job object lives in its folder's slot, so the result is still
+      // recorded on it; only the view refresh below stays gated on ui.job,
+      // and the slot's view refreshes when the user returns to the folder.
       if (response?.ok === false) {
         // IPC errors can include a timeout after the runtime admitted a
         // command. Without an explicit pre-dispatch rejection, execution is
@@ -2132,10 +2160,11 @@
         applyJobResult(job, result);
       }
     } catch (error) {
-      if (ui.job !== job || jobUiUnloaded) return;
+      if (jobUiUnloaded) return;
       job.status = 'unknown';
       job.observationError = String(error?.message || error).slice(0, 400);
     }
+    if (ui.job !== job) return;
     renderJob();
     if (job.status === 'running' && job.commandId) { setJobAwake(true); pollJobLoop(job); }
   }
