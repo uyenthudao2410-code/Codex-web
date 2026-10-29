@@ -45,10 +45,31 @@ const EXECUTOR_CLEANUP_BUDGET_MS = 430_000;
 // durable full-clean epoch retains the longer end-to-end deadline above.
 const MCP_PREPARE_FENCE_TTL_MS = 55_000;
 // A cold Backup-API copy, integrity check, and logical hash of the canonical
-// ledger can legitimately cross 15 seconds on Windows storage. Keep this
-// bounded below the outer Recovery Host bootstrap window while leaving enough
-// room for both the initial and exclusive admission censuses.
-const CANONICAL_LEDGER_CENSUS_TIMEOUT_MS = 30_000;
+// ledger can legitimately cross 15 seconds on Windows storage, and a warm
+// census under normal machine load was observed at 24s, 50s, and (under heavy
+// load) 137s. Keep a single census bounded below the 300s Recovery Host
+// restart-client timeout and the 600s activation TTL. Two full censuses at
+// this budget would exceed the restart timeout, which is why non-held
+// censuses are reused when the ledger is unchanged (see _censusWithReuse).
+const CANONICAL_LEDGER_CENSUS_TIMEOUT_MS = 180_000;
+// P2 open-and-use: supervisor quiesce file. Bounded (10 min), written by the
+// activation host at finalize start and cleared in finalize's finally, so a
+// crashed finalize cannot leave the supervisor suppressed forever. The
+// supervisor treats a malformed or expired file as absent.
+const ACTIVATION_QUIESCE_TTL_MS = 10 * 60 * 1000;
+const ACTIVATION_QUIESCE_MAX_SKEW_MS = 30 * 1000;
+function isActivationQuiesceValid(payload, nowUnixMs) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+  if (payload.schema_version !== 1) return false;
+  if (!text(payload.activation_epoch_id)) return false;
+  const requested = Number(payload.requested_at_unix_ms);
+  const expires = Number(payload.expires_at_unix_ms);
+  if (!Number.isSafeInteger(requested) || !Number.isSafeInteger(expires)) return false;
+  if (expires <= requested || expires - requested > ACTIVATION_QUIESCE_TTL_MS) return false;
+  if (requested > Number(nowUnixMs) + ACTIVATION_QUIESCE_MAX_SKEW_MS) return false;
+  return expires > Number(nowUnixMs);
+}
+const CANONICAL_LEDGER_CENSUS_REUSE_MAX_AGE_MS = 5 * 60 * 1000;
 const CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS = 5_000;
 const CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS = 5_000;
 const execFileAsync = promisify(execFile);
@@ -1037,6 +1058,33 @@ function heldCensus(command, args, options) {
   });
 }
 
+// Cheap ledger identity for census reuse: SQLite header change counter
+// (bytes 24-27), page count (bytes 28-31), file size, and mtime. This is
+// NOT the census evidence itself: it only decides whether a cached census
+// may be reused. A stale cached preflight can never admit a changed ledger,
+// because the held exclusive census always recomputes and its fingerprint
+// must match the preflight fingerprint before epoch creation.
+function cheapLedgerIdentity(workspace) {
+  try {
+    const ledgerPath = path.join(path.resolve(workspace), '.coding-tools', 'orchestration', 'ledger.sqlite3');
+    const stat = fs.statSync(ledgerPath);
+    const fd = fs.openSync(ledgerPath, 'r');
+    try {
+      const header = Buffer.alloc(100);
+      const bytesRead = fs.readSync(fd, header, 0, 100, 0);
+      return {
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+        changeCounter: bytesRead >= 28 ? header.readUInt32BE(24) : null,
+        pageCount: bytesRead >= 32 ? header.readUInt32BE(28) : null
+      };
+    } finally { fs.closeSync(fd); }
+  } catch { return null; }
+}
+function cheapLedgerIdentityMatches(a, b) {
+  return Boolean(a && b && a.size === b.size && a.mtimeMs === b.mtimeMs && a.changeCounter === b.changeCounter && a.pageCount === b.pageCount);
+}
+
 async function canonicalLedgerCensus({
   paths,
   workspace,
@@ -1256,6 +1304,7 @@ class FullCleanActivation {
     this.store = epochStore || new ActivationEpochStore({ paths, now });
     this.inFlight = null;
     this.inFlightRequestKey = null;
+    this._censusReuseCache = null;
   }
 
   current() { return this.store.current(); }
@@ -1542,6 +1591,31 @@ class FullCleanActivation {
     };
   }
 
+  // Reuse a fresh, safe, non-held census when the ledger has not changed.
+  // Held censuses are never reused: the exclusive gate must be freshly
+  // acquired and its fingerprint must match the preflight fingerprint.
+  // Unsafe censuses are never cached. Any identity, workspace, checkpoint,
+  // or permission difference, any unreadable ledger identity, and any age
+  // beyond the reuse window all fall through to a full recompute.
+  async _censusWithReuse(options = {}) {
+    if (typeof this.canonicalLedgerCensus !== 'function') {
+      throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Full clean activation cannot run without a canonical ledger census.');
+    }
+    if (options.holdExclusive === true) return this.canonicalLedgerCensus(options);
+    const workspace = text(options.workspace);
+    const key = JSON.stringify({ workspace, sourceCheckpoint: options.sourceCheckpoint || null, allowAcceptancePending: options.allowAcceptancePending === true });
+    const identity = workspace ? cheapLedgerIdentity(workspace) : null;
+    const cached = this._censusReuseCache;
+    if (cached && cached.key === key && cached.census && cached.census.safe === true && identity && cheapLedgerIdentityMatches(identity, cached.identity) && (this.now() - cached.obtainedAtMs) <= CANONICAL_LEDGER_CENSUS_REUSE_MAX_AGE_MS) {
+      return cached.census;
+    }
+    const census = await this.canonicalLedgerCensus(options);
+    if (census && census.safe === true && identity) {
+      this._censusReuseCache = { key, census, identity, obtainedAtMs: this.now() };
+    }
+    return census;
+  }
+
   async preflight({ operationId: requestedOperationId = '', sourceCheckpoint = null, allowAcceptancePending = false } = {}) {
     if (this.orchestrator?.busy || this.orchestrator?.recovering) {
       throw epochError('RUNTIME_BUSY', 'Runtime is busy; full clean activation was not admitted.');
@@ -1571,7 +1645,7 @@ class FullCleanActivation {
       }
       let census;
       try {
-        census = await this.canonicalLedgerCensus({
+        census = await this._censusWithReuse({
           workspace: this._settings().workspace,
           sourceCheckpoint,
           allowAcceptancePending: allowAcceptancePending === true
@@ -2074,7 +2148,7 @@ class FullCleanActivation {
       }
       let refreshed;
       try {
-        refreshed = await this.canonicalLedgerCensus({
+        refreshed = await this._censusWithReuse({
           workspace: this._settings().workspace,
           sourceCheckpoint: options.sourceCheckpoint || null,
           allowAcceptancePending: options.allowAcceptancePending === true,
@@ -2427,7 +2501,8 @@ class FullCleanActivation {
   async finalCensus(activationEpochId, {
     expectedOldInstanceId = '',
     reusePendingProjection = false,
-    revalidateCommitted = false
+    revalidateCommitted = false,
+    baselineCensus = null
   } = {}) {
     const epochId = text(activationEpochId);
     if (!epochId) throw epochError('ACTIVATION_EPOCH_ID_REQUIRED', 'Activation epoch is required for final census.');
@@ -2548,6 +2623,13 @@ class FullCleanActivation {
       } catch { connectorContractStatus = null; }
     }
     const identityChanged = (current, previous) => Boolean(current && (!text(previous) || current !== text(previous)));
+    // P2 open-and-use: when baselineCensus is present, identity-change checks
+    // become baseline-match checks. The committed census is the baseline, so a
+    // host/UI/MCP family that rotated as part of this activation (and was
+    // committed) is stable, while any change AFTER the commit still fails.
+    const baseline = baselineCensus && typeof baselineCensus === 'object' && !Array.isArray(baselineCensus) ? baselineCensus : null;
+    const baselineText = (field) => text(baseline?.[field]) || null;
+    const baselinePid = (field) => { const number = Number(baseline?.[field]); return Number.isSafeInteger(number) && number > 0 ? number : null; };
     const mcpEpochMatches = Boolean(health && String(health.activation_epoch_id || '') === epochId
       && String(state.nativeActivationEpochId || '') === epochId);
     const epochMatches = Boolean(mcpEpochMatches
@@ -2568,11 +2650,17 @@ class FullCleanActivation {
       && (!stateMcpRevision || stateMcpRevision === revision.running_revision)
       && (!health?.code_revision || String(health.code_revision) === String(revision.running_revision))
       && (!expectedMcpRevision || revision.disk_revision === expectedMcpRevision));
-    const tunnelEpochMatches = Boolean(!centralExecutor && currentTunnelPid && currentTunnelId
-      && String(state.tunnelActivationEpochId || '') === epochId
-      && state.tunnelFingerprint === tunnelFingerprint(settings, this.deviceIdentity?.device_id || '', epochId)
-      && identityChanged(currentTunnelId, oldTunnel.instance_id)
-      && (!oldTunnel.pid || currentTunnelPid !== numeric(oldTunnel.pid)));
+    const tunnelEpochMatches = baseline && !centralExecutor
+      ? Boolean(currentTunnelPid && currentTunnelId
+        && String(state.tunnelActivationEpochId || '') === epochId
+        && state.tunnelFingerprint === tunnelFingerprint(settings, this.deviceIdentity?.device_id || '', epochId)
+        && String(currentTunnelId) === baselineText('tunnel_instance_id')
+        && currentTunnelPid === baselinePid('tunnel_pid'))
+      : Boolean(!centralExecutor && currentTunnelPid && currentTunnelId
+        && String(state.tunnelActivationEpochId || '') === epochId
+        && state.tunnelFingerprint === tunnelFingerprint(settings, this.deviceIdentity?.device_id || '', epochId)
+        && identityChanged(currentTunnelId, oldTunnel.instance_id)
+        && (!oldTunnel.pid || currentTunnelPid !== numeric(oldTunnel.pid)));
     const boundOldHostId = text(oldRecoveryHost.instance_id);
     const oldHostPid = numeric(oldRecoveryHost.pid);
     const expectedHostId = text(expectedOldInstanceId) || boundOldHostId;
@@ -2581,12 +2669,25 @@ class FullCleanActivation {
       && String(this.recoveryInstanceId) !== expectedHostId
       && (!oldHostPid || Number(process.pid) !== oldHostPid)
       && hostEvidenceBound);
-    const processIdentity = Boolean(currentMcpProcessId && currentMcpServerId && currentSupervisorId && currentMcpPid
-      && isAlivePid(currentMcpPid)
-      && identityChanged(currentMcpProcessId, oldMcp.process_instance_id)
-      && identityChanged(currentMcpServerId, oldMcp.server_instance_id)
-      && identityChanged(currentSupervisorId, oldMcp.supervisor_instance_id)
-      && (!oldMcp.pid || currentMcpPid !== numeric(oldMcp.pid)));
+    // P2: in baseline mode the host must match the committed census, not
+    // differ from the old evidence. A host that rotated before the epoch was
+    // created (so old evidence already equals the new host) must not fail.
+    const hostReady = baseline
+      ? Boolean(this.recoveryInstanceId && String(this.recoveryInstanceId) === baselineText('host_instance_id')
+        && (!baselinePid('host_pid') || Number(process.pid) === baselinePid('host_pid')))
+      : hostChanged;
+    const processIdentity = baseline
+      ? Boolean(currentMcpProcessId && currentMcpServerId && currentSupervisorId && currentMcpPid
+        && isAlivePid(currentMcpPid)
+        && String(currentMcpProcessId) === baselineText('process_instance_id')
+        && String(currentMcpServerId) === baselineText('server_instance_id')
+        && String(currentSupervisorId) === baselineText('supervisor_instance_id'))
+      : Boolean(currentMcpProcessId && currentMcpServerId && currentSupervisorId && currentMcpPid
+        && isAlivePid(currentMcpPid)
+        && identityChanged(currentMcpProcessId, oldMcp.process_instance_id)
+        && identityChanged(currentMcpServerId, oldMcp.server_instance_id)
+        && identityChanged(currentSupervisorId, oldMcp.supervisor_instance_id)
+        && (!oldMcp.pid || currentMcpPid !== numeric(oldMcp.pid)));
     const recoveryHostRevision = (() => {
       try {
         return this.revisions?.status?.('recovery_host', this.recoveryHostRunningRevision || null, { force: true }) || {};
@@ -2622,11 +2723,17 @@ class FullCleanActivation {
     const oldUiId = text(oldUi.instance_id);
     const uiRevision = this.getUiRevision?.({ force: true }) || runtime?.codeRevision?.electronUi || {};
     const expectedUiRevision = text(record.component_revisions?.electron_ui?.disk_revision);
-    const uiReady = Boolean(uiPresence.alive && ui.instance_id && ui.activation_epoch_id === activationEpochId
-      && identityChanged(String(ui.instance_id), oldUiId)
-      && uiRevision.disk_revision && uiRevision.running_revision
-      && uiRevision.disk_revision === uiRevision.running_revision
-      && (!expectedUiRevision || uiRevision.disk_revision === expectedUiRevision));
+    const uiReady = baseline
+      ? Boolean(uiPresence.alive && ui.instance_id && ui.activation_epoch_id === activationEpochId
+        && String(ui.instance_id) === baselineText('ui_instance_id')
+        && uiRevision.disk_revision && uiRevision.running_revision
+        && uiRevision.disk_revision === uiRevision.running_revision
+        && (!expectedUiRevision || uiRevision.disk_revision === expectedUiRevision))
+      : Boolean(uiPresence.alive && ui.instance_id && ui.activation_epoch_id === activationEpochId
+        && identityChanged(String(ui.instance_id), oldUiId)
+        && uiRevision.disk_revision && uiRevision.running_revision
+        && uiRevision.disk_revision === uiRevision.running_revision
+        && (!expectedUiRevision || uiRevision.disk_revision === expectedUiRevision));
     const plane = this.getRecoveryPlaneStatus?.() || this.recoveryPlane?.lastStatus || {};
     const planeState = this.recoveryPlane?.readState?.() || {};
     const oldRecoveryMcp = evidence.recovery_mcp && typeof evidence.recovery_mcp === 'object' ? evidence.recovery_mcp : {};
@@ -2635,12 +2742,20 @@ class FullCleanActivation {
     const currentRecoveryMcpInstanceId = text(plane.mcp?.instance_id || planeState.recoveryMcpInstanceId);
     const currentRecoveryTunnelPid = numeric(plane.tunnel?.pid || planeState.recoveryTunnelPid);
     const currentRecoveryTunnelInstanceId = text(plane.tunnel?.instance_id || planeState.recoveryTunnelInstanceId);
-    const recoveryMcpIdentityChanged = Boolean(currentRecoveryMcpPid && currentRecoveryMcpInstanceId
-      && (!oldRecoveryMcp.pid || currentRecoveryMcpPid !== numeric(oldRecoveryMcp.pid))
-      && identityChanged(currentRecoveryMcpInstanceId, oldRecoveryMcp.instance_id));
-    const recoveryTunnelIdentityChanged = Boolean(currentRecoveryTunnelPid && currentRecoveryTunnelInstanceId
-      && (!oldRecoveryTunnel.pid || currentRecoveryTunnelPid !== numeric(oldRecoveryTunnel.pid))
-      && identityChanged(currentRecoveryTunnelInstanceId, oldRecoveryTunnel.instance_id));
+    const recoveryMcpIdentityChanged = baseline
+      ? Boolean(currentRecoveryMcpPid && currentRecoveryMcpInstanceId
+        && currentRecoveryMcpPid === baselinePid('recovery_mcp_pid')
+        && String(currentRecoveryMcpInstanceId) === baselineText('recovery_mcp_instance_id'))
+      : Boolean(currentRecoveryMcpPid && currentRecoveryMcpInstanceId
+        && (!oldRecoveryMcp.pid || currentRecoveryMcpPid !== numeric(oldRecoveryMcp.pid))
+        && identityChanged(currentRecoveryMcpInstanceId, oldRecoveryMcp.instance_id));
+    const recoveryTunnelIdentityChanged = baseline
+      ? Boolean(currentRecoveryTunnelPid && currentRecoveryTunnelInstanceId
+        && currentRecoveryTunnelPid === baselinePid('recovery_tunnel_pid')
+        && String(currentRecoveryTunnelInstanceId) === baselineText('recovery_tunnel_instance_id'))
+      : Boolean(currentRecoveryTunnelPid && currentRecoveryTunnelInstanceId
+        && (!oldRecoveryTunnel.pid || currentRecoveryTunnelPid !== numeric(oldRecoveryTunnel.pid))
+        && identityChanged(currentRecoveryTunnelInstanceId, oldRecoveryTunnel.instance_id));
     const recoveryMcpEpochMatches = Boolean(String(plane.activation_epoch_id || '') === epochId
       && String(plane.mcp?.activation_epoch_id || planeState.recoveryMcpActivationEpochId || '') === epochId);
     let recoveryMcpHealthVerified = false;
@@ -2712,7 +2827,7 @@ class FullCleanActivation {
     const componentsReadyForAdmission = Boolean(runtime.mcpRunning === true && health?.ready === true
       && processIdentity && epochMatches && workspaceMatches && deviceMatches && revisionMatches
       && (centralExecutor ? runtime.tunnelRunning !== true : (tunnelStatusVerified && tunnelEpochMatches))
-      && hostChanged && recoveryHostRevisionMatches
+      && hostReady && recoveryHostRevisionMatches
       && recoveryHostEpochMatches
       && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid
       && (!centralExecutor || centralRouteVerified));
@@ -2898,11 +3013,15 @@ class FullCleanActivation {
       });
     }
 
-    const expectedOldInstanceId = text(record.component_evidence?.recovery_host?.instance_id);
+    // P2: the committed census is the baseline. The old durable evidence may
+    // already be the new family (epoch created after host rotation), so
+    // requiring a change from it can never pass. Fail only on change AFTER
+    // the commit, which finalCensus enforces in baseline mode plus the
+    // identity-field comparison below.
     let fresh;
     try {
       fresh = await this.finalCensus(epochId, {
-        expectedOldInstanceId,
+        baselineCensus: committed,
         reusePendingProjection: true,
         revalidateCommitted: true
       });
@@ -2975,6 +3094,42 @@ class FullCleanActivation {
     };
   }
 
+  _activationQuiesceFile() {
+    try {
+      if (typeof this.paths?.dataRoot !== 'function') return null;
+      const root = text(this.paths.dataRoot());
+      return root ? path.join(root, 'full-clean-activation.quiesce.json') : null;
+    } catch { return null; }
+  }
+
+  _setActivationQuiesce(epochId) {
+    try {
+      const file = this._activationQuiesceFile();
+      if (!file) return false;
+      const now = this.now();
+      const payload = {
+        schema_version: 1,
+        activation_epoch_id: text(epochId),
+        requested_at_unix_ms: now,
+        expires_at_unix_ms: now + ACTIVATION_QUIESCE_TTL_MS
+      };
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(payload));
+      return true;
+    } catch { return false; }
+  }
+
+  _clearActivationQuiesce(epochId) {
+    try {
+      const file = this._activationQuiesceFile();
+      if (!file) return false;
+      const current = readJson(file, null);
+      if (current && text(current.activation_epoch_id) && text(current.activation_epoch_id) !== text(epochId)) return false;
+      fs.unlinkSync(file);
+      return true;
+    } catch { return false; }
+  }
+
   async finalize(activationEpochId, census = null) {
     const epochId = text(activationEpochId);
     if (!epochId) throw epochError('ACTIVATION_EPOCH_ID_REQUIRED', 'Activation epoch is required.');
@@ -2993,6 +3148,10 @@ class FullCleanActivation {
       // this read inside the transaction catch so a transport/store/census
       // exception is durably terminalized as FAILED rather than leaving an
       // active epoch that merely appears stuck.
+      // P2: hold supervisor quiesce across the commit-to-admission window so
+      // the supervisor cannot rotate the host between READY commit and MCP
+      // admission. Cleared in the finally below, even on failure.
+      this._setActivationQuiesce(epochId);
       const finalProof = await this.finalCensus(epochId, { reusePendingProjection: true });
       if (!finalProof.pass) throw epochError('UPDATE_INCOMPLETE', 'Full clean activation final census is incomplete.', finalProof);
       record = this.store.current();
@@ -3121,6 +3280,8 @@ class FullCleanActivation {
       const failed = this._failEpoch(epochId, error);
       if (failed) this._finishLinkedAction(failed, 'failed', this._actionResult(failed, { state: 'FAILED', admission_open: false, fully_ready: false }), error);
       throw error;
+    } finally {
+      this._clearActivationQuiesce(epochId);
     }
   }
 }
@@ -3131,6 +3292,9 @@ module.exports = {
   COMPONENTS,
   DEFAULT_TTL_MS,
   CANONICAL_LEDGER_CENSUS_TIMEOUT_MS,
+  ACTIVATION_QUIESCE_TTL_MS,
+  isActivationQuiesceValid,
+  CANONICAL_LEDGER_CENSUS_REUSE_MAX_AGE_MS,
   CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS,
   CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS,
   operationId,

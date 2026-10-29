@@ -9,7 +9,10 @@ const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { ActivationEpochStore } = require('../electron/services/activationEpoch');
 const {
   FullCleanActivation,
+  ACTIVATION_QUIESCE_TTL_MS,
+  isActivationQuiesceValid,
   CANONICAL_LEDGER_CENSUS_TIMEOUT_MS,
+  CANONICAL_LEDGER_CENSUS_REUSE_MAX_AGE_MS,
   CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS,
   CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS,
   canonicalLedgerCensus,
@@ -65,7 +68,8 @@ function codedError(code, message = code) {
 }
 
 test('canonical ledger census keeps a bounded cold-snapshot budget and classifies timeout causes', () => {
-  assert.equal(CANONICAL_LEDGER_CENSUS_TIMEOUT_MS, 30_000);
+  assert.equal(CANONICAL_LEDGER_CENSUS_TIMEOUT_MS, 180_000);
+  assert.equal(CANONICAL_LEDGER_CENSUS_REUSE_MAX_AGE_MS, 300_000);
   assert.equal(CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS, 5_000);
   assert.equal(CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS, 5_000);
   const nativeTimeout = Object.assign(new Error('Command failed'), { killed: true, signal: 'SIGTERM' });
@@ -1507,6 +1511,69 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   assert.equal(tunnelStatusCalls, 3, 'one transient Tunnel observation is retried within the same bounded census');
   assert.deepEqual(tunnelWaits, [250, 250]);
 
+  await t.test('P2: final census with a committed baseline fails closed on workspace mismatch', async () => {
+    const originalHealth = orchestrator.currentMcpHealth;
+    orchestrator.currentMcpHealth = async (...args) => ({ ...(await originalHealth(...args)), workspace: path.join(root, 'other-workspace') });
+    try {
+      const mismatched = await coordinator.finalCensus(activationEpochId, { baselineCensus: census });
+      assert.equal(mismatched.pass, false);
+      assert.equal(mismatched.workspace_matches, false);
+    } finally {
+      orchestrator.currentMcpHealth = originalHealth;
+    }
+  });
+
+  await t.test('P2: final census with a committed baseline fails closed on device mismatch', async () => {
+    const originalHealth = orchestrator.currentMcpHealth;
+    orchestrator.currentMcpHealth = async (...args) => ({ ...(await originalHealth(...args)), device_id: id('other-device', '1001') });
+    try {
+      const mismatched = await coordinator.finalCensus(activationEpochId, { baselineCensus: census });
+      assert.equal(mismatched.pass, false);
+      assert.equal(mismatched.device_matches, false);
+    } finally {
+      orchestrator.currentMcpHealth = originalHealth;
+    }
+  });
+
+  await t.test('P2: final census with a committed baseline fails closed on revision mismatch', async () => {
+    const originalSnapshot = orchestrator.lightweightSnapshot;
+    orchestrator.lightweightSnapshot = async (...args) => {
+      const snapshot = await originalSnapshot(...args);
+      return { ...snapshot, codeRevision: { ...snapshot.codeRevision, codingMcp: { disk_revision: revision, running_revision: 'b'.repeat(64) } } };
+    };
+    try {
+      const mismatched = await coordinator.finalCensus(activationEpochId, { baselineCensus: census });
+      assert.equal(mismatched.pass, false);
+      assert.equal(mismatched.revision_matches, false);
+    } finally {
+      orchestrator.lightweightSnapshot = originalSnapshot;
+    }
+  });
+
+  await t.test('P2: final census with the committed census as baseline passes when identities are stable', async () => {
+    const baselinePass = await coordinator.finalCensus(activationEpochId, { baselineCensus: census });
+    assert.equal(baselinePass.pass, true);
+    assert.equal(baselinePass.host_instance_id, recoveryHostInstanceId);
+    assert.equal(baselinePass.ui_verified, true);
+  });
+
+  await t.test('P2: final census with a committed baseline fails closed on post-commit UI change', async () => {
+    const originalUi = coordinator.getUiRegistration;
+    coordinator.getUiRegistration = () => ({
+      instance_id: id('other-electron-ui', '1001'),
+      pid: process.pid,
+      process_start_token: 'other-token',
+      activation_epoch_id: activationEpochId
+    });
+    try {
+      const drifted = await coordinator.finalCensus(activationEpochId, { baselineCensus: census });
+      assert.equal(drifted.pass, false);
+      assert.equal(drifted.ui_verified, false);
+    } finally {
+      coordinator.getUiRegistration = originalUi;
+    }
+  });
+
   connectorEvidenceMode = 'compatibility';
   connectorAcknowledged = false;
   connectorBootstrapObservedAt = new Date(nowUnixMs - 250).toISOString();
@@ -2921,7 +2988,7 @@ test('pre-admission revalidation rejects process drift against the committed cen
   coordinator.finalCensus = async (epochIdValue, options) => {
     assert.equal(epochIdValue, activationEpochId);
     assert.deepEqual(options, {
-      expectedOldInstanceId: id('recovery-host-retired', '1001'),
+      baselineCensus: committedCensus,
       reusePendingProjection: true,
       revalidateCommitted: true
     });
@@ -2942,6 +3009,86 @@ test('pre-admission revalidation rejects process drift against the committed cen
   );
   assert.equal(record.state, 'READY_COMMITTED');
   assert.equal(record.admission_state, 'CLOSED');
+});
+
+test('P2: pre-admission revalidation accepts a host rotation that was part of the activation', async (t) => {
+  const { root, paths } = fixture(t);
+  const activationEpochId = id('activation-pre-open-rotation', '1001');
+  const readyCommitDigest = 'e'.repeat(64);
+  const expiresAtUnixMs = 1_700_000_120_000;
+  const committedCensus = {
+    pass: true,
+    activation_epoch_id: activationEpochId,
+    host_instance_id: id('recovery-host-current', '1001'),
+    host_pid: 101,
+    process_instance_id: id('mcp-process-current', '1001'),
+    server_instance_id: id('mcp-server-current', '1001'),
+    supervisor_instance_id: id('native-supervisor-current', '1001'),
+    tunnel_instance_id: id('coding-tunnel-current', '1001'),
+    tunnel_pid: 102,
+    recovery_mcp_instance_id: id('recovery-mcp-current', '1001'),
+    recovery_mcp_pid: 103,
+    recovery_tunnel_instance_id: null,
+    recovery_tunnel_pid: null,
+    ui_instance_id: id('electron-ui-current', '1001'),
+    ui_running_revision: '1'.repeat(64),
+    recovery_host_running_revision: '2'.repeat(64),
+    running_revision: '3'.repeat(64),
+    disk_revision: '3'.repeat(64)
+  };
+  const record = {
+    activation_epoch_id: activationEpochId,
+    state: 'READY_COMMITTED',
+    admission_state: 'CLOSED',
+    ready_commit_digest: readyCommitDigest,
+    expires_at_unix_ms: expiresAtUnixMs,
+    component_evidence: {
+      recovery_host: { instance_id: id('recovery-host-retired', '1001') }
+    },
+    verification: { final_census: committedCensus }
+  };
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: { current: () => record },
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {},
+    now: () => 1_700_000_000_000
+  });
+  coordinator.finalCensus = async (epochIdValue, options) => {
+    assert.equal(epochIdValue, activationEpochId);
+    assert.deepEqual(options, {
+      baselineCensus: committedCensus,
+      reusePendingProjection: true,
+      revalidateCommitted: true
+    });
+    return committedCensus;
+  };
+  const result = await coordinator.revalidateBeforeAdmission({
+    activationEpochId,
+    readyCommitDigest,
+    expiresAtUnixMs
+  });
+  assert.equal(result.valid, true);
+  assert.equal(result.census, committedCensus);
+  assert.equal(record.state, 'READY_COMMITTED');
+  assert.equal(record.admission_state, 'CLOSED');
+});
+
+test('P2: activation quiesce validity is bounded and rejects stale or malformed files', () => {
+  const now = 1_700_000_000_000;
+  const base = {
+    schema_version: 1,
+    activation_epoch_id: 'activation-1',
+    requested_at_unix_ms: now,
+    expires_at_unix_ms: now + 600_000
+  };
+  assert.equal(isActivationQuiesceValid(base, now), true);
+  assert.equal(isActivationQuiesceValid({ ...base, expires_at_unix_ms: now }, now), false);
+  assert.equal(isActivationQuiesceValid({ ...base, expires_at_unix_ms: now + ACTIVATION_QUIESCE_TTL_MS + 1 }, now), false);
+  assert.equal(isActivationQuiesceValid({ ...base, requested_at_unix_ms: now + 31_000 }, now), false);
+  assert.equal(isActivationQuiesceValid({ ...base, schema_version: 2 }, now), false);
+  assert.equal(isActivationQuiesceValid({ ...base, activation_epoch_id: '' }, now), false);
+  assert.equal(isActivationQuiesceValid(null, now), false);
 });
 
 test('finalize never opens MCP admission when the durable ready commit fails', async (t) => {
@@ -3216,3 +3363,92 @@ test('census summary without live_service_jobs behaves as before', () => {
   assert.equal(result.safe, false);
 });
 
+
+test('canonical ledger census budget covers a slow census beyond the old thirty-second budget', async () => {
+  const result = await oneShotCensus(process.execPath, ['-e', 'setTimeout(() => { console.log(JSON.stringify({ slow: true })); }, 35000)'], {});
+  assert.equal(result.slow, true);
+});
+
+test('full-clean preflight reuses a fresh census when the ledger is unchanged', async (t) => {
+  const { root, paths } = fixture(t);
+  const workspace = path.join(root, 'workspace');
+  const ledgerPath = path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.writeFileSync(ledgerPath, 'ledger-reuse-v1'.padEnd(200, 'x'));
+  let calls = 0;
+  const census = { safe: true, code: 'READY', workspace, ledger_path: ledgerPath, snapshot: { sha256: 'a'.repeat(64), logical_sha256: 'b'.repeat(64) }, census_fingerprint: 'c'.repeat(64) };
+  const coordinator = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({ workspace }) },
+    orchestrator: { inspectCodeActivation: async () => ({ safe: true, code: 'COMPONENT_STOPPED', workspace }) },
+    canonicalLedgerCensus: async () => { calls += 1; return census; }
+  });
+  const first = await coordinator.preflight({ allowAcceptancePending: true });
+  const second = await coordinator.preflight({ allowAcceptancePending: true });
+  assert.equal(calls, 1, 'unchanged ledger must not recompute the census');
+  assert.equal(first.runtime.canonical_ledger_census, census);
+  assert.equal(second.runtime.canonical_ledger_census, census);
+});
+
+test('full-clean preflight rejects a stale cached census after the ledger changes', async (t) => {
+  const { root, paths } = fixture(t);
+  const workspace = path.join(root, 'workspace');
+  const ledgerPath = path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.writeFileSync(ledgerPath, 'ledger-reuse-v1'.padEnd(200, 'x'));
+  let calls = 0;
+  const make = (fp) => ({ safe: true, code: 'READY', workspace, ledger_path: ledgerPath, snapshot: { sha256: 'a'.repeat(64), logical_sha256: 'b'.repeat(64) }, census_fingerprint: fp });
+  const coordinator = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({ workspace }) },
+    orchestrator: { inspectCodeActivation: async () => ({ safe: true, code: 'COMPONENT_STOPPED', workspace }) },
+    canonicalLedgerCensus: async () => { calls += 1; return calls === 1 ? make('c'.repeat(64)) : make('d'.repeat(64)); }
+  });
+  await coordinator.preflight({ allowAcceptancePending: true });
+  fs.writeFileSync(ledgerPath, 'ledger-reuse-v2'.padEnd(300, 'y'));
+  fs.utimesSync(ledgerPath, new Date(), new Date(Date.now() + 5000));
+  const second = await coordinator.preflight({ allowAcceptancePending: true });
+  assert.equal(calls, 2, 'changed ledger must recompute the census');
+  assert.equal(second.runtime.canonical_ledger_census.census_fingerprint, 'd'.repeat(64));
+});
+
+test('full-clean preflight recomputes a census after the reuse window expires', async (t) => {
+  const { root, paths } = fixture(t);
+  const workspace = path.join(root, 'workspace');
+  const ledgerPath = path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.writeFileSync(ledgerPath, 'ledger-reuse-v1'.padEnd(200, 'x'));
+  let calls = 0;
+  let nowMs = 1700000000000;
+  const census = { safe: true, code: 'READY', workspace, ledger_path: ledgerPath, snapshot: { sha256: 'a'.repeat(64), logical_sha256: 'b'.repeat(64) }, census_fingerprint: 'c'.repeat(64) };
+  const coordinator = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({ workspace }) },
+    orchestrator: { inspectCodeActivation: async () => ({ safe: true, code: 'COMPONENT_STOPPED', workspace }) },
+    canonicalLedgerCensus: async () => { calls += 1; return census; },
+    now: () => nowMs
+  });
+  await coordinator.preflight({ allowAcceptancePending: true });
+  nowMs += 301000;
+  await coordinator.preflight({ allowAcceptancePending: true });
+  assert.equal(calls, 2, 'expired reuse window must recompute the census');
+});
+
+test('full-clean held census is never served from the reuse cache', async (t) => {
+  const { root, paths } = fixture(t);
+  const workspace = path.join(root, 'workspace');
+  const ledgerPath = path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.writeFileSync(ledgerPath, 'ledger-reuse-v1'.padEnd(200, 'x'));
+  let calls = 0;
+  const census = { safe: true, code: 'READY', workspace, ledger_path: ledgerPath, snapshot: { sha256: 'a'.repeat(64), logical_sha256: 'b'.repeat(64) }, census_fingerprint: 'c'.repeat(64) };
+  const coordinator = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({ workspace }) },
+    orchestrator: { inspectCodeActivation: async () => ({ safe: true, code: 'COMPONENT_STOPPED', workspace }) },
+    canonicalLedgerCensus: async () => { calls += 1; return census; }
+  });
+  await coordinator.preflight({ allowAcceptancePending: true });
+  await coordinator._censusWithReuse({ workspace, allowAcceptancePending: true, holdExclusive: true });
+  assert.equal(calls, 2, 'held census must recompute to acquire its exclusive gate');
+});

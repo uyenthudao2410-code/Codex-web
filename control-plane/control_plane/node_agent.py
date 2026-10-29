@@ -5143,23 +5143,22 @@ def reconcile_authority_status(args: argparse.Namespace) -> int:
     return 0
 
 
-def inspect_policy_authority(args: argparse.Namespace) -> int:
+def _policy_authority_observation(args, workspace_id, workspace_generation):
     """Resolve standing-policy metadata for exactly one selected local root.
 
-    The enrolled node obtains the current owner and facade contract from
-    Ubuntu. This installs no policy and returns neither a path nor credential.
-    Local-registration checks bracket HTTP so a removed/replaced root cannot
-    be promoted from stale UI data. Receipt freshness uses this node's local
-    observation clock; the Ubuntu clock is retained separately as provenance.
+    Returns the observation dict; prints nothing. The enrolled node obtains
+    the current owner and facade contract from Ubuntu. This installs no
+    policy and returns neither a path nor credential. Local-registration
+    checks bracket HTTP so a removed/replaced root cannot be promoted from
+    stale UI data. Receipt freshness uses this node's local observation
+    clock; the Ubuntu clock is retained separately as provenance.
     """
-
     config_path = Path(args.config).expanduser().resolve()
     config = _config(config_path)
-    workspace_id = _policy_identifier(args.workspace_id, "workspace_id")
-    workspace_generation = _policy_identifier(args.workspace_generation, "workspace_generation")
     _require_current_local_workspace_registration(
         args, config_path=config_path,
-        workspace_id=workspace_id, workspace_generation=workspace_generation,
+        workspace_id=workspace_id,
+        workspace_generation=workspace_generation,
     )
     response = _request(
         str(config["server_url"]),
@@ -5204,9 +5203,10 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
     )
     _require_current_local_workspace_registration(
         args, config_path=config_path,
-        workspace_id=workspace_id, workspace_generation=workspace_generation,
+        workspace_id=workspace_id,
+        workspace_generation=workspace_generation,
     )
-    print(json.dumps({
+    return {
         "operation": "control_plane_policy_authority_observation",
         "owner_id": owner_id,
         "workspace_id": workspace_id,
@@ -5222,7 +5222,21 @@ def inspect_policy_authority(args: argparse.Namespace) -> int:
         "observed_at_ms": int(time.time() * 1000),
         "server_observed_at_ms": server_observed_at_ms,
         "runtime_mode": _runtime_mode(args),
-    }, separators=(",", ":")))
+    }
+
+
+def inspect_policy_authority(args: argparse.Namespace) -> int:
+    """Resolve standing-policy metadata for exactly one selected local root.
+
+    The enrolled node obtains the current owner and facade contract from
+    Ubuntu. This installs no policy and returns neither a path nor credential.
+    Local-registration checks bracket HTTP so a removed/replaced root cannot
+    be promoted from stale UI data. Receipt freshness uses this node's local
+    observation clock; the Ubuntu clock is retained separately as provenance.
+    """
+    workspace_id = _policy_identifier(args.workspace_id, "workspace_id")
+    workspace_generation = _policy_identifier(args.workspace_generation, "workspace_generation")
+    print(json.dumps(_policy_authority_observation(args, workspace_id, workspace_generation), separators=(",", ":")))
     return 0
 
 
@@ -6144,6 +6158,12 @@ def heartbeat(args: argparse.Namespace) -> int:
     return 0
 
 
+# P4 open-and-use: last heartbeat projection posted by this process.
+# Reconnect detection ONLY. It never grants, extends, or reopens
+# authority, and it never changes lane admission or polling.
+_LAST_RUNTIME_HEARTBEAT_PROJECTION = None
+
+
 def runtime_heartbeat(args: argparse.Namespace) -> int:
     """Publish a conservative read-only projection of the local Execution Hub.
 
@@ -6158,6 +6178,8 @@ def runtime_heartbeat(args: argparse.Namespace) -> int:
     # degraded without probing for a more attractive identity.
     observation = recovery_identity_observation(args, project_root) if runtime_readiness(status)[0] == "ready" else None
     projection = runtime_heartbeat_projection(status, observation)
+    global _LAST_RUNTIME_HEARTBEAT_PROJECTION
+    _LAST_RUNTIME_HEARTBEAT_PROJECTION = dict(projection)
     config = _config(Path(args.config).expanduser().resolve())
     policy_observation = read_only_policy_observation(args, config)
     response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/heartbeat", {
@@ -7901,6 +7923,95 @@ def _connected_agent_lane_admission(args: argparse.Namespace, lane: str) -> None
     raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_LANE_INVALID")
 
 
+def reconnect_transition_kind(previous_readiness, readiness):
+    """Classify a connected-agent readiness observation for reconnect handling.
+
+    Returns "agent_start" for the first ready observation of a process,
+    "readiness_transition" when a previous non-ready observation becomes
+    ready, and None otherwise. Pure function: it grants nothing and changes
+    no state. A ready observation that follows a ready observation is
+    steady state, not a reconnect.
+    """
+    if readiness != "ready":
+        return None
+    if previous_readiness is None:
+        return "agent_start"
+    if previous_readiness != "ready":
+        return "readiness_transition"
+    return None
+
+
+def _reconnect_binding_numbers(item):
+    binding = item.get("binding_count")
+    exec_binding = item.get("exec_binding_count")
+    if isinstance(binding, bool) or not isinstance(binding, int):
+        return None
+    if isinstance(exec_binding, bool) or not isinstance(exec_binding, int):
+        return None
+    return (binding, exec_binding)
+
+
+def reconnect_authority_state(observations):
+    """Summarise reconnect authority observations without minting authority.
+
+    observations: policy-authority dicts (binding_count, exec_binding_count)
+    or {"error": code} entries. Returns "live" when any workspace has a live
+    binding with exec enabled, "no_live_binding" when observations exist,
+    none errored, and none has a live binding, and "unknown" otherwise
+    (including no observations, any error, or a binding without exec).
+    "unknown" deliberately does not claim a pilot or admission blocker the
+    node cannot observe: the poll endpoint returns no reason, and the
+    authority surface has no pilot-expiry or admission-recovery blocker.
+    """
+    items = [item for item in (observations or []) if isinstance(item, dict)]
+    for item in items:
+        numbers = _reconnect_binding_numbers(item)
+        if numbers is not None and numbers[0] >= 1 and numbers[1] >= 1:
+            return "live"
+    if items and all("error" not in item for item in items):
+        numbers = [_reconnect_binding_numbers(item) for item in items]
+        if all(pair is not None and pair[0] == 0 for pair in numbers):
+            return "no_live_binding"
+    return "unknown"
+
+
+def _reconnect_authority_observations(args):
+    """Read-only policy-authority observations for registered workspaces.
+
+    Runs once per reconnect moment only, never per iteration, so
+    steady-state polling traffic is unchanged. A per-workspace failure is
+    recorded as an error entry, never raised: one missing workspace must
+    not hide the rest. This observation never grants, extends, or reopens
+    authority; pilot renewal stays operator-only and admission reopen stays
+    with the operator runbook.
+    """
+    try:
+        config_path = Path(args.config).expanduser().resolve()
+        registry = _read_workspace_registry(_workspace_registry_path(args, config_path))
+        entries = registry.get("entries", [])
+    except (RuntimeError, OSError, ValueError):
+        return [{"error": "CONTROL_PLANE_WORKSPACE_REGISTRY_UNAVAILABLE"}]
+    observations = []
+    for entry in entries:
+        try:
+            observation = _policy_authority_observation(
+                args, entry["workspace_id"], entry["workspace_generation"])
+            observations.append({
+                "workspace_id": observation["workspace_id"],
+                "workspace_generation": observation["workspace_generation"],
+                "binding_count": observation["binding_count"],
+                "exec_binding_count": observation["exec_binding_count"],
+                "exec_enabled": observation["exec_enabled"],
+            })
+        except RuntimeError as error:
+            observations.append({
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "error": _safe_error_code(error),
+            })
+    return observations
+
+
 def _connected_agent_iteration(
     args: argparse.Namespace,
     *,
@@ -8000,6 +8111,13 @@ def run_connected_agent(args: argparse.Namespace) -> int:
     files decide which capability lanes may dequeue work; a missing/disabled
     lane is reported and skipped, never treated as permission to broaden the
     node.  Transport/runtime/auth failures use bounded reconnect backoff.
+    On the first ready heartbeat of a process, and on every later
+    non-ready to ready transition, the loop re-validates standing authority
+    once (read-only policy-authority observations for registered workspaces)
+    and reports the reconnect in the iteration line. That observation never
+    grants, extends, or reopens authority: pilot renewal stays operator-only
+    and admission reopen stays with the operator runbook, so a blocked
+    reconnect is reported as blocked instead of silently polling empty.
     """
 
     interval_seconds = _connected_agent_interval(args)
@@ -8018,6 +8136,7 @@ def run_connected_agent(args: argparse.Namespace) -> int:
     _config(config_path)
     completed_iterations = 0
     failures = 0
+    previous_readiness = None
     agent_status: dict[str, Any] = {
         "agent_instance_id": uuid.uuid4().hex,
         "agent_started_at_ms": int(time.time() * 1000),
@@ -8050,6 +8169,7 @@ def run_connected_agent(args: argparse.Namespace) -> int:
                 })
                 _write_connected_agent_status(args, agent_status)
                 heartbeat_succeeded = False
+                reconnect = None
 
                 def record_heartbeat_success() -> None:
                     nonlocal heartbeat_succeeded
@@ -8078,6 +8198,20 @@ def run_connected_agent(args: argparse.Namespace) -> int:
                         "last_error_scope": None,
                         "last_error_code": None,
                     })
+                    projection = _LAST_RUNTIME_HEARTBEAT_PROJECTION
+                    readiness = projection.get("readiness") if isinstance(projection, dict) else None
+                    kind = reconnect_transition_kind(previous_readiness, readiness)
+                    if kind is not None:
+                        observations = _reconnect_authority_observations(args)
+                        reconnect = {
+                            "kind": kind,
+                            "previous_readiness": previous_readiness,
+                            "readiness": readiness,
+                            "authority": reconnect_authority_state(observations),
+                            "workspaces": observations,
+                        }
+                    if readiness is not None:
+                        previous_readiness = readiness
                 except RuntimeError as error:
                     reason = _safe_error_code(error)
                     state = "degraded"
@@ -8097,14 +8231,17 @@ def run_connected_agent(args: argparse.Namespace) -> int:
                     })
                 completed_iterations = iteration
                 _write_connected_agent_status(args, agent_status)
-                print(json.dumps({
+                iteration_payload = {
                     "execution": "connected_agent_iteration",
                     "iteration": iteration,
                     "state": state,
                     "reason": reason,
                     "lanes": lanes,
                     "next_delay_seconds": delay_seconds,
-                }, separators=(",", ":")))
+                }
+                if reconnect is not None:
+                    iteration_payload["reconnect"] = reconnect
+                print(json.dumps(iteration_payload, separators=(",", ":")))
                 if max_iterations == 0 or completed_iterations < max_iterations:
                     time.sleep(delay_seconds)
     except KeyboardInterrupt:

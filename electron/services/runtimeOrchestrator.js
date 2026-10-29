@@ -635,6 +635,12 @@ class RuntimeOrchestrator {
     this.recoveryAttempts = 0;
     this.nextRecoveryAt = 0;
     this.autoRecoveryBlocked = false;
+    this.automaticFullCleanAttempted = false;
+    this.automaticFullCleanInFlight = false;
+    this.automaticFullCleanPending = false;
+    this.automaticFullCleanFailed = false;
+    this.automaticFullCleanFailure = '';
+    this.automaticFullCleanEpochId = '';
     this.lastStartFailure = '';
     this.deferredRecoveryCount = 0;
     this.heartbeatFailureSince = 0;
@@ -1076,6 +1082,11 @@ class RuntimeOrchestrator {
       recoveryAttempts: this.recoveryAttempts,
       nextRecoveryAt: this.nextRecoveryAt,
       recoveryBlocked: this.autoRecoveryBlocked,
+      automaticFullCleanAttempted: this.automaticFullCleanAttempted,
+      automaticFullCleanInFlight: this.automaticFullCleanInFlight,
+      automaticFullCleanFailed: this.automaticFullCleanFailed,
+      automaticFullCleanFailure: this.automaticFullCleanFailure,
+      automaticFullCleanEpochId: this.automaticFullCleanEpochId,
       lastStartFailure: this.lastStartFailure,
       deferredRecoveryCount: this.deferredRecoveryCount,
       lastFailureAt: this.heartbeatFailureSince > 0 ? new Date(this.heartbeatFailureSince).toISOString() : null,
@@ -3933,6 +3944,10 @@ class RuntimeOrchestrator {
     if (options.activationEpochId) this.setActivationEpoch(options.activationEpochId);
     if (!automatic) {
       this.autoRecoveryBlocked = false;
+      this.automaticFullCleanAttempted = false;
+      this.automaticFullCleanFailed = false;
+      this.automaticFullCleanFailure = '';
+      this.automaticFullCleanEpochId = '';
       this.lastStartFailure = '';
       this.heartbeatFailures = 0;
       this.heartbeatFailureKind = '';
@@ -4508,6 +4523,9 @@ class RuntimeOrchestrator {
     const expectedRunning = runtimeState.manualStop === false
       && Boolean(runtimeState.nativePid || runtimeState.tunnelPid || this.settingsStore.load().autoStartServices);
     if (this.busy || this.recovering || this.isManuallyStopped() || !expectedRunning) return status;
+    if (this.automaticFullCleanInFlight) {
+      return { ...status, recovering: true, recoveryBlocked: false, automaticFullCleanInFlight: true };
+    }
     if (this.autoRecoveryBlocked) {
       return { ...status, recoveryBlocked: true, lastStartFailure: this.lastStartFailure };
     }
@@ -4620,6 +4638,14 @@ class RuntimeOrchestrator {
         this.lastStartFailure = error.message;
         this.nextRecoveryAt = 0;
         this.deferredRecoveryCount = 0;
+        if (!this.automaticFullCleanAttempted && typeof this.fullCleanActivation?.restart === 'function') {
+          this.automaticFullCleanPending = true;
+          this.automaticFullCleanEpochId = String(this.activationEpochId || '').trim();
+        } else if (!this.automaticFullCleanAttempted) {
+          this.automaticFullCleanFailed = true;
+          this.automaticFullCleanFailure = 'Full-clean activation is unavailable.';
+          this.progress('automatic-full-clean-failed', 100, 'Tự khôi phục không khả dụng, cần kích hoạt thủ công.');
+        }
       }
       this.log.error(error.message, {
         stage: 'automatic-recovery',
@@ -4630,7 +4656,52 @@ class RuntimeOrchestrator {
     } finally {
       this.recovering = false;
     }
+    if (this.automaticFullCleanPending) {
+      this.automaticFullCleanPending = false;
+      await this.runAutomaticFullCleanOnce();
+    }
     return this.lightweightSnapshot();
+  }
+
+  async runAutomaticFullCleanOnce() {
+    if (this.automaticFullCleanAttempted || this.automaticFullCleanInFlight) return { attempted: false };
+    if (!this.fullCleanActivation || typeof this.fullCleanActivation.restart !== 'function') {
+      this.automaticFullCleanFailed = true;
+      this.automaticFullCleanFailure = 'Full-clean activation is unavailable.';
+      this.progress('automatic-full-clean-failed', 100, 'Tự khôi phục không khả dụng, cần kích hoạt thủ công.');
+      return { attempted: false, failed: true };
+    }
+    this.automaticFullCleanAttempted = true;
+    this.automaticFullCleanInFlight = true;
+    this.progress('automatic-full-clean-start', 20, 'Đang tự khôi phục runtime, không cần bấm tay.');
+    try {
+      const result = await this.fullCleanActivation.restart({ refresh: true, mode: 'full_clean_refresh', allowAcceptancePending: true, reason: 'automatic_full_clean_update_incomplete' });
+      const failedState = result?.state === 'FAILED' || result?.activationEpoch?.state === 'FAILED';
+      if (failedState) throw new Error('Automatic full-clean activation failed.');
+      this.autoRecoveryBlocked = false;
+      this.automaticFullCleanFailed = false;
+      this.automaticFullCleanFailure = '';
+      this.lastStartFailure = '';
+      this.endFailureStreak();
+      this.heartbeatFailures = 0;
+      this.recoveryAttempts = 0;
+      this.nextRecoveryAt = 0;
+      this.lastRecoveryAt = Date.now();
+      const ready = result?.state === 'READY' || result?.fully_ready === true;
+      this.progress('automatic-full-clean-ready', 100, ready ? 'Runtime đã tự khôi phục xong, sẵn sàng dùng.' : 'Runtime đang tự khôi phục, sẽ sẵn sàng trong giây lát.');
+      return { attempted: true, result };
+    } catch (error) {
+      this.autoRecoveryBlocked = true;
+      this.automaticFullCleanFailed = true;
+      this.automaticFullCleanFailure = String(error?.message || error);
+      this.lastStartFailure = String(error?.message || error);
+      this.nextRecoveryAt = 0;
+      this.log.error(error.message, { stage: 'automatic-full-clean', recoveryBlocked: true });
+      this.progress('automatic-full-clean-failed', 100, 'Tự khôi phục không thành công, cần kích hoạt thủ công.');
+      return { attempted: true, failed: true };
+    } finally {
+      this.automaticFullCleanInFlight = false;
+    }
   }
 
   async snapshot(options = {}) {
