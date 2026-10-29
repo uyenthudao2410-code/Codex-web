@@ -830,7 +830,12 @@ test('runtime recovery projection exposes only local typed supervisor evidence',
     downtimeMs: 0,
     failureElapsedMs: 0,
     mcpHealthFailureKind: null,
-    mcpHealthFailureDeterministic: false
+    mcpHealthFailureDeterministic: false,
+    automaticFullCleanAttempted: false,
+    automaticFullCleanInFlight: false,
+    automaticFullCleanFailed: false,
+    automaticFullCleanFailure: '',
+    automaticFullCleanEpochId: ''
   });
 });
 
