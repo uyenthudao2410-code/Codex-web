@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
+const { RuntimeOrchestrator, AUTOMATIC_FULL_CLEAN_TTL_MS } = require('../electron/services/runtimeOrchestrator');
 
 function makeOrchestrator(t, { fullCleanActivation, recoverError, readyWhen = () => false }) {
   const progress = [];
@@ -118,4 +118,88 @@ test('P3: runAutomaticFullCleanOnce directly respects the one-time guard', async
   const second = await orchestrator.runAutomaticFullCleanOnce();
   assert.equal(second.attempted, false);
   assert.equal(calls.length, 1, 'direct second call does not run a second full-clean');
+});
+
+test('P3 fix 3: automatic full-clean passes the longer automatic TTL (1200 s)', async (t) => {
+  assert.equal(AUTOMATIC_FULL_CLEAN_TTL_MS, 1_200_000);
+  const calls = [];
+  const fake = {
+    restart: async (options) => {
+      calls.push(options);
+      return { state: 'READY', fully_ready: true, admission_open: true, full_clean_activation: true };
+    }
+  };
+  const { orchestrator } = makeOrchestrator(t, { fullCleanActivation: fake, recoverError: updateIncompleteError(), readyWhen: () => calls.length > 0 });
+  await triggerRecovery(orchestrator);
+  assert.equal(calls.length, 1, 'exactly one automatic full-clean');
+  assert.equal(calls[0].reason, 'automatic_full_clean_update_incomplete');
+  assert.equal(calls[0].expiresInMs, AUTOMATIC_FULL_CLEAN_TTL_MS, 'P3 restart carries the automatic TTL');
+});
+
+test('P3 fix 2: expiry retry runs exactly once with the retry reason and longer TTL, and can succeed', async (t) => {
+  const calls = [];
+  const fake = {
+    restart: async (options) => {
+      calls.push(options);
+      return { state: 'READY', fully_ready: true, admission_open: true, full_clean_activation: true };
+    }
+  };
+  const { orchestrator, progress } = makeOrchestrator(t, { fullCleanActivation: fake, recoverError: updateIncompleteError() });
+  const first = await orchestrator.runAutomaticFullCleanExpiryRetry();
+  assert.equal(first.attempted, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].refresh, true);
+  assert.equal(calls[0].mode, 'full_clean_refresh');
+  assert.equal(calls[0].reason, 'automatic_full_clean_expiry_retry');
+  assert.equal(calls[0].expiresInMs, AUTOMATIC_FULL_CLEAN_TTL_MS);
+  assert.equal(orchestrator.automaticFullCleanFailed, false);
+  assert.equal(orchestrator.autoRecoveryBlocked, false);
+  const steps = progress.map((e) => e.step);
+  assert.ok(steps.includes('automatic-full-clean-expiry-retry-start'), 'retry progress emitted at start');
+  assert.ok(steps.includes('automatic-full-clean-ready'), 'retry progress emitted at end');
+  const second = await orchestrator.runAutomaticFullCleanExpiryRetry();
+  assert.equal(second.attempted, false);
+  assert.equal(calls.length, 1, 'second retry call does not run');
+});
+
+test('P3 fix 2: expiry retry is not blocked by the initial P3 attempt guard', async (t) => {
+  const calls = [];
+  const fake = {
+    restart: async (options) => {
+      calls.push(options);
+      return { state: 'HANDOFF', fully_ready: false };
+    }
+  };
+  const { orchestrator } = makeOrchestrator(t, { fullCleanActivation: fake, recoverError: updateIncompleteError() });
+  orchestrator.automaticFullCleanAttempted = true;
+  const first = await orchestrator.runAutomaticFullCleanExpiryRetry();
+  assert.equal(first.attempted, true, 'the retry has its own guard, not the initial P3 guard');
+  assert.equal(calls.length, 1);
+});
+
+test('P3 fix 2: if the expiry retry also fails, it stops and reports manual fallback (never loops)', async (t) => {
+  const calls = [];
+  const fake = { restart: async () => { calls.push(1); throw new Error('retry failed in test'); } };
+  const { orchestrator, progress } = makeOrchestrator(t, { fullCleanActivation: fake, recoverError: updateIncompleteError() });
+  const first = await orchestrator.runAutomaticFullCleanExpiryRetry();
+  assert.equal(first.attempted, true);
+  assert.equal(first.failed, true);
+  assert.equal(orchestrator.automaticFullCleanFailed, true);
+  assert.equal(orchestrator.autoRecoveryBlocked, true);
+  const failed = progress.filter((e) => e.step === 'automatic-full-clean-failed');
+  assert.equal(failed.length, 1);
+  assert.equal(failed[0].message, 'Tự khôi phục không thành công, cần kích hoạt thủ công.');
+  const second = await orchestrator.runAutomaticFullCleanExpiryRetry();
+  assert.equal(second.attempted, false);
+  assert.equal(calls.length, 1, 'a failed retry is never retried again');
+});
+
+test('P3 fix 2: expiry retry superseded by a live activation is not a failure', async (t) => {
+  const fake = { restart: async () => { throw Object.assign(new Error('epoch active'), { code: 'ACTIVATION_EPOCH_ACTIVE' }); } };
+  const { orchestrator } = makeOrchestrator(t, { fullCleanActivation: fake, recoverError: updateIncompleteError() });
+  const first = await orchestrator.runAutomaticFullCleanExpiryRetry();
+  assert.equal(first.attempted, true);
+  assert.equal(first.superseded, true);
+  assert.equal(orchestrator.automaticFullCleanFailed, false);
+  assert.equal(orchestrator.autoRecoveryBlocked, false);
 });

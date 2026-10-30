@@ -2014,6 +2014,7 @@ class FullCleanActivation {
       expected_disk_revision: text(options.expectedDiskRevision) || null,
       activation_epoch_id: text(options.activationEpochId) || null,
       expires_at_unix_ms: options.expiresAtUnixMs == null ? null : Number(options.expiresAtUnixMs),
+      expires_in_ms: options.expiresInMs == null ? null : Number(options.expiresInMs),
       allow_acceptance_pending: options.allowAcceptancePending === true,
       execution_role: profile.executionRole,
       component_profile: profile.componentProfile
@@ -2055,8 +2056,19 @@ class FullCleanActivation {
     const profile = requestedExecutionProfile(options, this._settings());
     options = { ...options, refresh, sourceCheckpoint, maintenanceWorkspace, executionRole: profile.executionRole, componentProfile: profile.componentProfile };
     const operation_id = text(options.operationId) || operationId();
-    const expiresAtUnixMs = Number(options.expiresAtUnixMs || (this.now() + DEFAULT_TTL_MS));
-    if (!Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= this.now()) throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request is expired.');
+    // Boot-expiry fix 1: the activation TTL runs from epoch creation, not
+    // from restart entry. Preflight (ledger census) can take ~75 s at boot
+    // and must not eat the TTL. An explicitly supplied absolute expiry keeps
+    // legacy semantics (bootstrap continuations own their deadline);
+    // otherwise the expiry is computed at _beginRecord time below from the
+    // requested duration (fix 3) or the default TTL.
+    const suppliedExpiresAtUnixMs = Number(options.expiresAtUnixMs || 0);
+    const hasSuppliedExpiry = Number.isSafeInteger(suppliedExpiresAtUnixMs) && suppliedExpiresAtUnixMs > 0;
+    if (hasSuppliedExpiry && suppliedExpiresAtUnixMs <= this.now()) throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request is expired.');
+    const requestedTtlMs = Number(options.expiresInMs || 0);
+    const hasRequestedTtl = Number.isSafeInteger(requestedTtlMs) && requestedTtlMs > 0;
+    if (options.expiresInMs != null && !hasRequestedTtl) throw epochError('ACTIVATION_REQUEST_INVALID', 'Full clean activation TTL must be a positive number of milliseconds.');
+    let expiresAtUnixMs = hasSuppliedExpiry ? suppliedExpiresAtUnixMs : null;
     // Idempotent replay is bound to the durable epoch, not merely to a caller
     // supplied operation id. A retry after Recovery Host handoff must resume
     // the existing transaction and never create a second epoch.
@@ -2188,6 +2200,13 @@ class FullCleanActivation {
     const releaseExclusiveGate = typeof heldCensus?.release_exclusive_gate === 'function'
       ? heldCensus.release_exclusive_gate : null;
     let record = null;
+    if (expiresAtUnixMs === null) {
+      // Creation-time TTL: the clock starts when the durable epoch is
+      // created, so a slow preflight no longer shortens the activation
+      // window. An actually-expired request still fails: the store rejects
+      // a non-future expiry, and the watchdog enforces the committed one.
+      expiresAtUnixMs = this.now() + (hasRequestedTtl ? requestedTtlMs : DEFAULT_TTL_MS);
+    }
     try {
       const componentEvidence = await this._captureIdentityEvidence();
       record = this._beginRecord({

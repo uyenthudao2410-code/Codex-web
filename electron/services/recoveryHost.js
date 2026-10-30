@@ -632,6 +632,12 @@ class RecoveryHost {
     this.ipcServer = null;
     this.supervisionTimer = null;
     this.supervisionInFlight = null;
+    // Boot-expiry fix 2: bounds for the one automatic expiry retry (see
+    // superviseOnce). The epoch-id guard prevents a re-fire for the same
+    // failed epoch across ticks; the in-flight flag prevents overlapping
+    // retries while the minutes-long restart is still in preflight.
+    this.automaticExpiryRetryInFlight = false;
+    this.automaticExpiryRetryEpochId = '';
     this.activationCompletionInFlight = null;
     this.lastSupervisionStatus = null;
     this.lastSupervisionObservedAtUnixMs = 0;
@@ -2643,6 +2649,33 @@ class RecoveryHost {
           this.log.error(error.message, { stage: 'recovery-host-activation-epoch-read', code: error?.code || '' });
           return this.lastSupervisionStatus;
         }
+      }
+      // Boot-expiry fix 2: a P3 automatic full-clean epoch that FAILED with
+      // ACTIVATION_REQUEST_EXPIRED gets exactly one automatic retry. This
+      // hook runs here — not via orchestrator.supervise(), which is
+      // deliberately suppressed while any epoch is non-READY — and it is
+      // bounded twice: only the initial P3 reason qualifies (the retry
+      // carries its own distinct reason, so a retry that also expires is
+      // never retried), and only once per failed epoch id in this host
+      // process (the retry's restart replaces the durable epoch, and a
+      // fast synchronous failure cannot re-fire for the same epoch id).
+      // The retry runs fire-and-forget: the 5 s watchdog tick must not
+      // block for a minutes-long activation, and later ticks observe the
+      // new epoch (or the epoch-id guard) instead of re-firing.
+      if (epoch
+        && epoch.state === 'FAILED'
+        && epoch.error?.code === 'ACTIVATION_REQUEST_EXPIRED'
+        && epoch.metadata?.reason === 'automatic_full_clean_update_incomplete'
+        && epoch.activation_epoch_id
+        && this.automaticExpiryRetryEpochId !== epoch.activation_epoch_id
+        && !this.automaticExpiryRetryInFlight
+        && typeof this.orchestrator?.runAutomaticFullCleanExpiryRetry === 'function') {
+        this.automaticExpiryRetryEpochId = epoch.activation_epoch_id;
+        this.automaticExpiryRetryInFlight = true;
+        this.log?.warn?.('Automatic full-clean epoch expired; retrying once.', { activationEpochId: epoch.activation_epoch_id });
+        this.orchestrator.runAutomaticFullCleanExpiryRetry()
+          .catch((retryError) => { this.log?.error?.(retryError?.message || String(retryError), { stage: 'automatic-full-clean-expiry-retry', code: retryError?.code || '' }); })
+          .finally(() => { this.automaticExpiryRetryInFlight = false; });
       }
       const readyAdoptionBlocked = this.readyAdoptionBlocksAdmission();
       const epochBlocked = Boolean(epoch && epoch.state !== 'READY');

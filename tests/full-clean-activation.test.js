@@ -3452,3 +3452,95 @@ test('full-clean held census is never served from the reuse cache', async (t) =>
   await coordinator._censusWithReuse({ workspace, allowAcceptancePending: true, holdExclusive: true });
   assert.equal(calls, 2, 'held census must recompute to acquire its exclusive gate');
 });
+
+// Boot-expiry fix 1: the activation TTL runs from epoch creation, so a slow
+// preflight does not eat it. The clock is advanced inside
+// inspectCodeActivation to simulate a 75 s boot ledger census.
+function fix1Coordinator(t, nowRef) {
+  const { root, paths } = fixture(t);
+  const store = new ActivationEpochStore({ paths, now: () => nowRef.now });
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    settings: {
+      load: () => ({ workspace: root, executionRole: 'direct_legacy' }),
+      save: () => {}
+    },
+    orchestrator: {
+      inspectCodeActivation: async () => {
+        nowRef.now += 75_000;
+        return { executor_cleanup_supported: true, safe: true, code: 'READY', workspace: root };
+      },
+      prepareCodeActivation: async (options) => ({
+        safe: true,
+        fenced: true,
+        executor_cleanup: { state: 'not_required', confirmed: true },
+        fence_operation_id: options.operationId,
+        expires_at_unix_ms: options.expiresAtUnixMs
+      }),
+      currentMcpHealth: async () => null,
+      stop: async () => {}
+    },
+    recoveryPlane: { stop: async () => {} },
+    spawnRecoveryReplacement: async () => {},
+    now: () => nowRef.now
+  });
+  return { store, coordinator };
+}
+
+test('boot-expiry fix 1: slow preflight does not eat the TTL; expiry runs from epoch creation', async (t) => {
+  const entryNow = 1_700_000_000_000;
+  const nowRef = { now: entryNow };
+  const { store, coordinator } = fix1Coordinator(t, nowRef);
+  const result = await coordinator.restart({
+    operationId: id('operation-fix1-creation-ttl', '1001'),
+    mode: 'full_clean_execution_role_handoff',
+    executionRole: 'central_executor'
+  });
+  assert.equal(result.state, 'HANDOFF');
+  assert.equal(nowRef.now, entryNow + 75_000, 'preflight advanced the clock by 75 s');
+  assert.equal(store.current().expires_at_unix_ms, entryNow + 75_000 + 600_000,
+    'expiry is creation time + default TTL, not restart-entry time + TTL');
+  assert.notEqual(store.current().expires_at_unix_ms, entryNow + 600_000);
+});
+
+test('boot-expiry fix 1: expiresInMs runs from epoch creation', async (t) => {
+  const entryNow = 1_700_000_000_000;
+  const nowRef = { now: entryNow };
+  const { store, coordinator } = fix1Coordinator(t, nowRef);
+  const result = await coordinator.restart({
+    operationId: id('operation-fix1-ttl-duration', '1001'),
+    mode: 'full_clean_execution_role_handoff',
+    executionRole: 'central_executor',
+    expiresInMs: 1_200_000
+  });
+  assert.equal(result.state, 'HANDOFF');
+  assert.equal(store.current().expires_at_unix_ms, entryNow + 75_000 + 1_200_000);
+});
+
+test('boot-expiry fix 1: an explicitly supplied absolute expiry is preserved verbatim', async (t) => {
+  const entryNow = 1_700_000_000_000;
+  const nowRef = { now: entryNow };
+  const { store, coordinator } = fix1Coordinator(t, nowRef);
+  const result = await coordinator.restart({
+    operationId: id('operation-fix1-absolute', '1001'),
+    mode: 'full_clean_execution_role_handoff',
+    executionRole: 'central_executor',
+    expiresAtUnixMs: entryNow + 900_000
+  });
+  assert.equal(result.state, 'HANDOFF');
+  assert.equal(store.current().expires_at_unix_ms, entryNow + 900_000);
+});
+
+test('boot-expiry fix 1: an already-expired absolute expiry still fails closed at entry', async (t) => {
+  const entryNow = 1_700_000_000_000;
+  const nowRef = { now: entryNow };
+  const { store, coordinator } = fix1Coordinator(t, nowRef);
+  await assert.rejects(coordinator.restart({
+    operationId: id('operation-fix1-expired', '1001'),
+    mode: 'full_clean_execution_role_handoff',
+    executionRole: 'central_executor',
+    expiresAtUnixMs: entryNow - 1
+  }), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+  assert.equal(store.current(), null, 'no epoch is created for an expired request');
+});

@@ -288,6 +288,15 @@ const DETERMINISTIC_MCP_HEALTH_FAILURES = new Set([
 // without turning that valid census into a false MCP timeout. The separate
 // health probe remains short and independently live.
 const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 30_000;
+// Boot-expiry fix 3: automatic full-clean activations (the P3 self-run and
+// its one expiry retry) get a longer TTL than the 600 s default. Measured:
+// the 30/10 boot run needed 624 s from restart entry (549 s from epoch
+// creation) and still had not cleared the VERIFYING gate; the manual run
+// the same morning succeeded in 436 s from entry. 1200 s from epoch
+// creation is ~2.2x the failed boot duration and ~2.9x the manual success
+// duration, within the 1800 s bound. Cost: a stuck automatic activation
+// holds admission closed for up to 20 minutes before failing instead of 10.
+const AUTOMATIC_FULL_CLEAN_TTL_MS = 1_200_000;
 // The MCP health endpoint is intentionally lock-light, but it still runs in
 // the same Python process as workspace tools.  Under a real connector load the
 // interpreter may not get scheduled within a 1.2s probe window even though the
@@ -641,6 +650,7 @@ class RuntimeOrchestrator {
     this.automaticFullCleanFailed = false;
     this.automaticFullCleanFailure = '';
     this.automaticFullCleanEpochId = '';
+    this.automaticFullCleanExpiryRetryAttempted = false;
     this.lastStartFailure = '';
     this.deferredRecoveryCount = 0;
     this.heartbeatFailureSince = 0;
@@ -3948,6 +3958,7 @@ class RuntimeOrchestrator {
       this.automaticFullCleanFailed = false;
       this.automaticFullCleanFailure = '';
       this.automaticFullCleanEpochId = '';
+      this.automaticFullCleanExpiryRetryAttempted = false;
       this.lastStartFailure = '';
       this.heartbeatFailures = 0;
       this.heartbeatFailureKind = '';
@@ -4675,7 +4686,7 @@ class RuntimeOrchestrator {
     this.automaticFullCleanInFlight = true;
     this.progress('automatic-full-clean-start', 20, 'Đang tự khôi phục runtime, không cần bấm tay.');
     try {
-      const result = await this.fullCleanActivation.restart({ refresh: true, mode: 'full_clean_refresh', allowAcceptancePending: true, reason: 'automatic_full_clean_update_incomplete' });
+      const result = await this.fullCleanActivation.restart({ refresh: true, mode: 'full_clean_refresh', allowAcceptancePending: true, reason: 'automatic_full_clean_update_incomplete', expiresInMs: AUTOMATIC_FULL_CLEAN_TTL_MS });
       const failedState = result?.state === 'FAILED' || result?.activationEpoch?.state === 'FAILED';
       if (failedState) throw new Error('Automatic full-clean activation failed.');
       this.autoRecoveryBlocked = false;
@@ -4697,6 +4708,67 @@ class RuntimeOrchestrator {
       this.lastStartFailure = String(error?.message || error);
       this.nextRecoveryAt = 0;
       this.log.error(error.message, { stage: 'automatic-full-clean', recoveryBlocked: true });
+      this.progress('automatic-full-clean-failed', 100, 'Tự khôi phục không thành công, cần kích hoạt thủ công.');
+      return { attempted: true, failed: true };
+    } finally {
+      this.automaticFullCleanInFlight = false;
+    }
+  }
+
+  // Boot-expiry fix 2: exactly one automatic retry for a P3 automatic
+  // full-clean epoch that FAILED with ACTIVATION_REQUEST_EXPIRED. This is
+  // driven by the Recovery Host watchdog (see superviseOnce), not by
+  // supervise(), which is deliberately suppressed while any epoch is
+  // non-READY. The retry carries its own distinct reason, so a retry that
+  // also expires is never retried again; the host-side epoch-id guard
+  // additionally prevents a re-fire for the same failed epoch. This method
+  // deliberately does NOT consult automaticFullCleanAttempted: in the
+  // replacement host that guard is fresh, and the retry's own guard below
+  // is the bound that matters.
+  async runAutomaticFullCleanExpiryRetry() {
+    if (this.automaticFullCleanExpiryRetryAttempted || this.automaticFullCleanInFlight) return { attempted: false };
+    if (!this.fullCleanActivation || typeof this.fullCleanActivation.restart !== 'function') {
+      this.automaticFullCleanExpiryRetryAttempted = true;
+      this.automaticFullCleanAttempted = true;
+      this.automaticFullCleanFailed = true;
+      this.automaticFullCleanFailure = 'Full-clean activation is unavailable.';
+      this.progress('automatic-full-clean-failed', 100, 'Tự khôi phục không thành công, cần kích hoạt thủ công.');
+      return { attempted: false, failed: true };
+    }
+    this.automaticFullCleanExpiryRetryAttempted = true;
+    this.automaticFullCleanAttempted = true;
+    this.automaticFullCleanInFlight = true;
+    this.progress('automatic-full-clean-expiry-retry-start', 20, 'Lần khôi phục trước hết hạn, đang tự thử lại một lần.');
+    try {
+      const result = await this.fullCleanActivation.restart({ refresh: true, mode: 'full_clean_refresh', allowAcceptancePending: true, reason: 'automatic_full_clean_expiry_retry', expiresInMs: AUTOMATIC_FULL_CLEAN_TTL_MS });
+      const failedState = result?.state === 'FAILED' || result?.activationEpoch?.state === 'FAILED';
+      if (failedState) throw new Error('Automatic full-clean expiry retry failed.');
+      this.autoRecoveryBlocked = false;
+      this.automaticFullCleanFailed = false;
+      this.automaticFullCleanFailure = '';
+      this.lastStartFailure = '';
+      this.endFailureStreak();
+      this.heartbeatFailures = 0;
+      this.recoveryAttempts = 0;
+      this.nextRecoveryAt = 0;
+      this.lastRecoveryAt = Date.now();
+      const ready = result?.state === 'READY' || result?.fully_ready === true;
+      this.progress('automatic-full-clean-ready', 100, ready ? 'Runtime đã tự khôi phục xong, sẵn sàng dùng.' : 'Runtime đang tự khôi phục, sẽ sẵn sàng trong giây lát.');
+      return { attempted: true, result };
+    } catch (error) {
+      if (String(error?.code || '') === 'ACTIVATION_EPOCH_ACTIVE') {
+        // Another activation now owns the epoch (e.g. a manual restart won
+        // the race while this retry was in preflight). That activation
+        // proceeds; do not mark the automatic path failed for losing it.
+        this.log?.error?.(error.message, { stage: 'automatic-full-clean-expiry-retry-superseded', recoveryBlocked: false });
+        return { attempted: true, superseded: true };
+      }
+      this.autoRecoveryBlocked = true;
+      this.automaticFullCleanFailed = true;
+      this.automaticFullCleanFailure = String(error?.message || error);
+      this.lastStartFailure = String(error?.message || error);
+      this.nextRecoveryAt = 0;
+      this.log.error(error.message, { stage: 'automatic-full-clean-expiry-retry', recoveryBlocked: true });
       this.progress('automatic-full-clean-failed', 100, 'Tự khôi phục không thành công, cần kích hoạt thủ công.');
       return { attempted: true, failed: true };
     } finally {
@@ -4802,4 +4874,4 @@ class RuntimeOrchestrator {
   }
 }
 
-module.exports = { RuntimeOrchestrator, executionRole, runtimeReadiness, probeMcp, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots };
+module.exports = { RuntimeOrchestrator, executionRole, runtimeReadiness, probeMcp, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots, AUTOMATIC_FULL_CLEAN_TTL_MS };

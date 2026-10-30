@@ -2912,3 +2912,74 @@ test('Recovery Host restart resolves the current accepted checkpoint and rejects
   }
   assert.equal(host.activationEpochStore.current(), null, 'invalid mixed handoff must not create a durable transaction');
 });
+
+test('Recovery Host watchdog retries a failed P3 automatic epoch exactly once on expiry, and never on other failures', async (t) => {
+  async function runTicks(epoch, ticks) {
+    const paths = fixture(t);
+    const retryCalls = [];
+    const host = new RecoveryHost({
+      paths,
+      settings: { load: () => ({ workspace: paths.appRoot(), autoStartServices: false }) },
+      secrets: {},
+      environment: {},
+      log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+      orchestrator: {
+        lightweightSnapshot: async () => ({ mcpRunning: true, tunnelRunning: true, fullyReady: false }),
+        supervise: async () => ({ mcpRunning: true, tunnelRunning: true, fullyReady: false }),
+        codingMcpRevisionStatus: () => ({
+          running_revision: 'a'.repeat(64),
+          disk_revision: 'a'.repeat(64),
+          update_pending: false,
+          state: 'current'
+        }),
+        runAutomaticFullCleanExpiryRetry: async () => { retryCalls.push(1); return { attempted: true }; }
+      },
+      healthService: {},
+      gateway: { stop: async () => true },
+      revisionTracker: {
+        captureRunning: () => 'a'.repeat(64),
+        status: () => ({
+          running_revision: 'a'.repeat(64),
+          disk_revision: 'a'.repeat(64),
+          update_pending: false,
+          state: 'current'
+        })
+      },
+      recoveryPlaneService: { setActivationEpoch() {} },
+      autoActivationController: {
+        status: () => ({ running: false, closure_input: null }),
+        start: () => ({ running: true }),
+        stop: () => true
+      }
+    });
+    host.fullCleanActivation = {
+      current: () => epoch,
+      enforceCurrentExpiry: () => { throw Object.assign(new Error('expired'), { code: 'ACTIVATION_REQUEST_EXPIRED' }); },
+      finalCensus: async () => ({ pass: false, verified: false, activation_epoch_id: epoch.activation_epoch_id }),
+      recordPendingCensus: () => epoch,
+      finalize: async () => epoch
+    };
+    host.activationEpochStore.current = () => epoch;
+    host.recordSupervisionStatus = (value) => {
+      host.lastSupervisionStatus = value;
+      return value;
+    };
+    host.ensureRecoveryPlane = async () => null;
+    host.superviseElectronUi = async () => null;
+    host.running = true;
+    for (let i = 0; i < ticks; i++) await host.superviseOnce();
+    return retryCalls.length;
+  }
+  const base = {
+    operation_id: 'full-clean-expiry-retry-0001',
+    activation_epoch_id: 'activation-expiry-retry-0001',
+    state: 'FAILED',
+    admission_state: 'CLOSED',
+    error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'Activation request expired before the activation boundary completed.' },
+    metadata: { reason: 'automatic_full_clean_update_incomplete' }
+  };
+  assert.equal(await runTicks(base, 2), 1, 'expired P3 epoch retries exactly once across ticks');
+  assert.equal(await runTicks({ ...base, error: { code: 'UPDATE_INCOMPLETE', message: 'identity changed' } }, 2), 0, 'non-expiry failure never retries');
+  assert.equal(await runTicks({ ...base, metadata: { reason: 'automatic_full_clean_expiry_retry' } }, 2), 0, 'a retry epoch that also expires is never retried again');
+  assert.equal(await runTicks({ ...base, metadata: { reason: 'operator_restart' } }, 2), 0, 'a manual epoch that expires is never auto-retried');
+});
