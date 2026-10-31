@@ -456,42 +456,46 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 )
                 self.assertEqual(status, 201)
                 self.assertIn("access_token", grant)
-                status, decision = post_json(
+                # No-pilot contract: the release server has no pilot decisions
+                # and no scoped_pilot admission mode. The service principal and
+                # grant above are the external state; the admission leg now
+                # returns the server from recovery to open, and the healthcheck
+                # must reflect open.
+                status, deleted_pilot = post_json(
                     f"{primary_url}/v1/scoped-pilot-decisions",
                     {
                         "principal_id": principal["principal_id"],
                         "binding_id": binding["binding_id"],
                         "expires_at_ms": int(time.time() * 1000) + 60_000,
-                        "reason": "Release healthcheck scoped pilot fixture",
+                        "reason": "Release healthcheck deleted pilot route",
                     },
                     authorization=f"Bearer {operator}",
                 )
-                self.assertEqual(status, 201)
-                self.assertEqual(decision["binding_id"], binding["binding_id"])
-                status, scoped_pilot = post_json(
+                self.assertEqual(status, 404)
+                status, reopened = post_json(
                     f"{primary_url}/v1/maintenance/admission",
-                    {"mode": "scoped_pilot"},
+                    {"mode": "open"},
                     authorization=f"Bearer {operator}",
                 )
                 self.assertEqual(status, 200)
-                self.assertEqual(scoped_pilot["admission_mode"], "scoped_pilot")
-                scoped_pilot_environment = {
+                self.assertEqual(reopened["admission_mode"], "open")
+                open_environment = {
                     **environment,
-                    "CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION": "scoped_pilot",
+                    "CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION": "open",
                 }
-                scoped_pilot_healthcheck = subprocess.run(
+                open_healthcheck = subprocess.run(
                     [str(release_root / "deploy" / "control-plane-healthcheck.sh")],
-                    env=scoped_pilot_environment,
+                    env=open_environment,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
                     timeout=30,
                 )
-                self.assertEqual(scoped_pilot_healthcheck.returncode, 0)
-                scoped_pilot_status = json.loads(
+                self.assertEqual(open_healthcheck.returncode, 0)
+                open_status = json.loads(
                     (backup_directory / "last-healthcheck.json").read_text(encoding="utf-8")
                 )
-                self.assertEqual(scoped_pilot_status["deployment"]["admission_mode"], "scoped_pilot")
+                self.assertEqual(open_status["deployment"]["admission_mode"], "open")
             finally:
                 process.terminate()
                 try:

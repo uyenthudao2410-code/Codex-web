@@ -110,7 +110,7 @@ test('workspace setup notice follows packaged runtime boundary', () => {
   assert.equal(connectionNotice.hidden, false);
   assert.equal(workspaceNotice.hidden, false);
   assert.match(workspaceNotice.querySelector('b').textContent, /bản phát triển/);
-  assert.match(workspaceNotice.querySelector('p').textContent, /Chọn thư mục, đăng ký workspace/);
+  assert.match(workspaceNotice.querySelector('p').textContent, /Chọn thư mục và đăng ký workspace cần bản cài đặt đã được xác minh/);
 
   fixture.snapshot.current_ui_runtime = {
     mode: 'packaged',
