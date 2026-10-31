@@ -6,30 +6,32 @@ from control_plane.web_ui import WEB_UI_HTML, WEB_UI_JAVASCRIPT
 
 
 class PrivateTunnelServiceConsoleTests(unittest.TestCase):
-    def test_console_explains_shared_identity_and_exact_target_pilot(self) -> None:
+    def test_console_explains_shared_identity_and_live_bindings(self) -> None:
         html = WEB_UI_HTML.decode("utf-8")
         javascript = WEB_UI_JAVASCRIPT.decode("utf-8")
 
         self.assertIn("Mỗi lời gọi qua tunnel dùng cùng một service principal", html)
         self.assertIn("không xác định người ChatGPT nào đã gọi", html)
         self.assertIn("Plus/Pro cá nhân lẫn Business", html)
-        self.assertIn("workspace đã chọn trong app Windows", html)
+        self.assertIn("thư mục dự án do Windows node đăng ký", html)
         for element_id in (
             "mcp-service-principals-body",
             "mcp-service-grants-body",
-            "scoped-pilot-decisions-body",
-            "service-pilot-next-action",
+            "service-next-action",
         ):
             self.assertIn(f'id="{element_id}"', html)
             self.assertIn(f"'{element_id}'", javascript)
+        self.assertNotIn('id="scoped-pilot-decisions-body"', html)
+        self.assertNotIn("scoped_pilot_decisions", javascript)
+        self.assertNotIn("scoped-pilot-decisions", javascript)
         self.assertIn("private_tunnel_service", javascript)
-        self.assertIn("central scoped_pilot — local effect chưa được chứng minh", javascript)
+        self.assertIn("Admission đang mở cho binding còn hiệu lực", javascript)
 
     def test_personal_chatgpt_guidance_separates_connection_from_admin_scope(self) -> None:
         html = WEB_UI_HTML.decode("utf-8")
         javascript = WEB_UI_JAVASCRIPT.decode("utf-8")
 
-        self.assertIn('<h2 id="service-pilot-title">ChatGPT qua private tunnel</h2>', html)
+        self.assertIn('<h2 id="service-tunnel-title">ChatGPT qua private tunnel</h2>', html)
         self.assertIn("target: 'ChatGPT qua private tunnel'", javascript)
         self.assertNotIn("ChatGPT Business qua private tunnel", html + javascript)
         self.assertIn('<details id="personal-tunnel-help">', html)
@@ -41,12 +43,12 @@ class PrivateTunnelServiceConsoleTests(unittest.TestCase):
         self.assertIn("Inventory chỉ kiểm tra metadata", html)
         self.assertIn("Grant chỉ xác thực tunnel, không tự cấp quyền sửa file/chạy lệnh", html)
 
-    def test_browser_only_revokes_service_grant_and_pilot_with_csrf(self) -> None:
+    def test_browser_only_revokes_service_grant_with_csrf(self) -> None:
         html = WEB_UI_HTML.decode("utf-8")
         javascript = WEB_UI_JAVASCRIPT.decode("utf-8")
 
         self.assertIn("/v1/ui/mcp-service-grants/${encodeURIComponent(grantId)}/revoke", javascript)
-        self.assertIn("/v1/ui/scoped-pilot-decisions/${encodeURIComponent(decisionId)}/revoke", javascript)
+        self.assertNotIn("/v1/ui/scoped-pilot-decisions/${encodeURIComponent(decisionId)}/revoke", javascript)
         self.assertIn("'X-Control-Plane-CSRF': csrfToken", javascript)
         self.assertNotIn("access_token", javascript)
         self.assertNotIn("localStorage", javascript)

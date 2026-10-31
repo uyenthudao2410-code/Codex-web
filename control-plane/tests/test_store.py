@@ -144,13 +144,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
         )
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
         self._ready_node()
-        self.store.set_admission_mode(mode="recovery")
-        initial = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-            reason="Initial bounded-read canary",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
+        self.store.set_admission_mode(mode="open")
         intent = self.store.request_mcp_bounded_file_read(
             owner_id="owner_default", principal_id=principal["principal_id"],
             binding_id=binding["binding_id"], path="README.md", start_line=1,
@@ -158,7 +152,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
             facade_contract=FACADE_CONTRACT,
         )
         action = self.store.action(owner_id="owner_default", action_id=intent["action_id"])
-        self.assertEqual(action["scoped_pilot_decision_id"], initial["decision_id"])
+        self.assertIsNone(action["scoped_pilot_decision_id"])
         delivery = self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read")[0]
         self.store.record_receipt(
             device_id="device-alpha", action_id=intent["action_id"],
@@ -500,6 +494,8 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.store.authenticate_mcp_service_token(access_token=grant["access_token"])
 
+        # Non-expiring by design: the stored expiry is metadata only.
+        # Authentication still succeeds past it; only revocation ends it.
         expiring = self.store.create_mcp_service_grant(
             owner_id="owner_default",
             principal_id=service["principal_id"],
@@ -507,8 +503,10 @@ class ControlPlaneStoreTests(unittest.TestCase):
             scopes=["control-plane.inventory"],
         )
         self.now += 1
-        with self.assertRaises(PermissionError):
-            self.store.authenticate_mcp_service_token(access_token=expiring["access_token"])
+        self.assertEqual(
+            self.store.authenticate_mcp_service_token(access_token=expiring["access_token"])["grant_id"],
+            expiring["grant_id"],
+        )
 
     def test_private_tunnel_service_grant_renewal_preserves_bearer_and_scopes(self) -> None:
         service = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
@@ -608,14 +606,15 @@ class ControlPlaneStoreTests(unittest.TestCase):
             scopes=["control-plane.inventory"],
         )
         context, _ = self._request()
-        # A shared service grant is identity, not admission. Even global open
-        # cannot create its task without an exact scoped pilot decision.
-        with self.assertRaises(ConflictError):
-            self.store.create_mcp_task_session(
-                owner_id="owner_default", principal_id=service["principal_id"],
-                binding_id=context["binding_id"], label="Shared tunnel task",
-                idempotency_key="service-task-0001",
-            )
+        # A shared service grant is identity, not admission. A live
+        # binding is sufficient for a task; no pilot decision exists.
+        task = self.store.create_mcp_task_session(
+            owner_id="owner_default", principal_id=service["principal_id"],
+            binding_id=context["binding_id"], label="Shared tunnel task",
+            idempotency_key="service-task-0001",
+        )
+        self.assertEqual(task["binding_id"], context["binding_id"])
+        self.assertIsNone(task["scoped_pilot_decision_id"])
         principals = self.store.list_private_tunnel_service_principals(owner_id="owner_default")
         self.assertEqual([item["principal_id"] for item in principals], [service["principal_id"]])
         self.assertNotIn("subject_digest", principals[0])
@@ -996,14 +995,14 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(health["unresolved_action_count"], 1)
         self.assertEqual(health["quarantined_unknown_action_count"], 1)
         self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
-        service_principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=service_principal["principal_id"],
-                binding_id=self.store.action(owner_id="owner_default", action_id=action["action_id"])["binding_id"],
-                expires_at_ms=self.now + 120_000,
-                reason="Generic workspace context unknown must remain blocking",
-            )
+        # The quarantined unknown stays visible, but it no longer vetoes
+        # a binding for the same workspace.
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=self.store.create_private_tunnel_service_principal(owner_id="owner_default")["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-1",
+        )
+        self.assertEqual(activated["state"], "active")
+        self.assertEqual(self.store.health()["unresolved_action_count"], 1)
 
         snapshot_path = Path(self.tempdir.name) / "quarantined-unknown.sqlite3"
         snapshot = self.store.backup_to(snapshot_path)
@@ -3563,7 +3562,7 @@ process.stdout.write(JSON.stringify(observation));
         self.assertTrue(entry["receipt"]["receipt_submitted"])
         self.assertNotIn("must-never-reach-central", json.dumps(entry))
 
-    def test_scoped_pilot_dispatches_only_decision_bound_file_read(self) -> None:
+    def test_live_binding_dispatches_only_binding_bound_file_read(self) -> None:
         binding = self.store.create_binding(
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-1", display_name="Selected workspace",
@@ -3582,16 +3581,7 @@ process.stdout.write(JSON.stringify(observation));
             admission_reference="test", expires_at_ms=self.now + 60_000,
         )
         self._ready_node()
-        self.store.set_admission_mode(mode="recovery")
-        with self.assertRaises(ConflictError):
-            self.store.set_admission_mode(mode="scoped_pilot")
-        decision = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-            reason="Pilot for the selected Windows workspace",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
-        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="generic"), [])
+        self.store.set_admission_mode(mode="open")
         intent = self.store.request_mcp_bounded_file_read(
             owner_id="owner_default", principal_id=principal["principal_id"],
             binding_id=binding["binding_id"], path="README.md", start_line=1,
@@ -3599,121 +3589,97 @@ process.stdout.write(JSON.stringify(observation));
             facade_contract=FACADE_CONTRACT,
         )
         action = self.store.action(owner_id="owner_default", action_id=intent["action_id"])
-        self.assertEqual(action["scoped_pilot_decision_id"], decision["decision_id"])
+        self.assertIsNone(action["scoped_pilot_decision_id"])
         delivered = self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read")
         self.assertEqual([row["action_id"] for row in delivered], [intent["action_id"]])
         self.assertEqual(self.store.action(owner_id="owner_default", action_id=old["action_id"])["delivery_state"], "queued")
+        generic = self.store.poll_actions(device_id="device-alpha", lane="generic")
+        self.assertEqual([row["action_id"] for row in generic], [old["action_id"]])
 
-    def test_scoped_pilot_renewal_rechecks_target_and_preserves_decision(self) -> None:
+    def test_binding_has_no_expiry_and_survives_clock_advance(self) -> None:
         binding = self.store.create_binding(
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-1", display_name="Selected workspace",
         )
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
         self._ready_node()
-        self.store.set_admission_mode(mode="recovery")
-        decision = self.store.create_scoped_pilot_decision(
+        self.store.set_admission_mode(mode="open")
+        self.store.create_mcp_task_session(
             owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-            reason="Renewal test for selected workspace",
+            binding_id=binding["binding_id"], label="No expiry task",
         )
-        self.store.set_admission_mode(mode="scoped_pilot")
-        renewed = self.store.renew_scoped_pilot_decision(
-            owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 120_000,
+        # Thirty days later, with a fresh heartbeat, the same binding still
+        # admits intake and dispatch: there is no pilot window to renew.
+        self.now += 30 * 24 * 60 * 60 * 1000
+        self._ready_node(runtime_instance_id="runtime-later", mcp_server_instance_id="server-later",
+                         activation_epoch="epoch-later")
+        intent = self.store.request_mcp_bounded_file_read(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], path="README.md", start_line=1,
+            max_lines=10, max_bytes=1024, idempotency_key="no-expiry-read-001",
+            facade_contract=FACADE_CONTRACT,
         )
-        self.assertEqual(renewed["expires_at_ms"], self.now + 120_000)
-        self.assertEqual(renewed["binding_id"], binding["binding_id"])
-        self.assertEqual(self.store.admission_status()["admission_mode"], "scoped_pilot")
-        with self.assertRaises(ValidationError):
-            self.store.renew_scoped_pilot_decision(
-                owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 30_000,
-            )
-        self.now += 120_000
-        with self.assertRaises(ConflictError):
-            self.store.renew_scoped_pilot_decision(
-                owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 60_000,
-            )
+        delivered = self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read")
+        self.assertEqual([row["action_id"] for row in delivered], [intent["action_id"]])
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=principal["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-1",
+        )
+        self.assertEqual(activated["binding_id"], binding["binding_id"])
+        self.assertEqual(activated["state"], "active")
 
-    def test_scoped_pilot_revocation_fences_queued_action_even_after_global_open(self) -> None:
+    def test_binding_revocation_fences_queued_action_even_after_global_open(self) -> None:
         binding = self.store.create_binding(
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-1", display_name="Selected workspace",
         )
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
         self._ready_node()
-        self.store.set_admission_mode(mode="recovery")
-        decision = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-            reason="Short trial for selected workspace",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
+        self.store.set_admission_mode(mode="open")
         intent = self.store.request_mcp_bounded_file_read(
             owner_id="owner_default", principal_id=principal["principal_id"],
             binding_id=binding["binding_id"], path="README.md", start_line=1,
             max_lines=10, max_bytes=1024, idempotency_key="pilot-file-read-002",
             facade_contract=FACADE_CONTRACT,
         )
-        self.store.revoke_scoped_pilot_decision(owner_id="owner_default", decision_id=decision["decision_id"])
+        self.store.revoke_binding(owner_id="owner_default", binding_id=binding["binding_id"])
         self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
-        self.store.set_admission_mode(mode="open")
-        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
-        # Simulate an old untagged service action surviving a schema upgrade.
-        with self.store._connection() as connection:
-            connection.execute(
-                "UPDATE actions SET scoped_pilot_decision_id = NULL WHERE action_id = ?",
-                (intent["action_id"],),
-            )
-        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
-        self.assertEqual(self.store.action(owner_id="owner_default", action_id=intent["action_id"])["delivery_state"], "queued")
+        # Revocation settles (rather than merely queues) the refused action.
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=intent["action_id"])["delivery_state"], "settled")
 
-    def test_shared_service_never_inherits_global_open_and_old_pilot_task_cannot_rebind(self) -> None:
+    def test_shared_service_task_binds_to_binding_not_to_global_open(self) -> None:
         binding = self.store.create_binding(
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-1", display_name="Selected workspace",
         )
+        other = self.store.create_binding(
+            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
+            workspace_generation="generation-1", display_name="Second binding same target",
+        )
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
+        self._ready_node()
+        self.store.set_admission_mode(mode="open")
+        task = self.store.create_mcp_task_session(
+            owner_id="owner_default", principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"], label="Task pinned to binding",
+        )
+        self.assertIsNone(task["scoped_pilot_decision_id"])
+        with self.assertRaises(ConflictError):
+            self.store.request_mcp_bounded_file_read(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=other["binding_id"], path="README.md", start_line=1,
+                max_lines=10, max_bytes=1024, idempotency_key="cross-binding-task-read-001",
+                facade_contract=FACADE_CONTRACT, task_id=task["task_id"],
+            )
+        self.store.revoke_binding(owner_id="owner_default", binding_id=other["binding_id"])
         with self.assertRaises(ConflictError):
             self.store.create_mcp_task_session(
                 owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], label="Not authorized by global open",
+                binding_id=other["binding_id"],
+                label="Revoked binding task",
             )
-        with self.assertRaises(ConflictError):
-            self.store.request_mcp_bounded_file_read(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], path="README.md", start_line=1,
-                max_lines=10, max_bytes=1024, idempotency_key="service-open-read-001",
-                facade_contract=FACADE_CONTRACT,
-            )
-        self.store.set_admission_mode(mode="recovery")
-        first = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-            reason="First task scope",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
-        task = self.store.create_mcp_task_session(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], label="Task pinned to first decision",
-        )
-        self.assertEqual(task["scoped_pilot_decision_id"], first["decision_id"])
-        self.store.set_admission_mode(mode="recovery")
-        second = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-            reason="Second task scope",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
-        with self.assertRaises(ConflictError):
-            self.store.request_mcp_bounded_file_read(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], path="README.md", start_line=1,
-                max_lines=10, max_bytes=1024, idempotency_key="old-pilot-task-read-001",
-                facade_contract=FACADE_CONTRACT, task_id=task["task_id"],
-            )
-        self.assertNotEqual(second["decision_id"], first["decision_id"])
 
-    def test_scoped_pilot_decision_rejects_unknown_effect_on_selected_node(self) -> None:
+    def test_unknown_effect_stays_visible_but_does_not_block_binding(self) -> None:
         context, request = self._request()
         self.store.seal_action(
             owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context",
@@ -3722,36 +3688,24 @@ process.stdout.write(JSON.stringify(observation));
         )
         self._ready_node()
         self.assertEqual(len(self.store.poll_actions(device_id="device-alpha")), 1)
-        self.store.set_admission_mode(mode="recovery")
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=context["binding_id"], expires_at_ms=self.now + 120_000,
-                reason="Unknown old effect must block selected node",
-            )
-
-    def test_scoped_pilot_resumes_after_exact_quarantined_file_read_without_settling_history(self) -> None:
-        binding, principal, old_action = self._quarantine_service_file_read_unknown()
-        self.store.set_admission_mode(mode="recovery")
-        other_principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=other_principal["principal_id"],
-                binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-                reason="A quarantined file read cannot authorize another service principal",
-            )
-
-        decision = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-            reason="Resume exact selected binding after audited bounded-read unknown",
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=principal["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-1",
         )
+        self.assertEqual(activated["state"], "active")
+        self.assertEqual(self.store.health()["unresolved_action_count"], 1)
 
+    def test_binding_resumes_after_exact_quarantined_file_read_without_settling_history(self) -> None:
+        binding, principal, old_action = self._quarantine_service_file_read_unknown()
         old_observation = self.store.action_observation(
             owner_id="owner_default", action_id=old_action["action_id"],
         )
-        self.assertEqual(decision["binding_id"], binding["binding_id"])
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=principal["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-1",
+        )
+        self.assertEqual(activated["binding_id"], binding["binding_id"])
         self.assertEqual(old_observation["delivery_state"], "reconcile_required")
         self.assertEqual(old_observation["receipts"][-1]["receipt_state"], "unknown")
         self.assertEqual(old_observation["reconciliation"]["disposition"], "quarantined_unknown")
@@ -3761,14 +3715,7 @@ process.stdout.write(JSON.stringify(observation));
         self.assertEqual(health["quarantined_unknown_action_count"], 1)
         self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
 
-        self.store.set_admission_mode(mode="scoped_pilot")
-        renewed = self.store.renew_scoped_pilot_decision(
-            owner_id="owner_default", decision_id=decision["decision_id"],
-            expires_at_ms=self.now + 120_000,
-        )
-        self.assertEqual(renewed["binding_id"], binding["binding_id"])
-
-    def test_scoped_pilot_replacement_preserves_expired_retired_quarantined_read_history(self) -> None:
+    def test_binding_replacement_preserves_expired_retired_quarantined_read_history(self) -> None:
         old_binding, principal, action = self._quarantine_service_file_read_unknown()
         self.now = action["expires_at_ms"] + 1
         self._register_workspace(device_id="device-alpha", workspace_id="workspace-alpha",
@@ -3777,7 +3724,6 @@ process.stdout.write(JSON.stringify(observation));
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-2", display_name="Replacement workspace",
         )
-        self.store.set_admission_mode(mode="recovery")
 
         def family() -> dict:
             with self.store._connection() as connection:
@@ -3786,146 +3732,60 @@ process.stdout.write(JSON.stringify(observation));
                 )] for table in ("actions", "action_reconciliations", "delivery_attempts", "receipts")}
 
         before = family()
-        decision = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-            reason="Continue exact workspace after retirement with preserved unknown read evidence",
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=principal["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-2",
         )
-        self.assertEqual(decision["workspace_generation"], "generation-2")
-        self.store.set_admission_mode(mode="scoped_pilot")
-        self.store.renew_scoped_pilot_decision(
-            owner_id="owner_default", decision_id=decision["decision_id"], expires_at_ms=self.now + 120_000,
-        )
+        self.assertEqual(activated["binding_id"], binding["binding_id"])
         self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
         self.assertEqual(family(), before)
         self.assertIsNone(before["actions"][0]["settled_at_ms"])
         self.assertEqual(before["actions"][0]["binding_id"], old_binding["binding_id"])
         self.assertEqual(before["receipts"][0]["receipt_state"], "unknown")
 
-    def test_scoped_pilot_retired_read_continuity_rejects_missing_fences_and_evidence(self) -> None:
-        _binding, principal, action = self._quarantine_service_file_read_unknown()
-        self.now = action["expires_at_ms"] + 1
+    def test_binding_activation_is_independent_of_quarantined_read_scope(self) -> None:
+        _binding, principal, _action = self._quarantine_service_file_read_unknown()
+        self.now = _action["expires_at_ms"] + 1
         self._register_workspace(device_id="device-alpha", workspace_id="workspace-alpha",
                                  workspace_generation="generation-2", display_name="Replacement workspace")
-        binding = self.store.create_binding(
-            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
-            workspace_generation="generation-2", display_name="Replacement workspace",
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=principal["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-2",
         )
-        self.store.set_admission_mode(mode="recovery")
-        mutations = [
-            ("registration_current", "node_workspaces", "retired_at_ms", None,
-             "device_id = 'device-alpha' AND workspace_id = 'workspace-alpha' AND workspace_generation = 'generation-1'"),
-            ("binding_active", "bindings", "revoked_at_ms", None, "binding_id = ?"),
-            ("context_open", "contexts", "closed_at_ms", None, "context_id = ?"),
-            ("action_unexpired", "actions", "expires_at_ms", self.now + 1, "action_id = ?"),
-            ("local_handle", "receipts", "local_handle", "unknown-handle", "action_id = ?"),
-            ("action_digest", "actions", "action_digest", "0" * 64, "action_id = ?"),
-            ("quarantine_digest", "action_reconciliations", "evidence_digest", "0" * 64, "action_id = ?"),
-            ("exec_unknown", "actions", "tool_name", "exec_command", "action_id = ?"),
-            ("write_unknown", "actions", "tool_name", "agent_workflow", "action_id = ?"),
-        ]
-        for label, table, column, value, where in mutations:
-            parameters = (() if "?" not in where else
-                          (action["binding_id"] if table == "bindings" else
-                           action["context_id"] if table == "contexts" else action["action_id"],))
-            with self.subTest(label=label), self.store._connection() as connection:
-                previous = connection.execute("SELECT " + column + " FROM " + table + " WHERE " + where,
-                                              parameters).fetchone()[0]
-                connection.execute("UPDATE " + table + " SET " + column + " = ? WHERE " + where,
-                                   (value, *parameters))
-                try:
-                    with self.assertRaises(ConflictError):
-                        self.store.create_scoped_pilot_decision(
-                            owner_id="owner_default", principal_id=principal["principal_id"],
-                            binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-                            reason="Incomplete retired-read evidence stays blocking",
-                        )
-                finally:
-                    connection.execute("UPDATE " + table + " SET " + column + " = ? WHERE " + where,
-                                       (previous, *parameters))
+        self.assertEqual(activated["state"], "active")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        self.assertEqual(self.store.health()["unresolved_action_count"], 1)
 
-    def test_scoped_pilot_retired_read_continuity_rejects_target_scope_changes(self) -> None:
-        _binding, principal, action = self._quarantine_service_file_read_unknown()
-        self.now = action["expires_at_ms"] + 1
-        self._register_workspace(device_id="device-alpha", workspace_id="workspace-alpha",
-                                 workspace_generation="generation-2", display_name="Replacement workspace")
-        kwargs = {"device_id": "device-alpha", "owner_id": "owner_default",
-                  "principal_id": principal["principal_id"], "workspace_id": "workspace-alpha",
-                  "workspace_generation": "generation-2"}
-        with self.store._connection() as connection:
-            row = connection.execute("SELECT * FROM actions WHERE action_id = ?", (action["action_id"],)).fetchone()
-            self.assertTrue(self.store._quarantined_retired_file_read_unknown_matches_pilot_workspace(
-                connection, action=row, **kwargs,
-            ))
-            for field, value in (("device_id", "device-other"), ("owner_id", "owner-other"),
-                                 ("principal_id", "principal-other"), ("workspace_id", "workspace-other"),
-                                 ("workspace_generation", "generation-1"), ("workspace_generation", "generation-missing")):
-                with self.subTest(field=field, value=value):
-                    self.assertFalse(self.store._quarantined_retired_file_read_unknown_matches_pilot_workspace(
-                        connection, action=row, **{**kwargs, field: value},
-                    ))
-
-    def test_scoped_pilot_current_generation_other_binding_unknown_stays_blocking(self) -> None:
-        _binding, principal, action = self._quarantine_service_file_read_unknown()
-        self.now = action["expires_at_ms"] + 1
-        binding = self.store.create_binding(
+    def test_other_binding_activation_succeeds_despite_quarantined_unknown(self) -> None:
+        _binding, principal, _action = self._quarantine_service_file_read_unknown()
+        self.now = _action["expires_at_ms"] + 1
+        self.store.create_binding(
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-1", display_name="Other current binding",
         )
-        self.store.set_admission_mode(mode="recovery")
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], expires_at_ms=self.now + 60_000,
-                reason="Current generation unknown cannot cross bindings",
-            )
+        activated = self.store.activate_node_workspace(
+            device_id="device-alpha", principal_id=principal["principal_id"],
+            workspace_id="workspace-alpha", workspace_generation="generation-1",
+        )
+        self.assertEqual(activated["state"], "active")
+        self.assertEqual(activated["workspace_id"], "workspace-alpha")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        self.assertEqual(self.store.health()["unresolved_action_count"], 1)
 
-    def test_scoped_pilot_stays_blocked_for_quarantined_file_read_with_local_handle(self) -> None:
-        binding, principal, _action = self._quarantine_service_file_read_unknown(
+    def test_quarantined_read_with_local_handle_stays_unsettled_and_visible(self) -> None:
+        _binding, _principal, action = self._quarantine_service_file_read_unknown(
             local_handle="local-handle-must-remain-blocking",
         )
-        self.store.set_admission_mode(mode="recovery")
+        observation = self.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "reconcile_required")
+        self.assertEqual(observation["receipts"][-1]["local_handle"], "local-handle-must-remain-blocking")
+        self.assertEqual(observation["reconciliation"]["disposition"], "quarantined_unknown")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
+        health = self.store.health()
+        self.assertEqual(health["unresolved_action_count"], 1)
+        self.assertEqual(health["quarantined_unknown_action_count"], 1)
 
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-                reason="A quarantined file read with a local handle remains blocking",
-            )
-
-    def test_scoped_pilot_stays_blocked_when_quarantined_file_read_evidence_digest_drifts(self) -> None:
-        binding, principal, action = self._quarantine_service_file_read_unknown()
-        self.store.set_admission_mode(mode="recovery")
-        with self.store._connection() as connection:
-            connection.execute(
-                "UPDATE action_reconciliations SET evidence_digest = ? WHERE action_id = ?",
-                ("0" * 64, action["action_id"]),
-            )
-
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-                reason="Tampered quarantine evidence cannot clear the pilot gate",
-            )
-
-    def test_scoped_pilot_stays_blocked_when_quarantined_file_read_action_digest_drifts(self) -> None:
-        binding, principal, action = self._quarantine_service_file_read_unknown()
-        self.store.set_admission_mode(mode="recovery")
-        with self.store._connection() as connection:
-            connection.execute(
-                "UPDATE actions SET action_digest = ? WHERE action_id = ?",
-                ("0" * 64, action["action_id"]),
-            )
-
-        with self.assertRaises(ConflictError):
-            self.store.create_scoped_pilot_decision(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-                reason="Drifted immutable action cannot clear the pilot gate",
-            )
-
-    def test_scoped_pilot_exec_is_pinned_to_task_and_exact_target(self) -> None:
+    def test_exec_is_pinned_to_task_and_exact_target(self) -> None:
         self.store.register_node_workspace(
             device_id="device-alpha", workspace_id="workspace-code", workspace_generation="generation-code-1",
             display_name="Code workspace", capabilities={"read": True, "write": True, "exec": True},
@@ -3940,18 +3800,11 @@ process.stdout.write(JSON.stringify(observation));
         )
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
         self._ready_node()
-        self.store.set_admission_mode(mode="recovery")
-        decision = self.store.create_scoped_pilot_decision(
+        self.store.set_admission_mode(mode="open")
+        other_task = self.store.create_mcp_task_session(
             owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-            reason="Structured command pilot in one code workspace",
+            binding_id=other["binding_id"], label="Other workspace task",
         )
-        self.store.set_admission_mode(mode="scoped_pilot")
-        with self.assertRaises(ConflictError):
-            self.store.create_mcp_task_session(
-                owner_id="owner_default", principal_id=principal["principal_id"],
-                binding_id=other["binding_id"], label="Wrong workspace",
-            )
         task = self.store.create_mcp_task_session(
             owner_id="owner_default", principal_id=principal["principal_id"],
             binding_id=binding["binding_id"], label="Selected workspace task",
@@ -3962,42 +3815,42 @@ process.stdout.write(JSON.stringify(observation));
                 binding_id=binding["binding_id"], argv=["npm", "test"],
                 idempotency_key="pilot-exec-no-task-001", facade_contract=FACADE_CONTRACT,
             )
+        with self.assertRaises(ConflictError):
+            self.store.request_mcp_exec(
+                owner_id="owner_default", principal_id=principal["principal_id"],
+                binding_id=binding["binding_id"], task_id=other_task["task_id"], argv=["npm", "test"],
+                idempotency_key="pilot-exec-wrong-task-001", facade_contract=FACADE_CONTRACT,
+            )
         intent = self.store.request_mcp_exec(
             owner_id="owner_default", principal_id=principal["principal_id"],
             binding_id=binding["binding_id"], task_id=task["task_id"], argv=["npm", "test"],
             idempotency_key="pilot-exec-task-001", facade_contract=FACADE_CONTRACT,
         )
         action = self.store.action(owner_id="owner_default", action_id=intent["action_id"])
-        self.assertEqual(action["scoped_pilot_decision_id"], decision["decision_id"])
+        self.assertIsNone(action["scoped_pilot_decision_id"])
         self.assertEqual(
             [row["action_id"] for row in self.store.poll_actions(device_id="device-alpha", lane="bounded_exec")],
             [intent["action_id"]],
         )
 
-    def test_restore_candidate_closes_scoped_pilot_and_revokes_decision(self) -> None:
+    def test_restore_candidate_closes_admission_and_keeps_bindings(self) -> None:
         binding = self.store.create_binding(
             owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha",
             workspace_generation="generation-1", display_name="Selected workspace",
         )
         principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")
         self.store.set_admission_mode(mode="recovery")
-        decision = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.now + 120_000,
-            reason="Before recovery snapshot",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
         source = Path(self.tempdir.name) / "scoped-pilot-source.sqlite3"
         receipt = self.store.backup_to(source)
         candidate = Path(self.tempdir.name) / "scoped-pilot-recovery.sqlite3"
         create_recovery_restore_candidate(source, candidate, expected_sha256=str(receipt["snapshot_sha256"]))
         restored = ControlPlaneStore(candidate, clock=lambda: self.now)
         self.assertEqual(restored.admission_status()["admission_mode"], "recovery")
-        self.assertIsNotNone(restored.scoped_pilot_decision(
-            owner_id="owner_default", decision_id=decision["decision_id"],
-        )["revoked_at_ms"])
-        with self.assertRaises(ConflictError):
+        self.assertIsNone(restored.binding(owner_id="owner_default", binding_id=binding["binding_id"])["revoked_at_ms"])
+        with self.assertRaises(ValidationError):
             restored.set_admission_mode(mode="scoped_pilot")
+        restored.set_admission_mode(mode="open")
+        self.assertEqual(restored.admission_status()["admission_mode"], "open")
 
     def test_read_only_bridge_defers_projection_until_request_binding(self) -> None:
         """The bridge must preserve IDs until the only final Python verifier."""

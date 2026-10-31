@@ -1173,7 +1173,6 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             "bindings": self.server.store.list_bindings(owner_id=owner_id),
             "mcp_service_principals": self.server.store.list_private_tunnel_service_principals(owner_id=owner_id),
             "mcp_service_grants": self.server.store.list_mcp_service_grants(owner_id=owner_id),
-            "scoped_pilot_decisions": self.server.store.list_scoped_pilot_decisions(owner_id=owner_id),
             "contexts": self.server.store.list_contexts(owner_id=owner_id),
             # Browser overview deliberately omits raw objective, criteria and
             # scope text. Those can contain private task data and are not needed
@@ -1283,11 +1282,6 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if self.path == "/v1/mcp-service-grants":
                 self._json(HTTPStatus.OK, {
                     "mcp_service_grants": self.server.store.list_mcp_service_grants(owner_id=self._operator()),
-                })
-                return
-            if self.path == "/v1/scoped-pilot-decisions":
-                self._json(HTTPStatus.OK, {
-                    "scoped_pilot_decisions": self.server.store.list_scoped_pilot_decisions(owner_id=self._operator()),
                 })
                 return
             if self.path == "/v1/oauth-principals":
@@ -1499,17 +1493,6 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     scopes=self._field(body, "scopes"),
                 ))
                 return
-            if self.path == "/v1/scoped-pilot-decisions":
-                if set(body) != {"principal_id", "binding_id", "expires_at_ms", "reason"}:
-                    raise ValidationError("scoped pilot decision payload is invalid.")
-                self._json(HTTPStatus.CREATED, self.server.store.create_scoped_pilot_decision(
-                    owner_id=self._operator(),
-                    principal_id=self._field(body, "principal_id"),
-                    binding_id=self._field(body, "binding_id"),
-                    expires_at_ms=self._field(body, "expires_at_ms"),
-                    reason=self._field(body, "reason"),
-                ))
-                return
             if self.path == "/v1/oauth-principals":
                 if set(body) != {"issuer", "subject"}:
                     raise ValidationError("OAuth principal link payload is invalid.")
@@ -1605,23 +1588,6 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     owner_id=self._operator(), principal_id=mcp_service_principal_revoke_match.group(1),
                 ))
                 return
-            scoped_pilot_revoke_match = re.fullmatch(r"/v1/scoped-pilot-decisions/([^/]+)/revoke", self.path)
-            if scoped_pilot_revoke_match:
-                if body:
-                    raise ValidationError("scoped pilot decision revocation payload is invalid.")
-                self._json(HTTPStatus.OK, self.server.store.revoke_scoped_pilot_decision(
-                    owner_id=self._operator(), decision_id=scoped_pilot_revoke_match.group(1),
-                ))
-                return
-            scoped_pilot_renew_match = re.fullmatch(r"/v1/scoped-pilot-decisions/([^/]+)/renew", self.path)
-            if scoped_pilot_renew_match:
-                if set(body) != {"expires_at_ms"}:
-                    raise ValidationError("scoped pilot renewal payload is invalid.")
-                self._json(HTTPStatus.OK, self.server.store.renew_scoped_pilot_decision(
-                    owner_id=self._operator(), decision_id=scoped_pilot_renew_match.group(1),
-                    expires_at_ms=self._field(body, "expires_at_ms"),
-                ))
-                return
             if self.path == "/v1/enrollment-requests":
                 result = self.server.store.request_enrollment(
                     device_id=self._field(body, "device_id"),
@@ -1704,15 +1670,6 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 self._json(HTTPStatus.OK, self.server.store.revoke_mcp_service_grant(
                     owner_id=self._ui_operator(require_csrf=True),
                     grant_id=ui_service_grant_revoke_match.group(1),
-                ))
-                return
-            ui_scoped_pilot_revoke_match = re.fullmatch(r"/v1/ui/scoped-pilot-decisions/([^/]+)/revoke", self.path)
-            if ui_scoped_pilot_revoke_match:
-                if body:
-                    raise ValidationError("browser scoped pilot revocation payload is invalid.")
-                self._json(HTTPStatus.OK, self.server.store.revoke_scoped_pilot_decision(
-                    owner_id=self._ui_operator(require_csrf=True),
-                    decision_id=ui_scoped_pilot_revoke_match.group(1),
                 ))
                 return
             if self.path == "/v1/maintenance/admission":

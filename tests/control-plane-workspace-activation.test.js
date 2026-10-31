@@ -10,8 +10,7 @@ const workspaceId = `workspace_${'1'.repeat(32)}`;
 const workspaceGeneration = `generation_${'2'.repeat(32)}`;
 const receipt = () => ({ device_id: '12345678-1234-4123-8123-123456789abc',
   workspace_id: workspaceId, workspace_generation: workspaceGeneration,
-  binding_id: `bind_${'3'.repeat(32)}`, pilot_decision_id: `pilot_${'4'.repeat(32)}`,
-  expires_at_ms: Date.now() + 60000, replayed: false, state: 'active' });
+  binding_id: `bind_${'3'.repeat(32)}`, state: 'active' });
 
 function fixture(t, runner) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'activate-folder-'));
@@ -35,6 +34,8 @@ test('activation carries exact registered identity and returns only local canoni
   const f = fixture(t, async (...args) => { calls.push(args); return { code: 0, stdout: JSON.stringify(receipt()) }; });
   const result = await f.service.activateWorkspace({ workspaceId, workspaceGeneration, confirmActivate: true });
   assert.equal(result.workspace_path, fs.realpathSync.native(f.root));
+  assert.equal(result.pilot_decision_id, undefined, 'no pilot decision is stored');
+  assert.equal(result.expires_at_ms, undefined, 'no pilot expiry is stored');
   const [command, args, options] = calls[0];
   assert.equal(command, f.paths.portablePython());
   assert.deepEqual(args.slice(0, 3), ['-I', f.paths.controlPlaneNodeAgent(), 'activate-workspace']);
@@ -44,6 +45,22 @@ test('activation carries exact registered identity and returns only local canoni
   assert.deepEqual(options.env, { PATH: 'safe' });
 });
 
+test('registration binding is usable with no pilot row and stale pilot fields are ignored, not required', async (t) => {
+  const f = fixture(t, async () => ({ code: 0, stdout: JSON.stringify(receipt()) }));
+  const result = await f.service.activateWorkspace({ workspaceId, workspaceGeneration, confirmActivate: true });
+  assert.equal(result.state, 'active');
+  assert.equal(result.binding_id, `bind_${'3'.repeat(32)}`);
+  assert.equal(result.workspace_id, workspaceId);
+  assert.equal(result.workspace_generation, workspaceGeneration);
+  assert.equal(result.pilot_decision_id, undefined, 'no pilot row is stored');
+  assert.equal(result.expires_at_ms, undefined, 'no pilot expiry is stored');
+  const stale = parseWorkspaceActivationResult(JSON.stringify({ ...receipt(),
+    pilot_decision_id: `pilot_${'9'.repeat(32)}`, expires_at_ms: 0, replayed: true }),
+    workspaceId, workspaceGeneration);
+  assert.equal(stale.state, 'active');
+  assert.equal(stale.pilot_decision_id, undefined);
+  assert.equal(stale.expires_at_ms, undefined);
+});
 test('activation rejects absent consent, wrong generation, development, duplicate or concurrent registry change', async (t) => {
   let calls = 0;
   const f = fixture(t, async () => { calls++; return { stdout: JSON.stringify(receipt()) }; });
@@ -60,15 +77,22 @@ test('activation rejects absent consent, wrong generation, development, duplicat
   await assert.rejects(f.service.activateWorkspace({ workspaceId, workspaceGeneration, confirmActivate: true }), { code: 'CONTROL_PLANE_WORKSPACE_SELECTION_MISMATCH' });
 });
 
-test('activation receipt rejects wrong target, expired authority, malformed identity and extra path/secret fields', () => {
+test('activation receipt rejects wrong target, malformed identity and extra path/secret fields, and ignores stale pilot fields', () => {
   const valid = receipt();
   assert.equal(parseWorkspaceActivationResult(JSON.stringify(valid), workspaceId, workspaceGeneration).state, 'active');
   for (const mutation of [{ workspace_id: `workspace_${'6'.repeat(32)}` }, { workspace_generation: `generation_${'7'.repeat(32)}` },
-    { expires_at_ms: 0 }, { expires_at_ms: '123' }, { replayed: 1 }, { state: 'registered' },
-    { binding_id: 'wrong' }, { pilot_decision_id: 'wrong' }, { device_id: 'wrong' }, { workspace_path: 'E:\\private' }, { token: 'private' }]) {
+    { state: 'registered' },
+    { binding_id: 'wrong' }, { device_id: 'wrong' }, { workspace_path: 'E:\\private' }, { token: 'private' }]) {
     assert.throws(() => parseWorkspaceActivationResult(JSON.stringify({ ...valid, ...mutation }), workspaceId, workspaceGeneration),
       { code: 'CONTROL_PLANE_WORKSPACE_ACTIVATION_OUTPUT_INVALID' });
   }
+  const stale = parseWorkspaceActivationResult(JSON.stringify({ ...valid,
+    pilot_decision_id: `pilot_${'4'.repeat(32)}`, expires_at_ms: Date.now() - 1000, replayed: false }),
+    workspaceId, workspaceGeneration);
+  assert.equal(stale.state, 'active');
+  assert.equal(stale.pilot_decision_id, undefined);
+  assert.equal(stale.expires_at_ms, undefined);
+  assert.equal(stale.binding_id, valid.binding_id);
   assert.throws(() => parseWorkspaceActivationResult(JSON.stringify(valid) + '\n{}', workspaceId, workspaceGeneration), { code: 'CONTROL_PLANE_WORKSPACE_ACTIVATION_OUTPUT_INVALID' });
 });
 
@@ -140,7 +164,7 @@ test('activation reuses the default root and an authorized root even when 32 add
   }
 });
 
-test('activation refuses a new root at the limit before granting or switching pilot', async () => {
+test('activation refuses a new root at the limit before granting or ensuring the binding', async () => {
   const authorizedRoots = Array.from({ length: 32 }, (_, index) => `E:\\existing-${index}`);
   const f = activationRootFixture({ authorizedRoots });
   await assert.rejects(f.activate(), { code: 'CONTROL_PLANE_WORKSPACE_ROOT_LIMIT' });
@@ -150,7 +174,7 @@ test('activation refuses a new root at the limit before granting or switching pi
   assert.equal(f.currentSettings.workspace, 'E:\\native-root');
 });
 
-test('activation preserves existing roots and requires the native grant to succeed before pilot switch', async () => {
+test('activation preserves existing roots and requires the native grant to succeed before ensuring the binding', async () => {
   const authorizedRoots = ['E:\\existing'];
   const f = activationRootFixture({ authorizedRoots, grantError: Object.assign(new Error('Fixture native grant rejected.'), { code: 'FIXTURE_NATIVE_GRANT_REJECTED' }) });
   await assert.rejects(f.activate(), { code: 'FIXTURE_NATIVE_GRANT_REJECTED' });

@@ -209,14 +209,12 @@ test('adding a folder picks once confirms the exact path and installs full permi
   f.context.api.registerControlPlaneWorkspace = async (request) => {
     assert.equal(f.confirmations.length, 1, 'consent precedes registration');
     const receipt = await register(request);
-    return { ...receipt, display_name: 'Autocad' };
-  };
-  f.context.api.activateControlPlaneWorkspace = async (request) => {
-    f.calls.push(['activate', plain(request)]);
-    f.state.centralAuthorityStatus.targets = [{ workspace_id: request.workspaceId,
-      workspace_generation: request.workspaceGeneration, dispatch_state: 'dispatchable',
+    // Registration creates the binding: the target is dispatchable for the
+    // new generation without a separate activation step.
+    f.state.centralAuthorityStatus.targets = [{ workspace_id: 'workspace-selected',
+      workspace_generation: 'generation-new', dispatch_state: 'dispatchable',
       capabilities: { read: true, write: true, exec: true } }];
-    return { workspace_id: request.workspaceId, workspace_generation: request.workspaceGeneration, workspace_path: path };
+    return { ...receipt, display_name: 'Autocad', workspace_path: path };
   };
   const access = await f.context.addControlPlaneWorkspace();
   assert.equal(f.confirmations.length, 1);
@@ -225,9 +223,7 @@ test('adding a folder picks once confirms the exact path and installs full permi
   assert.deepEqual(f.calls.find(([name]) => name === 'register')[1], {
     workspacePath: path, capabilities: { read: true, write: true, exec: true }
   });
-  assert.deepEqual(f.calls.find(([name]) => name === 'activate')[1], {
-    workspaceId: 'workspace-selected', workspaceGeneration: 'generation-new', confirmActivate: true
-  });
+  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 0, 'no separate activation step');
   assert.equal(f.calls.some(([name]) => name === 'replace' || name === 'probe-sandbox'), false);
   assert.equal(f.calls.find(([name]) => name === 'install-exec')[1].probeSandbox, false);
   assert.deepEqual(plain(access), { read: true, patch: true, exec: true, executionMode: 'native_first',
@@ -236,7 +232,6 @@ test('adding a folder picks once confirms the exact path and installs full permi
   assert.equal(f.state.snapshot.settings.workspace, 'E:\\legacy-root', 'action-specific scope preserves native root');
   assert.equal(f.state.setupContinuation, null);
 });
-
 test('an existing folder confirmation uses its exact registered path instead of a duplicate display name', async () => {
   const f = fixture();
   f.workspace.display_name = 'Autocad';
@@ -264,56 +259,49 @@ test('cancelling the Add-folder picker or its single permission confirmation per
   }
 });
 
-test('using an existing full-permission folder activates its exact generation without registration or replacement', async () => {
+test('using an existing full-permission folder is usable immediately without registration, replacement or a separate activation step', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
-  await f.context.applyCentralWorkspacePermissions();
-  assert.deepEqual(f.calls.filter(([name]) => name === 'activate'), [['activate', {
-    workspaceId: f.workspace.workspace_id, workspaceGeneration: f.workspace.workspace_generation, confirmActivate: true
-  }]]);
+  const access = await f.context.applyCentralWorkspacePermissions();
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 0);
   assert.equal(f.calls.some(([name]) => ['choose', 'register', 'replace'].includes(name)), false);
+  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 0, 'authority status is display-only, not a setup gate');
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
   assert.equal(f.confirmations.length, 1);
-  const operations = f.calls.map(([name]) => name);
-  assert.ok(operations.indexOf('activate') < operations.indexOf('refresh-authority'));
-  assert.ok(operations.indexOf('refresh-authority') < operations.indexOf('install-files'));
+  assert.equal(f.state.setupContinuation, null);
 });
-
-test('activation failure or a mismatched activation receipt stops before installing permission', async () => {
-  for (const kind of ['rejected', 'wrong-id', 'wrong-generation', 'missing-path', 'unsupported']) {
-    const f = fixture();
-    f.context.selectCentralWorkspace(f.workspace);
-    if (kind === 'unsupported') delete f.context.api.activateControlPlaneWorkspace;
-    else f.context.api.activateControlPlaneWorkspace = async () => {
-      if (kind === 'rejected') throw new Error('CONTROL_PLANE_WORKSPACE_ACTIVATION_BUSY');
-      return { workspace_id: kind === 'wrong-id' ? 'workspace-other' : f.workspace.workspace_id,
-        workspace_generation: kind === 'wrong-generation' ? 'generation-other' : f.workspace.workspace_generation,
-        ...(kind !== 'missing-path' && { workspace_path: 'E:\\DEV\\Autocad' }) };
-    };
-    await assert.rejects(f.context.applyCentralWorkspacePermissions(), /ACTIVATION_BUSY|chưa khớp|chưa hỗ trợ/);
-    assert.equal(f.calls.some(([name]) => name.startsWith('install-') || name === 'probe-sandbox'), false, kind);
-    assert.equal(f.state.centralWorkspaceActivationReceipt, undefined, kind);
-    assert.equal(f.state.setupContinuation, null, kind);
-    assert.doesNotMatch(f.state.setupContinuationMessage, /Đã xác minh policy/);
-  }
-});
-
-test('cancelling while activation is pending prevents subsequent policy installation and display-cache update', async () => {
+test('a missing activation API is irrelevant: the folder is usable after registration without an activation step', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
-  let resolveActivation;
-  f.context.api.activateControlPlaneWorkspace = () => new Promise((resolve) => { resolveActivation = resolve; });
-  const pending = f.context.applyCentralWorkspacePermissions();
-  for (let attempt = 0; attempt < 30 && !resolveActivation; attempt += 1) await Promise.resolve();
-  assert.equal(typeof resolveActivation, 'function');
-  f.context.cancelSetupContinuation('Đã dừng thiết lập.');
-  resolveActivation({ workspace_id: f.workspace.workspace_id,
-    workspace_generation: f.workspace.workspace_generation, workspace_path: 'E:\\DEV\\Autocad' });
-  assert.equal(await pending, null);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
-  assert.equal(f.storage.has('coding-tools-active-folder-v1'), false);
-  assert.equal(f.state.setupContinuationBusy, false);
+  delete f.context.api.activateControlPlaneWorkspace;
+  const access = await f.context.applyCentralWorkspacePermissions();
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.some(([name]) => name === 'activate'), false);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
+  assert.equal(f.state.centralWorkspaceActivationReceipt, undefined);
+  assert.equal(f.state.setupContinuation, null);
+  assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
-
+test('completed setup leaves no pending timer and a later continuation call installs nothing again', async () => {
+  const f = fixture();
+  f.context.selectCentralWorkspace(f.workspace);
+  f.state.centralAuthorityStatus.targets = [];
+  const access = await f.context.applyCentralWorkspacePermissions();
+  assert.equal(access.read, true);
+  assert.equal(f.timers.size, 0);
+  assert.equal(f.state.setupContinuation, null);
+  assert.equal(await f.context.continueSetup(), null);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
+  assert.equal(f.timers.size, 0);
+});
 test('active-folder display cache requires matching current authority and policy before showing the folder', async () => {
   const f = fixture();
   const saved = { origin: 'https://control.example.test', device: 'device-current',
@@ -530,50 +518,62 @@ test('applying changed capabilities replaces only the selected ID and generation
   f.context.selectCentralWorkspace(f.workspace);
   f.context.chooseCentralWorkspacePreset('code');
   f.state.centralWorkspaceCandidate = 'E:\\unrelated-root';
-  assert.equal(await f.context.applyCentralWorkspacePermissions({ prepareExec: true }), null);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
   assert.deepEqual(f.calls.filter(([name]) => name === 'replace'), [['replace', {
     workspaceId: 'workspace-selected', workspaceGeneration: 'generation-current',
     capabilities: { read: true, write: true, exec: true }, confirmReplace: true
   }]]);
-  assert.equal(f.calls.some(([name]) => ['choose', 'install-files', 'install-exec'].includes(name)), false);
+  assert.equal(f.calls.some(([name]) => name === 'choose'), false);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
   assert.equal(f.confirmations.length, 1);
   assert.match(f.confirmations[0], /Đổi mức quyền.*đóng liên kết và tác vụ/);
   assert.match(f.confirmations[0], /Cho phép MCP dùng thư mục/);
   assert.equal(f.state.centralWorkspaceSelection.workspace_generation, 'generation-new');
-  assert.equal(f.state.setupContinuation.workspace_generation, 'generation-new');
-  assert.deepEqual(plain(f.state.setupContinuation.capabilities), { read: true, write: true, exec: true });
-  assert.equal(f.timers.size, 1);
+  assert.equal(f.state.setupContinuation, null);
+  assert.equal(f.timers.size, 0);
   assert.equal(f.state.centralWorkspaceCandidate, '');
   assert.equal(f.state.centralWorkspaceBusy, false);
 });
-
-test('unchanged capabilities with no exact dispatchable binding wait for owner without opening Console or installing policies', async () => {
+test('unchanged capabilities install immediately even when no dispatchable binding is reported', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets[0].workspace_generation = 'generation-other';
-  assert.equal(await f.context.applyCentralWorkspacePermissions({ prepareExec: true }), null);
-  assert.equal(f.calls.some(([name]) => name === 'console' || name.startsWith('install-')), false);
-  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 1);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.some(([name]) => name === 'console'), false);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 0);
   assert.equal(f.calls.filter(([name]) => name === 'list-workspaces').length, 1);
   assert.equal(f.confirmations.length, 1);
-  assert.equal(f.state.setupContinuation.workspace_generation, 'generation-current');
-  assert.equal([...f.timers.values()][0].delay, 15_000);
+  assert.equal(f.state.setupContinuation, null);
+  assert.equal(f.timers.size, 0);
+  assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
-
-test('retained authority targets cannot grant permissions when freshness refresh still fails and remain pending', async () => {
+test('stale authority status does not block the same exact selected folder', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.fresh = false;
   assert.equal(f.context.centralWorkspaceTarget(f.workspace), null);
-  assert.equal(await f.context.applyCentralWorkspacePermissions({ prepareExec: true }), null);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-') || name === 'console'), false);
-  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 1);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
+  assert.equal(f.calls.some(([name]) => name === 'console'), false);
   assert.equal(f.confirmations.length, 1);
-  assert.match(f.state.setupContinuationMessage, /Chưa đọc được trạng thái Ubuntu/);
-  assert.equal(f.timers.size, 1);
+  assert.equal(f.state.setupContinuation, null);
+  assert.equal(f.timers.size, 0);
+  assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
-
-test('successful authority refresh permits the same exact selected target', async () => {
+test('a stale authority refresh is not needed to permit the same exact selected target', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.fresh = false;
@@ -581,116 +581,112 @@ test('successful authority refresh permits the same exact selected target', asyn
     f.calls.push(['refresh-authority', plain(options)]);
     f.state.centralAuthorityStatus.fresh = true;
   };
-  await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
-  assert.deepEqual(f.calls.find(([name]) => name === 'refresh-authority'), ['refresh-authority', { quiet: true }]);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 0, 'setup no longer waits on an authority refresh');
   assert.equal(f.confirmations.length, 1);
-  assert.equal(f.calls.some(([name]) => name === 'install-exec'), true);
+  assert.equal(f.state.setupContinuation, null);
 });
-
-test('fresh but inactive authority does not reuse a retained dispatchable target or auto-open Console', async () => {
+test('fresh but inactive authority status does not block the selected folder or auto-open Console', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.state = 'unknown';
   assert.equal(f.context.centralWorkspaceTarget(f.workspace), null);
-  assert.equal(await f.context.applyCentralWorkspacePermissions({ prepareExec: true }), null);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-') || name === 'console'), false);
-  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 1);
-  assert.equal(f.confirmations.length, 1);
-  assert.equal(f.timers.size, 1);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), true);
+  assert.equal(f.calls.some(([name]) => name === 'console'), false);
+  assert.equal(f.timers.size, 0);
+  assert.equal(f.state.setupContinuation, null);
 });
-
-test('pending owner authority resumes on the 15 second check using the same in-memory consent', async () => {
+test('a folder with no reported binding installs immediately instead of waiting on a 15 second check', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets = [];
-  await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
-  const consent = f.state.setupContinuation;
-  assert.equal(consent.origin, 'https://control.example.test');
-  assert.equal(consent.device, 'device-current');
-  assert.equal([...f.timers.values()][0].delay, 15_000);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
+  assert.equal(f.timers.size, 0);
   const persisted = JSON.parse(f.storage.get('coding-tools-setup-selection-v1'));
   assert.deepEqual(Object.keys(persisted).sort(), ['device', 'origin', 'workspace_generation', 'workspace_id']);
-  f.state.centralAuthorityStatus.targets = [{
-    workspace_id: f.workspace.workspace_id, workspace_generation: f.workspace.workspace_generation,
-    dispatch_state: 'dispatchable', capabilities: { ...f.workspace.capabilities }
-  }];
-  await f.runTimer();
   assert.equal(f.confirmations.length, 1);
-  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 3);
-  assert.deepEqual(f.calls.filter(([name]) => name.startsWith('install-')).map(([name]) => name),
-    ['install-files', 'install-exec']);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
   assert.equal(f.state.setupContinuation, null);
-  assert.equal(f.timers.size, 0);
+  assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
-
-test('a duplicated exact target remains pending rather than silently choosing a binding', async () => {
+test('a duplicated exact target does not block setup or silently choose a binding', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets.push({ ...f.state.centralAuthorityStatus.targets[0] });
   assert.equal(f.context.centralWorkspaceTarget(f.workspace), null);
-  assert.equal(await f.context.applyCentralWorkspacePermissions({ prepareExec: true }), null);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
-  assert.equal(f.timers.size, 1);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.read, true);
+  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), true);
+  assert.equal(f.timers.size, 0);
+  assert.equal(f.state.setupContinuation, null);
 });
-
-test('dispatchable binding without every selected capability remains pending before local effects', async () => {
+test('a binding without every selected capability does not block local policy installation', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets[0].capabilities.exec = false;
-  assert.equal(await f.context.applyCentralWorkspacePermissions({ prepareExec: true }), null);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
-  assert.equal(f.timers.size, 1);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.exec, true);
+  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), true);
+  assert.equal(f.timers.size, 0);
   assert.equal(f.confirmations.length, 1);
+  assert.equal(f.state.setupContinuation, null);
 });
-
-test('cancelling pending setup clears the timer and a later authority observation cannot install policies', async () => {
+test('cancelling after completion cannot trigger a later policy installation', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets = [];
-  await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
-  assert.equal(f.timers.size, 1);
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.read, true);
+  assert.equal(f.timers.size, 0);
   f.context.cancelSetupContinuation('Người dùng đã dừng.');
-  f.state.centralAuthorityStatus.targets = [{
-    workspace_id: f.workspace.workspace_id, workspace_generation: f.workspace.workspace_generation,
-    dispatch_state: 'dispatchable', capabilities: { ...f.workspace.capabilities }
-  }];
   assert.equal(await f.context.continueSetup(), null);
   assert.equal(f.timers.size, 0);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
   assert.equal(f.confirmations.length, 1);
 });
-
-test('server, device, generation, and capability changes cancel retained consent before installing policies', async () => {
+test('server, device, generation, and capability changes after completion do not resume a setup', async () => {
   for (const change of ['server', 'device', 'generation', 'capability']) {
     const f = fixture();
     f.context.selectCentralWorkspace(f.workspace);
-    f.state.centralAuthorityStatus.targets = [];
-    await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+    const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+    assert.equal(access.read, true, change);
+    assert.equal(f.state.setupContinuation, null, change);
     if (change === 'server') f.state.snapshot.settings.controlPlaneServerUrl = 'https://other.example.test';
     if (change === 'device') f.state.snapshot.device.device_id = 'device-other';
     if (change === 'generation') f.state.centralWorkspaces = [{ ...f.workspace, workspace_generation: 'generation-other' }];
     if (change === 'capability') f.state.centralWorkspacePreset = 'read';
-    await f.runTimer();
-    assert.equal(f.state.setupContinuation, null, change);
-    assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false, change);
+    assert.equal(await f.context.continueSetup(), null, change);
+    assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1, change);
+    assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1, change);
     assert.equal(f.timers.size, 0, change);
     assert.equal(f.confirmations.length, 1, change);
   }
 });
-
-test('waiting stops after its bounded deadline without creating durable consent', async () => {
+test('an expired setup scope stops before installing policies', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
-  f.state.centralAuthorityStatus.targets = [];
-  await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
-  f.state.setupContinuation.deadline = Date.now() - 1;
-  await f.runTimer();
-  assert.equal(f.state.setupContinuation, null);
+  f.state.setupContinuation = {
+    origin: 'https://control.example.test', device: 'device-current',
+    workspace_id: f.workspace.workspace_id, workspace_generation: f.workspace.workspace_generation,
+    capabilities: { ...f.workspace.capabilities }, execution_mode: 'native_first',
+    deadline: Date.now() - 1
+  };
+  assert.equal(await f.context.continueSetup(), null);
   assert.match(f.state.setupContinuationMessage, /10 phút/);
+  assert.equal(f.state.setupContinuation, null);
   assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
   assert.equal(f.timers.size, 0);
 });
-
 test('reopening restores only an exact server/device/generation draft and requires new consent', () => {
   const previous = fixture();
   previous.context.selectCentralWorkspace(previous.workspace);
@@ -738,7 +734,7 @@ test('standing setup confirms local scope once and verifies files before install
   assert.equal(operations.includes('install-metadata'), false);
   assert.equal(operations.filter((name) => name === 'install-files').length, 1);
   assert.equal(operations.filter((name) => name === 'install-exec').length, 1);
-  assert.ok(operations.indexOf('refresh-authority') < operations.indexOf('install-files'));
+  assert.equal(operations.filter((name) => name === 'refresh-authority').length, 0, 'authority status is display-only, not a setup gate');
   assert.ok(operations.indexOf('inspect-files') < operations.indexOf('install-exec'));
   for (const [name, request] of f.calls.filter(([name]) => name.startsWith('install-'))) {
     assert.equal(request.workspaceId, f.workspace.workspace_id, name);
@@ -925,21 +921,17 @@ test('native project approvals cannot transfer from a policy for another workspa
   }
 });
 
-test('changing execution mode invalidates waiting consent before later authority can install a policy', async () => {
+test('changing execution mode after completion does not reinstall or resume a setup', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
-  f.state.centralAuthorityStatus.targets = [];
-  await f.context.applyCentralWorkspacePermissions();
-  assert.equal(f.state.setupContinuation.execution_mode, 'native_first');
-  f.state.centralExecutionMode = 'native_only';
-  f.state.centralAuthorityStatus.targets = [{ workspace_id: f.workspace.workspace_id,
-    workspace_generation: f.workspace.workspace_generation, dispatch_state: 'dispatchable',
-    capabilities: { ...f.workspace.capabilities } }];
-  await f.runTimer();
+  const access = await f.context.applyCentralWorkspacePermissions();
+  assert.equal(access.read, true);
   assert.equal(f.state.setupContinuation, null);
-  assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
+  f.state.centralExecutionMode = 'native_only';
+  assert.equal(await f.context.continueSetup(), null);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
 });
-
 test('native readiness labels capability separately from Job proof and do not invent VM RAM', () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
@@ -979,23 +971,21 @@ test('registration and automatic inventory refresh with exec selected never open
   assert.ok(f.calls.filter(([name]) => name === 'inspect-exec').every(([, request]) => request.probeSandbox === false));
 });
 
-test('automatic authority continuation installs all permissions without opening Sandbox or repeating activation', async () => {
+test('a folder installs all permissions immediately without an authority wait or a repeated activation', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets = [];
-  await f.context.applyCentralWorkspacePermissions();
-  f.state.centralAuthorityStatus.targets = [{ workspace_id: f.workspace.workspace_id,
-    workspace_generation: f.workspace.workspace_generation, dispatch_state: 'dispatchable',
-    capabilities: { ...f.workspace.capabilities } }];
-  await f.runTimer();
+  const access = await f.context.applyCentralWorkspacePermissions();
+  assert.equal(access.read, true);
+  assert.equal(access.patch, true);
+  assert.equal(access.exec, true);
   assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
   assert.equal(f.calls.some(([name]) => name === 'probe-sandbox'), false);
   assert.equal(f.calls.find(([name]) => name === 'install-exec')[1].probeSandbox, false);
-  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 0);
   assert.equal(f.state.setupContinuation, null);
   assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
-
 test('explicit Sandbox diagnostic after ordinary full permission setup probes once without reinstalling permission', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
@@ -1141,7 +1131,7 @@ test('current standing file and exec policies are observed without reinstalling 
   assert.equal(access.exec, true);
   assert.equal(f.calls.some(([name]) => name.startsWith('install-')), false);
   assert.equal(f.calls.filter(([name]) => name === 'inspect-exec').length, 1);
-  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 2);
+  assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 0, 'authority status is display-only, not a setup gate');
   assert.equal(f.confirmations.length, 1);
   assert.equal(f.state.setupContinuation, null);
 });
@@ -1316,21 +1306,17 @@ test('a file inspection completing after a selection change caches its own targe
   assert.equal(f.context.setupWorkspaceAccess(other).read, false);
 });
 
-test('capability loss at final authority recheck prevents a completed setup claim', async () => {
+test('target capability loss reported by authority status does not prevent a completed setup claim', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
-  let refreshes = 0;
-  f.context.reconcileControlPlaneAuthorityStatus = async (options) => {
-    f.calls.push(['refresh-authority', plain(options)]);
-    if (++refreshes === 2) f.state.centralAuthorityStatus.targets[0].capabilities.exec = false;
-  };
-  await assert.rejects(f.context.applyCentralWorkspacePermissions({ prepareExec: true }), /Quyền Ubuntu đã hết hạn hoặc thay đổi/);
+  f.state.centralAuthorityStatus.targets[0].capabilities.exec = false;
+  const access = await f.context.applyCentralWorkspacePermissions({ prepareExec: true });
+  assert.equal(access.exec, true);
   assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
   assert.equal(f.state.setupContinuation, null);
-  assert.match(f.state.setupContinuationMessage, /Policy local được giữ/);
-  assert.doesNotMatch(f.state.setupContinuationMessage, /Đã xác minh policy cho quyền đã chọn/);
+  assert.match(f.state.setupContinuationMessage, /Đã xác minh policy cho quyền đã chọn/);
+  assert.doesNotMatch(f.state.setupContinuationMessage, /Quyền Ubuntu đã hết hạn/);
 });
-
 test('compact metadata expiry during Sandbox preparation cannot expire verified standing setup', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);

@@ -29,7 +29,6 @@ NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
 NODE_ROTATION_STATES = frozenset({"prepared", "activated", "completed", "aborted"})
 SCHEMA_VERSION = 29
 MCP_SERVICE_GRANT_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000
-SCOPED_PILOT_MAX_TTL_MS = 24 * 60 * 60 * 1000
 PRIVATE_TUNNEL_SERVICE_ISSUER = "private_tunnel_service"
 MCP_SERVICE_INVENTORY_SCOPE = "control-plane.inventory"
 MCP_SERVICE_READ_SCOPE = "control-plane.read"
@@ -1607,7 +1606,7 @@ class ControlPlaneStore:
             "SELECT state_value FROM control_plane_state WHERE state_key = 'admission_mode'"
         ).fetchone()
         mode = str(row["state_value"]) if row is not None else "recovery"
-        return mode if mode in {"open", "recovery", "scoped_pilot"} else "recovery"
+        return mode if mode in {"open", "recovery"} else "recovery"
 
     def admission_status(self) -> dict[str, Any]:
         with self._connection() as connection:
@@ -1616,50 +1615,18 @@ class ControlPlaneStore:
             ).fetchone()
         mode = str(row["state_value"]) if row is not None else "recovery"
         return {
-            "admission_mode": mode if mode in {"open", "recovery", "scoped_pilot"} else "recovery",
+            "admission_mode": mode if mode in {"open", "recovery"} else "recovery",
             "changed_at_ms": row["changed_at_ms"] if row is not None else None,
         }
 
     def set_admission_mode(self, *, mode: str) -> dict[str, Any]:
         mode = str(mode or "").strip().lower()
-        if mode not in {"open", "recovery", "scoped_pilot"}:
+        if mode not in {"open", "recovery"}:
             raise ValidationError("admission mode is invalid.")
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             current = self._admission_mode(connection)
             now = self.clock()
-            if mode == "scoped_pilot" and current != mode:
-                active = connection.execute(
-                    "SELECT COUNT(*) FROM scoped_pilot_decisions d "
-                    "JOIN bindings b ON b.binding_id = d.binding_id "
-                    "JOIN nodes n ON n.device_id = d.device_id "
-                    "JOIN node_workspaces nw ON nw.device_id = d.device_id "
-                    "AND nw.workspace_id = d.workspace_id AND nw.workspace_generation = d.workspace_generation "
-                    "JOIN oauth_principals p ON p.principal_id = d.principal_id "
-                    "WHERE d.revoked_at_ms IS NULL AND d.expires_at_ms > ? "
-                    "AND b.revoked_at_ms IS NULL AND b.owner_id = d.owner_id "
-                    "AND b.device_id = d.device_id AND b.endpoint_id = d.endpoint_id "
-                    "AND b.workspace_id = d.workspace_id AND b.workspace_generation = d.workspace_generation "
-                    "AND n.revoked_at_ms IS NULL AND n.owner_id = d.owner_id AND n.endpoint_id = d.endpoint_id "
-                    "AND nw.retired_at_ms IS NULL AND p.revoked_at_ms IS NULL "
-                    "AND p.owner_id = d.owner_id AND p.principal_kind = 'private_tunnel_service'",
-                    (now,),
-                ).fetchone()[0]
-                if active < 1:
-                    raise ConflictError("scoped pilot requires a current live owner decision.")
-            if mode == "recovery":
-                # A later pilot must get a new decision. Otherwise an old
-                # queued action could become dispatchable after reopening.
-                revoked = connection.execute(
-                    "SELECT decision_id FROM scoped_pilot_decisions WHERE revoked_at_ms IS NULL"
-                ).fetchall()
-                connection.execute(
-                    "UPDATE scoped_pilot_decisions SET revoked_at_ms = ? WHERE revoked_at_ms IS NULL",
-                    (now,),
-                )
-                for row in revoked:
-                    self._event(connection, "scoped_pilot_decision", str(row["decision_id"]),
-                                "scoped_pilot_decision_revoked_by_recovery", {})
             if current != mode:
                 connection.execute(
                     "UPDATE control_plane_state SET state_value = ?, changed_at_ms = ? WHERE state_key = 'admission_mode'",
@@ -1668,533 +1635,6 @@ class ControlPlaneStore:
                 self._event(connection, "control_plane", "admission", "admission_mode_changed", {"mode": mode})
             connection.execute("COMMIT")
         return self.admission_status()
-
-    def create_scoped_pilot_decision(
-        self,
-        *,
-        owner_id: str,
-        principal_id: str,
-        binding_id: str,
-        expires_at_ms: int,
-        reason: str,
-    ) -> dict[str, Any]:
-        """Authorize one current service principal and exact registered target.
-
-        Creating the decision does not open admission. The owner must separately
-        select scoped_pilot; the node's local policy remains authoritative.
-        """
-        owner_id = _text(owner_id, "owner_id")
-        principal_id = _text(principal_id, "principal_id")
-        binding_id = _text(binding_id, "binding_id")
-        reason = str(reason or "").strip()
-        if not 1 <= len(reason) <= 400:
-            raise ValidationError("scoped pilot reason is invalid.")
-        if isinstance(expires_at_ms, bool) or not isinstance(expires_at_ms, int):
-            raise ValidationError("scoped pilot expiry is invalid.")
-        decision_id = f"pilot_{uuid.uuid4().hex}"
-        with self._connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            now = self.clock()
-            if self._admission_mode(connection) not in {"recovery", "scoped_pilot"}:
-                raise ConflictError("scoped pilot decision requires recovery or scoped admission.")
-            if not now < expires_at_ms <= now + SCOPED_PILOT_MAX_TTL_MS:
-                raise ValidationError("scoped pilot expiry must be within 24 hours.")
-            existing = connection.execute(
-                "SELECT COUNT(*) FROM scoped_pilot_decisions WHERE principal_id = ? AND binding_id = ? "
-                "AND revoked_at_ms IS NULL AND expires_at_ms > ?",
-                (principal_id, binding_id, now),
-            ).fetchone()[0]
-            if existing:
-                raise ConflictError("another scoped pilot decision covers this target.")
-            target = connection.execute(
-                """
-                SELECT b.*, n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
-                       n.revoked_at_ms AS node_revoked_at_ms, n.readiness AS node_readiness,
-                       nw.retired_at_ms AS workspace_retired_at_ms,
-                       p.owner_id AS principal_owner_id, p.revoked_at_ms AS principal_revoked_at_ms,
-                       p.principal_kind
-                FROM bindings AS b
-                JOIN nodes AS n ON n.device_id = b.device_id
-                JOIN node_workspaces AS nw ON nw.device_id = b.device_id
-                  AND nw.workspace_id = b.workspace_id
-                  AND nw.workspace_generation = b.workspace_generation
-                JOIN oauth_principals AS p ON p.principal_id = ?
-                WHERE b.binding_id = ?
-                """,
-                (principal_id, binding_id),
-            ).fetchone()
-            if target is None:
-                raise NotFoundError("scoped pilot target does not exist.")
-            if (
-                target["owner_id"] != owner_id
-                or target["node_owner_id"] != owner_id
-                or target["principal_owner_id"] != owner_id
-                or target["principal_kind"] != "private_tunnel_service"
-            ):
-                raise PermissionError("scoped pilot target or service principal is not owned by this account.")
-            if (
-                target["revoked_at_ms"] is not None
-                or target["node_revoked_at_ms"] is not None
-                or target["principal_revoked_at_ms"] is not None
-                or target["workspace_retired_at_ms"] is not None
-                or target["node_endpoint_id"] != target["endpoint_id"]
-            ):
-                raise ConflictError("scoped pilot target is no longer current.")
-            self._require_current_workspace_registration(
-                connection,
-                device_id=str(target["device_id"]),
-                workspace_id=str(target["workspace_id"]),
-                workspace_generation=str(target["workspace_generation"]),
-            )
-            unresolved = self._blocking_unresolved_action_count_for_pilot(
-                connection,
-                device_id=str(target["device_id"]),
-                owner_id=owner_id,
-                principal_id=principal_id,
-                binding_id=binding_id,
-                workspace_id=str(target["workspace_id"]),
-                workspace_generation=str(target["workspace_generation"]),
-            )
-            if unresolved:
-                raise ConflictError("selected node has unresolved prior actions.")
-            connection.execute(
-                """INSERT INTO scoped_pilot_decisions
-                   (decision_id, owner_id, principal_id, binding_id, device_id, endpoint_id,
-                    workspace_id, workspace_generation, reason, created_at_ms, expires_at_ms, revoked_at_ms)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
-                (decision_id, owner_id, principal_id, binding_id, target["device_id"],
-                 target["endpoint_id"], target["workspace_id"], target["workspace_generation"],
-                 reason, now, expires_at_ms),
-            )
-            self._event(connection, "scoped_pilot_decision", decision_id, "scoped_pilot_decision_created",
-                        {"binding_id": binding_id, "device_id": target["device_id"],
-                         "principal_id": principal_id, "expires_at_ms": expires_at_ms})
-            connection.execute("COMMIT")
-        return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
-
-    def scoped_pilot_decision(self, *, owner_id: str, decision_id: str) -> dict[str, Any]:
-        owner_id = _text(owner_id, "owner_id")
-        decision_id = _text(decision_id, "decision_id")
-        with self._connection() as connection:
-            row = connection.execute("SELECT * FROM scoped_pilot_decisions WHERE decision_id = ?", (decision_id,)).fetchone()
-        if row is None:
-            raise NotFoundError("scoped pilot decision does not exist.")
-        if row["owner_id"] != owner_id:
-            raise PermissionError("scoped pilot decision belongs to another owner.")
-        return dict(row)
-
-    def list_scoped_pilot_decisions(self, *, owner_id: str) -> list[dict[str, Any]]:
-        owner_id = _text(owner_id, "owner_id")
-        with self._connection() as connection:
-            rows = connection.execute(
-                "SELECT * FROM scoped_pilot_decisions WHERE owner_id = ? ORDER BY created_at_ms, decision_id",
-                (owner_id,),
-            ).fetchall()
-        return [dict(row) for row in rows]
-
-    def _quarantined_file_read_unknown_matches_pilot_target(
-        self,
-        connection: sqlite3.Connection,
-        *,
-        action: sqlite3.Row,
-        owner_id: str,
-        principal_id: str,
-        binding_id: str,
-        workspace_id: str,
-        workspace_generation: str,
-    ) -> bool:
-        """Allow a new pilot past only an audited unknown read on that target.
-
-        This does not settle or hide the action. It is a narrow continuity rule
-        for one immutable bounded file-read intent after the owner has already
-        quarantined its unknown receipt. Every unresolved action outside this
-        exact same-principal, same-generation read remains admission-blocking.
-        """
-
-        if (
-            action["owner_id"] != owner_id
-            or action["binding_id"] != binding_id
-            or action["workspace_id"] != workspace_id
-            or action["workspace_generation"] != workspace_generation
-            or action["tool_name"] != "workspace_context"
-            or action["delivery_state"] != "reconcile_required"
-        ):
-            return False
-        try:
-            arguments = json.loads(str(action["arguments_json"]))
-        except (TypeError, ValueError, json.JSONDecodeError):
-            return False
-        if not isinstance(arguments, dict) or set(arguments) != {
-            "operation", "path", "start_line", "max_lines", "max_bytes",
-        } or arguments.get("operation") != "read_file":
-            return False
-        try:
-            if _bounded_file_read_path(arguments.get("path")) != arguments.get("path"):
-                return False
-            if _bounded_file_read_limits(
-                start_line=arguments.get("start_line"),
-                max_lines=arguments.get("max_lines"),
-                max_bytes=arguments.get("max_bytes"),
-            ) != (arguments.get("start_line"), arguments.get("max_lines"), arguments.get("max_bytes")):
-                return False
-        except (TypeError, ValueError, ValidationError):
-            return False
-
-        intent = connection.execute(
-            """
-            SELECT * FROM mcp_file_read_intents
-            WHERE action_id = ?
-            """,
-            (action["action_id"],),
-        ).fetchone()
-        if (
-            intent is None
-            or intent["owner_id"] != owner_id
-            or intent["principal_id"] != principal_id
-            or intent["binding_id"] != binding_id
-        ):
-            return False
-        task_link = connection.execute(
-            "SELECT task_id FROM mcp_task_action_links WHERE action_id = ?",
-            (action["action_id"],),
-        ).fetchone()
-        facade_contract = {
-            "schema_version": intent["facade_schema_version"],
-            "profile": intent["facade_profile"],
-            "sha256": intent["facade_contract_sha256"],
-        }
-        expected_intent = {
-            "kind": "mcp_facade_bounded_file_read_v1",
-            "principal_id": principal_id,
-            "binding_id": binding_id,
-            "task_id": task_link["task_id"] if task_link is not None else None,
-            "path": arguments["path"],
-            "start_line": arguments["start_line"],
-            "max_lines": arguments["max_lines"],
-            "max_bytes": arguments["max_bytes"],
-            "idempotency_key": intent["idempotency_key"],
-            "facade_contract": facade_contract,
-        }
-        expected_intent_digest = _digest(expected_intent)
-        if (
-            expected_intent_digest != intent["intent_digest"]
-            or action["admission_reference"] != f"mcp_file_read:{expected_intent_digest}"
-        ):
-            return False
-        action_immutable = {
-            "request_id": action["request_id"],
-            "context_id": action["context_id"],
-            "binding_id": action["binding_id"],
-            "principal_id": principal_id,
-            "device_id": action["device_id"],
-            "endpoint_id": action["endpoint_id"],
-            "workspace_id": action["workspace_id"],
-            "workspace_generation": action["workspace_generation"],
-            "tool_name": action["tool_name"],
-            "arguments": arguments,
-            "idempotency_key": action["idempotency_key"],
-            "admission_reference": action["admission_reference"],
-            "expires_at_ms": action["expires_at_ms"],
-            "facade_contract": facade_contract,
-        }
-        if action["action_digest"] != _digest(action_immutable):
-            return False
-
-        reconciliation = connection.execute(
-            "SELECT * FROM action_reconciliations WHERE action_id = ?",
-            (action["action_id"],),
-        ).fetchone()
-        receipt = connection.execute(
-            """
-            SELECT receipt_id, local_handle, receipt_state, payload_json,
-                   receipt_digest, received_at_ms
-            FROM receipts WHERE action_id = ?
-            ORDER BY received_at_ms DESC, receipt_id DESC LIMIT 1
-            """,
-            (action["action_id"],),
-        ).fetchone()
-        attempts = connection.execute(
-            "SELECT attempt_id FROM delivery_attempts WHERE action_id = ? ORDER BY attempt_number",
-            (action["action_id"],),
-        ).fetchall()
-        if (
-            reconciliation is None
-            or reconciliation["owner_id"] != owner_id
-            or reconciliation["device_id"] != action["device_id"]
-            or reconciliation["disposition"] != "quarantined_unknown"
-            or reconciliation["declaration"] != QUARANTINE_UNKNOWN_DECLARATION
-            or receipt is None
-            or receipt["receipt_state"] != "unknown"
-            or receipt["local_handle"] != ""
-            or receipt["receipt_id"] != reconciliation["receipt_id"]
-            or receipt["receipt_digest"] != reconciliation["receipt_digest"]
-            or receipt["received_at_ms"] != reconciliation["receipt_received_at_ms"]
-            or len(attempts) != 1
-        ):
-            return False
-        receipt_attempts = connection.execute(
-            """
-            SELECT COUNT(*) AS total,
-                   SUM(CASE WHEN attempt_id = ? THEN 1 ELSE 0 END) AS matches
-            FROM delivery_attempts WHERE action_id = ?
-            """,
-            (attempts[0]["attempt_id"], action["action_id"]),
-        ).fetchone()
-        if int(receipt_attempts["total"] or 0) != 1 or int(receipt_attempts["matches"] or 0) != 1:
-            return False
-        try:
-            receipt_payload = json.loads(str(receipt["payload_json"]))
-        except (TypeError, ValueError, json.JSONDecodeError):
-            return False
-        if (
-            isinstance(receipt_payload, dict)
-            and receipt_payload.get("schema_version") == 1
-            and receipt_payload.get("operation_kind") == "control_plane_bounded_file_read"
-            and receipt_payload.get("code") == "CONTROL_PLANE_FILE_READ_EFFECT_UNKNOWN"
-        ) is not True:
-            return False
-        expected_receipt_digest = _digest({
-            "attempt_id": attempts[0]["attempt_id"],
-            "receipt_state": receipt["receipt_state"],
-            "local_handle": receipt["local_handle"],
-            "payload": receipt_payload,
-        })
-        if receipt["receipt_digest"] != expected_receipt_digest:
-            return False
-        expected_evidence_digest = _digest({
-            "schema_version": 1,
-            "action_id": action["action_id"],
-            "owner_id": owner_id,
-            "device_id": action["device_id"],
-            "tool_name": action["tool_name"],
-            "delivery_state": action["delivery_state"],
-            "latest_receipt_id": receipt["receipt_id"],
-            "latest_receipt_state": receipt["receipt_state"],
-            "latest_receipt_digest": receipt["receipt_digest"],
-            "latest_receipt_received_at_ms": receipt["received_at_ms"],
-            "delivery_attempt_count": 1,
-        })
-        return reconciliation["evidence_digest"] == expected_evidence_digest
-
-    def _quarantined_retired_file_read_unknown_matches_pilot_workspace(
-        self,
-        connection: sqlite3.Connection,
-        *,
-        action: sqlite3.Row,
-        device_id: str,
-        owner_id: str,
-        principal_id: str,
-        workspace_id: str,
-        workspace_generation: str,
-    ) -> bool:
-        """Keep an audited read unknown on a fenced prior root as history.
-
-        This never settles the unknown or authorizes its replay. Only the same
-        owner's, device's and service principal's fully verified bounded read
-        can stop blocking another current local root, after
-        expiry and retirement have fenced its registration, binding and context.
-        """
-        if (
-            action["owner_id"] != owner_id
-            or action["device_id"] != device_id
-            or (action["workspace_id"] == workspace_id
-                and action["workspace_generation"] == workspace_generation)
-            or action["expires_at_ms"] > self.clock()
-            or action["settled_at_ms"] is not None
-        ):
-            return False
-        current = connection.execute(
-            "SELECT 1 FROM node_workspaces WHERE device_id = ? AND workspace_id = ? "
-            "AND workspace_generation = ? AND retired_at_ms IS NULL",
-            (device_id, workspace_id, workspace_generation),
-        ).fetchone()
-        historical = connection.execute(
-            """
-            SELECT nw.retired_at_ms, b.revoked_at_ms, c.closed_at_ms
-            FROM node_workspaces nw
-            JOIN bindings b ON b.device_id = nw.device_id
-              AND b.workspace_id = nw.workspace_id
-              AND b.workspace_generation = nw.workspace_generation
-            JOIN contexts c ON c.binding_id = b.binding_id
-              AND c.owner_id = b.owner_id AND c.device_id = b.device_id
-              AND c.endpoint_id = b.endpoint_id AND c.workspace_id = b.workspace_id
-              AND c.workspace_generation = b.workspace_generation
-            WHERE nw.device_id = ? AND nw.workspace_id = ? AND nw.workspace_generation = ?
-              AND b.binding_id = ? AND b.owner_id = ? AND b.endpoint_id = ?
-              AND c.context_id = ?
-            """,
-            (device_id, action["workspace_id"], action["workspace_generation"],
-             action["binding_id"], owner_id, action["endpoint_id"], action["context_id"]),
-        ).fetchone()
-        if current is None or historical is None or any(
-            historical[field] is None for field in ("retired_at_ms", "revoked_at_ms", "closed_at_ms")
-        ):
-            return False
-        # Verify the historical intent against its own immutable target. The
-        # new generation does not replace any field in that causal evidence.
-        return self._quarantined_file_read_unknown_matches_pilot_target(
-            connection, action=action, owner_id=owner_id, principal_id=principal_id,
-            binding_id=action["binding_id"], workspace_id=action["workspace_id"],
-            workspace_generation=action["workspace_generation"],
-        )
-
-    def _blocking_unresolved_action_count_for_pilot(
-        self,
-        connection: sqlite3.Connection,
-        *,
-        device_id: str,
-        owner_id: str,
-        principal_id: str,
-        binding_id: str,
-        workspace_id: str,
-        workspace_generation: str,
-    ) -> int:
-        actions = connection.execute(
-            """
-            SELECT * FROM actions
-            WHERE device_id = ? AND workspace_id = ?
-              AND delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
-            ORDER BY created_at_ms, action_id
-            """,
-            (device_id, workspace_id),
-        ).fetchall()
-        return sum(
-            1
-            for action in actions
-            if not (self._quarantined_file_read_unknown_matches_pilot_target(
-                connection,
-                action=action,
-                owner_id=owner_id,
-                principal_id=principal_id,
-                binding_id=binding_id,
-                workspace_id=workspace_id,
-                workspace_generation=workspace_generation,
-            ) or self._quarantined_retired_file_read_unknown_matches_pilot_workspace(
-                connection, action=action, device_id=device_id, owner_id=owner_id,
-                principal_id=principal_id, workspace_id=workspace_id,
-                workspace_generation=workspace_generation,
-            ))
-        )
-
-    def revoke_scoped_pilot_decision(self, *, owner_id: str, decision_id: str) -> dict[str, Any]:
-        owner_id = _text(owner_id, "owner_id")
-        decision_id = _text(decision_id, "decision_id")
-        with self._connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute(
-                "SELECT owner_id, revoked_at_ms FROM scoped_pilot_decisions WHERE decision_id = ?",
-                (decision_id,),
-            ).fetchone()
-            if row is None:
-                raise NotFoundError("scoped pilot decision does not exist.")
-            if row["owner_id"] != owner_id:
-                raise PermissionError("scoped pilot decision belongs to another owner.")
-            if row["revoked_at_ms"] is None:
-                connection.execute(
-                    "UPDATE scoped_pilot_decisions SET revoked_at_ms = ? WHERE decision_id = ?",
-                    (self.clock(), decision_id),
-                )
-                self._event(connection, "scoped_pilot_decision", decision_id, "scoped_pilot_decision_revoked", {})
-            connection.execute("COMMIT")
-        return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
-
-    def renew_scoped_pilot_decision(
-        self,
-        *,
-        owner_id: str,
-        decision_id: str,
-        expires_at_ms: int,
-    ) -> dict[str, Any]:
-        """Extend one current target decision without changing its scope.
-
-        Renewal is operator-only, bounded by the same 24-hour limit as initial
-        issuance, and never opens admission.  Expired or revoked decisions
-        require a fresh recovery-time decision instead of being resurrected.
-        """
-
-        owner_id = _text(owner_id, "owner_id")
-        decision_id = _text(decision_id, "decision_id")
-        if isinstance(expires_at_ms, bool) or not isinstance(expires_at_ms, int):
-            raise ValidationError("scoped pilot expiry is invalid.")
-        with self._connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute(
-                """
-                SELECT d.*, b.revoked_at_ms AS binding_revoked_at_ms,
-                       b.endpoint_id AS binding_endpoint_id,
-                       n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
-                       n.revoked_at_ms AS node_revoked_at_ms,
-                       nw.retired_at_ms AS workspace_retired_at_ms,
-                       p.owner_id AS principal_owner_id,
-                       p.revoked_at_ms AS principal_revoked_at_ms,
-                       p.principal_kind
-                FROM scoped_pilot_decisions AS d
-                JOIN bindings AS b ON b.binding_id = d.binding_id
-                JOIN nodes AS n ON n.device_id = d.device_id
-                JOIN node_workspaces AS nw
-                  ON nw.device_id = d.device_id
-                 AND nw.workspace_id = d.workspace_id
-                 AND nw.workspace_generation = d.workspace_generation
-                JOIN oauth_principals AS p ON p.principal_id = d.principal_id
-                WHERE d.decision_id = ?
-                """,
-                (decision_id,),
-            ).fetchone()
-            if row is None:
-                connection.execute("ROLLBACK")
-                raise NotFoundError("scoped pilot decision does not exist.")
-            if row["owner_id"] != owner_id or row["node_owner_id"] != owner_id or row["principal_owner_id"] != owner_id:
-                connection.execute("ROLLBACK")
-                raise PermissionError("scoped pilot decision is not owned by this account.")
-            now = self.clock()
-            if row["revoked_at_ms"] is not None or row["expires_at_ms"] <= now:
-                connection.execute("ROLLBACK")
-                raise ConflictError("expired or revoked scoped pilot decisions cannot be renewed.")
-            if (
-                row["principal_kind"] != "private_tunnel_service"
-                or row["principal_revoked_at_ms"] is not None
-                or row["binding_revoked_at_ms"] is not None
-                or row["node_revoked_at_ms"] is not None
-                or row["workspace_retired_at_ms"] is not None
-                or row["binding_endpoint_id"] != row["endpoint_id"]
-                or row["node_endpoint_id"] != row["endpoint_id"]
-            ):
-                connection.execute("ROLLBACK")
-                raise ConflictError("scoped pilot target is no longer current.")
-            if not row["expires_at_ms"] < expires_at_ms <= now + SCOPED_PILOT_MAX_TTL_MS:
-                connection.execute("ROLLBACK")
-                raise ValidationError("scoped pilot renewal must extend within 24 hours from now.")
-            self._require_current_workspace_registration(
-                connection,
-                device_id=str(row["device_id"]),
-                workspace_id=str(row["workspace_id"]),
-                workspace_generation=str(row["workspace_generation"]),
-            )
-            unresolved = self._blocking_unresolved_action_count_for_pilot(
-                connection,
-                device_id=str(row["device_id"]),
-                owner_id=owner_id,
-                principal_id=str(row["principal_id"]),
-                binding_id=str(row["binding_id"]),
-                workspace_id=str(row["workspace_id"]),
-                workspace_generation=str(row["workspace_generation"]),
-            )
-            if unresolved:
-                connection.execute("ROLLBACK")
-                raise ConflictError("selected node has unresolved prior actions.")
-            connection.execute(
-                "UPDATE scoped_pilot_decisions SET expires_at_ms = ? WHERE decision_id = ?",
-                (expires_at_ms, decision_id),
-            )
-            self._event(
-                connection,
-                "scoped_pilot_decision",
-                decision_id,
-                "scoped_pilot_decision_renewed",
-                {"previous_expires_at_ms": row["expires_at_ms"], "expires_at_ms": expires_at_ms},
-            )
-            connection.execute("COMMIT")
-        return self.scoped_pilot_decision(owner_id=owner_id, decision_id=decision_id)
 
     def _admission_decision(
         self,
@@ -2207,7 +1647,14 @@ class ControlPlaneStore:
         now: int,
         task_id: str | None = None,
     ) -> str | None:
-        """Return the decision pinned to a new pilot action, or reject intake."""
+        """Return the live binding for a new service action, or reject intake.
+
+        A private-tunnel service principal is admitted only against a live
+        binding on a live node with a current workspace registration. There
+        is no expiring pilot decision: binding revocation, node revocation,
+        or workspace retirement ends admission immediately. Tasks bind to
+        the binding only; no task-to-decision check exists.
+        """
         mode = self._admission_mode(connection)
         principal = connection.execute(
             "SELECT owner_id, principal_kind, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
@@ -2229,44 +1676,38 @@ class ControlPlaneStore:
         }:
             raise ConflictError("shared MCP service cannot admit this execution lane.")
         if lane == "bounded_exec" and task_id is None:
-            raise ConflictError("scoped pilot exec requires a current task and writer lease.")
-        rows = connection.execute(
+            raise ConflictError("bounded exec requires a current task and writer lease.")
+        binding = connection.execute(
             """
-            SELECT d.decision_id, d.device_id, d.workspace_id, d.workspace_generation
-            FROM scoped_pilot_decisions AS d
-            JOIN bindings AS b ON b.binding_id = d.binding_id
-            JOIN nodes AS n ON n.device_id = d.device_id
-            JOIN node_workspaces AS nw ON nw.device_id = d.device_id
-              AND nw.workspace_id = d.workspace_id
-              AND nw.workspace_generation = d.workspace_generation
-            JOIN oauth_principals AS p ON p.principal_id = d.principal_id
-            WHERE d.owner_id = ? AND d.principal_id = ? AND d.binding_id = ?
-              AND d.revoked_at_ms IS NULL AND d.expires_at_ms > ?
-              AND b.owner_id = d.owner_id AND b.device_id = d.device_id
-              AND b.endpoint_id = d.endpoint_id AND b.workspace_id = d.workspace_id
-              AND b.workspace_generation = d.workspace_generation AND b.revoked_at_ms IS NULL
-              AND n.owner_id = d.owner_id AND n.endpoint_id = d.endpoint_id AND n.revoked_at_ms IS NULL
-              AND nw.retired_at_ms IS NULL AND p.owner_id = d.owner_id AND p.revoked_at_ms IS NULL
-              AND p.principal_kind = 'private_tunnel_service'
+            SELECT b.*, n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                   n.revoked_at_ms AS node_revoked_at_ms, nw.retired_at_ms AS workspace_retired_at_ms
+            FROM bindings AS b
+            JOIN nodes AS n ON n.device_id = b.device_id
+            JOIN node_workspaces AS nw ON nw.device_id = b.device_id
+              AND nw.workspace_id = b.workspace_id
+              AND nw.workspace_generation = b.workspace_generation
+            WHERE b.binding_id = ?
             """,
-            (owner_id, principal_id, binding_id, now),
-        ).fetchall()
-        if len(rows) != 1:
-            raise ConflictError("no current scoped pilot decision covers this target.")
-        if task_id is not None:
-            task = connection.execute(
-                "SELECT scoped_pilot_decision_id FROM mcp_task_sessions WHERE task_id = ?",
-                (task_id,),
-            ).fetchone()
-            if task is None or task["scoped_pilot_decision_id"] != rows[0]["decision_id"]:
-                raise ConflictError("task is not bound to the current scoped pilot decision.")
+            (binding_id,),
+        ).fetchone()
+        if binding is None:
+            raise NotFoundError("binding does not exist.")
+        if (
+            binding["owner_id"] != owner_id
+            or binding["node_owner_id"] != owner_id
+            or binding["revoked_at_ms"] is not None
+            or binding["node_revoked_at_ms"] is not None
+            or binding["workspace_retired_at_ms"] is not None
+            or binding["node_endpoint_id"] != binding["endpoint_id"]
+        ):
+            raise ConflictError("selected binding is no longer dispatchable.")
         self._require_current_workspace_registration(
             connection,
-            device_id=str(rows[0]["device_id"]),
-            workspace_id=str(rows[0]["workspace_id"]),
-            workspace_generation=str(rows[0]["workspace_generation"]),
+            device_id=str(binding["device_id"]),
+            workspace_id=str(binding["workspace_id"]),
+            workspace_generation=str(binding["workspace_generation"]),
         )
-        return str(rows[0]["decision_id"])
+        return str(binding["binding_id"])
 
     def _event(self, connection: sqlite3.Connection, subject_type: str, subject_id: str, event_type: str, details: dict[str, Any]) -> None:
         connection.execute(
@@ -2687,7 +2128,7 @@ class ControlPlaneStore:
         account target that was actually bound to a registered workspace.  The
         node authenticates with its existing credential and receives only
         display labels, lifecycle states and capability/presence summaries.
-        A configured private service sees only its exact live pilot targets.
+        A configured private service sees only its exact live binding targets.
         Owner IDs, OAuth subjects, binding IDs, paths, credentials
         and task/context records never cross this boundary.
         """
@@ -2747,21 +2188,10 @@ class ControlPlaneStore:
             ]
             has_bindings = bool(targets)
             if principal_id is not None:
-                selected = connection.execute(
-                    "SELECT d.* FROM scoped_pilot_decisions d JOIN oauth_principals p "
-                    "ON p.principal_id = d.principal_id "
-                    "WHERE d.revoked_at_ms IS NULL AND d.expires_at_ms > ? "
-                    "AND p.revoked_at_ms IS NULL AND p.owner_id = d.owner_id "
-                    "AND p.principal_kind = 'private_tunnel_service' "
-                    "AND d.owner_id = ? AND d.principal_id = ? AND d.device_id = ? AND d.endpoint_id = ?",
-                    (now, owner_id, principal_id, device_id, node["endpoint_id"]),
-                ).fetchall()
-                delegated = {tuple(pilot[field] for field in
-                                   ("binding_id", "endpoint_id", "workspace_id", "workspace_generation"))
-                             for pilot in selected} if self._admission_mode(connection) == "scoped_pilot" else set()
                 targets = [target for target in targets
-                           if tuple(target[field] for field in
-                                    ("binding_id", "endpoint_id", "workspace_id", "workspace_generation")) in delegated]
+                           if target["binding_state"] == "active"
+                           and target["workspace_state"] == "active"
+                           and target["node_state"] == "active"]
             with self._connection() as workspace_connection:
                 workspace_count_row = workspace_connection.execute(
                     "SELECT COUNT(*) AS count FROM node_workspaces WHERE device_id = ? AND retired_at_ms IS NULL",
@@ -2827,12 +2257,14 @@ class ControlPlaneStore:
         self, *, device_id: str, principal_id: str, workspace_id: str,
         workspace_generation: str,
     ) -> dict[str, Any]:
-        """Add a registered folder within this node's existing pilot window.
+        """Ensure a permanent binding for a registered folder.
 
         The authenticated node represents its local owner. This operation
-        cannot enroll a device, grant a principal, extend authority or open
-        admission. Existing decisions, tasks and writers remain independent;
-        the exact target's unresolved effects still block new authority.
+        cannot enroll a device, grant a principal, or open admission. The
+        binding is permanent until the folder is retired or the binding is
+        revoked; there is no expiring pilot decision. Unresolved actions
+        stay visible via health and quarantine; they no longer veto a
+        folder binding.
         """
         device_id = _text(device_id, "device_id")
         principal_id = _text(principal_id, "principal_id")
@@ -2840,9 +2272,6 @@ class ControlPlaneStore:
         workspace_generation = _text(workspace_generation, "workspace_generation")
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            now = self.clock()
-            if self._admission_mode(connection) != "scoped_pilot":
-                raise ConflictError("local folder activation requires an existing scoped pilot.")
             node = connection.execute("SELECT * FROM nodes WHERE device_id = ?", (device_id,)).fetchone()
             if node is None:
                 raise NotFoundError("device is not enrolled.")
@@ -2850,83 +2279,38 @@ class ControlPlaneStore:
                 raise ConflictError("device credential is revoked.")
             owner_id = str(node["owner_id"])
             principal = connection.execute(
-                "SELECT * FROM oauth_principals WHERE principal_id = ?", (principal_id,),
+                "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
             ).fetchone()
             if (principal is None or principal["owner_id"] != owner_id
                     or principal["principal_kind"] != "private_tunnel_service"
                     or principal["revoked_at_ms"] is not None):
                 raise PermissionError("node is not owned by the configured active MCP service principal.")
-            decisions = connection.execute(
-                "SELECT d.* FROM scoped_pilot_decisions d "
-                "JOIN bindings b ON b.binding_id = d.binding_id "
-                "JOIN node_workspaces nw ON nw.device_id = d.device_id "
-                "AND nw.workspace_id = d.workspace_id AND nw.workspace_generation = d.workspace_generation "
-                "WHERE d.revoked_at_ms IS NULL AND d.expires_at_ms > ? "
-                "AND d.owner_id = ? AND d.principal_id = ? AND d.device_id = ? AND d.endpoint_id = ? "
-                "AND b.revoked_at_ms IS NULL AND b.owner_id = d.owner_id AND b.device_id = d.device_id "
-                "AND b.endpoint_id = d.endpoint_id AND b.workspace_id = d.workspace_id "
-                "AND b.workspace_generation = d.workspace_generation AND nw.retired_at_ms IS NULL "
-                "ORDER BY d.expires_at_ms, d.created_at_ms, d.decision_id",
-                (now, owner_id, principal_id, device_id, node["endpoint_id"]),
-            ).fetchall()
-            if not decisions:
-                raise ConflictError("local folder activation requires a current live pilot for this node and principal.")
-            previous = decisions[0]
             selected = self._require_current_workspace_registration(
                 connection, device_id=device_id, workspace_id=workspace_id,
                 workspace_generation=workspace_generation,
             )
-            matching = [decision for decision in decisions if decision["workspace_id"] == workspace_id
-                        and decision["workspace_generation"] == workspace_generation]
-            if len(matching) > 1:
-                raise ConflictError("multiple live pilot decisions cover this target.")
-            if matching:
-                previous = matching[0]
-                result = {"device_id": device_id, "workspace_id": workspace_id,
-                          "workspace_generation": workspace_generation, "binding_id": previous["binding_id"],
-                          "pilot_decision_id": previous["decision_id"], "expires_at_ms": previous["expires_at_ms"],
-                          "replayed": True, "state": "active"}
-                connection.execute("COMMIT")
-                return result
             binding = connection.execute(
                 "SELECT * FROM bindings WHERE owner_id = ? AND device_id = ? AND endpoint_id = ? "
                 "AND workspace_id = ? AND workspace_generation = ? AND revoked_at_ms IS NULL "
                 "ORDER BY created_at_ms, binding_id LIMIT 1",
                 (owner_id, device_id, node["endpoint_id"], workspace_id, workspace_generation),
             ).fetchone()
-            binding_id = str(binding["binding_id"]) if binding is not None else f"bind_{uuid.uuid4().hex}"
-            if self._blocking_unresolved_action_count_for_pilot(
-                connection, device_id=device_id, owner_id=owner_id, principal_id=principal_id,
-                binding_id=binding_id, workspace_id=workspace_id, workspace_generation=workspace_generation,
-            ):
-                raise ConflictError("selected node has unresolved prior actions.")
             if binding is None:
+                binding_id = f"bind_{uuid.uuid4().hex}"
                 connection.execute(
                     "INSERT INTO bindings VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
                     (binding_id, owner_id, device_id, node["endpoint_id"], workspace_id,
-                     workspace_generation, selected["display_name"], now),
+                     workspace_generation, selected["display_name"], self.clock()),
                 )
                 self._event(connection, "binding", binding_id, "binding_created",
                             {"device_id": device_id, "workspace_id": workspace_id, "source": "local_owner_activation"})
-            decision_id = f"pilot_{uuid.uuid4().hex}"
-            connection.execute(
-                """INSERT INTO scoped_pilot_decisions
-                   (decision_id, owner_id, principal_id, binding_id, device_id, endpoint_id,
-                    workspace_id, workspace_generation, reason, created_at_ms, expires_at_ms, revoked_at_ms)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
-                (decision_id, owner_id, principal_id, binding_id, device_id, node["endpoint_id"],
-                 workspace_id, workspace_generation, "Local owner activated a registered folder", now,
-                 previous["expires_at_ms"]),
-            )
-            self._event(connection, "scoped_pilot_decision", decision_id, "scoped_pilot_decision_created",
-                        {"binding_id": binding_id, "device_id": device_id, "principal_id": principal_id,
-                         "expires_at_ms": previous["expires_at_ms"], "previous_decision_id": previous["decision_id"],
-                         "source": "local_owner_activation"})
+            else:
+                binding_id = str(binding["binding_id"])
             connection.execute("COMMIT")
             return {"device_id": device_id, "workspace_id": workspace_id,
                     "workspace_generation": workspace_generation, "binding_id": binding_id,
-                    "pilot_decision_id": decision_id, "expires_at_ms": previous["expires_at_ms"],
-                    "replayed": False, "state": "active"}
+                    "state": "active"}
 
     def list_enrollment_requests(self) -> list[dict[str, Any]]:
         with self._connection() as connection:
@@ -4671,7 +4055,7 @@ class ControlPlaneStore:
                         raise ConflictError("task idempotency lineage is invalid.")
                     connection.execute("COMMIT")
                     return self.mcp_task_session(owner_id=owner_id, principal_id=principal_id, task_id=str(existing_key["task_id"]))
-                pilot_decision_id = self._admission_decision(
+                self._admission_decision(
                     connection, owner_id=owner_id, principal_id=principal_id,
                     binding_id=binding_id, lane="task_open", now=self.clock(),
                 )
@@ -4728,11 +4112,6 @@ class ControlPlaneStore:
                     (principal_id, idempotency_key, intent_digest, task_id, now),
                 )
                 self._event(connection, "mcp_task_session", task_id, "mcp_task_session_created", {"binding_id": binding_id})
-                if pilot_decision_id is not None:
-                    connection.execute(
-                        "UPDATE mcp_task_sessions SET scoped_pilot_decision_id = ? WHERE task_id = ?",
-                        (pilot_decision_id, task_id),
-                    )
                 connection.execute("COMMIT")
             except Exception:
                 connection.execute("ROLLBACK")
@@ -5632,10 +5011,11 @@ class ControlPlaneStore:
             ).fetchone()
         if row is None or not hmac.compare_digest(str(row["token_digest"]), token_digest):
             raise PermissionError("MCP service authentication failed.")
+        # The owner tunnel grant is revocable but non-expiring: only
+        # revocation (grant or principal) or an owner mismatch ends it.
         if (
             row["revoked_at_ms"] is not None
             or row["principal_revoked_at_ms"] is not None
-            or row["expires_at_ms"] <= self.clock()
             or row["principal_owner_id"] != row["owner_id"]
         ):
             raise PermissionError("MCP service grant is no longer live.")
@@ -6106,7 +5486,7 @@ class ControlPlaneStore:
                     }
 
                 now = self.clock()
-                pilot_decision_id = self._admission_decision(
+                self._admission_decision(
                     connection, owner_id=owner_id, principal_id=principal_id,
                     binding_id=binding_id, lane="bounded_file_read", now=now, task_id=task_id,
                 )
@@ -6236,11 +5616,6 @@ class ControlPlaneStore:
                         action_idempotency_key, f"mcp_file_read:{intent_digest}", now, expires_at_ms,
                     ),
                 )
-                if pilot_decision_id is not None:
-                    connection.execute(
-                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
-                        (pilot_decision_id, action_id),
-                    )
                 connection.execute(
                     """
                     INSERT INTO mcp_file_read_intents(
@@ -7235,7 +6610,7 @@ class ControlPlaneStore:
                 ).fetchone()
                 if legacy_existing is not None:
                     raise ConflictError("idempotency key is already bound to a different patch authority mode.")
-                pilot_decision_id = self._admission_decision(
+                self._admission_decision(
                     connection, owner_id=owner_id, principal_id=principal_id,
                     binding_id=binding_id, lane="standing_patch", now=self.clock(), task_id=task_id,
                 )
@@ -7340,11 +6715,6 @@ class ControlPlaneStore:
                         action_idempotency_key, f"mcp_standing_patch:{intent_digest}", now, expires_at_ms,
                     ),
                 )
-                if pilot_decision_id is not None:
-                    connection.execute(
-                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
-                        (pilot_decision_id, action_id),
-                    )
                 connection.execute(
                     """
                     INSERT INTO mcp_standing_patch_intents(
@@ -7598,7 +6968,7 @@ class ControlPlaneStore:
                         "replayed": True,
                     }
                 now = self.clock()
-                pilot_decision_id = self._admission_decision(
+                self._admission_decision(
                     connection, owner_id=owner_id, principal_id=principal_id,
                     binding_id=binding_id, lane="bounded_exec", now=now, task_id=task_id,
                 )
@@ -7692,11 +7062,6 @@ class ControlPlaneStore:
                      _canonical_json(action_arguments), action_digest, writer_lease_generation, action_idempotency_key,
                      f"mcp_exec:{intent_digest}", now, expires_at_ms),
                 )
-                if pilot_decision_id is not None:
-                    connection.execute(
-                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
-                        (pilot_decision_id, action_id),
-                    )
                 connection.execute(
                     """INSERT INTO mcp_exec_intents(owner_id, principal_id, binding_id, task_id, writer_lease_generation, argv_json, argv_digest,
                         cwd, timeout_ms, max_output_bytes, idempotency_key, intent_digest, facade_schema_version,
@@ -7889,7 +7254,7 @@ class ControlPlaneStore:
                                                 "profile": existing["facade_profile"],
                                                 "sha256": existing["facade_contract_sha256"]}, "replayed": True}
                 now = self.clock()
-                pilot_decision_id = self._admission_decision(
+                self._admission_decision(
                     connection, owner_id=owner_id, principal_id=principal_id,
                     binding_id=binding_id, lane="artifact", now=now, task_id=task_id,
                 )
@@ -7947,11 +7312,6 @@ class ControlPlaneStore:
                     (action_id, owner_id, request_id, context_id, binding_id, live["device_id"], live["endpoint_id"],
                      live["workspace_id"], live["workspace_generation"], tool_name, _canonical_json(action_arguments),
                      action_digest, action_idempotency_key, f"mcp_artifact_{kind}:{intent_digest}", now, expires_at_ms))
-                if pilot_decision_id is not None:
-                    connection.execute(
-                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
-                        (pilot_decision_id, action_id),
-                    )
                 connection.execute(
                     """INSERT INTO mcp_artifact_intents(owner_id, principal_id, binding_id, task_id, kind, path,
                         idempotency_key, intent_digest, facade_schema_version, facade_profile, facade_contract_sha256,
@@ -8099,7 +7459,7 @@ class ControlPlaneStore:
                         },
                         "replayed": True,
                     }
-                pilot_decision_id = self._admission_decision(
+                self._admission_decision(
                     connection, owner_id=owner_id, principal_id=principal_id,
                     binding_id=binding_id, lane="document_write", now=self.clock(), task_id=task_id,
                 )
@@ -8183,11 +7543,6 @@ class ControlPlaneStore:
                      writer_lease_generation, action_idempotency_key,
                      f"mcp_document_write:{intent_digest}", now, expires_at_ms),
                 )
-                if pilot_decision_id is not None:
-                    connection.execute(
-                        "UPDATE actions SET scoped_pilot_decision_id = ? WHERE action_id = ?",
-                        (pilot_decision_id, action_id),
-                    )
                 connection.execute(
                     """INSERT INTO mcp_document_write_intents(
                         owner_id, principal_id, binding_id, task_id, writer_lease_generation,
@@ -8380,53 +7735,59 @@ class ControlPlaneStore:
             if mode == "recovery":
                 connection.execute("COMMIT")
                 return []
-            # A pilot action is dispatchable only under its original live
-            # decision, even if central admission later becomes globally open.
-            # This predicate runs before LIMIT, so old queued actions cannot
-            # hide eligible pilot actions or be accidentally delivered.
-            pilot_eligible = """(
-                pilot.decision_id = a.scoped_pilot_decision_id
-                AND pilot.owner_id = a.owner_id
-                AND pilot.binding_id = a.binding_id
-                AND pilot.device_id = a.device_id
-                AND pilot.endpoint_id = a.endpoint_id
-                AND pilot.workspace_id = a.workspace_id
-                AND pilot.workspace_generation = a.workspace_generation
-                AND pilot.revoked_at_ms IS NULL AND pilot.expires_at_ms > ?
+            # A binding action is dispatchable only while its binding, node,
+            # and workspace registration are live. This predicate runs before
+            # LIMIT, so old queued actions cannot hide eligible actions or
+            # be accidentally delivered. Node dispatchability (heartbeat and
+            # runtime identity) is additionally enforced per row below.
+            binding_eligible = """(
+                b.revoked_at_ms IS NULL
+                AND n.revoked_at_ms IS NULL
+                AND nw.retired_at_ms IS NULL
+                AND nw.registered_at_ms IS NOT NULL
                 AND (tl.task_id IS NULL OR (
-                    pilot_task.closed_at_ms IS NULL AND pilot_task.expires_at_ms > ?))
-                AND pilot_principal.owner_id = pilot.owner_id
-                AND pilot_principal.principal_kind = 'private_tunnel_service'
-                AND pilot_principal.revoked_at_ms IS NULL
-                AND ((f.action_id IS NOT NULL AND f.principal_id = pilot.principal_id
-                      AND f.binding_id = pilot.binding_id
-                      AND (tl.task_id IS NULL OR (
-                          pilot_task.scoped_pilot_decision_id = pilot.decision_id
-                          AND pilot_task.principal_id = pilot.principal_id
-                          AND pilot_task.binding_id = pilot.binding_id)))
-                  OR (s.action_id IS NOT NULL AND s.principal_id = pilot.principal_id
-                      AND s.binding_id = pilot.binding_id
-                      AND pilot_task.scoped_pilot_decision_id = pilot.decision_id
-                      AND pilot_task.principal_id = pilot.principal_id
-                      AND pilot_task.binding_id = pilot.binding_id)
-                  OR (e.action_id IS NOT NULL AND e.principal_id = pilot.principal_id
-                      AND e.binding_id = pilot.binding_id
-                      AND pilot_task.scoped_pilot_decision_id = pilot.decision_id
-                      AND pilot_task.principal_id = pilot.principal_id
-                      AND pilot_task.binding_id = pilot.binding_id)
-                  OR (a2.action_id IS NOT NULL AND a2.principal_id = pilot.principal_id
-                      AND a2.binding_id = pilot.binding_id
-                      AND ((a2.task_id IS NULL AND tl.task_id IS NULL) OR (
-                          a2.task_id = pilot_task.task_id
-                          AND pilot_task.scoped_pilot_decision_id = pilot.decision_id
-                          AND pilot_task.principal_id = pilot.principal_id
-                          AND pilot_task.binding_id = pilot.binding_id)))
-                  OR (d.action_id IS NOT NULL AND d.principal_id = pilot.principal_id
-                      AND d.binding_id = pilot.binding_id
-                      AND d.task_id = pilot_task.task_id
-                      AND pilot_task.scoped_pilot_decision_id = pilot.decision_id
-                      AND pilot_task.principal_id = pilot.principal_id
-                      AND pilot_task.binding_id = pilot.binding_id))
+                    task_session.closed_at_ms IS NULL AND task_session.expires_at_ms > ?
+                    AND task_session.binding_id = a.binding_id))
+                AND ((m.action_id IS NOT NULL AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = m.principal_id
+                      AND intent_principal.owner_id = a.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL))
+                  OR (f.action_id IS NOT NULL AND f.binding_id = a.binding_id AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = f.principal_id
+                      AND intent_principal.owner_id = a.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL))
+                  OR (p.action_id IS NOT NULL AND p.binding_id = a.binding_id
+                      AND (p.task_id IS NULL OR p.task_id = tl.task_id) AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = p.principal_id
+                      AND intent_principal.owner_id = a.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL))
+                  OR (s.action_id IS NOT NULL AND s.binding_id = a.binding_id
+                      AND s.task_id = tl.task_id AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = s.principal_id
+                      AND intent_principal.owner_id = a.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL))
+                  OR (e.action_id IS NOT NULL AND e.binding_id = a.binding_id
+                      AND e.task_id = tl.task_id AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = e.principal_id
+                      AND intent_principal.owner_id = a.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL))
+                  OR (a2.action_id IS NOT NULL AND a2.binding_id = a.binding_id
+                      AND ((a2.task_id IS NULL AND tl.task_id IS NULL) OR a2.task_id = tl.task_id) AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = a2.principal_id
+                      AND intent_principal.owner_id = a2.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL))
+                  OR (d.action_id IS NOT NULL AND d.binding_id = a.binding_id
+                      AND d.task_id = tl.task_id AND EXISTS (
+                    SELECT 1 FROM oauth_principals AS intent_principal
+                    WHERE intent_principal.principal_id = d.principal_id
+                      AND intent_principal.owner_id = a.owner_id
+                      AND intent_principal.revoked_at_ms IS NULL)))
             )"""
             untagged_non_service = """(
                 a.scoped_pilot_decision_id IS NULL
@@ -8439,10 +7800,7 @@ class ControlPlaneStore:
                       )
                 )
             )"""
-            admission_predicate = (
-                pilot_eligible if mode == "scoped_pilot"
-                else f"({untagged_non_service} OR {pilot_eligible})"
-            )
+            admission_predicate = f"({untagged_non_service} OR {binding_eligible})"
             rows = connection.execute(
                 f"""
                 SELECT
@@ -8535,9 +7893,7 @@ class ControlPlaneStore:
                 JOIN contexts c ON c.context_id = a.context_id
                 JOIN work_requests w ON w.request_id = a.request_id
                 LEFT JOIN mcp_task_action_links tl ON tl.action_id = a.action_id
-                LEFT JOIN mcp_task_sessions pilot_task ON pilot_task.task_id = tl.task_id
-                LEFT JOIN scoped_pilot_decisions pilot ON pilot.decision_id = a.scoped_pilot_decision_id
-                LEFT JOIN oauth_principals pilot_principal ON pilot_principal.principal_id = pilot.principal_id
+                LEFT JOIN mcp_task_sessions task_session ON task_session.task_id = tl.task_id
                 LEFT JOIN mcp_task_writer_leases wl
                     ON wl.binding_id = a.binding_id
                    AND wl.released_at_ms IS NULL
@@ -8558,7 +7914,7 @@ class ControlPlaneStore:
                 ORDER BY a.created_at_ms
                 LIMIT ?
                 """,
-                (device_id, *(() if workspace_id is None else (workspace_id, workspace_generation)), now, now, limit),
+                (device_id, *(() if workspace_id is None else (workspace_id, workspace_generation)), now, limit),
             ).fetchall()
             result: list[dict[str, Any]] = []
             for row in rows:

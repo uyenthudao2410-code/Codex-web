@@ -31,8 +31,7 @@ class NodeWorkspaceActivationCliTests(unittest.TestCase):
         self.save_registry()
         self.response = {"device_id": "device-alpha", "workspace_id": self.entry["workspace_id"],
             "workspace_generation": self.entry["workspace_generation"], "binding_id": "bind_" + "a" * 32,
-            "pilot_decision_id": "pilot_" + "b" * 32, "expires_at_ms": int(time.time() * 1000) + 60_000,
-            "replayed": False, "state": "active"}
+            "state": "active"}
 
     def save_registry(self, entries=None) -> None:
         self.registry.write_text(json.dumps({"schema_version": 1, "entries": [self.entry] if entries is None else entries}),
@@ -88,10 +87,10 @@ class NodeWorkspaceActivationCliTests(unittest.TestCase):
             {**self.response, "workspace_id": "other-workspace"},
             {**self.response, "workspace_generation": "other-generation"},
             {**self.response, "binding_id": "invalid"},
-            {**self.response, "pilot_decision_id": "invalid"},
+            {**self.response, "pilot_decision_id": "pilot_" + "b" * 32},
             {**self.response, "expires_at_ms": 1},
-            {**self.response, "expires_at_ms": True},
-            {**self.response, "replayed": 1},
+            {**self.response, "state": "active", "replayed": False},
+            {k: v for k, v in self.response.items() if k != "state"},
             {**self.response, "state": "registered"},
             {**self.response, "workspace_path": str(self.workspace)},
         ]
@@ -131,10 +130,10 @@ class NodeWorkspaceActivationCliTests(unittest.TestCase):
         self.assertEqual(output, "")
         self.assertIn("CONTROL_PLANE_REQUEST_FAILED", errors)
         self.assertEqual(request.call_count, 1)
-        with mock.patch("control_plane.node_agent._request", return_value={**self.response, "replayed": True}) as retry:
+        with mock.patch("control_plane.node_agent._request", return_value=self.response) as retry:
             code, output, errors = self.invoke()
         self.assertEqual(code, 0, errors)
-        self.assertTrue(json.loads(output)["replayed"])
+        self.assertEqual(json.loads(output), self.response)
         self.assertEqual(retry.call_count, 1)
 
 

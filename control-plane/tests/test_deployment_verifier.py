@@ -9,7 +9,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from control_plane.deployment_verifier import _admission, main as verifier_main
+from control_plane.deployment_verifier import DeploymentVerificationError, _admission, main as verifier_main
 from control_plane.http_api import ControlPlaneHttpServer, _package_source_sha256
 from control_plane.store import ControlPlaneStore, SCHEMA_VERSION
 
@@ -50,8 +50,11 @@ class _RedirectHealthHandler(BaseHTTPRequestHandler):
 
 
 class DeploymentHealthVerifierTests(unittest.TestCase):
-    def test_scoped_pilot_is_an_explicit_expected_admission_mode(self) -> None:
-        self.assertEqual(_admission("scoped_pilot"), "scoped_pilot")
+    def test_scoped_pilot_is_no_longer_an_expected_admission_mode(self) -> None:
+        self.assertEqual(_admission("open"), "open")
+        self.assertEqual(_admission("recovery"), "recovery")
+        with self.assertRaises(DeploymentVerificationError):
+            _admission("scoped_pilot")
 
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()

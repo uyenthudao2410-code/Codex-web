@@ -240,7 +240,7 @@ function guidanceFunction() {
   return context.centralSetupGuidance;
 }
 
-test('central setup guidance keeps development, stale authority and local runtime blockers distinct', () => {
+test('central setup guidance keeps development and local runtime blockers distinct and never blocks on stale authority status', () => {
   const guidance = guidanceFunction();
   const base = {
     current_ui_runtime: { mode: 'packaged', installation_id: 'a'.repeat(64) },
@@ -267,7 +267,7 @@ test('central setup guidance keeps development, stale authority and local runtim
     recovery_host_connection: { state: 'blocked', code: 'RECOVERY_HOST_INSTALLATION_MISMATCH' }
   }, { state: 'approved', fresh: true }, null).key, 'runtime-mismatch');
   assert.equal(guidance(base, { state: 'pending_operator_approval', fresh: true }, null).key, 'pending');
-  assert.equal(guidance(base, { state: 'approved', fresh: true }, { state: 'active', fresh: false }).key, 'authority-stale');
+  assert.equal(guidance(base, { state: 'approved', fresh: true }, { state: 'active', fresh: false }).key, 'approved');
   assert.equal(guidance({ ...base, status: { ...base.status, centralStatusReason: 'LOCAL_EXECUTOR_NOT_READY' } }, { state: 'approved', fresh: true }, { state: 'active', fresh: true }).key, 'local-executor');
   assert.equal(guidance({ ...base, status: { ...base.status, centralStatusReason: 'CENTRAL_LOCAL_POLICY_NOT_READY' } }, { state: 'approved', fresh: true }, { state: 'no_binding', fresh: true }).key, 'policy');
   assert.equal(guidance(base, { state: 'rejected', fresh: true }, null).key, 'unverified');

@@ -1,4 +1,4 @@
-"""Private service document/artifact lanes retain scoped pilot authority."""
+"""Private service document/artifact lanes retain live-binding authority."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ import unittest
 from pathlib import Path
 
 from control_plane.mcp_facade import ControlPlaneMcpFacade
-from control_plane.store import ConflictError, ControlPlaneStore
+from control_plane.store import ConflictError, ControlPlaneStore, PermissionError
 
 
-class ScopedPilotArtifactTests(unittest.TestCase):
+class BindingArtifactTests(unittest.TestCase):
     def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix="scoped-pilot-artifacts-")
+        temporary = tempfile.TemporaryDirectory(prefix="binding-artifacts-")
         self.addCleanup(temporary.cleanup)
         self.now = 1_700_000_000_000
         self.store = ControlPlaneStore(Path(temporary.name) / "control.sqlite3", clock=lambda: self.now)
@@ -38,12 +38,7 @@ class ScopedPilotArtifactTests(unittest.TestCase):
             mcp_server_instance_id="server-documents", activation_epoch="epoch-documents",
             contract_version="smart-v3", readiness="ready",
         )
-        self.store.set_admission_mode(mode="recovery")
-        self.decision = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=self.principal, binding_id=self.binding,
-            expires_at_ms=self.now + 120_000, reason="Document and artifact pilot",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
+        self.store.set_admission_mode(mode="open")
         self.facade = ControlPlaneMcpFacade(
             self.store, auth_kind="private_tunnel_service", oauth_scopes=("control-plane.inventory",),
             oauth_file_read_enabled=True, oauth_patch_write_scope="control-plane.patch",
@@ -55,14 +50,14 @@ class ScopedPilotArtifactTests(unittest.TestCase):
     def _task(self) -> str:
         return self.store.create_mcp_task_session(
             owner_id="owner_default", principal_id=self.principal,
-            binding_id=self.binding, label="Scoped document work",
+            binding_id=self.binding, label="Document work",
         )["task_id"]
 
     def _document(self, key: str, **overrides: object) -> dict:
         arguments = {
             "owner_id": "owner_default", "principal_id": self.principal, "binding_id": self.binding,
             "task_id": self.task, "operation": "document_create", "target": "docs/created.txt",
-            "content": "Scoped document content\n", "idempotency_key": key, "facade_contract": self.contract,
+            "content": "Document content\n", "idempotency_key": key, "facade_contract": self.contract,
             **overrides,
         }
         return self.store.request_mcp_document_write(**arguments)
@@ -105,7 +100,7 @@ class ScopedPilotArtifactTests(unittest.TestCase):
                 intent = response["result"]["structuredContent"]
                 action_id = intent["action_id"]
                 action = self._action(intent)
-                self.assertEqual(action["scoped_pilot_decision_id"], self.decision["decision_id"])
+                self.assertIsNone(action["scoped_pilot_decision_id"])
                 delivered = self._poll("document_write")
                 self.assertEqual([row["action_id"] for row in delivered], [action_id])
                 self.assertEqual(delivered[0]["mcp_document_write_task_id"], self.task)
@@ -120,13 +115,13 @@ class ScopedPilotArtifactTests(unittest.TestCase):
                 self.assertEqual(self._poll("document_write"), [])
 
     def test_document_write_cannot_use_another_binding_principal_or_closed_task(self) -> None:
+        # Task binding and task ownership are both fenced at intake by the
+        # live-task check; only the pilot lineage is gone.
+        with self.assertRaises(ConflictError):
+            self._document("document-wrong-binding", binding_id=self.other_binding)
         another_principal = self.store.create_private_tunnel_service_principal(owner_id="owner_default")["principal_id"]
-        for key, fields in (
-            ("wrong-binding", {"binding_id": self.other_binding}),
-            ("wrong-principal", {"principal_id": another_principal}),
-        ):
-            with self.subTest(key=key), self.assertRaises(ConflictError):
-                self._document("document-" + key, **fields)
+        with self.assertRaises(PermissionError):
+            self._document("document-wrong-principal", principal_id=another_principal)
         self.store.close_mcp_task_session(owner_id="owner_default", principal_id=self.principal, task_id=self.task)
         with self.assertRaises(ConflictError):
             self._document("document-closed-task")
@@ -144,7 +139,7 @@ class ScopedPilotArtifactTests(unittest.TestCase):
         self.assertEqual(self._poll("document_write"), [])
         self.assertEqual(self._action(intent)["delivery_state"], "settled")
 
-    def test_document_and_image_reads_are_pilot_pinned_with_and_without_tasks(self) -> None:
+    def test_document_and_image_reads_are_binding_bound_with_and_without_tasks(self) -> None:
         for kind in ("document", "image"):
             for task_id in (self.task, None):
                 with self.subTest(kind=kind, task_id=task_id):
@@ -152,7 +147,7 @@ class ScopedPilotArtifactTests(unittest.TestCase):
                         f"artifact-{kind}-{'task' if task_id else 'without-task'}", kind=kind,
                         path="docs/input.txt" if kind == "document" else "assets/image.png", task_id=task_id,
                     )
-                    self.assertEqual(self._action(intent)["scoped_pilot_decision_id"], self.decision["decision_id"])
+                    self.assertIsNone(self._action(intent)["scoped_pilot_decision_id"])
                     self.assertEqual([row["action_id"] for row in self._poll("bounded_artifact")], [intent["action_id"]])
 
     def test_artifact_cannot_retarget_and_closed_task_never_dispatches(self) -> None:
@@ -163,10 +158,10 @@ class ScopedPilotArtifactTests(unittest.TestCase):
         self.assertEqual(self._poll("bounded_artifact"), [])
         self.assertEqual(self._action(intent)["delivery_state"], "queued")
 
-    def test_pilot_revocation_fences_both_lanes_even_after_global_open(self) -> None:
+    def test_binding_revocation_fences_both_lanes_even_after_global_open(self) -> None:
         self._document("document-before-revoke")
         self._artifact("artifact-before-revoke")
-        self.store.revoke_scoped_pilot_decision(owner_id="owner_default", decision_id=self.decision["decision_id"])
+        self.store.revoke_binding(owner_id="owner_default", binding_id=self.binding)
         self.store.set_admission_mode(mode="open")
         self.assertEqual(self._poll("document_write"), [])
         self.assertEqual(self._poll("bounded_artifact"), [])
@@ -175,29 +170,39 @@ class ScopedPilotArtifactTests(unittest.TestCase):
         with self.assertRaises(ConflictError):
             self._artifact("artifact-after-revoke")
 
-    def test_pilot_expiry_fences_both_lanes_with_a_fresh_ready_node(self) -> None:
+    def test_no_expiry_blocks_new_intake_after_clock_advance_with_a_fresh_ready_node(self) -> None:
         self._document("document-before-expiry")
-        self._artifact("artifact-before-expiry")
-        self.now = self.decision["expires_at_ms"]
+        old_artifact = self._artifact("artifact-before-expiry")
+        # Past the old 120 s pilot window, with a fresh heartbeat. The old
+        # actions' 60 s writer lease has lapsed (a delivery precondition, not
+        # authority), so this test proves authority, not lease survival: new
+        # intake on the same live binding and task still queues and delivers.
+        self.now += 120_000
         self.store.heartbeat(
             device_id="device-documents", endpoint_id="endpoint-documents", runtime_instance_id="runtime-documents",
             mcp_server_instance_id="server-documents", activation_epoch="epoch-documents",
             contract_version="smart-v3", readiness="ready",
         )
         self.store.set_admission_mode(mode="open")
-        self.assertEqual(self._poll("document_write"), [])
-        self.assertEqual(self._poll("bounded_artifact"), [])
+        document = self._document("document-after-expiry")
+        artifact = self._artifact("artifact-after-expiry")
+        self.assertEqual([row["action_id"] for row in self._poll("document_write")], [document["action_id"]])
+        # The artifact lane has no writer-lease fence, so the pre-advance
+        # artifact delivers alongside the new one; both prove no pilot gate.
+        self.assertEqual([row["action_id"] for row in self._poll("bounded_artifact")],
+                         [old_artifact["action_id"], artifact["action_id"]])
 
-    def test_missing_action_or_task_pilot_lineage_is_never_global_authority(self) -> None:
-        document = self._document("document-lost-lineage")
-        artifact = self._artifact("artifact-lost-lineage", task_id=None)
+    def test_null_decision_lineage_is_the_normal_binding_path(self) -> None:
+        document = self._document("document-null-lineage")
+        artifact = self._artifact("artifact-null-lineage", task_id=None)
         with self.store._connection() as connection:
             connection.execute("UPDATE actions SET scoped_pilot_decision_id=NULL WHERE action_id=?", (artifact["action_id"],))
             connection.execute("UPDATE mcp_task_sessions SET scoped_pilot_decision_id=NULL WHERE task_id=?", (self.task,))
         self.store.set_admission_mode(mode="open")
+        self.assertEqual([row["action_id"] for row in self._poll("document_write")], [document["action_id"]])
+        self.assertEqual([row["action_id"] for row in self._poll("bounded_artifact")], [artifact["action_id"]])
         self.assertEqual(self._poll("document_write"), [])
         self.assertEqual(self._poll("bounded_artifact"), [])
-        self.assertEqual(self._action(document)["delivery_state"], "queued")
 
 
 if __name__ == "__main__":

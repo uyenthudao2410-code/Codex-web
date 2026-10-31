@@ -62,7 +62,7 @@ const pageMeta = {
   usage: ['SỬ DỤNG', 'Sử dụng Token', 'Theo dõi token, chi phí và hiệu quả sử dụng.'],
   device: ['DEVICE CONTROL', 'Thiết bị hiện tại', 'Định danh thiết bị, ownership, Coding/Recovery, Tunnel và Git của máy đang chạy Recovery Host.'],
   deploy: ['KẾT NỐI', 'Kết nối máy chủ', 'Kết nối Ubuntu hoặc cấu hình direct legacy trong phần nâng cao.'],
-  workspace: ['THƯ MỤC & QUYỀN', 'Thư mục & quyền', 'Chọn đường dẫn local và xem rõ quyền đọc, ghi, chạy đang được áp dụng.'],
+  workspace: ['THƯ MỤC & QUYỀN', 'Thư mục & quyền', 'Thư mục đã thêm dùng được ngay sau khi đăng ký; xem rõ quyền đọc, ghi, chạy đang được áp dụng.'],
   task: ['TASKS & PROOF', 'Tasks & Proof', 'Theo dõi durable task state, kiểm thử, proof, lịch sử và hiệu năng.'],
   system: ['CÀI ĐẶT', 'Cài đặt', 'Kết nối Ubuntu, thư mục, quyền và tùy chọn ứng dụng trong cùng một nơi.'],
   build: ['BUILD & XÁC MINH', 'Xác minh & Build', 'Tự động nhận diện dự án, thực thi kiểm thử và build, đồng thời kiểm tra sản phẩm đầu ra.'],
@@ -583,7 +583,7 @@ async function startSetupContinuation({ prepareExec = false } = {}) {
             : executionMode === 'native_only' ? 'Chỉ native có kiểm soát: không mở VM; chặn lệnh ngoài policy native. '
               : 'Native trước theo policy: metadata Git và phiên bản CLI không mở VM. Lệnh chạy mã dự án cần quyền native riêng hoặc Windows Sandbox. '
         : '')
-      + 'Quyền và thời hạn của kết nối MCP vẫn được kiểm tra. '
+      + 'Thư mục dùng được ngay sau khi đăng ký; không cần cấp quyền riêng. '
       + (workspace && centralWorkspaceCapabilitiesChanged(workspace, capabilities)
         ? 'Đổi mức quyền sẽ đóng liên kết và tác vụ của đăng ký cũ. '
         : '')
@@ -622,7 +622,6 @@ async function continueSetup() {
   const scope = state.setupContinuation;
   if (!scope || state.setupContinuationBusy) return null;
   state.setupContinuationBusy = true;
-  let pending = false;
   try {
     if (state.setupContinuation !== scope || !setupScopeMatches(scope, selectedCentralWorkspace())) {
       cancelSetupContinuation('Lựa chọn máy hoặc thư mục đã thay đổi. Chọn lại đúng phạm vi để tiếp tục.');
@@ -632,33 +631,9 @@ async function continueSetup() {
       cancelSetupContinuation('Đã dừng chờ sau 10 phút. Lựa chọn được giữ; bấm Tiếp tục để kiểm tra lại.');
       return null;
     }
-    if (!scope.activated) {
-      if (typeof api.activateControlPlaneWorkspace !== 'function') throw new Error('Bản ứng dụng này chưa hỗ trợ kích hoạt thư mục. Cập nhật ứng dụng rồi thử lại.');
-      state.setupContinuationMessage = 'Đang chuyển MCP sang thư mục đã chọn…';
-      renderSetupExecution();
-      const activation = unwrap(await api.activateControlPlaneWorkspace({
-        workspaceId: scope.workspace_id, workspaceGeneration: scope.workspace_generation,
-        confirmActivate: true
-      }));
-      if (state.setupContinuation !== scope || !setupScopeMatches(scope, selectedCentralWorkspace())) return null;
-      if (activation?.workspace_id !== scope.workspace_id || activation?.workspace_generation !== scope.workspace_generation
-        || typeof activation.workspace_path !== 'string' || !activation.workspace_path.trim()) {
-        throw new Error('Kết quả kích hoạt chưa khớp thư mục đã chọn. Chưa bật quyền.');
-      }
-      state.centralWorkspaceActivationReceipt = {
-        origin: scope.origin, device: scope.device, workspace_id: scope.workspace_id,
-        workspace_generation: scope.workspace_generation, workspace_path: activation.workspace_path
-      };
-      try { localStorage.setItem('coding-tools-active-folder-v1', JSON.stringify(state.centralWorkspaceActivationReceipt)); }
-      catch { /* Display cache is optional; authenticated authority is checked next. */ }
-      scope.activated = true;
-      await refreshSnapshot({ forceForms: false });
-      if (state.setupContinuation !== scope || !setupScopeMatches(scope, selectedCentralWorkspace())) return null;
-    }
-    state.setupContinuationMessage = 'Đang kiểm tra quyền đã cấp trên Ubuntu…';
-    renderSetupExecution();
-    await reconcileControlPlaneAuthorityStatus({ quiet: true });
-    if (state.setupContinuation !== scope) return null;
+    // No pilot step and no authority gate: registration already created
+    // the binding, so the folder is usable immediately. The standing
+    // file/exec installs below are the only verification before use.
     await refreshControlPlaneWorkspaces({ quiet: true });
     const workspace = selectedCentralWorkspace();
     if (state.setupContinuation !== scope || !setupScopeMatches(scope, workspace)) {
@@ -666,23 +641,10 @@ async function continueSetup() {
       return null;
     }
     if (Date.now() > scope.deadline) {
-      cancelSetupContinuation('Đã dừng chờ sau 10 phút. Lựa chọn được giữ; bấm Tiếp tục sau khi owner cấp quyền.');
+      cancelSetupContinuation('Đã dừng chờ sau 10 phút. Lựa chọn được giữ; bấm Tiếp tục để kiểm tra lại.');
       return null;
     }
-    const target = centralWorkspaceTarget(workspace);
-    if (state.centralAuthorityStatus?.fresh === true
-      && ['revoked', 'binding_revoked', 'workspace_retired', 'workspace_missing'].includes(state.centralAuthorityStatus.state)) {
-      throw new Error(authorityStatusPresentation(state.centralAuthorityStatus).detail);
-    }
-    const permitted = target?.dispatch_state === 'dispatchable' && ['read', 'write', 'exec'].every((name) =>
-      workspace.capabilities?.[name] !== true || target.capabilities?.[name] === true);
-    if (!permitted) {
-      pending = true;
-      state.setupContinuationMessage = state.centralAuthorityStatus?.fresh === true
-        ? 'Chưa xác minh được kết nối MCP cho thư mục này. Đang kiểm tra lại; chưa bật quyền.'
-        : 'Chưa đọc được trạng thái Ubuntu. Đang kiểm tra lại; giữ nguyên máy và thư mục đã chọn.';
-      return null;
-    }
+
     if (state.snapshot?.status?.signalStale === true || state.snapshot?.status?.telemetryAvailable === false) {
       throw new Error('Trạng thái runtime đang cũ. Kiểm tra kết nối trước khi đồng bộ quyền.');
     }
@@ -744,29 +706,18 @@ async function continueSetup() {
       || (workspace.capabilities?.exec && !access.exec)) {
       throw new Error('Chưa xác minh được quyền hiện hành trên Ubuntu. Bấm Tiếp tục để kiểm tra và đồng bộ lại.');
     }
-    await reconcileControlPlaneAuthorityStatus({ quiet: true });
-    if (!isCurrent()) return null;
-    const finalTarget = centralWorkspaceTarget(workspace);
-    if (finalTarget?.dispatch_state !== 'dispatchable'
-      || ['read', 'write', 'exec'].some((name) => workspace.capabilities?.[name] === true && finalTarget.capabilities?.[name] !== true)) {
-      throw new Error('Quyền Ubuntu đã hết hạn hoặc thay đổi trong lúc kiểm tra. Policy local được giữ; chủ hệ thống cần kiểm tra quyền rồi tiếp tục.');
-    }
+    // Authority status is display-only: it never gates completion. The
+    // standing policy receipts verified above are the completion evidence.
     cancelSetupContinuation('Đã xác minh policy cho quyền đã chọn. Tác vụ mới dùng thư mục này; kết quả từng lệnh xem trong Tác vụ.');
     return access;
   } catch (error) {
     if (state.setupContinuation === scope) cancelSetupContinuation(error?.message || 'Chưa hoàn tất thiết lập. Kiểm tra rồi tiếp tục.');
     throw error;
   } finally {
-    if (state.setupContinuation === scope && !pending) cancelSetupContinuation('Thiết lập đã dừng vì phạm vi hoặc thời hạn thay đổi. Bấm Tiếp tục để xác nhận lại.');
+    if (state.setupContinuation === scope) cancelSetupContinuation('Thiết lập đã dừng vì phạm vi hoặc thời hạn thay đổi. Bấm Tiếp tục để xác nhận lại.');
     state.setupContinuationBusy = false;
     renderSetupExecution();
     if (state.snapshot) renderSetupState(state.snapshot);
-    if (pending && state.setupContinuation === scope) {
-      state.setupContinuationTimer = setTimeout(() => {
-        state.setupContinuationTimer = null;
-        void continueSetup().catch((error) => toast('Thiết lập cần xử lý', error.message, 'warning'));
-      }, 15_000);
-    }
   }
 }
 
@@ -919,6 +870,8 @@ function centralRoutePresentation(status = {}) {
   };
 }
 
+// Authority status is display-only for setup guidance: it never blocks
+// a folder. The authority argument is kept for call-site compatibility.
 function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null) {
   const uiRecovery = snapshot.recoveryHost?.electron_ui_recovery || {};
   const currentUiMode = String(
@@ -955,9 +908,9 @@ function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null
   ) || connectionMismatch;
   const status = snapshot?.status || {};
   const centralStatusReason = String(status.centralStatusReason || '').trim();
-  const packagedRequired = [enrollment?.error_code, authority?.error_code]
+  const packagedRequired = [enrollment?.error_code]
     .some((code) => /PACKAGED_REQUIRED|candidate packaged/.test(String(code || '')));
-  const packagedRuntimeMissing = [enrollment?.error_code, authority?.error_code]
+  const packagedRuntimeMissing = [enrollment?.error_code]
     .some((code) => /RUNTIME_MISSING/.test(String(code || '')));
   if (currentUiMode === 'packaged' && installationMismatch) return {
     key: 'runtime-mismatch', owner: 'TRÊN WINDOWS', title: 'Recovery Host không cùng bản cài đặt',
@@ -989,7 +942,7 @@ function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null
     detail: 'Kiểm tra địa chỉ Ubuntu và kết nối mạng chung, rồi kiểm tra trạng thái máy. Giữ nguyên yêu cầu đã lưu; không gửi đăng ký mới chỉ vì lần kiểm tra này chưa thành công.',
     action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
   };
-  if (enrollment?.state === 'revoked' || authority?.state === 'revoked') return {
+  if (enrollment?.state === 'revoked') return {
     key: 'revoked', owner: 'QUẢN TRỊ VIÊN UBUNTU', title: 'Máy đã bị thu hồi quyền',
     detail: 'Nhờ quản trị viên kiểm tra máy trên Ubuntu. Không tự đăng ký lại hoặc chuyển công việc sang máy khác.',
     action: 'details', actionLabel: 'Xem hướng xử lý'
@@ -1021,11 +974,7 @@ function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null
     detail: 'Runtime đang phản hồi nhưng chưa có receipt enrollment fresh ở client. Giữ nguyên cấu hình và kiểm tra lại; không coi heartbeat là approve.',
     action: 'check', actionLabel: 'Kiểm tra trạng thái máy'
   };
-  if (authority?.fresh === false) return {
-    key: 'authority-stale', owner: 'KIỂM TRA QUYỀN UBUNTU', title: 'Máy đã duyệt nhưng quyền hiện tại chưa xác minh',
-    detail: 'Lần đọc account/target từ Ubuntu đang stale hoặc lỗi. Không giữ nhãn xanh từ receipt cũ, không gửi lại enrollment và không chạy task cho tới khi có receipt mới.',
-    action: 'check', actionLabel: 'Kiểm tra lại quyền'
-  };
+
   if (centralStatusReason === 'LOCAL_EXECUTOR_NOT_READY') return {
     key: 'local-executor', owner: 'TRÊN WINDOWS', title: 'Máy đã duyệt nhưng runtime local chưa sẵn sàng',
     detail: 'Enrollment không có vấn đề. Kiểm tra activation/runtime local theo hướng dẫn; không duyệt lại máy và không đăng ký workspace mới để né blocker.',
@@ -1043,7 +992,7 @@ function centralSetupGuidance(snapshot = {}, enrollment = null, authority = null
   };
   return {
     key: 'approved', owner: 'WINDOWS → UBUNTU', title: 'Máy đã được xác nhận · tiếp tục thư mục và quyền',
-    detail: 'Thêm thư mục ở phần “Thư mục & quyền”. Quản trị viên cấp thư mục cho tài khoản; sau đó kiểm tra liên kết ở dưới. Duyệt máy không đồng nghĩa đã sẵn sàng chạy nhiệm vụ.',
+    detail: 'Thêm thư mục ở phần “Thư mục & quyền”. Thư mục đã thêm dùng được ngay sau khi đăng ký; trạng thái liên kết chỉ hiển thị để kiểm tra. Duyệt máy không đồng nghĩa đã sẵn sàng chạy nhiệm vụ.',
     action: 'workspace', actionLabel: 'Mở thư mục & quyền'
   };
 }
@@ -1079,7 +1028,7 @@ function renderConnectionGuidance(snapshot) {
     const detail = devNotice.querySelector('p');
     if (guidance.key === 'development') {
       if (title) title.textContent = 'Bạn đang dùng bản phát triển · npm start';
-      if (detail) detail.textContent = 'Chọn thư mục, đăng ký workspace và bật quyền Ubuntu cần bản cài đặt đã được xác minh. Mở bản Coding Tools MCP đã cài để tiếp tục. npm start hỗ trợ preview và chẩn đoán; kết nối Ubuntu không tự cấp quyền chạy.';
+      if (detail) detail.textContent = 'Chọn thư mục và đăng ký workspace cần bản cài đặt đã được xác minh. Mở bản Coding Tools MCP đã cài để tiếp tục. npm start hỗ trợ preview và chẩn đoán; kết nối Ubuntu không tự cấp quyền chạy.';
     } else if (guidance.key === 'runtime-mismatch') {
       if (title) title.textContent = 'Recovery Host không cùng bản cài đặt';
       if (detail) detail.textContent = 'Cửa sổ hiện tại là packaged nhưng Recovery Host thuộc installation khác, thường do runtime development còn giữ single-instance lock. Đóng runtime kia rồi mở lại bản Coding Tools MCP đã cài.';
@@ -1553,7 +1502,7 @@ function renderCentralExecutorMode(snapshot) {
     workspaceStatus.textContent = !selectedWorkspace ? 'Đăng ký đã thay đổi; chưa áp dụng quyền. Làm mới danh sách rồi chọn lại.'
       : centralWorkspaceCapabilitiesChanged(selectedWorkspace, state.centralWorkspaceCapabilities)
         ? 'Mức quyền mới chưa lưu. Bấm dùng thư mục để xác nhận và áp dụng.'
-        : state.centralAuthorityStatus?.fresh !== true ? 'Trạng thái liên kết đã cũ. Kiểm tra lại trước khi bật quyền.'
+        : state.centralAuthorityStatus?.fresh !== true ? 'Trạng thái liên kết đã cũ. Kiểm tra lại trạng thái liên kết.'
           : centralWorkspaceTarget(selectedWorkspace)?.dispatch_state !== 'dispatchable'
           ? 'Thư mục đã thêm. Bấm dùng thư mục để kết nối MCP và áp dụng quyền.'
           : 'Bấm dùng thư mục để áp dụng quyền đọc/sửa/chạy sau một xác nhận.';

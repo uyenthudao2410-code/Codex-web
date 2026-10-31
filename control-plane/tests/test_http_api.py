@@ -161,7 +161,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             display_name=display_name,
         )
 
-    def test_shared_service_and_scoped_pilot_operator_routes_stay_redacted_and_csrf_protected(self) -> None:
+    def test_shared_service_operator_routes_stay_redacted_and_csrf_protected(self) -> None:
         node = self.server.store.enroll_node(
             owner_id="owner_default", device_id="device-pilot-http",
             endpoint_id="endpoint-pilot-http", display_name="Pilot node",
@@ -182,19 +182,19 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         }, f"Bearer {self.operator_token}")
         self.assertEqual(status, 201)
         self.assertIn("access_token", grant)
-        self.server.store.set_admission_mode(mode="recovery")
-        status, decision = self._post("/v1/scoped-pilot-decisions", {
+        # The pilot decision routes are deleted: creation is gone.
+        status, gone = self._post("/v1/scoped-pilot-decisions", {
             "principal_id": principal["principal_id"],
             "binding_id": binding["binding_id"],
             "expires_at_ms": self.server.store.clock() + 60_000,
             "reason": "Exact selected workspace pilot",
         }, f"Bearer {self.operator_token}")
-        self.assertEqual(status, 201)
+        self.assertEqual(status, 404)
         status, overview = self._get("/v1/ui/overview", f"Bearer {self.operator_token}")
         self.assertEqual(status, 200)
         self.assertEqual(len(overview["mcp_service_principals"]), 1)
         self.assertEqual(len(overview["mcp_service_grants"]), 1)
-        self.assertEqual(len(overview["scoped_pilot_decisions"]), 1)
+        self.assertNotIn("scoped_pilot_decisions", overview)
         self.assertNotIn(grant["access_token"], json.dumps(overview))
         self.assertNotIn("token_digest", json.dumps(overview))
         renewed_grant_expiry = self.server.store.clock() + 120_000
@@ -205,28 +205,14 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(renewed_grant["expires_at_ms"], renewed_grant_expiry)
-        renewed_decision_expiry = self.server.store.clock() + 120_000
-        status, renewed_decision = self._post(
-            f"/v1/scoped-pilot-decisions/{decision['decision_id']}/renew",
-            {"expires_at_ms": renewed_decision_expiry},
-            f"Bearer {self.operator_token}",
-        )
-        self.assertEqual(status, 200)
-        self.assertEqual(renewed_decision["expires_at_ms"], renewed_decision_expiry)
         cookie, csrf = self._ui_login()
         status, forbidden, _ = self._request_with_headers(
-            f"/v1/ui/scoped-pilot-decisions/{decision['decision_id']}/revoke",
+            f"/v1/ui/mcp-service-grants/{grant['grant_id']}/revoke",
             method="POST", payload={}, headers={"Origin": self.web_origin, "Cookie": cookie},
         )
         self.assertEqual(status, 403)
         self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
         headers = {"Origin": self.web_origin, "Cookie": cookie, CSRF_HEADER_NAME: csrf}
-        status, revoked, _ = self._request_with_headers(
-            f"/v1/ui/scoped-pilot-decisions/{decision['decision_id']}/revoke",
-            method="POST", payload={}, headers=headers,
-        )
-        self.assertEqual(status, 200)
-        self.assertIsNotNone(revoked["revoked_at_ms"])
         status, revoked_grant, _ = self._request_with_headers(
             f"/v1/ui/mcp-service-grants/{grant['grant_id']}/revoke",
             method="POST", payload={}, headers=headers,

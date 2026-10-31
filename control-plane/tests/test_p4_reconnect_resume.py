@@ -4,16 +4,15 @@ Covers the two layers P4 can honestly pin from the Windows checkout:
 
 * Store layer (control_plane.store): after a simulated disconnect and a
   fresh-heartbeat reconnect, poll dispatches only still-queued actions;
-  settled actions are never re-dispatched. Pilot renewal keeps scope
-  (only expiry changes), an expired pilot cannot be renewed, and workspace
-  activation replays the live pilot (re-homing) without minting authority.
+  settled actions are never re-dispatched. Workspace activation is an
+  idempotent ensure-binding: re-activation returns the same binding
+  without minting authority, and there is no pilot to renew.
 * Node-agent layer (control_plane.node_agent): the connected-agent loop
   classifies reconnect moments (agent start / readiness transition) and
   summarises reconnect authority observations without minting anything.
 
-What this file deliberately does NOT claim: operator-token pilot renewal
-and admission reopen are server-side operator operations (see
-store.renew_scoped_pilot_decision and http_api admission routes) and are
+What this file deliberately does NOT claim: admission reopen is a
+server-side operator operation (see http_api admission routes) and is
 not available to the node agent, which holds no operator token.
 """
 
@@ -61,12 +60,7 @@ class ReconnectStoreTests(unittest.TestCase):
         self.store.heartbeat(device_id="device-alpha", endpoint_id="endpoint-alpha",
                              runtime_instance_id="runtime-alpha", mcp_server_instance_id="server-alpha",
                              activation_epoch="epoch-alpha", contract_version="smart-v3", readiness="ready")
-        self.store.set_admission_mode(mode="recovery")
-        self.pilot = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=self.principal, binding_id=self.binding["binding_id"],
-            expires_at_ms=self.now + 20 * 60 * 60 * 1000, reason="P4 reconnect pilot",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
+        self.store.set_admission_mode(mode="open")
         self.store.create_mcp_task_session(
             owner_id="owner_default", principal_id=self.principal,
             binding_id=self.binding["binding_id"], label="P4 work",
@@ -115,62 +109,27 @@ class ReconnectStoreTests(unittest.TestCase):
         self.assertEqual(self.action_state(queued["action_id"]), "settled")
         self.assertEqual(self.store.poll_actions(device_id="device-alpha", lane="bounded_file_read"), [])
 
-    def _fresh_pilot_on_autocad(self) -> dict:
-        binding = self.store.create_binding(
-            owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-autocad",
-            workspace_generation="generation-1", display_name="Autocad",
-        )
-        self.store.set_admission_mode(mode="recovery")
-        pilot = self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=self.principal, binding_id=binding["binding_id"],
-            expires_at_ms=self.now + 120_000, reason="P4 renew pilot",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
-        return pilot
-
-    def test_renew_expired_pilot_raises_conflict(self) -> None:
-        pilot = self._fresh_pilot_on_autocad()
-        self.now = pilot["expires_at_ms"] + 1
-        with self.assertRaises(ConflictError):
-            self.store.renew_scoped_pilot_decision(
-                owner_id="owner_default", decision_id=pilot["decision_id"],
-                expires_at_ms=self.now + 3_600_000,
-            )
-
-    def test_renew_live_pilot_preserves_scope(self) -> None:
-        pilot = self._fresh_pilot_on_autocad()
-        renewed = self.store.renew_scoped_pilot_decision(
-            owner_id="owner_default", decision_id=pilot["decision_id"],
-            expires_at_ms=self.now + 3_600_000,
-        )
-        self.assertEqual(renewed["decision_id"], pilot["decision_id"])
-        self.assertEqual(renewed["binding_id"], pilot["binding_id"])
-        self.assertEqual(renewed["device_id"], pilot["device_id"])
-        self.assertEqual(renewed["workspace_id"], pilot["workspace_id"])
-        self.assertEqual(renewed["workspace_generation"], pilot["workspace_generation"])
-        self.assertEqual(renewed["principal_id"], pilot["principal_id"])
-        self.assertEqual(renewed["expires_at_ms"], self.now + 3_600_000)
-        self.assertIsNone(renewed["revoked_at_ms"])
-
-    def test_activate_replay_rehomes_without_new_authority(self) -> None:
+    def test_activate_is_idempotent_without_new_authority(self) -> None:
         first = self.store.activate_node_workspace(
             device_id="device-alpha", principal_id=self.principal,
             workspace_id="workspace-autocad", workspace_generation="generation-1",
         )
-        self.assertFalse(first["replayed"])
+        self.assertEqual(set(first), {"device_id", "workspace_id", "workspace_generation", "binding_id", "state"})
+        self.assertEqual(first["state"], "active")
         with self.store._connection() as connection:
+            bindings_before = connection.execute("SELECT COUNT(*) FROM bindings").fetchone()[0]
             decisions_before = connection.execute("SELECT COUNT(*) FROM scoped_pilot_decisions").fetchone()[0]
         second = self.store.activate_node_workspace(
             device_id="device-alpha", principal_id=self.principal,
             workspace_id="workspace-autocad", workspace_generation="generation-1",
         )
-        self.assertTrue(second["replayed"])
-        self.assertEqual(second["pilot_decision_id"], first["pilot_decision_id"])
-        self.assertEqual(second["expires_at_ms"], first["expires_at_ms"])
-        self.assertEqual(second["binding_id"], first["binding_id"])
+        self.assertEqual(second, first)
         with self.store._connection() as connection:
+            bindings_after = connection.execute("SELECT COUNT(*) FROM bindings").fetchone()[0]
             decisions_after = connection.execute("SELECT COUNT(*) FROM scoped_pilot_decisions").fetchone()[0]
+        self.assertEqual(bindings_after, bindings_before)
         self.assertEqual(decisions_after, decisions_before)
+        self.assertEqual(decisions_after, 0)
 
 
 class ReconnectTransitionTests(unittest.TestCase):

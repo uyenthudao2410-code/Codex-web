@@ -2819,25 +2819,16 @@ class ControlPlaneMcpFacade:
         message = "Authorized target inventory only; no workspace was accessed and no task authority was created."
         if self.auth_kind == PRIVATE_TUNNEL_SERVICE_AUTH_KIND:
             # A shared connector (personal Plus/Pro or Business/Edu/Enterprise)
-            # identifies every permitted caller as one service, so owner inventory is broader than the target
-            # they were delegated. Show only the exact currently delegated
-            # bindings; an empty result is honest before/after pilot decisions.
-            now = self.store.clock()
-            delegated = {
-                decision["binding_id"]
-                for decision in self.store.list_scoped_pilot_decisions(owner_id=owner_id)
-                if decision["principal_id"] == principal_id
-                and decision["revoked_at_ms"] is None
-                and decision["expires_at_ms"] > now
-            }
+            # identifies every permitted caller as one service, so owner inventory is broader than the
+            # targets any one caller may use. Show only exact live bindings;
+            # an empty result is honest when no binding is live.
             targets = [
                 target for target in targets
-                if target["binding_id"] in delegated
-                and target["binding_state"] == "active"
+                if target["binding_state"] == "active"
                 and target["workspace_state"] == "active"
                 and target["node_state"] == "active"
             ]
-            message = "Exact delegated service target inventory only; no workspace was accessed and no task authority was created."
+            message = "Exact live service target inventory only; no workspace was accessed and no task authority was created."
         return {
             "content": [{"type": "text", "text": message + " Use this exact tool_contract for expected_facade_contract: " + _canonical_json(_contract_metadata(self.contract))
                          + ". File paths are relative POSIX paths from the selected workspace root; the node contract_version is a different contract. Registered capabilities do not prove local file or exec admission."}],

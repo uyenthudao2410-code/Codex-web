@@ -389,7 +389,14 @@ def _request(url: str, path: str, payload: dict[str, Any], authorization: str | 
             detail = json.loads(error.read().decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             detail = {}
-        raise RuntimeError(str(detail.get("error", {}).get("code") or f"HTTP_{error.code}")) from error
+        facade_error = detail.get("error") if isinstance(detail, dict) else None
+        if isinstance(facade_error, dict):
+            facade_message = facade_error.get("message") or facade_error.get("code")
+        elif isinstance(facade_error, str):
+            facade_message = facade_error
+        else:
+            facade_message = None
+        raise RuntimeError(facade_message or f"HTTP_{error.code}") from error
     except (urllib.error.URLError, OSError, TimeoutError) as error:
         # A receipt may already be durable locally, and the central service may
         # even have accepted it before this transport failure reached us.  Keep
@@ -6118,20 +6125,13 @@ def activate_workspace(args: argparse.Namespace) -> int:
         {"workspace_id": entry["workspace_id"], "workspace_generation": entry["workspace_generation"],
          "confirm_activate": True}, f"Node {config['node_secret']}",
     )
-    expected = {"device_id", "workspace_id", "workspace_generation", "binding_id",
-                "pilot_decision_id", "expires_at_ms", "replayed", "state"}
+    expected = {"device_id", "workspace_id", "workspace_generation", "binding_id", "state"}
     if (not isinstance(response, dict) or set(response) != expected
             or response.get("device_id") != config["device_id"]
             or response.get("workspace_id") != entry["workspace_id"]
             or response.get("workspace_generation") != entry["workspace_generation"]
             or not isinstance(response.get("binding_id"), str)
             or re.fullmatch(r"bind_[a-f0-9]{32}", response["binding_id"]) is None
-            or not isinstance(response.get("pilot_decision_id"), str)
-            or re.fullmatch(r"pilot_[a-f0-9]{32}", response["pilot_decision_id"]) is None
-            or not isinstance(response.get("expires_at_ms"), int)
-            or isinstance(response.get("expires_at_ms"), bool)
-            or response["expires_at_ms"] <= int(time.time() * 1000)
-            or not isinstance(response.get("replayed"), bool)
             or response.get("state") != "active"):
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_ACTIVATION_RESPONSE_INVALID")
     current_entry = _require_current_local_workspace_registration(
@@ -7982,7 +7982,7 @@ def _reconnect_authority_observations(args):
     steady-state polling traffic is unchanged. A per-workspace failure is
     recorded as an error entry, never raised: one missing workspace must
     not hide the rest. This observation never grants, extends, or reopens
-    authority; pilot renewal stays operator-only and admission reopen stays
+    authority; there is no pilot to renew, and admission reopen stays
     with the operator runbook.
     """
     try:
@@ -8105,7 +8105,7 @@ def _write_connected_agent_status(args: argparse.Namespace, status: dict[str, An
 
 
 def run_connected_agent(args: argparse.Namespace) -> int:
-    """Keep an enrolled node connected independently of the read-only pilot.
+    """Keep an enrolled node connected independently of binding authority.
 
     A heartbeat is always attempted after enrollment.  Local standing policy
     files decide which capability lanes may dequeue work; a missing/disabled
@@ -8115,7 +8115,7 @@ def run_connected_agent(args: argparse.Namespace) -> int:
     non-ready to ready transition, the loop re-validates standing authority
     once (read-only policy-authority observations for registered workspaces)
     and reports the reconnect in the iteration line. That observation never
-    grants, extends, or reopens authority: pilot renewal stays operator-only
+    grants, extends, or reopens authority: there is no pilot to renew
     and admission reopen stays with the operator runbook, so a blocked
     reconnect is reported as blocked instead of silently polling empty.
     """

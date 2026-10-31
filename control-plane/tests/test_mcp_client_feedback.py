@@ -236,8 +236,7 @@ class McpClientFeedbackTests(unittest.TestCase):
         for enabled in (False, True):
             with self.subTest(exec_enabled=enabled):
                 facade = self.private_facade(exec_enabled=enabled)
-                with (mock.patch.object(self.store, "list_account_targets", return_value=[]),
-                      mock.patch.object(self.store, "list_scoped_pilot_decisions", return_value=[])):
+                with mock.patch.object(self.store, "list_account_targets", return_value=[]):
                     inventory = self.call({"operation": "inventory"}, facade=facade)["result"]["structuredContent"]
                 capabilities = inventory["relay_capabilities"]
                 self.assertFalse(inventory["workspace_accessed"])

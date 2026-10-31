@@ -100,28 +100,20 @@ class PrivateTunnelServiceFacadeTests(unittest.TestCase):
         self.assertEqual(denied["result"]["structuredContent"]["tool_name"], "request_permissions")
         self.assertEqual(self.store.health()["counts"]["mcp_permission_requests"], 0)
 
-    def test_shared_service_inventory_shows_only_exact_current_delegated_bindings(self) -> None:
+    def test_shared_service_inventory_shows_only_live_bindings(self) -> None:
         targets = [
             {"binding_id": "bind-selected", "binding_state": "active", "workspace_state": "active", "node_state": "active"},
             {"binding_id": "bind-other", "binding_state": "active", "workspace_state": "active", "node_state": "active"},
-            {"binding_id": "bind-unrelated", "binding_state": "active", "workspace_state": "active", "node_state": "active"},
+            {"binding_id": "bind-revoked", "binding_state": "revoked", "workspace_state": "active", "node_state": "active"},
+            {"binding_id": "bind-retired", "binding_state": "active", "workspace_state": "retired", "node_state": "active"},
+            {"binding_id": "bind-dead-node", "binding_state": "active", "workspace_state": "active", "node_state": "revoked"},
         ]
-        decision = {
-            "principal_id": "shared-service-principal", "binding_id": "bind-selected",
-            "revoked_at_ms": None, "expires_at_ms": self.store.clock() + 60_000,
-        }
-        with (mock.patch.object(self.store, "list_account_targets", return_value=targets),
-              mock.patch.object(self.store, "list_scoped_pilot_decisions", return_value=[])):
+        with mock.patch.object(self.store, "list_account_targets", return_value=targets):
+            inventory = self._call("workspace_context", {"operation": "inventory"}, frozenset({READ_SCOPE}))
+        self.assertEqual(inventory["result"]["structuredContent"]["targets"], targets[:2])
+        with mock.patch.object(self.store, "list_account_targets", return_value=[]):
             empty = self._call("workspace_context", {"operation": "inventory"}, frozenset({READ_SCOPE}))
         self.assertEqual(empty["result"]["structuredContent"]["targets"], [])
-        with (mock.patch.object(self.store, "list_account_targets", return_value=targets),
-              mock.patch.object(self.store, "list_scoped_pilot_decisions", return_value=[decision])):
-            selected = self._call("workspace_context", {"operation": "inventory"}, frozenset({READ_SCOPE}))
-        self.assertEqual(selected["result"]["structuredContent"]["targets"], [targets[0]])
-        with (mock.patch.object(self.store, "list_account_targets", return_value=targets),
-              mock.patch.object(self.store, "list_scoped_pilot_decisions", return_value=[decision, {**decision, "binding_id": "bind-other"}])):
-            parallel = self._call("workspace_context", {"operation": "inventory"}, frozenset({READ_SCOPE}))
-        self.assertEqual(parallel["result"]["structuredContent"]["targets"], targets[:2])
 
     def test_write_and_exec_require_verified_write_scope(self) -> None:
         for name, arguments in (

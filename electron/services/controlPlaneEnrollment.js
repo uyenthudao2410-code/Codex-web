@@ -896,18 +896,30 @@ function parseWorkspaceActivationResult(stdout, workspaceId, workspaceGeneration
   const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   let payload;
   try { if (lines.length === 1) payload = JSON.parse(lines[0]); } catch { /* rejected below */ }
+  // No-pilot contract: the binding receipt carries only device, workspace,
+  // binding and state. Stale pilot fields (pilot_decision_id, expires_at_ms)
+  // and the legacy replayed flag, when present in an old response, are
+  // ignored, never required and never stored. Any other extra field is
+  // still rejected so path/secret material cannot smuggle through.
+  const required = ['binding_id', 'device_id', 'state', 'workspace_generation', 'workspace_id'];
+  const allowedExtra = new Set(['pilot_decision_id', 'expires_at_ms', 'replayed']);
   if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES
     || !payload || typeof payload !== 'object' || Array.isArray(payload)
-    || Object.keys(payload).sort().join(',') !== 'binding_id,device_id,expires_at_ms,pilot_decision_id,replayed,state,workspace_generation,workspace_id'
+    || Object.keys(payload).some((key) => !required.includes(key) && !allowedExtra.has(key))
+    || !required.every((key) => Object.hasOwn(payload, key))
     || payload.workspace_id !== workspaceId || payload.workspace_generation !== workspaceGeneration
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(payload.device_id || ''))
     || !/^bind_[0-9a-f]{32}$/.test(String(payload.binding_id || ''))
-    || !/^pilot_[0-9a-f]{32}$/.test(String(payload.pilot_decision_id || ''))
-    || !Number.isSafeInteger(payload.expires_at_ms) || payload.expires_at_ms <= Date.now()
-    || typeof payload.replayed !== 'boolean' || payload.state !== 'active') {
-    throw enrollmentError('CONTROL_PLANE_WORKSPACE_ACTIVATION_OUTPUT_INVALID', 'Biên nhận kích hoạt không khớp thư mục đã chọn. Cần đối soát trước khi tiếp tục.');
+    || payload.state !== 'active') {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_ACTIVATION_OUTPUT_INVALID', 'Biên nhận liên kết không khớp thư mục đã chọn. Cần đối soát trước khi tiếp tục.');
   }
-  return Object.freeze({ ...payload });
+  return Object.freeze({
+    device_id: payload.device_id,
+    workspace_id: payload.workspace_id,
+    workspace_generation: payload.workspace_generation,
+    binding_id: payload.binding_id,
+    state: 'active'
+  });
 }
 
 function parseWorkspaceRegistrationResult(stdout) {
@@ -1986,6 +1998,9 @@ class ControlPlaneEnrollmentService {
       centralWorkspaceId(workspaceId), centralWorkspaceGeneration(workspaceGeneration));
   }
 
+  // Ensure-binding: the node agent returns the binding created at
+  // registration. confirmActivate is only the local folder-pick
+  // confirmation; there is no pilot decision or expiry in this receipt.
   async activateWorkspace({ workspaceId, workspaceGeneration, confirmActivate = false } = {}) {
     if (this.paths.runtimeMode() !== 'packaged') {
       throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Kích hoạt thư mục chỉ chạy từ ứng dụng đóng gói đã xác minh.');

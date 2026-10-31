@@ -299,16 +299,7 @@ class PrivateTunnelServiceHttpTests(unittest.TestCase):
             owner_id="owner_default", device_id=node["device_id"],
             display_name="Selected workspace", **selection,
         )
-        status, unscoped = self.request("POST", path, body=selection, extra_headers=node_headers)
-        self.assertEqual(status, 409)
-        self.assertEqual(unscoped["error"]["code"], "CONFLICT")
-        self.store.set_admission_mode(mode="recovery")
-        self.store.create_scoped_pilot_decision(
-            owner_id="owner_default", principal_id=self.principal["principal_id"],
-            binding_id=binding["binding_id"], expires_at_ms=self.store.clock() + 60_000,
-            reason="Selected private policy authority test",
-        )
-        self.store.set_admission_mode(mode="scoped_pilot")
+        # No pilot needed: a live binding is sufficient for policy authority.
         status, authority = self.request("POST", path, body=selection, extra_headers=node_headers)
         self.assertEqual(status, 200)
         self.assertEqual(authority["owner_id"], "owner_default")

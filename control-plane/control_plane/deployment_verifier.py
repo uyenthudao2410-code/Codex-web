@@ -24,7 +24,7 @@ from .store import SCHEMA_VERSION
 
 FINGERPRINT_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 SERVICE_INSTANCE_PATTERN = re.compile(r"^cp_[a-f0-9]{32}$")
-ADMISSION_MODES = frozenset({"open", "recovery", "scoped_pilot"})
+ADMISSION_MODES = frozenset({"open", "recovery"})
 MAX_HEALTH_BYTES = 128 * 1024
 
 
