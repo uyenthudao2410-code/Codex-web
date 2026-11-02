@@ -13,7 +13,6 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $TaskName = 'WebMCP Recovery Supervisor'
 $PollSeconds = 5
-$AgentSpecHashCacheSeconds = 600
 $FailureThreshold = 4
 $StartupCooldownSeconds = 20
 $RestartWindowMinutes = 10
@@ -64,15 +63,6 @@ function Get-Sha256File([string]$Path) {
     if ($null -ne $stream) { $stream.Dispose() }
     $sha.Dispose()
   }
-}
-$script:AgentSpecHashCache = @{}
-function Get-CachedSha256File([string]$Path) {
-  $now = [DateTimeOffset]::UtcNow
-  $entry = $script:AgentSpecHashCache[$Path]
-  if ($null -ne $entry -and ($now - $entry.At).TotalSeconds -lt $AgentSpecHashCacheSeconds) { return $entry.Hash }
-  $hash = Get-Sha256File $Path
-  if ($null -ne $hash -and $hash -ne '') { $script:AgentSpecHashCache[$Path] = @{Hash = $hash; At = $now} }
-  return $hash
 }
 function Get-Sha256Text([string]$Text) {
   $sha = [Security.Cryptography.SHA256]::Create()
@@ -238,7 +228,13 @@ function Get-ControlPlaneAgentSpec($M) {
   $paths=Get-ControlPlaneAgentPaths $M
   if($null-eq$paths){return [pscustomobject]@{eligible=$false;state='unsupported_mode';pid=$null}}
   $python=[string]$paths.python_path;$agent=[string]$paths.agent_path;$node=[string]$paths.node_path
-  if([string]::IsNullOrWhiteSpace($node)-or-not(Test-PathEqual ([string]$M.control_plane_node_path) $node)-or-not(Test-Path -LiteralPath $node -PathType Leaf)-or[string]$M.control_plane_node_sha256-notmatch'^[a-f0-9]{64}$'-or(Get-CachedSha256File $node)-ne[string]$M.control_plane_node_sha256-or-not(Test-PathEqual ([string]$M.control_plane_python_path) $python)-or-not(Test-PathEqual ([string]$M.control_plane_node_agent_path) $agent)-or[string]$M.control_plane_python_sha256-notmatch'^[a-f0-9]{64}$'-or[string]$M.control_plane_node_agent_sha256-notmatch'^[a-f0-9]{64}$'-or-not(Test-Path -LiteralPath $python -PathType Leaf)-or-not(Test-Path -LiteralPath $agent -PathType Leaf)-or(Get-CachedSha256File $python)-ne[string]$M.control_plane_python_sha256-or(Get-CachedSha256File $agent)-ne[string]$M.control_plane_node_agent_sha256){return [pscustomobject]@{eligible=$false;state='integrity_unproven';pid=$null}}
+  $specHashCache = Get-Variable -Scope Script -Name AgentSpecHashCache -ValueOnly -ErrorAction SilentlyContinue
+  if ($null -eq $specHashCache) { $specHashCache = @{}; Set-Variable -Scope Script -Name AgentSpecHashCache -Value $specHashCache }
+  $specHashNow = [DateTimeOffset]::UtcNow
+  if ([string]::IsNullOrWhiteSpace($node) -or -not (Test-Path -LiteralPath $node -PathType Leaf)) { $nodeHash = $null } else { $specHashEntry = $specHashCache[$node]; if ($null -ne $specHashEntry -and ($specHashNow - $specHashEntry.checked_at).TotalSeconds -lt 600) { $nodeHash = $specHashEntry.hash } else { $nodeHash = Get-Sha256File $node; if ($null -ne $nodeHash -and $nodeHash -ne '') { $specHashCache[$node] = @{hash = $nodeHash; checked_at = $specHashNow} } } }
+  if ([string]::IsNullOrWhiteSpace($python) -or -not (Test-Path -LiteralPath $python -PathType Leaf)) { $pythonHash = $null } else { $specHashEntry = $specHashCache[$python]; if ($null -ne $specHashEntry -and ($specHashNow - $specHashEntry.checked_at).TotalSeconds -lt 600) { $pythonHash = $specHashEntry.hash } else { $pythonHash = Get-Sha256File $python; if ($null -ne $pythonHash -and $pythonHash -ne '') { $specHashCache[$python] = @{hash = $pythonHash; checked_at = $specHashNow} } } }
+  if ([string]::IsNullOrWhiteSpace($agent) -or -not (Test-Path -LiteralPath $agent -PathType Leaf)) { $agentHash = $null } else { $specHashEntry = $specHashCache[$agent]; if ($null -ne $specHashEntry -and ($specHashNow - $specHashEntry.checked_at).TotalSeconds -lt 600) { $agentHash = $specHashEntry.hash } else { $agentHash = Get-Sha256File $agent; if ($null -ne $agentHash -and $agentHash -ne '') { $specHashCache[$agent] = @{hash = $agentHash; checked_at = $specHashNow} } } }
+  if([string]::IsNullOrWhiteSpace($node)-or-not(Test-PathEqual ([string]$M.control_plane_node_path) $node)-or-not(Test-Path -LiteralPath $node -PathType Leaf)-or[string]$M.control_plane_node_sha256-notmatch'^[a-f0-9]{64}$'-or$nodeHash-ne[string]$M.control_plane_node_sha256-or-not(Test-PathEqual ([string]$M.control_plane_python_path) $python)-or-not(Test-PathEqual ([string]$M.control_plane_node_agent_path) $agent)-or[string]$M.control_plane_python_sha256-notmatch'^[a-f0-9]{64}$'-or[string]$M.control_plane_node_agent_sha256-notmatch'^[a-f0-9]{64}$'-or-not(Test-Path -LiteralPath $python -PathType Leaf)-or-not(Test-Path -LiteralPath $agent -PathType Leaf)-or$pythonHash-ne[string]$M.control_plane_python_sha256-or$agentHash-ne[string]$M.control_plane_node_agent_sha256){return [pscustomobject]@{eligible=$false;state='integrity_unproven';pid=$null}}
   $configPath=Get-ControlPlaneAgentConfigPath $M;if(-not(Test-Path -LiteralPath $configPath -PathType Leaf)){return [pscustomobject]@{eligible=$false;state='waiting_for_pairing';pid=$null}};$workspaceRegistryPath=Get-ControlPlaneWorkspaceRegistryPath $M
   try{$config=Read-BoundedJson $configPath $MaxJsonBytes -Required}catch{return [pscustomobject]@{eligible=$false;state='config_unavailable';pid=$null}}
   if($config -isnot [PSCustomObject]){return [pscustomobject]@{eligible=$false;state='config_invalid';pid=$null}}
