@@ -28,7 +28,7 @@ jobs:
           python resources/coding-tools-mcp/scripts/report_p4_readiness.py "${args[@]}" | tee p4-readiness.json
       - name: Upload P4 readiness report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: p4-readiness-${{ github.sha }}
           path: p4-readiness.json

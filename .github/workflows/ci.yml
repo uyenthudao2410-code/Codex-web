@@ -101,7 +101,7 @@ jobs:
           fi
       - name: Upload Rust workspace failure log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rust-workspace-test-log-${{ github.sha }}
           path: cargo-test.log
@@ -224,7 +224,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload desktop test log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-test-log-${{ github.sha }}
           path: desktop-test.log
@@ -274,7 +274,7 @@ jobs:
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/npm_install_windows_smoke.ps1 -RequireExactSource -ProvenanceOut "$env:RUNNER_TEMP\windows-release-provenance.json"
       - name: Upload Windows exact-source provenance
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release-provenance-${{ github.sha }}
           path: ${{ runner.temp }}/windows-release-provenance.json
