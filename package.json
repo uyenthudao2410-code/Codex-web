@@ -51,7 +51,7 @@
     "dist:dir": "npm run icon:build && node scripts/build-dev-candidate.js"
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
+    "electron-updater": "^6.8.11",
     "typescript": "5.9.3"
   },
   "devDependencies": {
