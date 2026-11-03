@@ -1332,7 +1332,9 @@ class ControlPlaneEnrollmentService {
         return result?.stdout;
       } catch (error) {
         throw enrollmentError(String(error?.code || 'CONTROL_PLANE_FILE_POLICY_INSTALL_FAILED'),
-          `Không thể hoàn tất ${operation} cho workspace đã chọn.`);
+          operation === 'inspect-policy-authority'
+            ? 'Chưa xác minh được quyền của thư mục đã chọn trên Ubuntu, có thể thư mục chưa được kích hoạt hoặc kết nối đang lỗi.'
+            : `Không thể hoàn tất ${operation} cho workspace đã chọn.`);
       }
     };
     const authority = parsePolicyAuthorityObservation(await runAgent('inspect-policy-authority', [...shared, ...runtime]),
@@ -1998,9 +2000,10 @@ class ControlPlaneEnrollmentService {
       centralWorkspaceId(workspaceId), centralWorkspaceGeneration(workspaceGeneration));
   }
 
-  // Ensure-binding: the node agent returns the binding created at
-  // registration. confirmActivate is only the local folder-pick
-  // confirmation; there is no pilot decision or expiry in this receipt.
+  // Ensure-binding: the node agent creates (or reuses) the binding here.
+  // Registration alone never creates one. confirmActivate is only the
+  // local folder-pick confirmation; there is no pilot decision or
+  // expiry in this receipt.
   async activateWorkspace({ workspaceId, workspaceGeneration, confirmActivate = false } = {}) {
     if (this.paths.runtimeMode() !== 'packaged') {
       throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Kích hoạt thư mục chỉ chạy từ ứng dụng đóng gói đã xác minh.');

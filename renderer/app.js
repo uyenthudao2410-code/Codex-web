@@ -32,6 +32,7 @@ function createPreviewApi() {
     rotateControlPlaneCredential: () => ok({ device_id: snapshot.device.device_id, rotation_id: 'rotate_' + 'a'.repeat(32), state: 'completed', current_generation: 1, next_generation: 2, fresh: true, error_code: null }),
     registerControlPlaneWorkspace: ({ capabilities } = {}) => ok({ workspace_id: 'workspace_0123456789abcdef0123456789abcdef', workspace_generation: 'generation_abcdef0123456789abcdef0123456789', display_name: 'my-project', capabilities: { read: true, write: capabilities?.write === true, exec: capabilities?.exec === true }, replayed: false, state: 'registered' }),
     replaceControlPlaneWorkspace: ({ capabilities } = {}) => ok({ workspace_id: 'workspace_0123456789abcdef0123456789abcdef', old_workspace_generation: 'generation_abcdef0123456789abcdef0123456789', workspace_generation: 'generation_fedcba9876543210fedcba9876543210', display_name: 'my-project', capabilities: { read: true, write: capabilities?.write === true, exec: capabilities?.exec === true }, replayed: false, state: 'replaced' }),
+    activateControlPlaneWorkspace: ({ workspaceId, workspaceGeneration } = {}) => ok({ device_id: snapshot.device.device_id, workspace_id: workspaceId, workspace_generation: workspaceGeneration, binding_id: 'bind_' + 'e'.repeat(32), state: 'active', workspace_path: snapshot.settings.workspace }),
     listControlPlaneWorkspaces: () => ok([]),
     installControlPlaneReadOnlyPolicyAssignment: () => ok({ enabled: true, expires_at_ms: Date.now() + 60 * 60 * 1000, policy_sha256: 'b'.repeat(64), runtime_mode: 'packaged', windows_acl_verified: false }),
     installControlPlaneStandingFilePolicies: ({ workspaceId, workspaceGeneration, allowWrite } = {}) => ok({
@@ -583,7 +584,7 @@ async function startSetupContinuation({ prepareExec = false } = {}) {
             : executionMode === 'native_only' ? 'Chỉ native có kiểm soát: không mở VM; chặn lệnh ngoài policy native. '
               : 'Native trước theo policy: metadata Git và phiên bản CLI không mở VM. Lệnh chạy mã dự án cần quyền native riêng hoặc Windows Sandbox. '
         : '')
-      + 'Thư mục dùng được ngay sau khi đăng ký; không cần cấp quyền riêng. '
+      + 'Sau khi đồng ý, ứng dụng sẽ kích hoạt thư mục trên Ubuntu rồi áp dụng quyền đã chọn. '
       + (workspace && centralWorkspaceCapabilitiesChanged(workspace, capabilities)
         ? 'Đổi mức quyền sẽ đóng liên kết và tác vụ của đăng ký cũ. '
         : '')
@@ -602,6 +603,35 @@ async function startSetupContinuation({ prepareExec = false } = {}) {
   if (origin !== setupOrigin() || device !== setupDevice()
     || ['read', 'write', 'exec'].some((name) => capabilities[name] !== (workspace.capabilities?.[name] === true))) {
     throw new Error('Máy hoặc quyền đăng ký đã thay đổi. Chọn lại để tiếp tục.');
+  }
+  // Activation creates the server binding that every later authority
+  // check requires. Registration alone is inventory only and never
+  // creates a binding, so a folder that skips this step fails the
+  // standing policy installs below. The confirm dialog above is the
+  // owner's explicit confirmation the server requires; activation is
+  // idempotent (ensure-binding), so re-running this flow reuses the
+  // existing binding instead of creating a second one.
+  if (typeof api.activateControlPlaneWorkspace !== 'function') {
+    throw new Error('Bản ứng dụng này chưa hỗ trợ kích hoạt thư mục. Cập nhật ứng dụng rồi thử lại.');
+  }
+  try {
+    const activation = unwrap(await api.activateControlPlaneWorkspace({
+      workspaceId: workspace.workspace_id,
+      workspaceGeneration: workspace.workspace_generation,
+      confirmActivate: true
+    }));
+    state.centralWorkspaceActivationReceipt = {
+      origin, device,
+      workspace_id: activation.workspace_id,
+      workspace_generation: activation.workspace_generation,
+      workspace_path: String(activation.workspace_path || workspace.workspace_path || '').trim(),
+      binding_id: activation.binding_id
+    };
+    try {
+      localStorage.setItem('coding-tools-active-folder-v1', JSON.stringify(state.centralWorkspaceActivationReceipt));
+    } catch { /* The durable registry remains the source of truth. */ }
+  } catch (error) {
+    throw new Error('Không thể kích hoạt thư mục đã chọn trên Ubuntu: ' + (error?.message || 'kiểm tra kết nối rồi bấm lại.'));
   }
   saveSetupSelection();
   state.setupContinuation = {
@@ -631,9 +661,10 @@ async function continueSetup() {
       cancelSetupContinuation('Đã dừng chờ sau 10 phút. Lựa chọn được giữ; bấm Tiếp tục để kiểm tra lại.');
       return null;
     }
-    // No pilot step and no authority gate: registration already created
-    // the binding, so the folder is usable immediately. The standing
-    // file/exec installs below are the only verification before use.
+    // No pilot step: activation in startSetupContinuation created the
+    // binding, so the folder is usable once the standing installs below
+    // verify. The standing file/exec installs are the only verification
+    // before use.
     await refreshControlPlaneWorkspaces({ quiet: true });
     const workspace = selectedCentralWorkspace();
     if (state.setupContinuation !== scope || !setupScopeMatches(scope, workspace)) {
@@ -2915,7 +2946,7 @@ async function registerControlPlaneWorkspace() {
       exec: receipt.capabilities?.exec === true
     };
     state.centralWorkspacePreset = centralWorkspacePresetFor(state.centralWorkspaceCapabilities);
-    toast('Đã thêm thư mục', 'Đang kết nối và áp dụng quyền đã chọn.', 'success');
+    toast('Đã thêm thư mục', 'Đã đăng ký thư mục, đang tiếp tục áp dụng quyền đã chọn.', 'success');
     await refreshCentralWorkspaceUiAfterCommit();
     saveSetupSelection();
     await reconcileControlPlaneAuthorityStatus({ quiet: true });

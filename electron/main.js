@@ -1420,8 +1420,9 @@ function registerIpc() {
   }));
   // Ensure-binding entry for an already-registered workspace: the local
   // folder-pick confirmation (confirmActivate) plus the authorized-root
-  // checks below. The binding itself is created at registration; there is
-  // no pilot decision or expiry to check here.
+  // checks below. The binding itself is created by activation here;
+  // registration alone never creates one. There is no pilot decision
+  // or expiry to check here.
   secureHandle('control-plane:activate-workspace', (event, request) => invokeSafely(async () => {
     assertManagerIpc(event);
     if (settings.load().executionRole !== 'central_executor') {
@@ -1442,8 +1443,8 @@ function registerIpc() {
       }
       // Preserve the native default root and epoch; grant this owner-selected
       // root through the existing native authorization API before the binding
-      // is ensured. Registration already created the binding; this handler only
-      // ensures the local root for an already-registered workspace.
+      // is ensured. Activation below creates (or reuses) the binding for
+      // this already-registered workspace.
       await orchestrator.updateAuthorizedRoots([...roots, workspaceRoot]);
     }
     return controlPlaneEnrollment.activateWorkspace({
