@@ -73,8 +73,9 @@ function fixture({ write = true, exec = true, accepted = true, executionMode = '
     },
     activateControlPlaneWorkspace: async (request) => {
       calls.push(['activate', plain(request)]);
-      return { workspace_id: request.workspaceId, workspace_generation: request.workspaceGeneration,
-        workspace_path: 'E:\\selected-project' };
+      return { device_id: 'device-current', workspace_id: request.workspaceId,
+        workspace_generation: request.workspaceGeneration, binding_id: 'bind_' + 'e'.repeat(32),
+        state: 'active', workspace_path: 'E:\\selected-project' };
     },
     installControlPlaneStandingFilePolicies: async (request) => {
       calls.push(['install-files', plain(request)]);
@@ -201,7 +202,7 @@ function assertTargetLabels(f, expected, title = expected) {
   }
 }
 
-test('adding a folder picks once confirms the exact path and installs full permission without starting Sandbox', async () => {
+test('adding a folder picks once confirms the exact path, activates once, and installs full permission without starting Sandbox', async () => {
   const f = fixture({ write: false, exec: false });
   const path = 'E:\\DEV\\Autocad';
   f.context.api.chooseWorkspace = async () => { f.calls.push(['choose']); return path; };
@@ -209,8 +210,9 @@ test('adding a folder picks once confirms the exact path and installs full permi
   f.context.api.registerControlPlaneWorkspace = async (request) => {
     assert.equal(f.confirmations.length, 1, 'consent precedes registration');
     const receipt = await register(request);
-    // Registration creates the binding: the target is dispatchable for the
-    // new generation without a separate activation step.
+    // Test scaffolding: expose the new generation as dispatchable so the
+    // continuation can proceed; the binding itself is created by the
+    // activation step below, not by registration.
     f.state.centralAuthorityStatus.targets = [{ workspace_id: 'workspace-selected',
       workspace_generation: 'generation-new', dispatch_state: 'dispatchable',
       capabilities: { read: true, write: true, exec: true } }];
@@ -223,7 +225,11 @@ test('adding a folder picks once confirms the exact path and installs full permi
   assert.deepEqual(f.calls.find(([name]) => name === 'register')[1], {
     workspacePath: path, capabilities: { read: true, write: true, exec: true }
   });
-  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 0, 'no separate activation step');
+  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 1, 'activation creates the binding');
+  assert.deepEqual(f.calls.find(([name]) => name === 'activate')[1], {
+    workspaceId: 'workspace-selected', workspaceGeneration: 'generation-new', confirmActivate: true
+  });
+  assert.equal(f.state.centralWorkspaceActivationReceipt.binding_id, 'bind_' + 'e'.repeat(32));
   assert.equal(f.calls.some(([name]) => name === 'replace' || name === 'probe-sandbox'), false);
   assert.equal(f.calls.find(([name]) => name === 'install-exec')[1].probeSandbox, false);
   assert.deepEqual(plain(access), { read: true, patch: true, exec: true, executionMode: 'native_first',
@@ -259,14 +265,17 @@ test('cancelling the Add-folder picker or its single permission confirmation per
   }
 });
 
-test('using an existing full-permission folder is usable immediately without registration, replacement or a separate activation step', async () => {
+test('using an existing full-permission folder activates once and is usable without registration or replacement', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   const access = await f.context.applyCentralWorkspacePermissions();
   assert.equal(access.read, true);
   assert.equal(access.patch, true);
   assert.equal(access.exec, true);
-  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 0);
+  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 1, 'activation creates the binding');
+  assert.deepEqual(f.calls.find(([name]) => name === 'activate')[1], {
+    workspaceId: 'workspace-selected', workspaceGeneration: 'generation-current', confirmActivate: true
+  });
   assert.equal(f.calls.some(([name]) => ['choose', 'register', 'replace'].includes(name)), false);
   assert.equal(f.calls.filter(([name]) => name === 'refresh-authority').length, 0, 'authority status is display-only, not a setup gate');
   assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
@@ -274,20 +283,16 @@ test('using an existing full-permission folder is usable immediately without reg
   assert.equal(f.confirmations.length, 1);
   assert.equal(f.state.setupContinuation, null);
 });
-test('a missing activation API is irrelevant: the folder is usable after registration without an activation step', async () => {
+test('a missing activation API stops setup with a plain-language guard error instead of silently skipping activation', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   delete f.context.api.activateControlPlaneWorkspace;
-  const access = await f.context.applyCentralWorkspacePermissions();
-  assert.equal(access.read, true);
-  assert.equal(access.patch, true);
-  assert.equal(access.exec, true);
+  await assert.rejects(f.context.applyCentralWorkspacePermissions(), /chưa hỗ trợ kích hoạt/);
   assert.equal(f.calls.some(([name]) => name === 'activate'), false);
-  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
-  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 1);
+  assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 0, 'no policy install without activation');
+  assert.equal(f.calls.filter(([name]) => name === 'install-exec').length, 0, 'no policy install without activation');
   assert.equal(f.state.centralWorkspaceActivationReceipt, undefined);
   assert.equal(f.state.setupContinuation, null);
-  assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
 test('completed setup leaves no pending timer and a later continuation call installs nothing again', async () => {
   const f = fixture();
@@ -971,7 +976,7 @@ test('registration and automatic inventory refresh with exec selected never open
   assert.ok(f.calls.filter(([name]) => name === 'inspect-exec').every(([, request]) => request.probeSandbox === false));
 });
 
-test('a folder installs all permissions immediately without an authority wait or a repeated activation', async () => {
+test('a folder activates once before installing all permissions, without an authority wait or a repeated activation', async () => {
   const f = fixture();
   f.context.selectCentralWorkspace(f.workspace);
   f.state.centralAuthorityStatus.targets = [];
@@ -982,7 +987,10 @@ test('a folder installs all permissions immediately without an authority wait or
   assert.equal(f.calls.filter(([name]) => name === 'install-files').length, 1);
   assert.equal(f.calls.some(([name]) => name === 'probe-sandbox'), false);
   assert.equal(f.calls.find(([name]) => name === 'install-exec')[1].probeSandbox, false);
-  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 0);
+  assert.equal(f.calls.filter(([name]) => name === 'activate').length, 1, 'activation creates the binding');
+  assert.deepEqual(f.calls.find(([name]) => name === 'activate')[1], {
+    workspaceId: 'workspace-selected', workspaceGeneration: 'generation-current', confirmActivate: true
+  });
   assert.equal(f.state.setupContinuation, null);
   assert.match(f.state.setupContinuationMessage, /Đã xác minh policy/);
 });
