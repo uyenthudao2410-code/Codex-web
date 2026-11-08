@@ -75,6 +75,7 @@ const {
   normaliseExecResult
 } = require('./controlPlaneExecBridge');
 const { readControlPlaneRouteEvidence } = require('./controlPlaneRouteEvidence');
+const { resolveGitCommand } = require('./recoveryActionStore');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -598,7 +599,7 @@ function controlMcpActivation(port, token, payload) {
 }
 
 class RuntimeOrchestrator {
-  constructor({ settings, secrets, environment, log, emitProgress = () => {}, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '', fullCleanActivation = null, resolveFullCleanSourceCheckpoint = null, listenerPidProbe = null }) {
+  constructor({ settings, secrets, environment, log, emitProgress = () => {}, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '', fullCleanActivation = null, resolveFullCleanSourceCheckpoint = null, listenerPidProbe = null, gitStatusRunFn = null }) {
     this.settingsStore = settings;
     this.secrets = secrets;
     this.environment = environment;
@@ -610,6 +611,9 @@ class RuntimeOrchestrator {
     // scoped seam for lifecycle proofs; it never changes the default owner
     // check or exposes a renderer-controlled override.
     this.listenerPidProbe = typeof listenerPidProbe === 'function' ? listenerPidProbe : null;
+    // Production probes git through commandRunner's `run`. Keep a narrowly
+    // scoped seam for probe proofs; it never changes the default command.
+    this.gitStatusRunFn = typeof gitStatusRunFn === 'function' ? gitStatusRunFn : run;
     this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
     this.activationEpochStore = (() => { try { return new ActivationEpochStore({ paths }); } catch { return null; } })();
     this.activationEpochId = String(activationEpochId || '').trim() || (() => {
@@ -1111,11 +1115,40 @@ class RuntimeOrchestrator {
 
   async _probeGitStatus(target) {
     let status = { available: false, branch: null, head: null, head_short: null, dirty: null };
+    // Probe B fixed the accepted-code git probe; this header probe had the
+    // same bare-`git` failure in the Recovery Host process, whose PATH does
+    // not resolve it. Resolve the same absolute command, and give the probe
+    // 10 s instead of 2 s: a cold git status on a large checkout can be
+    // slow, and a timeout here only hides the header identity. Failures are
+    // logged instead of swallowed so the next 'Git: n/a' is diagnosable; the
+    // probe stays fail-closed and still returns available: false.
+    const git = resolveGitCommand();
     try {
-      const git = process.platform === 'win32' ? 'git.exe' : 'git';
-      const result = await run(git, ['-C', target, 'status', '--porcelain=v2', '--branch', '--untracked-files=normal'], { allowFailure: true, timeoutMs: 2000 });
-      if (result.code === 0) status = parseGitStatusPorcelainV2(result.stdout);
-    } catch {}
+      const result = await (this.gitStatusRunFn || run)(git, ['-C', target, 'status', '--porcelain=v2', '--branch', '--untracked-files=normal'], { allowFailure: true, timeoutMs: 10_000 });
+      if (result.code === 0) {
+        status = parseGitStatusPorcelainV2(result.stdout);
+      } else {
+        this.log?.warn?.('Git status probe failed', {
+          stage: 'git-status-probe',
+          git_command: git,
+          target,
+          cause_code: null,
+          timed_out: false,
+          exit_code: result.code,
+          stderr_tail: String(result.stderr || '').slice(-500) || null
+        });
+      }
+    } catch (error) {
+      this.log?.warn?.('Git status probe failed', {
+        stage: 'git-status-probe',
+        git_command: git,
+        target,
+        cause_code: typeof error?.code === 'string' ? error.code : null,
+        timed_out: error?.timedOut === true,
+        exit_code: Number.isInteger(error?.code) ? error.code : null,
+        stderr_tail: String(error?.stderr || '').slice(-500) || null
+      });
+    }
     return status;
   }
 

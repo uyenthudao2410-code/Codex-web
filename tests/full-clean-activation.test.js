@@ -336,7 +336,8 @@ test('pending activation census replaces stale durable component evidence withou
     recoveryPlane: {},
     revisions: {},
     deviceIdentity: {},
-    epochStore: store
+    epochStore: store,
+    now: () => 1_700_000_000_000
   });
   const census = {
     pass: false,
@@ -353,7 +354,10 @@ test('pending activation census replaces stale durable component evidence withou
   assert.equal(pending.state, 'VERIFYING');
   assert.equal(pending.admission_state, 'CLOSED');
   assert.equal(pending.ready_commit_digest, null);
-  assert.deepEqual(pending.verification, census);
+  assert.deepEqual(pending.verification, {
+    ...census,
+    pending_census_history: [{ observed_at_ms: 1_700_000_000_000, failing_predicates: [] }]
+  });
 
   const passingCandidate = activation.recordPendingCensus(activationEpochId, {
     ...census,
@@ -367,6 +371,79 @@ test('pending activation census replaces stale durable component evidence withou
   assert.equal(passingCandidate.ready_commit_digest, null);
   assert.equal(passingCandidate.verification.pass, true,
     'a passing candidate remains evidence-only until finalize independently commits it');
+});
+
+test('recordPendingCensus derives the stored reason from the first failing predicate', (t) => {
+  const { paths } = fixture(t);
+  const activationEpochId = id('activation-pending-reason', '0001');
+  const operationId = id('operation-pending-reason', '0001');
+  const store = epochStore(paths);
+  store.create({
+    activation_epoch_id: activationEpochId,
+    operation_id: operationId,
+    expiresAtUnixMs: 1_700_000_120_000
+  });
+  store.update(activationEpochId, { state: 'VERIFYING', reason: 'initial-census' });
+  const activation = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({}) },
+    secrets: { get: () => '' },
+    orchestrator: {},
+    recoveryPlane: {},
+    revisions: {},
+    deviceIdentity: {},
+    epochStore: store,
+    now: () => 1_700_000_000_000
+  });
+  const base = {
+    pass: false,
+    verified: false,
+    activation_epoch_id: activationEpochId
+  };
+
+  // Central route wins over every other failing predicate.
+  let pending = activation.recordPendingCensus(activationEpochId, {
+    ...base,
+    reason: 'UPDATE_INCOMPLETE',
+    failing_predicates: [
+      { name: 'projection_rebuild_verified', reason: 'PREFLIGHT_RECEIPT_STALE' },
+      { name: 'central_route_verified', reason: 'CENTRAL_ROUTE_EVIDENCE_STALE' },
+      { name: 'ui_verified', reason: null }
+    ]
+  });
+  assert.equal(pending.transitions.at(-1).reason, 'waiting-central-route');
+
+  // Projection rebuild is next in priority.
+  pending = activation.recordPendingCensus(activationEpochId, {
+    ...base,
+    reason: 'UPDATE_INCOMPLETE',
+    failing_predicates: [
+      { name: 'projection_rebuild_verified', reason: 'PREFLIGHT_RECEIPT_STALE' },
+      { name: 'ui_verified', reason: null }
+    ]
+  });
+  assert.equal(pending.transitions.at(-1).reason, 'waiting-projection-rebuild');
+
+  // Any other failing predicate names the component wait.
+  pending = activation.recordPendingCensus(activationEpochId, {
+    ...base,
+    reason: 'UPDATE_INCOMPLETE',
+    failing_predicates: [{ name: 'ui_verified', reason: null }]
+  });
+  assert.equal(pending.transitions.at(-1).reason, 'waiting-component');
+
+  // No failing predicate recorded: the census reason is left untouched.
+  pending = activation.recordPendingCensus(activationEpochId, {
+    ...base,
+    reason: 'UPDATE_INCOMPLETE',
+    failing_predicates: []
+  });
+  assert.equal(pending.transitions.at(-1).reason, 'UPDATE_INCOMPLETE');
+  pending = activation.recordPendingCensus(activationEpochId, {
+    ...base,
+    reason: 'UPDATE_INCOMPLETE'
+  });
+  assert.equal(pending.transitions.at(-1).reason, 'UPDATE_INCOMPLETE');
 });
 
 test('pending census advances only STARTING and refreshes VERIFYING without mutating coordinator-owned states', (t) => {
@@ -397,13 +474,17 @@ test('pending census advances only STARTING and refreshes VERIFYING without muta
           Object.assign(current, next);
           return current;
         }
-      }
+      },
+      now: () => 1_700_000_000_000
     });
 
     const next = activation.recordPendingCensus(activationEpochId, census);
     assert.equal(updateCalls, 1, `${state} must persist exactly one census refresh`);
     assert.equal(next.state, 'VERIFYING');
-    assert.deepEqual(next.verification, census);
+    assert.deepEqual(next.verification, {
+      ...census,
+      pending_census_history: [{ observed_at_ms: 1_700_000_000_000, failing_predicates: [] }]
+    });
     assert.equal(next.admission_state, 'CLOSED');
   }
 
@@ -1790,6 +1871,64 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
       assert.equal(centralStore.current().admission_state, 'CLOSED');
       assert.equal(admissionCalls, 0);
     }
+    // Fix 4a: a stale route evidence file is refreshed once through the
+    // agent's own one-shot heartbeat instead of failing the census for the
+    // whole VERIFYING window. The stubbed spawn rewrites the evidence file
+    // exactly as the real runtime-heartbeat would.
+    let refreshCalls = 0;
+    let refreshArgv = null;
+    fs.mkdirSync(path.join(paths.appRoot(), 'control-plane', 'control_plane'), { recursive: true });
+    fs.writeFileSync(paths.controlPlaneNodeAgent(), '');
+    fs.writeFileSync(paths.controlPlaneNodeConfigFile(), '{}');
+    fs.writeFileSync(paths.controlPlaneWorkspaceRegistryFile(), '{}');
+    coordinator.pythonStatusFn = async () => ({
+      installed: true, command: 'python.exe', launchCommand: 'python.exe', prefixArgs: [], version: 'Python 3.12.0'
+    });
+    coordinator.execFileFn = async (command, args) => {
+      refreshCalls += 1;
+      refreshArgv = { command, args };
+      writeRoute();
+      return { stdout: '', stderr: '' };
+    };
+    // The stale loop ends on the policy variant, not the stale one, so
+    // rewrite the stale variant the refresh is designed to handle.
+    writeRoute({ observed_at_ms: nowUnixMs - 60_001 });
+    const refreshed = await coordinator.finalCensus(activationEpochId);
+    assert.equal(refreshCalls, 1, 'stale evidence must trigger exactly one heartbeat refresh');
+    assert.equal(refreshed.central_route_verified, true);
+    assert.equal(refreshed.central_status_reason, null);
+    assert.equal(refreshed.pass, true);
+    assert.deepEqual(refreshed.failing_predicates, []);
+    assert.equal(refreshArgv.command, 'python.exe');
+    assert.equal(refreshArgv.args[0], '-I');
+    assert.equal(refreshArgv.args[1], paths.controlPlaneNodeAgent());
+    assert.equal(refreshArgv.args[2], 'runtime-heartbeat');
+    assert.ok(refreshArgv.args.includes('--config'));
+    assert.ok(refreshArgv.args.includes(paths.controlPlaneNodeConfigFile()));
+    assert.ok(refreshArgv.args.includes('--workspace-registry'));
+    assert.ok(refreshArgv.args.includes(paths.controlPlaneWorkspaceRegistryFile()));
+    assert.ok(refreshArgv.args.includes('--project-root'));
+    assert.ok(refreshArgv.args.includes(paths.appRoot()));
+    assert.ok(refreshArgv.args.includes('--node'));
+    assert.ok(refreshArgv.args.includes(paths.executablePath()));
+    assert.ok(refreshArgv.args.includes('--runtime-mode'));
+    assert.ok(refreshArgv.args.includes('--timeout-seconds'));
+    assert.ok(refreshArgv.args.includes('20'));
+    // Throttle: a second census within 30 s must not spawn again (the
+    // fixture clock is frozen, so this tick is inside the throttle window).
+    writeRoute({ observed_at_ms: nowUnixMs - 60_001 });
+    const throttled = await coordinator.finalCensus(activationEpochId);
+    assert.equal(refreshCalls, 1, 'the refresh must be throttled to one attempt per 30 s');
+    assert.equal(throttled.pass, false);
+    assert.equal(throttled.central_route_verified, false);
+    assert.equal(throttled.central_status_reason, 'CENTRAL_ROUTE_EVIDENCE_STALE');
+    assert.deepEqual(throttled.failing_predicates, [
+      { name: 'central_route_verified', reason: 'CENTRAL_ROUTE_EVIDENCE_STALE' }
+    ]);
+    coordinator.recordPendingCensus(activationEpochId, throttled);
+    const pendingHistory = centralStore.current().verification.pending_census_history;
+    assert.equal(pendingHistory.length, 2, 'the earlier missing-route tick is already in the history');
+    assert.equal(pendingHistory[1].failing_predicates[0].name, 'central_route_verified');
     writeRoute();
     primaryTunnelRunning = true;
     assert.equal((await coordinator.finalCensus(activationEpochId)).pass, false,

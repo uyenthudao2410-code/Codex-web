@@ -24,6 +24,25 @@ const DIRECT_EXECUTION_ROLE = 'direct_legacy';
 const CENTRAL_EXECUTION_ROLE = 'central_executor';
 const DIRECT_COMPONENT_PROFILE = 'direct_legacy_v1';
 const CENTRAL_COMPONENT_PROFILE = 'central_executor_v1';
+// Fix 4a: when the central-route evidence file is stale, missing, or invalid
+// during finalCensus, the host refreshes it once through the agent's own
+// one-shot heartbeat instead of failing the census for the whole VERIFYING
+// window. The refresh is throttled (30 s) and guarded against concurrent
+// runs; any failure keeps the original verdict, so the census stays fail-closed.
+const CENTRAL_ROUTE_REFRESH_TIMEOUT_MS = 25_000;
+const CENTRAL_ROUTE_REFRESH_THROTTLE_MS = 30_000;
+// Only these reader verdicts mean the evidence file itself may be out of
+// date and worth refreshing through the agent heartbeat. A device mismatch
+// or a missing local device identity is not a staleness problem and must
+// never trigger a refresh.
+const CENTRAL_ROUTE_REFRESHABLE_REASONS = new Set([
+  'CENTRAL_ROUTE_EVIDENCE_STALE',
+  'CENTRAL_ROUTE_EVIDENCE_MISSING',
+  'CENTRAL_ROUTE_EVIDENCE_INVALID'
+]);
+// Option 5: per-tick failing-predicate history kept on the pending census.
+// Bounded to 12 entries; predicate names/reasons only, no secrets or tokens.
+const PENDING_CENSUS_HISTORY_MAX_ENTRIES = 12;
 const EXECUTION_ROLE_HANDOFF_MODE = 'full_clean_execution_role_handoff';
 // Full-clean activation includes Recovery Host handoff, cold Electron
 // startup, MCP/Tunnel readiness and an exact postflight census.  This deadline
@@ -639,6 +658,50 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
     process_instance_id: processInstanceId || null,
     server_instance_id: serverInstanceId || null
   };
+}
+
+// Option 5: failing predicates for one census tick. Each entry carries only
+// a predicate name and the reason the census already carries for it (the
+// central status reason, the projection rebuild code, or the first connector
+// reason); reason is null where the census has none. No paths, PIDs,
+// tokens, or raw census data are recorded here.
+function failingCensusPredicates({
+  centralExecutor = false,
+  workspaceMatches = true,
+  deviceMatches = true,
+  revisionMatches = true,
+  recoveryHostRevisionMatches = true,
+  recoveryHostEpochMatches = true,
+  processIdentityVerified = true,
+  epochMatches = true,
+  uiVerified = true,
+  recoveryPlaneVerified = true,
+  projectionRebuildValid = true,
+  projectionRebuildCode = '',
+  centralRouteVerified = true,
+  centralStatusReason = '',
+  connectorReady = null
+} = {}) {
+  const failing = [];
+  const add = (name, failed, reason = null) => {
+    if (failed) failing.push({ name, reason: reason === null || reason === undefined ? null : text(reason) || null });
+  };
+  add('workspace_matches', !workspaceMatches);
+  add('device_matches', !deviceMatches);
+  add('revision_matches', !revisionMatches);
+  add('recovery_host_revision_matches', !recoveryHostRevisionMatches);
+  add('recovery_host_epoch_matches', !recoveryHostEpochMatches);
+  add('process_identity_verified', !processIdentityVerified);
+  add('epoch_matches', !epochMatches);
+  add('ui_verified', !uiVerified);
+  add('recovery_plane_verified', !recoveryPlaneVerified);
+  add('projection_rebuild_verified', !projectionRebuildValid, projectionRebuildCode);
+  if (centralExecutor) {
+    add('central_route_verified', !centralRouteVerified, centralRouteVerified ? null : centralStatusReason);
+  } else {
+    add('connector_ready', connectorReady ? !connectorReady.valid : false, connectorReady?.reasons?.[0] || connectorReady?.code || null);
+  }
+  return failing;
 }
 
 function reusablePendingProjectionObservation(record, { allowCommitted = false } = {}) {
@@ -1275,6 +1338,8 @@ class FullCleanActivation {
     recoveryHostRunningRevision = '',
     now = () => Date.now(),
     waitFn = wait,
+    pythonStatusFn = pythonStatus,
+    execFileFn = execFileAsync,
     epochStore = null
   } = {}) {
     if (!paths) throw new Error('Full clean activation requires runtime paths.');
@@ -1301,6 +1366,10 @@ class FullCleanActivation {
     this.recoveryHostRunningRevision = text(recoveryHostRunningRevision);
     this.now = now;
     this.wait = waitFn;
+    this.pythonStatusFn = pythonStatusFn;
+    this.execFileFn = execFileFn;
+    this._centralRouteRefreshInFlight = null;
+    this._centralRouteRefreshLastAttemptMs = 0;
     this.store = epochStore || new ActivationEpochStore({ paths, now });
     this.inFlight = null;
     this.inFlightRequestKey = null;
@@ -1343,12 +1412,41 @@ class FullCleanActivation {
         census_activation_epoch_id: String(census.activation_epoch_id || '') || null
       });
     }
+    // Option 5: keep a bounded per-tick history of which predicates failed,
+    // so a later diagnosis can tell whether one predicate stuck the whole
+    // VERIFYING window or different ones failed on different ticks. Names
+    // and reasons only; the history lives inside the stored verification.
+    const previousHistory = current.verification && typeof current.verification === 'object'
+      && !Array.isArray(current.verification)
+      ? current.verification.pending_census_history : null;
+    const history = Array.isArray(previousHistory) ? [...previousHistory] : [];
+    history.push({
+      observed_at_ms: this.now(),
+      failing_predicates: Array.isArray(census.failing_predicates) ? census.failing_predicates : []
+    });
+    const censusWithHistory = {
+      ...census,
+      pending_census_history: history.slice(-PENDING_CENSUS_HISTORY_MAX_ENTRIES)
+    };
+    // Option 5: derive the stored reason from the first failing predicate,
+    // so the epoch itself names the blocker (central route first, then the
+    // projection rebuild, then any other component). With no failing
+    // predicate recorded, keep the reason the census already carries.
+    const failingPredicateNames = new Set(
+      (Array.isArray(census.failing_predicates) ? census.failing_predicates : [])
+        .map((entry) => (typeof entry === 'string' ? entry : String(entry?.name || '')))
+        .filter(Boolean)
+    );
+    let pendingReason = String(census.reason || 'waiting-for-connector-or-component');
+    if (failingPredicateNames.has('central_route_verified')) pendingReason = 'waiting-central-route';
+    else if (failingPredicateNames.has('projection_rebuild_verified')) pendingReason = 'waiting-projection-rebuild';
+    else if (failingPredicateNames.size > 0) pendingReason = 'waiting-component';
     const next = this.store.update(epochId, {
       state: 'VERIFYING',
-      reason: String(census.reason || 'waiting-for-connector-or-component'),
-      verification: census
+      reason: pendingReason,
+      verification: censusWithHistory
     });
-    this._linkActionPending(next, { census, activation_state: 'VERIFYING' });
+    this._linkActionPending(next, { census: censusWithHistory, activation_state: 'VERIFYING' });
     return next;
   }
 
@@ -2517,6 +2615,70 @@ class FullCleanActivation {
     }
   }
 
+  // Fix 4a: refresh stale, missing, or invalid central-route evidence
+  // through the agent's own one-shot heartbeat. The stored evidence file is
+  // written by the node agent's heartbeat loop; at boot that loop may not
+  // have landed a fresh heartbeat yet (or the tunnel flapped), so every
+  // VERIFYING tick would otherwise fail on a stale, missing, or invalid
+  // evidence file until the epoch expires.
+  // The host instead runs the exact agent command the supervisor uses for
+  // the connected agent, with the subcommand swapped to runtime-heartbeat:
+  // fixed argv from validated paths, isolated (-I), 25 s timeout, at most
+  // one attempt per 30 s, never concurrent. Any missing path, failed spawn,
+  // or timeout returns the original stale result, so the census stays
+  // fail-closed; the next tick retries after the throttle.
+  async _refreshStaleCentralRouteEvidence(settings, nowMs) {
+    let route = null;
+    try {
+      route = this.orchestrator?.centralRouteEvidence?.(settings, nowMs) || null;
+    } catch { route = null; }
+    if (!route || !CENTRAL_ROUTE_REFRESHABLE_REASONS.has(route.reason)) return route;
+    const now = this.now();
+    if (now - (this._centralRouteRefreshLastAttemptMs || 0) < CENTRAL_ROUTE_REFRESH_THROTTLE_MS) return route;
+    if (this._centralRouteRefreshInFlight) return route;
+    const refresh = (async () => {
+      const python = await this.pythonStatusFn(this.paths);
+      if (!python || python.installed !== true || !python.command) return false;
+      const agent = typeof this.paths?.controlPlaneNodeAgent === 'function'
+        ? this.paths.controlPlaneNodeAgent() : '';
+      const config = typeof this.paths?.controlPlaneNodeConfigFile === 'function'
+        ? this.paths.controlPlaneNodeConfigFile() : '';
+      const registry = typeof this.paths?.controlPlaneWorkspaceRegistryFile === 'function'
+        ? this.paths.controlPlaneWorkspaceRegistryFile() : '';
+      const projectRoot = typeof this.paths?.appRoot === 'function' ? this.paths.appRoot() : '';
+      const node = typeof this.paths?.executablePath === 'function' ? this.paths.executablePath() : '';
+      if (!agent || !fs.existsSync(agent) || !config || !fs.existsSync(config)
+        || !projectRoot || !path.isAbsolute(projectRoot) || !fs.existsSync(projectRoot)
+        || !node || !fs.existsSync(node)) return false;
+      const args = [
+        ...(python.prefixArgs || []),
+        '-I', agent, 'runtime-heartbeat',
+        '--config', config,
+        '--project-root', projectRoot,
+        '--node', node,
+        '--runtime-mode', typeof this.paths?.runtimeMode === 'function' ? this.paths.runtimeMode() : 'packaged',
+        '--timeout-seconds', '20'
+      ];
+      if (registry && fs.existsSync(registry)) args.push('--workspace-registry', registry);
+      // The throttle counts spawn attempts only: a validation failure
+      // (missing path) spawns nothing and is cheap, so it must not
+      // consume the window a later tick needs once the files exist.
+      this._centralRouteRefreshLastAttemptMs = now;
+      await this.execFileFn(python.command, args, {
+        cwd: projectRoot,
+        windowsHide: true,
+        timeout: CENTRAL_ROUTE_REFRESH_TIMEOUT_MS,
+        maxBuffer: 1024 * 1024
+      });
+      return true;
+    })();
+    this._centralRouteRefreshInFlight = refresh;
+    try { await refresh; } catch { /* fail-closed: keep the original result */ } finally { this._centralRouteRefreshInFlight = null; }
+    try {
+      return this.orchestrator?.centralRouteEvidence?.(settings, this.now()) || route;
+    } catch { return route; }
+  }
+
   async finalCensus(activationEpochId, {
     expectedOldInstanceId = '',
     reusePendingProjection = false,
@@ -2832,8 +2994,12 @@ class FullCleanActivation {
     // admission bit, which is necessarily CLOSED before commitReady. Read the
     // independent authenticated heartbeat/policy evidence afresh instead of
     // requiring READY in order to prove that READY may be committed.
+    // Fix 4a: a stale, missing, or invalid route evidence file is refreshed
+    // once through the agent's own one-shot heartbeat before the census
+    // judges it, so a boot whose agent loop has not landed a fresh heartbeat
+    // yet does not fail the whole VERIFYING window on the evidence file.
     const centralRoute = centralExecutor
-      ? this.orchestrator?.centralRouteEvidence?.(settings, this.now()) || null
+      ? await this._refreshStaleCentralRouteEvidence(settings, this.now())
       : null;
     const centralRouteVerified = Boolean(centralExecutor
       && centralRoute?.connected === true
@@ -2880,6 +3046,26 @@ class FullCleanActivation {
       nowUnixMs: censusNowUnixMs
     });
     const pass = Boolean(componentsReadyForAdmission && (centralExecutor || connectorReady?.valid === true));
+    // Option 5: record which predicates failed on this tick. Names and the
+    // reason already carried by the census only (central status reason,
+    // projection code, connector reasons); null where no reason exists.
+    const failingPredicates = failingCensusPredicates({
+      centralExecutor,
+      workspaceMatches,
+      deviceMatches,
+      revisionMatches,
+      recoveryHostRevisionMatches,
+      recoveryHostEpochMatches,
+      processIdentityVerified: processIdentity,
+      epochMatches: allComponentsSameEpoch,
+      uiVerified: uiReady,
+      recoveryPlaneVerified: recoveryMcpReady && recoveryTunnelReady,
+      projectionRebuildValid: projectionRebuild.valid,
+      projectionRebuildCode: projectionRebuild.code,
+      centralRouteVerified,
+      centralStatusReason: centralRouteVerified ? null : (text(centralRoute?.reason) || 'CENTRAL_ROUTE_EVIDENCE_UNAVAILABLE'),
+      connectorReady
+    });
     // The final census is deliberately taken before commitReady()/complete_epoch
     // opens MCP admission.  lightweightSnapshot() therefore reports
     // updateIncomplete=true because the durable epoch is still VERIFYING/CLOSED,
@@ -2971,6 +3157,7 @@ class FullCleanActivation {
       projection_rebuild_receipt: projectionRebuild.receipt,
       lifecycle_decision: activationObservation?.lifecycle_decision || null,
       reason: pass ? null : 'UPDATE_INCOMPLETE',
+      failing_predicates: failingPredicates,
       runtime: runtimeForReadyProof
     };
   }
@@ -3327,5 +3514,9 @@ module.exports = {
   canonicalProjectionRebuildSha256,
   validateProjectionRebuildGate,
   validateConnectorReadyGate,
+  failingCensusPredicates,
+  CENTRAL_ROUTE_REFRESH_TIMEOUT_MS,
+  CENTRAL_ROUTE_REFRESH_THROTTLE_MS,
+  PENDING_CENSUS_HISTORY_MAX_ENTRIES,
   reusablePendingProjectionObservation
 };

@@ -33,6 +33,26 @@ const ACTIVATION_EPOCH_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 const AUTO_ACTIVATION_INTERVAL_MS = 3000;
 const ACTIVATION_REQUEST_TTL_MS = 45000;
 const MAX_GIT_OUTPUT_BYTES = 1024 * 1024;
+// The accepted-code auto-activation probe runs git from the Recovery Host
+// process, whose PATH evidently does not resolve bare `git` (the same git
+// binary answers in both the interactive user session and the SSH session:
+// C:\Program Files\Git\cmd\git.exe, 2.49.0.windows.1). Resolve it by
+// absolute path first so the probe no longer depends on the host process
+// inheriting a git PATH entry. Candidates are the standard Windows install
+// layouts, validated to exist; anything else falls back to bare `git`,
+// preserving today's behaviour on other installs.
+const GIT_CANDIDATE_PATHS = Object.freeze([
+  'C:\\Program Files\\Git\\cmd\\git.exe',
+  'C:\\Program Files\\Git\\bin\\git.exe'
+]);
+function resolveGitCommand() {
+  for (const candidate of GIT_CANDIDATE_PATHS) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch { /* try the next candidate */ }
+  }
+  return 'git';
+}
 const MAX_DIRTY_ENTRIES = 2000;
 const MAX_AUTO_INTENTS = 96;
 const MAX_AUTO_ATTEMPTS = 5;
@@ -504,25 +524,33 @@ function parseGitStatus(output) {
 }
 
 async function runGit(workspace, args) {
+  const gitCommand = resolveGitCommand();
   try {
-    return await execFileAsync('git', ['-C', workspace, ...args], {
+    return await execFileAsync(gitCommand, ['-C', workspace, ...args], {
       cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 5000, maxBuffer: MAX_GIT_OUTPUT_BYTES
     });
   } catch (error) {
     throw actionError('AUTO_ACTIVATION_GIT_UNAVAILABLE', 'Git identity required for automatic activation is unavailable.', {
-      exit_code: Number.isInteger(error?.code) ? error.code : null
+      exit_code: Number.isInteger(error?.code) ? error.code : null,
+      cause_code: typeof error?.code === 'string' ? error.code : null,
+      timed_out: error?.killed === true,
+      git_command: gitCommand
     });
   }
 }
 
 async function runGitBytes(workspace, args) {
+  const gitCommand = resolveGitCommand();
   try {
-    return await execFileAsync('git', ['-C', workspace, ...args], {
+    return await execFileAsync(gitCommand, ['-C', workspace, ...args], {
       cwd: workspace, windowsHide: true, encoding: 'buffer', timeout: 5000, maxBuffer: MAX_GIT_OUTPUT_BYTES
     });
   } catch (error) {
     throw actionError('AUTO_ACTIVATION_GIT_UNAVAILABLE', 'Git identity required for automatic activation is unavailable.', {
-      exit_code: Number.isInteger(error?.code) ? error.code : null
+      exit_code: Number.isInteger(error?.code) ? error.code : null,
+      cause_code: typeof error?.code === 'string' ? error.code : null,
+      timed_out: error?.killed === true,
+      git_command: gitCommand
     });
   }
 }
@@ -1603,6 +1631,7 @@ module.exports = {
   requestFingerprint,
   workspaceIdentity,
   gitStatus,
+  resolveGitCommand,
   samePath,
   parseGitStatus,
   fingerprintPaths,
