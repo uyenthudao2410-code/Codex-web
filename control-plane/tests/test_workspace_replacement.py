@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -8,7 +9,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from control_plane.node_agent import main as node_agent_main
+from control_plane.node_agent import _append_registry_write_journal, main as node_agent_main
 
 
 class WorkspaceReplacementTests(unittest.TestCase):
@@ -265,6 +266,142 @@ class WorkspaceReplacementTests(unittest.TestCase):
             result, _stdout, stderr = self.invoke(argv)
         self.assertEqual(result, 1)
         self.assertIn("CONTROL_PLANE_POLICY_AUTHORITY_TARGET_MISMATCH", stderr)
+
+
+    def test_registry_read_accepts_bom(self) -> None:
+        second = self.root / "second-workspace"
+        second.mkdir()
+        payload = {
+            "schema_version": 1,
+            "entries": [
+                {
+                    "workspace_id": "workspace-replace-0001",
+                    "workspace_generation": "generation-replace-old-0001",
+                    "canonical_path": str(self.workspace.resolve()),
+                    "display_name": "fixture-workspace",
+                    "capabilities": {"read": True, "write": False, "exec": False},
+                    "created_at_ms": 1_700_000_000_000,
+                },
+                {
+                    "workspace_id": "workspace-replace-0002",
+                    "workspace_generation": "generation-replace-old-0002",
+                    "canonical_path": str(second.resolve()),
+                    "display_name": "second-workspace",
+                    "capabilities": {"read": True, "write": True, "exec": False},
+                    "created_at_ms": 1_700_000_000_001,
+                },
+            ],
+        }
+        # The 09/11 registry was rewritten with a UTF-8 BOM; list-workspaces
+        # must still read every entry instead of failing the whole inventory.
+        self.registry.write_bytes(b"\xef\xbb\xbf" + json.dumps(payload).encode("utf-8"))
+        result, stdout, stderr = self.invoke([
+            "list-workspaces",
+            "--config", str(self.config),
+            "--workspace-registry", str(self.registry),
+        ])
+        self.assertEqual(result, 0, stderr)
+        workspaces = json.loads(stdout)["workspaces"]
+        self.assertEqual(
+            [item["workspace_id"] for item in workspaces],
+            ["workspace-replace-0001", "workspace-replace-0002"],
+        )
+
+    def test_registry_write_does_not_emit_bom_and_journals_replace(self) -> None:
+        (self.data_root / "control-plane-exec-policy.json").write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "authority_mode": "standing",
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner-replace-0001",
+            "device_id": "device-replace-0001",
+            "endpoint_id": "endpoint-replace-0001",
+            "workspace_id": "workspace-replace-0001",
+            "workspace_generation": "generation-replace-old-0001",
+            "expires_at_ms": None,
+            "facade_contract": {"schema_version": 1, "profile": "replace", "sha256": "a" * 64},
+            "allowed_argv_prefixes": [["python"]],
+            "max_timeout_ms": 5_000,
+            "max_output_bytes": 1_024,
+            "max_concurrent": 1,
+        }), encoding="utf-8")
+
+        def request(_origin: str, route: str, payload: dict[str, object], _auth: str) -> dict[str, object]:
+            if route.endswith("/retire"):
+                return self.retirement_response()
+            return self.registration_response(generation=str(payload["workspace_generation"]))
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request):
+            result, _stdout, stderr = self.invoke(self.args())
+        self.assertEqual(result, 0, stderr)
+        self.assertFalse(self.registry.read_bytes().startswith(b"\xef\xbb\xbf"))
+        journal_path = self.registry.with_name(f"{self.registry.name}.registry-journal.json")
+        lines = journal_path.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 1)
+        entry = json.loads(lines[0])
+        self.assertEqual(entry["op"], "replace")
+        self.assertEqual(entry["workspace_id"], "workspace-replace-0001")
+        self.assertIsInstance(entry["at_ms"], int)
+        self.assertIsInstance(entry["pid"], int)
+
+    def test_replace_moves_entry_to_end_and_keeps_other_entries(self) -> None:
+        second = self.root / "second-workspace"
+        second.mkdir()
+        first_created = 1_700_000_000_000
+        second_created = 1_700_000_000_001
+        self.registry.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [
+                {
+                    "workspace_id": "workspace-replace-0001",
+                    "workspace_generation": "generation-replace-old-0001",
+                    "canonical_path": str(self.workspace.resolve()),
+                    "display_name": "fixture-workspace",
+                    "capabilities": {"read": True, "write": False, "exec": False},
+                    "created_at_ms": first_created,
+                },
+                {
+                    "workspace_id": "workspace-replace-0002",
+                    "workspace_generation": "generation-replace-old-0002",
+                    "canonical_path": str(second.resolve()),
+                    "display_name": "second-workspace",
+                    "capabilities": {"read": True, "write": True, "exec": False},
+                    "created_at_ms": second_created,
+                },
+            ],
+        }), encoding="utf-8")
+
+        def request(_origin: str, route: str, payload: dict[str, object], _auth: str) -> dict[str, object]:
+            if route.endswith("/retire"):
+                return self.retirement_response()
+            return self.registration_response(generation=str(payload["workspace_generation"]))
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request):
+            result, _stdout, stderr = self.invoke(self.args())
+        self.assertEqual(result, 0, stderr)
+        registry = json.loads(self.registry.read_text(encoding="utf-8"))
+        self.assertEqual(len(registry["entries"]), 2)
+        # The replaced entry moves to the end (the 09/11 observable); the
+        # untouched entry keeps its place and its timestamp. The replaced
+        # entry itself is re-minted with a fresh created_at_ms by design.
+        self.assertEqual(registry["entries"][0]["workspace_id"], "workspace-replace-0002")
+        self.assertEqual(registry["entries"][0]["created_at_ms"], second_created)
+        self.assertEqual(registry["entries"][1]["workspace_id"], "workspace-replace-0001")
+        self.assertIsInstance(registry["entries"][1]["created_at_ms"], int)
+
+    def test_append_registry_write_journal(self) -> None:
+        journal_path = self.registry.with_name(f"{self.registry.name}.registry-journal.json")
+        _append_registry_write_journal(self.registry, op="register", workspace_id="workspace-journal-0001")
+        _append_registry_write_journal(self.registry, op="retire", workspace_id="workspace-journal-0001")
+        lines = journal_path.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 2)
+        first, second = (json.loads(line) for line in lines)
+        self.assertEqual([entry["op"] for entry in (first, second)], ["register", "retire"])
+        for entry in (first, second):
+            self.assertEqual(entry["workspace_id"], "workspace-journal-0001")
+            self.assertEqual(entry["pid"], os.getpid())
+            self.assertIsInstance(entry["at_ms"], int)
+        self.assertGreaterEqual(second["at_ms"], first["at_ms"])
 
 
 if __name__ == "__main__":

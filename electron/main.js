@@ -86,7 +86,8 @@ const environment = new EnvironmentService(runtimePaths);
 const controlPlaneEnrollment = new ControlPlaneEnrollmentService({
   paths: runtimePaths,
   getExecutionMode: () => settings.load().executionMode,
-  experimentalWindowsSandbox: runtimePaths.runtimeMode() === 'packaged'
+  experimentalWindowsSandbox: runtimePaths.runtimeMode() === 'packaged',
+  log
 });
 const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
 const uiInstanceId = crypto.randomBytes(16).toString('hex');

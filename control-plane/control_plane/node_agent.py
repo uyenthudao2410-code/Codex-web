@@ -718,6 +718,27 @@ def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
             pass
 
 
+def _append_registry_write_journal(registry_path: Path, *, op: str, workspace_id: str) -> None:
+    """Append one audit line per registry write (F4, r32).
+
+    Append-only JSON lines next to the registry; best-effort, never fails
+    the registry write itself.
+    """
+    journal_path = registry_path.with_name(f"{registry_path.name}.registry-journal.json")
+    entry = {
+        "at_ms": int(time.time() * 1000),
+        "op": op,
+        "workspace_id": workspace_id,
+        "pid": os.getpid(),
+    }
+    try:
+        journal_path.parent.mkdir(parents=True, exist_ok=True)
+        with journal_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
+    except OSError:
+        pass
+
+
 def _credential_hash(secret: str) -> str:
     return hashlib.sha256(json.dumps({"node_secret": secret}, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
@@ -5425,7 +5446,9 @@ def _read_workspace_registry(path: Path) -> dict[str, Any]:
     if len(raw) > WORKSPACE_REGISTRY_MAX_BYTES:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_INVALID")
     try:
-        parsed = json.loads(raw.decode("utf-8"))
+        # F4 (r32): utf-8-sig strips a leading BOM so a BOM-written registry
+        # still reads; anything else still fails closed below.
+        parsed = json.loads(raw.decode("utf-8-sig"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_INVALID") from error
     if (
@@ -5804,6 +5827,7 @@ def retire_workspace(args: argparse.Namespace) -> int:
         )
     ]
     _write_json_atomic(registry_path, registry)
+    _append_registry_write_journal(registry_path, op="retire", workspace_id=entry["workspace_id"])
     print(json.dumps({**receipt, "state": "retired"}, separators=(",", ":")))
     return 0
 
@@ -5892,6 +5916,7 @@ def _replace_local_workspace_registry_entry(
     if len(entries) > WORKSPACE_REGISTRY_MAX_ENTRIES:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_FULL")
     _write_json_atomic(registry_path, {"schema_version": WORKSPACE_REGISTRY_SCHEMA_VERSION, "entries": entries})
+    _append_registry_write_journal(registry_path, op="replace", workspace_id=replacement["workspace_id"])
     return replacement
 
 
@@ -6084,6 +6109,7 @@ def register_workspace(args: argparse.Namespace) -> int:
         }
         registry["entries"].append(entry)
         _write_json_atomic(registry_path, registry)
+        _append_registry_write_journal(registry_path, op="register", workspace_id=entry["workspace_id"])
     elif entry["display_name"] != display_name or entry["capabilities"] != capabilities:
         # A changed capability/label is a new central generation.  Do not
         # overwrite a server-visible identity after a response loss; force a

@@ -46,6 +46,7 @@ function refreshCoordinator(t, { route, nowMs }) {
   fs.writeFileSync(paths.controlPlaneNodeAgent(), '');
   fs.writeFileSync(paths.controlPlaneNodeConfigFile(), '{}');
   fs.writeFileSync(paths.controlPlaneWorkspaceRegistryFile(), '{}');
+  const logLines = [];
   const coordinator = new FullCleanActivation({
     paths,
     epochStore: epochStore(paths),
@@ -58,21 +59,28 @@ function refreshCoordinator(t, { route, nowMs }) {
       route = FRESH;
       return { stdout: '', stderr: '' };
     },
+    log: { info(event, fields) { logLines.push({ event, fields }); }, warn() {}, error() {} },
     now: () => now
   });
   return {
-    paths, coordinator, calls,
+    paths, coordinator, calls, logLines,
     setRoute: (value) => { route = value; },
     setNow: (value) => { now = value; }
   };
 }
 
 test('host refreshes stale central route evidence once through the agent heartbeat', async (t) => {
-  const { paths, coordinator, calls } = refreshCoordinator(t, { route: STALE, nowMs: 1_700_000_000_000 });
+  const { paths, coordinator, calls, logLines } = refreshCoordinator(t, { route: STALE, nowMs: 1_700_000_000_000 });
   const result = await coordinator._refreshStaleCentralRouteEvidence({}, 1_700_000_000_000);
 
   assert.equal(calls.length, 1, 'stale evidence must trigger exactly one heartbeat refresh');
   assert.deepEqual(result, FRESH);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:trigger').length, 1);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:spawn').length, 1);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:spawn-done').length, 1);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:re-read').length, 1);
+  assert.equal(logLines.find((entry) => entry.event === 'central-route-refresh:re-read').fields.reason, 'CENTRAL_ROUTE_READY');
+  assert.equal(logLines.find((entry) => entry.event === 'central-route-refresh:trigger').fields.reason, 'CENTRAL_ROUTE_EVIDENCE_STALE');
   assert.equal(calls[0].command, 'python.exe');
   assert.equal(calls[0].options.timeout, CENTRAL_ROUTE_REFRESH_TIMEOUT_MS);
   assert.equal(calls[0].options.timeout, 25_000);
@@ -114,7 +122,7 @@ test('host refreshes missing and invalid central route evidence', async (t) => {
 });
 
 test('host refresh is throttled to one attempt per 30 s and fail-closed on spawn failure', async (t) => {
-  const { coordinator, calls, setRoute, setNow } = refreshCoordinator(t, { route: STALE, nowMs: 1_700_000_000_000 });
+  const { coordinator, calls, logLines, setRoute, setNow } = refreshCoordinator(t, { route: STALE, nowMs: 1_700_000_000_000 });
   coordinator.execFileFn = async () => {
     calls.push({ failed: true });
     throw Object.assign(new Error('spawn failed'), { code: 'ENOENT' });
@@ -123,10 +131,16 @@ test('host refresh is throttled to one attempt per 30 s and fail-closed on spawn
   const failed = await coordinator._refreshStaleCentralRouteEvidence({}, 1_700_000_000_000);
   assert.deepEqual(failed, STALE, 'a failed refresh must keep the stale verdict');
   assert.equal(calls.length, 1);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:spawn-failed').length, 1);
+  assert.match(logLines.find((entry) => entry.event === 'central-route-refresh:spawn-failed').fields.error, /spawn failed/);
 
   const throttled = await coordinator._refreshStaleCentralRouteEvidence({}, 1_700_000_000_000);
   assert.deepEqual(throttled, STALE);
   assert.equal(calls.length, 1, 'a second attempt inside the throttle window must not spawn');
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:trigger').length, 2);
+  const throttleTriggers = logLines.filter((entry) => entry.event === 'central-route-refresh:trigger');
+  assert.ok(throttleTriggers[1].fields.throttle_gap_ms < CENTRAL_ROUTE_REFRESH_THROTTLE_MS);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:spawn').length, 1);
 
   setNow(1_700_000_000_000 + CENTRAL_ROUTE_REFRESH_THROTTLE_MS + 1_000);
   coordinator.execFileFn = async () => {
@@ -138,14 +152,17 @@ test('host refresh is throttled to one attempt per 30 s and fail-closed on spawn
   assert.deepEqual(retried, FRESH, 'the next tick after the throttle must retry');
   assert.equal(calls.length, 2);
   assert.equal(CENTRAL_ROUTE_REFRESH_THROTTLE_MS, 30_000);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:spawn').length, 2);
 });
 
 test('host does not spawn a refresh when the agent script or config is missing', async (t) => {
-  const { paths, coordinator, calls, setNow } = refreshCoordinator(t, { route: STALE, nowMs: 1_700_000_000_000 });
+  const { paths, coordinator, calls, logLines, setNow } = refreshCoordinator(t, { route: STALE, nowMs: 1_700_000_000_000 });
   fs.rmSync(paths.controlPlaneNodeAgent());
   const noAgent = await coordinator._refreshStaleCentralRouteEvidence({}, 1_700_000_000_000);
   assert.deepEqual(noAgent, STALE);
   assert.equal(calls.length, 0, 'a missing agent script must not spawn');
+  assert.deepEqual(logLines.find((entry) => entry.event === 'central-route-refresh:validation-failed').fields.missing, ['node-agent']);
+  assert.equal(logLines.filter((entry) => entry.event === 'central-route-refresh:spawn').length, 0);
 
   // Advance past the throttle so the second sub-case is judged on its own
   // missing path, not on the throttle left by the first attempt.
@@ -155,6 +172,7 @@ test('host does not spawn a refresh when the agent script or config is missing',
   const noConfig = await coordinator._refreshStaleCentralRouteEvidence({}, 1_700_000_000_000 + 31_000);
   assert.deepEqual(noConfig, STALE);
   assert.equal(calls.length, 0, 'a missing node config must not spawn');
+  assert.deepEqual(logLines.filter((entry) => entry.event === 'central-route-refresh:validation-failed').map((entry) => entry.fields.missing), [['node-agent'], ['node-config']]);
 });
 
 test('failingCensusPredicates lists only the predicates that failed, with their reasons', () => {

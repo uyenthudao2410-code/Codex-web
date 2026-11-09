@@ -1065,7 +1065,7 @@ function parseWorkspaceReplacementResult(stdout) {
 
 class ControlPlaneEnrollmentService {
   constructor({ paths, runner = run, environment = process.env, experimentalWindowsSandbox = false,
-    getExecutionMode = () => 'sandboxed' } = {}) {
+    getExecutionMode = () => 'sandboxed', getCurrentProcessId, log = null } = {}) {
     if (!paths || typeof paths.runtimeMode !== 'function' || typeof paths.portablePython !== 'function'
       || typeof paths.controlPlaneNodeAgent !== 'function' || typeof paths.controlPlaneNodeConfigFile !== 'function'
       || typeof paths.controlPlaneWorkspaceRegistryFile !== 'function'
@@ -1075,6 +1075,8 @@ class ControlPlaneEnrollmentService {
     this.paths = paths;
     this.runner = runner;
     this.environment = environment;
+    this.log = log;
+    this.getCurrentProcessId = typeof getCurrentProcessId === 'function' ? getCurrentProcessId : () => process.pid;
     this.experimentalWindowsSandbox = experimentalWindowsSandbox === true;
     if (typeof getExecutionMode !== 'function') throw new TypeError('getExecutionMode must be a function.');
     this.getExecutionMode = getExecutionMode;
@@ -1992,6 +1994,7 @@ class ControlPlaneEnrollmentService {
       const code = String(error?.code || 'CONTROL_PLANE_WORKSPACE_REGISTRATION_FAILED');
       throw enrollmentError(code, 'Không thể đăng ký workspace local với Ubuntu.');
     }
+    this.log?.info?.('control-plane-enrollment:registry-write', { op: 'register', workspace_id: normalizedWorkspaceId, pid: this.getCurrentProcessId() });
     return parseWorkspaceRegistrationResult(result?.stdout);
   }
 
@@ -2113,6 +2116,7 @@ class ControlPlaneEnrollmentService {
       const code = String(error?.code || 'CONTROL_PLANE_WORKSPACE_RETIRE_FAILED');
       throw enrollmentError(code, 'Không thể thu hồi workspace local tại Ubuntu.');
     }
+    this.log?.info?.('control-plane-enrollment:registry-write', { op: 'retire', workspace_id: normalizedWorkspaceId, pid: this.getCurrentProcessId() });
     return parseWorkspaceRetirementResult(result?.stdout);
   }
 
@@ -2176,6 +2180,7 @@ class ControlPlaneEnrollmentService {
       || receipt.old_workspace_generation !== normalizedWorkspaceGeneration) {
       throw enrollmentError('CONTROL_PLANE_WORKSPACE_REPLACE_TARGET_MISMATCH', 'Receipt replacement không đúng workspace đã chọn; cần đối soát trước khi tiếp tục.');
     }
+    this.log?.info?.('control-plane-enrollment:registry-write', { op: 'replace', workspace_id: normalizedWorkspaceId, pid: this.getCurrentProcessId() });
     return receipt;
   }
 }

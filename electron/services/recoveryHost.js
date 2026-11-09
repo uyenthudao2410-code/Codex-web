@@ -538,6 +538,25 @@ function readLock(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
 }
 
+// F1 (r32): the durable epoch's current Recovery Host identity. The
+// creation-time component_evidence is immutable, so a replacement host that
+// takes over records itself in epoch metadata (see rebindCurrentRecoveryHost)
+// and later resumes prefer that live identity over the stale creation-time one.
+function currentRecoveryHostInstanceId(epoch) {
+  return String(epoch?.metadata?.current_recovery_host_instance_id || epoch?.component_evidence?.recovery_host?.instance_id || '').trim();
+}
+
+// F1 (r32): drop a lock whose holder is already dead so a replacement host
+// can take over without failing the epoch it is resuming. Fail-closed: a
+// live holder (or an unreadable lock) is never removed here.
+function releaseStaleRecoveryHostLock(paths) {
+  const current = readLock(paths.recoveryHostLockFile());
+  if (!current) return true;
+  if (current.pid != null && isProcessAlive(current.pid)) return false;
+  try { fs.unlinkSync(paths.recoveryHostLockFile()); } catch { /* already gone */ }
+  return true;
+}
+
 function acquireRecoveryHostLock(paths, instanceId, pid = process.pid) {
   const file = paths.recoveryHostLockFile();
   ensureParent(file);
@@ -578,6 +597,13 @@ async function waitForReplacementLockRelease(paths, expectedInstanceId, timeoutM
     const current = readLock(paths.recoveryHostLockFile());
     if (!current) return true;
     if (String(current.instance_id || '') !== String(expectedInstanceId || '')) {
+      // F1 (r32): the lock holder may have died after the handoff (the old
+      // host crashed mid-VERIFYING). Only a LIVE holder different from the
+      // expected instance means the replacement target really changed; a dead
+      // holder is a stale lock, not a changed target.
+      if (current.pid != null && !isProcessAlive(current.pid) && releaseStaleRecoveryHostLock(paths)) {
+        return true;
+      }
       throw Object.assign(new Error('Recovery Host replacement target changed.'), { code: 'RECOVERY_REPLACEMENT_TARGET_CHANGED' });
     }
     await wait(50);
@@ -1393,6 +1419,35 @@ class RecoveryHost {
       requiresNewEpoch: true,
       durableEpoch
     };
+  }
+
+  // F1 (r32): re-bind the durable epoch to the host that currently holds the
+  // replacement lock, so a later resume compares against the live host
+  // instead of the host that created the epoch. component_evidence is
+  // immutable via activationEpochStore.update, so the current identity lives
+  // in metadata (update() persists metadata, and normalizeRecord keeps it out
+  // of the immutable request_intent). Best-effort: a failed update must not
+  // fail the resume itself.
+  rebindCurrentRecoveryHost() {
+    try {
+      const epoch = this.activationEpochStore?.current?.();
+      if (!epoch || typeof epoch !== 'object') return false;
+      const currentId = String(epoch.metadata?.current_recovery_host_instance_id || '').trim();
+      const currentPid = Number(epoch.metadata?.current_recovery_host_pid || 0);
+      if (currentId === String(this.instanceId || '').trim() && currentPid === Number(process.pid || 0)) {
+        return false;
+      }
+      const updated = this.activationEpochStore.update(epoch.activation_epoch_id, {
+        metadata: {
+          ...(epoch.metadata || {}),
+          current_recovery_host_instance_id: this.instanceId,
+          current_recovery_host_pid: process.pid
+        }
+      });
+      return String(updated?.metadata?.current_recovery_host_instance_id || '').trim() === String(this.instanceId || '').trim();
+    } catch {
+      return false;
+    }
   }
 
   recordBootstrapEpoch(epoch, extra = {}) {
@@ -2959,7 +3014,7 @@ class RecoveryHost {
           activationEpochId: expiredEpochId
         });
       } else {
-        const boundOldHostId = String(durableEpoch.component_evidence?.recovery_host?.instance_id || '').trim();
+        const boundOldHostId = currentRecoveryHostInstanceId(durableEpoch);
         if (!boundOldHostId) {
           throw Object.assign(new Error('Active activation epoch has no bound old Recovery Host identity.'), {
             code: 'ACTIVATION_EPOCH_OLD_INSTANCE_REQUIRED',
@@ -3063,7 +3118,7 @@ class RecoveryHost {
         persistReplacementFailure(error);
         throw error;
       }
-      const boundOldHostId = String(durableEpoch.component_evidence?.recovery_host?.instance_id || '').trim();
+      const boundOldHostId = currentRecoveryHostInstanceId(durableEpoch);
       const suppliedOldHostId = String(this.replacement?.expectedOldInstanceId || '').trim();
       if (boundOldHostId && suppliedOldHostId && boundOldHostId !== suppliedOldHostId) {
         const error = Object.assign(new Error('Replacement target does not match the durable old Recovery Host identity.'), {
@@ -3138,6 +3193,7 @@ class RecoveryHost {
         await waitForReplacementLockRelease(this.paths, this.replacement.expectedOldInstanceId);
       }
       acquireRecoveryHostLock(this.paths, this.instanceId);
+      this.rebindCurrentRecoveryHost();
     } catch (error) {
       persistReplacementFailure(error);
       throw error;
@@ -3451,6 +3507,8 @@ module.exports = {
   UI_RECOVERY_COOLDOWN_MS,
   UI_RECOVERY_ATTEMPT_LIMIT,
   waitForReplacementLockRelease,
+  isProcessAlive,
+  releaseStaleRecoveryHostLock,
   activationClosureProjection,
   buildMcpIdentityObservation,
   validatePersistedReadyConnectorProof,

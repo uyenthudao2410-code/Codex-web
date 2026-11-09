@@ -2634,11 +2634,25 @@ class FullCleanActivation {
     } catch { route = null; }
     if (!route || !CENTRAL_ROUTE_REFRESHABLE_REASONS.has(route.reason)) return route;
     const now = this.now();
-    if (now - (this._centralRouteRefreshLastAttemptMs || 0) < CENTRAL_ROUTE_REFRESH_THROTTLE_MS) return route;
+    const throttleGapMs = now - (this._centralRouteRefreshLastAttemptMs || 0);
+    // F2 (r32): one log line per refresh attempt (trigger / validation /
+    // spawn / outcome / re-read) so every VERIFYING tick that attempts a
+    // refresh can be matched against the epoch transitions in assistant.log.
+    this.log?.info?.('central-route-refresh:trigger', {
+      reason: route.reason,
+      throttle_gap_ms: throttleGapMs,
+      throttle_ms: CENTRAL_ROUTE_REFRESH_THROTTLE_MS,
+      in_flight: Boolean(this._centralRouteRefreshInFlight)
+    });
+    if (throttleGapMs < CENTRAL_ROUTE_REFRESH_THROTTLE_MS) return route;
     if (this._centralRouteRefreshInFlight) return route;
+    const startedAtMs = Date.now();
     const refresh = (async () => {
       const python = await this.pythonStatusFn(this.paths);
-      if (!python || python.installed !== true || !python.command) return false;
+      if (!python || python.installed !== true || !python.command) {
+        this.log?.info?.('central-route-refresh:validation-failed', { missing: 'python' });
+        return false;
+      }
       const agent = typeof this.paths?.controlPlaneNodeAgent === 'function'
         ? this.paths.controlPlaneNodeAgent() : '';
       const config = typeof this.paths?.controlPlaneNodeConfigFile === 'function'
@@ -2647,9 +2661,15 @@ class FullCleanActivation {
         ? this.paths.controlPlaneWorkspaceRegistryFile() : '';
       const projectRoot = typeof this.paths?.appRoot === 'function' ? this.paths.appRoot() : '';
       const node = typeof this.paths?.executablePath === 'function' ? this.paths.executablePath() : '';
-      if (!agent || !fs.existsSync(agent) || !config || !fs.existsSync(config)
-        || !projectRoot || !path.isAbsolute(projectRoot) || !fs.existsSync(projectRoot)
-        || !node || !fs.existsSync(node)) return false;
+      const missing = [];
+      if (!agent || !fs.existsSync(agent)) missing.push('node-agent');
+      if (!config || !fs.existsSync(config)) missing.push('node-config');
+      if (!projectRoot || !path.isAbsolute(projectRoot) || !fs.existsSync(projectRoot)) missing.push('project-root');
+      if (!node || !fs.existsSync(node)) missing.push('node-binary');
+      if (missing.length > 0) {
+        this.log?.info?.('central-route-refresh:validation-failed', { missing });
+        return false;
+      }
       const args = [
         ...(python.prefixArgs || []),
         '-I', agent, 'runtime-heartbeat',
@@ -2664,18 +2684,35 @@ class FullCleanActivation {
       // (missing path) spawns nothing and is cheap, so it must not
       // consume the window a later tick needs once the files exist.
       this._centralRouteRefreshLastAttemptMs = now;
-      await this.execFileFn(python.command, args, {
-        cwd: projectRoot,
-        windowsHide: true,
-        timeout: CENTRAL_ROUTE_REFRESH_TIMEOUT_MS,
-        maxBuffer: 1024 * 1024
-      });
+      // F2: argv carries paths and fixed flags only -- no secrets.
+      this.log?.info?.('central-route-refresh:spawn', { command: python.command, args });
+      try {
+        await this.execFileFn(python.command, args, {
+          cwd: projectRoot,
+          windowsHide: true,
+          timeout: CENTRAL_ROUTE_REFRESH_TIMEOUT_MS,
+          maxBuffer: 1024 * 1024
+        });
+      } catch (error) {
+        this.log?.info?.('central-route-refresh:spawn-failed', {
+          duration_ms: Date.now() - startedAtMs,
+          error: String(error?.message || error || '').slice(-500)
+        });
+        throw error;
+      }
+      this.log?.info?.('central-route-refresh:spawn-done', { duration_ms: Date.now() - startedAtMs });
       return true;
     })();
     this._centralRouteRefreshInFlight = refresh;
     try { await refresh; } catch { /* fail-closed: keep the original result */ } finally { this._centralRouteRefreshInFlight = null; }
     try {
-      return this.orchestrator?.centralRouteEvidence?.(settings, this.now()) || route;
+      const refreshed = this.orchestrator?.centralRouteEvidence?.(settings, this.now()) || route;
+      this.log?.info?.('central-route-refresh:re-read', {
+        has_evidence: Boolean(refreshed && !refreshed.error),
+        reason: refreshed?.reason || null,
+        error: refreshed?.error ? String(refreshed.error).slice(0, 200) : null
+      });
+      return refreshed;
     } catch { return route; }
   }
 
